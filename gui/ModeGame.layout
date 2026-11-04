@@ -155,6 +155,7 @@
         <LayoutImport type="DefaultWindow" filename="WindowCasinoPayout.layout" name="CasinoPayoutWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowGhostRoom.layout" name="GhostRoomWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowInfirmary.layout" name="InfirmaryWindowImport" />
+        <LayoutImport type="DefaultWindow" filename="WindowWorkers.layout" name="WorkersWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowSpa.layout" name="SpaWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowTavern.layout" name="TavernWindowImport" />
         <LayoutImport type="DefaultWindow" filename="WindowMerchant.layout" name="MerchantWindowImport" />
@@ -357,6 +358,21 @@
             <Property name="TooltipText" value="Infirmary" />
             <UserString name="AllowEdgeScrolling" value="true" />
             <UserString name="ContextHelp" value="Infirmary: payer, discharge health, healing switch, patients (I)" />
+        </Window>
+        <Window type="OD/InvisibleButton" name="WorkersButton">
+            <Property name="Area" value="{{0,388},{1,-240},{0,500},{1,-184}}" />
+            <Property name="Text" value="Workers" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="HorzLabelFormatting" value="RightAligned" />
+            <Property name="NormalTextColour" value="FFF2C860" />
+            <Property name="HoverTextColour" value="FFFFE9A8" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/WorkersHudNormal" />
+            <Property name="HoverImage" value="OpenDungeonsIcons/WorkersHudHover" />
+            <Property name="PushedImage" value="OpenDungeonsIcons/WorkersHudPressed" />
+            <Property name="AlwaysOnTop" value="True" />
+            <Property name="TooltipText" value="Workers (J)" />
+            <UserString name="AllowEdgeScrolling" value="true" />
+            <UserString name="ContextHelp" value="Workers: fixed workers per job, free workers, priority and carry order (J)" />
         </Window>
         <Window type="OD/GameTabButton" name="MerchantButton">
             <Property name="Area" value="{{0,196},{1,-224},{0,236},{1,-184}}" />
