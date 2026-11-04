@@ -115,6 +115,8 @@ def main():
                 attrs[key] = str(int(attrs[key]) * 2)
         if source_name:
             tile = Image.open(SOURCE / source_name).convert("RGBA")
+            if slot["name"] == "GhostRoomButton":
+                tile = tile.resize((int(attrs["width"]), int(attrs["height"])), Image.Resampling.LANCZOS)
             if tile.size != (int(attrs["width"]), int(attrs["height"])):
                 raise ValueError(f"Painted source size differs from its atlas rectangle: {source_name}")
         else:

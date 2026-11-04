@@ -224,3 +224,20 @@ assert 'Magical Defense' in dungeonbook_page and 'Element Defense' in dungeonboo
 for area in re.findall(r'name="Area" value="([^"]*)"', dungeonbook_page):
     assert all(offset == 0 for _scale, offset in udims(area)), 'the Dungeonbook profile page uses relative areas only'
 print('Dungeonbook profile page fits at every scale (relative areas, no scrollbar)')
+
+# The Workers window (key J) is part of the checked windows, fits every tested screen without being shrunk below its
+# text, and everything inside it uses relative areas (check_workers_window.py pins its parts and behaviour).
+workers = [entry for entry in windows if entry[1] == 'WorkersWindow']
+assert workers, 'the Workers window is not found in the layouts'
+for screen_w, screen_h in SCREENS:
+    for user_scale in USER_SCALES:
+        scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user_scale
+        assert fit_factor(workers[0][2], screen_w, screen_h, scale) >= 0.999, ('Workers window shrinks', screen_w, screen_h, user_scale)
+workers_layout = ET.parse(repo / 'gui/WindowWorkers.layout').getroot().find('Window')
+for part in workers_layout.iter('Window'):
+    if part is workers_layout:
+        continue
+    for prop in part.findall('Property'):
+        if prop.get('name') == 'Area':
+            assert all(offset == 0 for _scale, offset in udims(prop.get('value'))), part.get('name') + ' uses a fixed pixel area'
+print('Workers window fits at every scale (relative areas inside)')

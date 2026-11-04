@@ -52,6 +52,7 @@ class ItemBagEntity;
 class MiniMapDrawnFull;
 class MenuModeLoad;
 class SocialWindow;
+class WorkersWindow;
 class ODPacket;
 
 enum class SpellType;
@@ -454,6 +455,8 @@ private:
     //! \brief The population panel in the creatures tab
     std::unique_ptr<CreaturePanel> mCreaturePanel;
     std::unique_ptr<SocialWindow> mSocialWindow;
+    //! The Workers window of the keeper (key J and the HUD button)
+    std::unique_ptr<WorkersWindow> mWorkersWindow;
     std::vector<CEGUI::Window*> mHeldCreatureIcons;
     //! \brief Creates, updates and places the held creature portraits.
     void refreshHeldCreatureIcons();
