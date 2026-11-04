@@ -35,7 +35,7 @@ overlay_source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text().
 # Mana is the inner ring of the badge flower, health the outer ring; both shrink from the top.
 assert 'MANA_RING' not in overlay_source
 assert 'MANA_FLOWER_SHARE' not in overlay_source
-assert 'BADGE_FLOWER_MATERIAL = "CreatureOverlay0";' in overlay_source
+assert 'BADGE_FLOWER_PREFIX = "CreatureOverlay0";' in overlay_source
 assert 'mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown)' in source
 server = (root / 'source/network/ODServer.cpp').read_text()
 assert server.count('packetSend << clientSocket->supportsCreatureProgress();') == 1

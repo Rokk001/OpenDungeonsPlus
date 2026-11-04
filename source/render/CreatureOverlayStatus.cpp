@@ -70,11 +70,11 @@ const Ogre::Real CROWN_CHAR_HEIGHT = 16;
 //! Width and height in pixels of the area of the crown picture
 const Ogre::Real CROWN_SIZE = 64;
 //! Material of the whole badge flower, used as health ring of a creature without mana. It is tinted red.
-const std::string BADGE_FLOWER_MATERIAL = "CreatureOverlay";
+const std::string BADGE_FLOWER_PREFIX = "CreatureOverlay";
 //! Material of the outer ring of the flower (health ring of a creature with mana), tinted red
-const std::string BADGE_OUTER_RING_MATERIAL = "CreatureOverlayHealthStage";
+const std::string BADGE_OUTER_RING_PREFIX = "CreatureOverlayHealthStage";
 //! Material of the inner ring of the flower (mana ring), tinted with the mana colour
-const std::string BADGE_INNER_RING_MATERIAL = "CreatureOverlayManaStage";
+const std::string BADGE_INNER_RING_PREFIX = "CreatureOverlayManaStage";
 //! Colour channels (0 to 255) of the mana part of the flower, a strong blue
 const Ogre::Real MANA_COLOUR_RED = 25.0f;
 const Ogre::Real MANA_COLOUR_GREEN = 90.0f;
@@ -150,7 +150,7 @@ CreatureOverlayStatus::CreatureOverlayStatus(Creature* creature, Ogre::Entity* e
     // The inner mana ring lies over the health ring, below the experience ring and the level; updateProgress
     // selects the segment stage for each ring.
     const std::string manaMaterial = RenderManager::getSingleton().rrBuildTintedMaterial(
-        BADGE_INNER_RING_MATERIAL + "0", getManaColour());
+        BADGE_INNER_RING_PREFIX + "0", getManaColour());
     uint32_t manaId = mMovableTextOverlay->createChildOverlay("MedievalSharp", 30,
         Ogre::ColourValue::White, manaMaterial, false);
     mOverlayIds[static_cast<uint32_t>(CreatureOverlays::mana)] = manaId;
@@ -245,7 +245,7 @@ void CreatureOverlayStatus::updateHealth()
         mHasMana = hasMana;
         // With mana only the outer ring shows the health, the inner ring belongs to the mana
         std::string material = RenderManager::getSingleton().rrBuildTintedMaterial(
-            (hasMana ? BADGE_OUTER_RING_MATERIAL : BADGE_FLOWER_MATERIAL) + Helper::toString(mHealthValue), getLifeColour());
+            (hasMana ? BADGE_OUTER_RING_PREFIX : BADGE_FLOWER_PREFIX) + Helper::toString(mHealthValue), getLifeColour());
         uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];
         mMovableTextOverlay->setMaterialName(healthId, material);
     }
@@ -285,7 +285,7 @@ void CreatureOverlayStatus::updateProgress(Ogre::Real timeSincelastFrame)
         }
     }
     const std::string manaMaterial = RenderManager::getSingleton().rrBuildTintedMaterial(
-        BADGE_INNER_RING_MATERIAL + Helper::toString(manaStage), getManaColour());
+        BADGE_INNER_RING_PREFIX + Helper::toString(manaStage), getManaColour());
     mMovableTextOverlay->setMaterialName(manaId, manaMaterial);
     mMovableTextOverlay->displayOverlay(manaId, hasMana ? -1 : 0);
     const uint32_t experienceId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::experience)];

@@ -12,10 +12,10 @@ assert 'NB_OVERLAY_HEALTH_VALUES = 8;' in creature
 assert 'HEALTH_BADGE_SIZE = 64;' in source
 assert 'forceTextArea(healthId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE)' in source
 assert 'forceTextArea(manaId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE)' in source
-assert 'BADGE_OUTER_RING_MATERIAL = "CreatureOverlayHealthStage";' in source
-assert 'BADGE_INNER_RING_MATERIAL = "CreatureOverlayManaStage";' in source
-assert '(hasMana ? BADGE_OUTER_RING_MATERIAL : BADGE_FLOWER_MATERIAL) + Helper::toString(mHealthValue)' in source
-assert 'BADGE_INNER_RING_MATERIAL + Helper::toString(manaStage)' in source
+assert 'BADGE_OUTER_RING_PREFIX = "CreatureOverlayHealthStage";' in source
+assert 'BADGE_INNER_RING_PREFIX = "CreatureOverlayManaStage";' in source
+assert '(hasMana ? BADGE_OUTER_RING_PREFIX : BADGE_FLOWER_PREFIX) + Helper::toString(mHealthValue)' in source
+assert 'BADGE_INNER_RING_PREFIX + Helper::toString(manaStage)' in source
 assert 'setVerticalBand(' not in source
 assert 'if(manaShare > 0.0)' in source and 'if(manaShare >= threshold)' in source
 assert 'threshold -= 1.0 / static_cast<double>(steps);' in source

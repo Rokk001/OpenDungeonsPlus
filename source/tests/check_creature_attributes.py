@@ -768,9 +768,9 @@ def check_part_g():
     assert 'createChildOverlay("MedievalSharp", 30,\n        Ogre::ColourValue::White, manaMaterial, false)' in constructor
     assert 'forceTextArea(manaId, HEALTH_BADGE_SIZE, HEALTH_BADGE_SIZE)' in constructor
     assert 'setOffset(manaId' not in constructor and 'displayOverlay(manaId, 0)' in constructor
-    assert 'BADGE_INNER_RING_MATERIAL + "0", getManaColour()' in constructor
-    assert 'BADGE_FLOWER_MATERIAL = "CreatureOverlay";' in status
-    assert 'MANA_FLOWER_SHARE' not in status and 'BADGE_OUTER_RING_MATERIAL = "CreatureOverlayHealthStage";' in status
+    assert 'BADGE_INNER_RING_PREFIX + "0", getManaColour()' in constructor
+    assert 'BADGE_FLOWER_PREFIX = "CreatureOverlay";' in status
+    assert 'MANA_FLOWER_SHARE' not in status and 'BADGE_OUTER_RING_PREFIX = "CreatureOverlayHealthStage";' in status
     assert 'MANA_RING' not in status
     channels = [int(re.search(name + r' = (\d+)\.0f', status)[1]) for name in ('MANA_COLOUR_RED', 'MANA_COLOUR_GREEN', 'MANA_COLOUR_BLUE')]
     assert channels[2] == 255 and channels[0] < 64 and channels[1] < 128, 'strong blue'
