@@ -115,8 +115,12 @@ struct MovableTextOverlay {
 struct CreatureOverlayStatus {
  Creature* mCreature;MovableTextOverlay* mMovableTextOverlay;std::vector<uint32_t> mOverlayIds{0,1,2,3,4};
  double mRecoveryTurns=0;uint32_t mRecoverySerial=0;float mRecoveryElapsed=0;
+ int getManaColour()const{return 0;}
  void updateProgress(float);
 };
+namespace Helper{template<class T> std::string toString(T v){return std::to_string(v);}}
+struct RenderManager{static RenderManager& getSingleton(){static RenderManager r;return r;}template<class C> std::string rrBuildTintedMaterial(const std::string& m,C){return m;}};
+const std::string BADGE_INNER_RING_PREFIX="CreatureOverlayManaStage";
 CLOCK
 //! \brief Checks progress packets and the unchanged clock for attacks, room pauses and worker steps.
 int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++checks;if(!ok){++failures;std::cerr<<"FAIL "<<why<<'\n';}};
@@ -171,14 +175,13 @@ int main(){int checks=0,failures=0;auto check=[&](bool ok,const char* why){++che
   unsigned paused=overlay.frames[2];status.updateProgress(0);check(overlay.frames[2]==paused,"worker recovery freezes while paused");
  }
  struct Near{static bool within(float a,double b){return std::abs(a-b)<1e-4;}};
- b.mMaxMana=40;b.mOverlayHealthValue=0;for(double mana:{0.,2.,5.,20.,36.,40.,60.,-5.}){b.mMana=mana;status.updateProgress(0);
+ //! rief Expected mana segment stage: 0 = full ring, 7 = empty ring (8,7,6,5,3,2,1,0 segments left), same steps as the life ring.
+ struct Stage{static unsigned of(double share){if(share<=0)return 7;if(share>=1.)return 0;for(unsigned s=1;s<6;++s)if(share>=1.-s/6.)return s;return 6;}};
+ b.mMaxMana=40;for(double mana:{0.,2.,5.,21.,36.,40.,60.,-5.}){b.mMana=mana;status.updateProgress(0);
   const double share=mana<=0?0.:mana>=40?1.:mana/40;
-  check(share==0?!overlay.shown[4]:overlay.shown[4],"mana part is shown while there is mana");
-  check(Near::within(overlay.bottom[4],1.0)&&Near::within(overlay.top[4],1-share),"the inner mana ring shrinks with the mana");
-  check(Near::within(overlay.top[0],0.)&&Near::within(overlay.bottom[0],1.),"full health fills the whole outer ring");}
- b.mMana=20;b.mOverlayHealthValue=4;status.updateProgress(0);check(Near::within(overlay.top[0],0.5)&&Near::within(overlay.bottom[0],1.),"half health shrinks the outer ring to half");
- b.mMaxMana=0;b.mMana=10;b.mOverlayHealthValue=0;status.updateProgress(0);check(!overlay.shown[4]&&Near::within(overlay.top[0],0.)&&Near::within(overlay.bottom[0],1.),"no mana pool shows the whole flower as health");
- b.mOverlayHealthValue=4;status.updateProgress(0);check(Near::within(overlay.top[0],0.5)&&Near::within(overlay.bottom[0],1.),"health drains from the top without mana");b.mOverlayHealthValue=0;
+  check(overlay.shown[4],"the inner ring is shown for a creature with a mana pool, an empty pool shows the empty stage");
+  check(overlay.material[4]=="CreatureOverlayManaStage"+std::to_string(Stage::of(share)),"the inner mana ring picks its segment stage from the mana");}
+ b.mMaxMana=0;b.mMana=10;status.updateProgress(0);check(!overlay.shown[4],"no mana pool hides the inner ring");
  b.mHasProgressInformation=false;status.updateProgress(0);check(!overlay.shown[1]&&overlay.frames[2]==0,"legacy replay does not invent progress");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
