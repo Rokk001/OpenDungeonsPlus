@@ -605,6 +605,177 @@ material GhostBookPages
     }
 }
 
+// Ghost press: near-black rusty riveted iron of the base, columns, crown, platen, screw, handle and chains.
+material GhostPressIron
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.75 0.75 0.75
+            diffuse 0.92 0.92 0.92 1
+            specular 0.26 0.21 0.16 1 20
+            texture_unit
+            {
+                texture GhostPressIron.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Ghost press (idle and locked): pale carved emblems on the crown and the base.
+material GhostPressEngraving
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.40 0.36 0.28
+            diffuse 0.48 0.44 0.34 1
+            specular 0.10 0.09 0.07 1 12
+        }
+    }
+}
+
+// Ghost press (working): the emblems glow and pulse.
+material GhostPressEmblem
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            texture_unit
+            {
+                anim_texture GhostPressGlow_0.png GhostPressGlow_1.png GhostPressGlow_2.png GhostPressGlow_3.png 1.6
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Ghost press (working): parchment pages of the open book in the press.
+material GhostPressPages
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.80 0.80 0.80
+            diffuse 0.95 0.95 0.95 1
+            specular 0.03 0.03 0.03 1 4
+            texture_unit
+            {
+                texture GhostPressPages.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Ghost press (working): glowing rune circles on the pages (they turn and pulse by bone).
+material GhostPressRune
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture GhostPressRune.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Ghost press (working): ectoplasm stream and drips flowing out under the platen.
+material GhostPressFlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            texture_unit
+            {
+                texture ManaStillFlow.png
+                tex_address_mode wrap
+                filtering trilinear
+                scroll_anim -0.8 0
+            }
+        }
+    }
+}
+
+// Ghost press (working): green ectoplasm mist around the book and wisps rising in front of the press.
+material GhostPressVapour
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture GhostNoise.png
+                tex_address_mode wrap
+                scroll_anim 0.3 0.05
+                colour_op_ex modulate src_texture src_manual 0.20 0.65 0.24
+            }
+            texture_unit
+            {
+                texture ManaStillGlowRamp.png
+                tex_address_mode clamp
+                colour_op_ex modulate src_texture src_current
+            }
+        }
+    }
+}
+
+// Ghost press (idle): soft stain of dried ectoplasm on the empty bed.
+material GhostPressResidue
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            texture_unit
+            {
+                texture GhostPressStain.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.6 0.6 0.6
+            }
+        }
+    }
+}
+
 // Soul forge (ghost apparatus): green fire in the firebox of the working forge.
 material GhostForgeFire
 {

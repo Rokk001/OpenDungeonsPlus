@@ -104,6 +104,26 @@ def main():
     assert 'RESEARCH_BOOK_MESH = "Grimoire"' in read('source/entities/ItemBagEntity.cpp')
     for name in ('GhostBookLeather','GhostBookPages'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
+    # Ghost press rework after mockup A (owner decision 665): rusty iron, pulsing emblems, open book with turning runes,
+    # flowing ectoplasm, vapour, idle stain and draped webs.
+    for texture in ['GhostPressIron.png','GhostPressPages.png','GhostPressRune.png','GhostPressStain.png']+['GhostPressGlow_%d.png'%k for k in range(4)]:
+        credited('materials/textures/'+texture,credits)
+    press_mesh = (repo/'models/GhostPress.mesh').read_bytes()
+    for name in ('GhostPressIron','GhostPressEngraving','GhostPressEmblem','GhostPressPages','GhostPressRune','GhostPressFlow',
+            'GhostPressVapour','GhostPressResidue','GhostBookLeather','GhostBrass','GhostEctoplasm','ManaStillWeb','ManaStillWebStrand'):
+        block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
+        assert block, name
+        for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
+            for file in texture.split():
+                if file.endswith('.png'):
+                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+        assert name.encode()+b'\n' in press_mesh, ('ghost press uses',name)
+    assert re.search(r'anim_texture GhostPressGlow_0\.png( GhostPressGlow_\d\.png){3} [\d.]+',still_material), 'emblem pulse'
+    assert re.search(r'material GhostPressFlow\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'ectoplasm flow'
+    press_skeleton = (repo/'models/GhostPress.skeleton').read_bytes()
+    for bone in (b'Root',b'Press',b'Handle',b'Glow',b'Drips',b'Dull',b'Webs',b'SpringL',b'Stream',b'RuneL',b'Drip1',b'Drop1',
+            b'Wisp1',b'Mist',b'Residue',b'WebSway'):
+        assert bone+b'\n' in press_skeleton, bone
     # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
     for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):
         credited(path,credits)
