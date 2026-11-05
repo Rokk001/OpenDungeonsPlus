@@ -2583,7 +2583,7 @@ bool Tile::hasWorkerDigging() const
     return false;
 }
 
-void Tile::canWorkerDig(Creature& worker, std::vector<Tile*>& tiles)
+void Tile::canWorkerDig(Creature& worker, std::vector<Tile*>& tiles, RoomObjectNavigation::RouteCache* routeCache)
 {
     if(!getIsOnServerMap() || worker.getPositionTile() == nullptr)
         return;
@@ -2597,7 +2597,7 @@ void Tile::canWorkerDig(Creature& worker, std::vector<Tile*>& tiles)
             slot < ConfigManager::getSingleton().getNbWorkersDigSameFaceTile(); ++slot)
         {
             std::vector<Ogre::Vector2> path;
-            if(mWorkersDigging[i][slot] == nullptr && worker.wallDigPath(this, neigh, slot, path))
+            if(mWorkersDigging[i][slot] == nullptr && worker.wallDigPath(this, neigh, slot, path, routeCache))
             {
                 tiles.push_back(neigh);
                 break;
