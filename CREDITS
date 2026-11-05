@@ -2051,6 +2051,8 @@ assets-src/rooms/ghostroom/create_models.py    AI-generated with Codex    GPLv3+
 assets-src/rooms/ghostroom/GhostCauldron.blend    AI-generated with Codex    GPLv3+    Original iron press cauldron on four clawed feet, brass pipes and a real glazed opening, 2026-10-26
 models/GhostCauldron.mesh    AI-generated with Codex    GPLv3+    Export of the original GhostCauldron Blender source; two-tile footprint, 2026-10-26
 materials/scripts/Ghost.material    AI-generated with Codex    GPLv3+    Original weathered room-object surfaces, flowing ghost glow, glass and warning-lamp pulse, 2026-10-26
+models/Ghost.mesh    AI-generated with Claude Code    GPLv3+    Original ragged hooded ghost in a torn shroud with bony clawed hands and wisps streaming back, the one figure of every ghost, built in Blender after the chosen design, 2026-11-05
+models/Ghost.skeleton    AI-generated with Claude Code    GPLv3+    Original ghost rig with the floating Idle and gliding Walk clips, 2026-11-05
 materials/textures/GhostBrass.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
 materials/textures/GhostGaugeFace.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
 materials/textures/GhostIron.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26

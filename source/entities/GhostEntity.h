@@ -71,7 +71,7 @@ public:
     //! \brief Creates a ghost from an entity creation packet.
     static GhostEntity* loadFromPacket(GameMap* map, ODPacket& packet);
 protected:
-    //! \brief Creates the creature-shaped mesh and restores its current ghost presentation.
+    //! \brief Creates the shrouded ghost mesh and restores its current ghost presentation.
     void createMeshLocal(NodeType type = NodeType::MTILES_NODE) override;
 private:
     //! \brief Chooses a reachable non-full tile inside the configured Chebyshev square.
