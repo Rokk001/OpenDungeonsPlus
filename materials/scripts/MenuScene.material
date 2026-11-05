@@ -611,6 +611,16 @@ material MenuCrowBlack : MenuIron
     } }
 }
 
+// The menu crow's beak, eyes, legs and talons: dark grey horn with a dull sheen.
+material MenuCrowBeak : MenuIron
+{
+    technique { pass lighting {
+        ambient 0.075 0.072 0.068 1
+        diffuse 0.075 0.072 0.068 1
+        specular 0.26 0.24 0.21 1 36
+    } }
+}
+
 // Diseased rat hide is dark and soil-stained, with no colourful highlights.
 material MenuRatHide : MenuDemonStone
 {

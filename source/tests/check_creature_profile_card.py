@@ -147,8 +147,24 @@ social_width = int(social_size[3]) - int(social_size[1])
 social_height = int(social_size[4]) - int(social_size[2])
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
 assert 'OwnPostsText' in page and 'OwnPostsText' not in social_layout
-assert 'ownPosts->setText(posts)' in social and 'ownPosts->setVisible(hasCreature && !posts.empty())' in social
-assert social.index('ownPosts->setText(posts)') < social.index('creature->fillProfilePage(mProfilePage)')
+# The book shows the shared page without portrait, name, attributes and item slots (they have their own places in the
+# book) and lists the recent posts in its own column; the rows of the compact page start at the top.
+hidden = social[social.index('const char* const hidden[]'):]
+hidden = hidden[:hidden.index('};')]
+for name in ('Portrait', 'NameText', 'AttributesText', 'EquipmentText', 'EquipmentRow', 'OwnPostsText'):
+    assert '"%s"' % name in hidden, name
+assert 'page->getChild("PostsText")->setText(' in social and '(rows < MAX_OWN_POSTS)' in social
+assert social.index('const char* const hidden[]') < social.index('creature->fillProfilePage(mProfilePage)')
+assert 'const bool compact = !page->getChild("Portrait")->isVisible();' in profile_layout
+assert 'float y = compact ? PROFILE_ROW_GAP : std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);' in profile_layout
+import xml.etree.ElementTree as ElementTree
+social_root = ElementTree.fromstring(social_layout).find('Window')
+profile_page = social_root.find("Window[@name='ProfilePage']")
+holder_area = [float(v) for v in re.findall(r'\{(-?[0-9.]+),0\}', profile_page.find(
+    "Window[@name='SocialHolder']/Property[@name='Area']").get('value'))]
+page_area = [float(v) for v in re.findall(r'\{(-?[0-9.]+),0\}', profile_page.find("Property[@name='Area']").get('value'))]
+holder_width_fraction = holder_area[2] - holder_area[0]
+holder_height_fraction = (holder_area[3] - holder_area[1]) * (page_area[3] - page_area[1])
 assert 'y = layoutProfileTextRow(page->getChild("OwnPostsText"), y, scale)' in profile_layout
 assert profile_layout.index('page->getChild("OwnPostsText")') > profile_layout.index('textRowsAfter[i]')
 assert 'mProfilePage->setUserString("ProfileCreature", mSelectedCreature)' in social
@@ -162,10 +178,24 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
         scale = min(screen_width / 1024.0, screen_height / 768.0) * percent / 100.0
         for owner, outer_width, outer_height, fraction, reserve in (
                 ('card', width, height, .88, 0.0),
-                ('Dungeonbook', social_width, social_height, .9, 0.0)):
+                ('Dungeonbook', social_width, social_height, holder_height_fraction, 0.0)):
             fit = min(1.0, screen_width / (outer_width * scale), screen_height / (outer_height * scale))
             viewport = (outer_height * fit - title - border) * fraction - reserve
-            page_width = (outer_width * fit - 2 * side) * (.5 if owner == 'Dungeonbook' else 1.0)
+            page_width = (outer_width * fit - 2 * side) * (holder_width_fraction if owner == 'Dungeonbook' else 1.0)
+            if owner == 'Dungeonbook':
+                # Compact page: health and experience bars first, then the social rows, all reachable by scrolling
+                assert page_width - 48 >= 200, ('the social rows of the book are too narrow', page_width)
+                core_bottom = 4 + 4 + 20
+                assert core_bottom <= viewport
+                rows_bottom = core_bottom
+                for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
+                    top = rows_bottom + 4
+                    rows_bottom = top + lines * line_height + 4
+                    assert lines * line_height + 8 <= viewport, 'a single row is higher than the book viewport'
+                    maximum = max(0.0, rows_bottom - viewport)
+                    offset = min(top, maximum)
+                    assert top - offset >= 0 and rows_bottom - offset <= viewport + 1e-6
+                continue
             equipment_width = page_width - 148.0 - 32.0
             image_edge = max(1.0, min(equipment_width / 4.0, viewport * 0.2 / 5.0))
             columns = (2.5, 0.5, 1.5, 1.5, 1.5, 2.5, 0.5, 1.5, 2.5, 0.0, 1.0, 2.0, 3.0)

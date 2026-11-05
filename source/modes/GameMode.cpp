@@ -903,7 +903,7 @@ GameMode::GameMode(ModeManager *modeManager):
     mCreaturePanel.reset(new CreaturePanel(*mGameMap, modeManager->getGui(),
         mRootWindow->getChild(Gui::TAB_CREATURES)));
 
-    // Dungeonbook: creature list and post feed
+    // Dungeonbook: start page with creature list and feed, and the pages of one creature
     mSocialWindow.reset(new SocialWindow(mRootWindow, *mGameMap));
     // Workers window: fixed workers per job, mode, priority and carry order
     mWorkersWindow.reset(new WorkersWindow(mRootWindow, *mGameMap));
@@ -919,16 +919,7 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleSocialWindow, this)));
     addEventConnection(mRootWindow->getChild("SocialWindow")->subscribeEvent(
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&SocialWindow::onCloseClicked, mSocialWindow.get())));
-    addEventConnection(mRootWindow->getChild("SocialWindow/FilterButton")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFilterClicked, mSocialWindow.get())));
-    addEventConnection(mRootWindow->getChild("SocialWindow/FeedPane/FeedModeButton")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFeedModeClicked, mSocialWindow.get())));
-    addEventConnection(mRootWindow->getChild("SocialWindow/FeedTab")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFeedTabClicked, mSocialWindow.get())));
-    addEventConnection(mRootWindow->getChild("SocialWindow/ProfileTab")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileTabClicked, mSocialWindow.get())));
-    addEventConnection(mRootWindow->getChild("SocialWindow/CreatureList")->subscribeEvent(
-        CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&SocialWindow::onSelectionChanged, mSocialWindow.get())));
+    // The filters, the creature list, the arrows and the navigation bar of the book are connected by the book itself
 }
 
 GameMode::~GameMode()

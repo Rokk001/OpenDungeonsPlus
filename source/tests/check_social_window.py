@@ -30,11 +30,13 @@ check(m is not None, 'a fixed size centred area is expected')
 width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
 check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
 check('name="Visible" value="False"' in layout, 'hidden by default')
-for name in ('CreaturesLabel', 'FilterButton', 'CreatureList', 'FeedTab', 'ProfileTab', 'FeedPane', 'FeedModeButton',
-             'FeedText', 'ProfilePane', 'ProfileHint', 'ProfileHolder'):
+for name in ('HomePage', 'CreaturesLabel', 'FilterAll', 'FilterWorkers', 'FilterFighters', 'FilterUnhappy', 'ListRows',
+             'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'SocialHolder', 'PostsText', 'ValuesPage',
+             'InventoryPage', 'Header', 'BackButton', 'PrevButton', 'NextButton', 'NavBar', 'NavFeed', 'NavProfile',
+             'NavValues', 'NavInventory'):
     check('name="%s"' % name in layout, name)
-check('OpenProfileButton' not in layout, 'the profile opens in the right pane, not in a window')
-# Both columns use the shared frame client rectangle with proportional margins.
+check('OpenProfileButton' not in layout, 'the profile opens in the book, not in a window')
+# The start page has the list on the left and the feed of all creatures on the right, inside the shared frame client.
 import xml.etree.ElementTree as ET
 social_root = ET.fromstring(layout).find('Window')
 
@@ -48,21 +50,24 @@ def area(name):
     return [float(scale) for scale, _ in dims]
 
 
-list_area = area('CreatureList')
-feed = area('FeedPane')
-profile = area('ProfilePane')
-check(feed == profile, 'feed and profile use the same grid')
-check(feed[0] > list_area[2], 'the right part must not overlap the list')
-# Preserve the original minimum text-column width after subtracting the actual forged frame.
-skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()
-side = float(skin.find("Image[@name='WindowLeftEdge']").get('width')) / 4
-check((width - 2 * side) * (profile[2] - profile[0]) >= 400, 'the profile needs about 400 design pixels')
-check(abs(list_area[0] - (1 - profile[2])) < 1e-6, 'equal outer margins')
-check(area('FeedTab')[0] == feed[0] and area('ProfileTab')[2] == feed[2], 'tabs align to the right column')
-check(abs((area('FeedTab')[2] - area('FeedTab')[0]) -
-          (area('ProfileTab')[2] - area('ProfileTab')[0])) < 1e-6, 'equal tab widths')
-check('name="Visible" value="False"' in layout[layout.index('name="ProfilePane"'):layout.index('name="ProfileHint"')],
-      'the feed is shown first')
+list_area = area('ListRows')
+feed = area('FeedRows')
+check(feed[0] > list_area[2], 'the feed must not overlap the list')
+check(area('ListScroll')[0] >= list_area[2] and area('ListScroll')[2] <= feed[0], 'the list scrollbar sits between')
+# The feed column keeps the original minimum text-column width (light frame of at most 16 design pixels per side).
+check((width - 2 * 16) * (feed[2] - feed[0]) >= 400, 'the feed needs about 400 design pixels')
+pages = [w.get('name') for w in social_root.findall('Window')]
+check(pages[:5] == ['HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'], pages)
+for page in pages[1:5] + ['Header']:
+    own = social_root.find("Window[@name='%s']" % page).findall('Property')
+    check(any(p.get('name') == 'Visible' and p.get('value') == 'False' for p in own),
+          page + ' is hidden until a creature is opened')
+filter_areas = [area(n) for n in ('FilterAll', 'FilterWorkers', 'FilterFighters', 'FilterUnhappy')]
+check(all(abs((a[2] - a[0]) - (filter_areas[0][2] - filter_areas[0][0])) < 0.01 for a in filter_areas),
+      'equal filter widths')
+nav_areas = [area(n) for n in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory')]
+check(all(abs((a[2] - a[0]) - (nav_areas[0][2] - nav_areas[0][0])) < 1e-6 for a in nav_areas), 'equal navigation widths')
+check(area('NavBar')[1] >= max(area(p)[3] for p in pages[:5]) - 1e-6, 'the navigation bar sits below the pages')
 check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')
 
 hud = read('gui/ModeGame.layout')
@@ -93,9 +98,10 @@ check('mSocialWindow->update(' in frame and 'PostLog' not in frame, 'the feed is
 
 window = read('source/render/SocialWindow.cpp')
 server = read('source/network/ODServer.cpp')
-check('seat->isAlliedSeat(owner)' in server and 'keeper->getNick()' in server and 'creature.keeper' in window,
+check('seat->isAlliedSeat(owner)' in server and 'keeper->getNick()' in server and '"Keeper: " + entry.keeper' in window,
       'the server sends allied creatures with their keeper name')
-check('item->setTooltipText(entries[i].mText)' in window, 'full list entry remains available when elided')
+check('row->getChild("Button")->setTooltipText(' in window and 'entry->keeper' in window,
+      'full name, class and keeper remain available when the name is elided')
 
 # Older peers and replays have no on-demand server roster; use recorded creatures and the original profile.
 local_start = window.index('bool useLocalCreatureRoster()')
@@ -113,17 +119,23 @@ check('!useLocalCreatureRoster()' in hide and 'askDungeonbookRoster, false' in h
       'no unsubscribe is sent to a replay or unsupported peer')
 roster_body = window[window.index('void SocialWindow::rebuildCreatureList()'):window.index('void SocialWindow::rebuildFeed()')]
 for source in ('mGameMap.getSeats()', 'isAlliedSeat(seat)', 'mGameMap.getCreaturesBySeat(seat)',
-               'entry.name = creature->getName()', 'entry.keeper = seat->getPlayer()->getNick()'):
+               'entry.name = creature->getName()', 'entry.keeper = seat->getPlayer()->getNick()',
+               'entry.appearance = CreatureAppearanceLogic::toToken(creature->getAppearance())'):
     check(source in roster_body, 'local list uses the recorded allied creature data: ' + source)
-profile_body = window[window.index('void SocialWindow::refreshProfile()'):window.index('void SocialWindow::rebuildCreatureList()')]
-check('if(localRoster)' in profile_body and 'creature->fillProfilePage(mProfilePage)' in profile_body,
-      'local mode retains the existing social profile without server-only statistics')
-check('getStatsText(' not in profile_body, 'local profile does not invent server-only statistics')
+profile_body = window[window.index('void SocialWindow::refreshProfile('):window.index('void SocialWindow::refreshValues(')]
+check('creature->fillProfilePage(mProfilePage)' in profile_body and 'if(creature != nullptr)' in profile_body,
+      'a creature known here shows the existing social profile')
+check('getStatsText(' not in window, 'the book does not invent server-only statistics')
+values_body = window[window.index('void SocialWindow::refreshValues('):window.index('void SocialWindow::refreshInventory(')]
+check('const bool known = !useLocalCreatureRoster();' in values_body and 'known ?' in values_body,
+      'replays and older peers show no server-only values')
 check('Known creatures (' in roster_body and 'detailed server statistics are unavailable' in roster_body,
       'local roster is identified as incomplete')
 destructor = window[window.index('SocialWindow::~SocialWindow()'):window.index('void SocialWindow::setTabState')]
-check('connection->disconnect()' in destructor and 'windows.destroyWindow(mProfilePage)' in destructor and
-      'windows.destroyWindow(mDungeonbookPage)' in destructor, 'both dynamic pages and subscriptions are released')
+check('connection->disconnect()' in destructor and 'windows.destroyWindow(mProfilePage)' in destructor,
+      'the dynamic page and all subscriptions are released')
+check('mLinkConnections.push_back(window->subscribeEvent(event, subscriber))' in window,
+      'every control subscription of the book is kept for the release')
 client = read('source/network/ODClient.cpp')
 check('getDungeonbookRosterOpen()' in server and 'notifyDungeonbookRoster(gameMap, player)' in server,
       'server sends snapshots only to subscribed clients')
@@ -142,24 +154,24 @@ check('getDungeonbookRoster()' in window and 'getCircularCreatureAppearanceImage
 header = read('source/render/SocialWindow.h')
 check('onOpenProfileClicked' not in window + gamemode + header and 'createStatsWindow' not in window,
       'no window is opened from the Dungeonbook')
-for handler in ('onFeedTabClicked', 'onProfileTabClicked'):
-    check('SocialWindow::' + handler in window and '&SocialWindow::' + handler in gamemode, handler)
+for handler in ('onNavClicked', 'onBackClicked', 'onPreviousClicked', 'onNextClicked', 'onFilterClicked',
+                'onListRowClicked'):
+    check('SocialWindow::' + handler in window and '&SocialWindow::' + handler in window, handler)
 check('SocialWindow::onLinkClicked' in window and '&SocialWindow::onLinkClicked' in window,
       'the names in the friends and foe rows select a creature')
 page = read('gui/WindowCreatureProfilePage.layout')
-check('name="OwnPostsText"' in page and 'mProfilePage->getChild("OwnPostsText")' in window,
-      'the existing recent posts share the scrolling profile')
-check('MAX_OWN_POSTS = 5' in window and '(rows < MAX_OWN_POSTS)' in window, 'all five recent posts remain available')
+check('name="OwnPostsText"' in page and '"OwnPostsText"' in window,
+      'the recent posts of the shared page give way to the posts column of the book')
+check('MAX_OWN_POSTS = 5' in window and '(rows < MAX_OWN_POSTS)' in window, 'the five recent posts remain available')
 for name in ('FriendLink0', 'FriendLink1', 'FoeLink'):
     check('type="OD/InvisibleButton" name="%s"' % name in page, name + ' is a borderless button')
 check('LinkButton' not in layout + window + gamemode, 'the friend and foe buttons below the profile are gone')
 check('getHorzScrollbar' not in window and 'elideToWidth' in window,
-      'long list entries are shortened, no horizontal scrollbar')
-check('EventMouseDoubleClick' not in gamemode[gamemode.index('SocialWindow/CreatureList'):gamemode.index('GameMode::~GameMode')],
-      'no double click window')
-selection = window[window.index('bool SocialWindow::onSelectionChanged'):]
+      'long names are shortened, no horizontal scrollbar')
+check('EventMouseDoubleClick' not in window, 'no double click window')
+selection = window[window.index('bool SocialWindow::onListRowClicked'):]
 selection = selection[:selection.index('\n}\n')]
-check('showTab(true)' in selection, 'selecting a creature shows its profile')
+check('Page::Profile' in selection, 'selecting a creature shows its profile')
 check('fillProfilePage(mProfilePage)' in window and 'createCreatureProfilePage(holder)' in window,
       'the profile uses the shared fill function')
 tabs = window[window.index('void SocialWindow::setTabState'):window.index('bool SocialWindow::isVisible')]

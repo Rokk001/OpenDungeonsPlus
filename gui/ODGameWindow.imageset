@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Imageset autoScaled="true" imagefile="ODGameWindow.png" name="OpenDungeonsGameWindow" nativeHorzRes="3840" nativeVertRes="2160" version="2">
+    <Image name="ClientBrush" xPos="0" yPos="0" width="256" height="256" />
+    <Image name="FrameTopLeft" xPos="260" yPos="0" width="32" height="32" />
+    <Image name="FrameTopRight" xPos="296" yPos="0" width="32" height="32" />
+    <Image name="FrameBottomLeft" xPos="332" yPos="0" width="32" height="32" />
+    <Image name="FrameBottomRight" xPos="368" yPos="0" width="32" height="32" />
+    <Image name="FrameTop" xPos="260" yPos="40" width="128" height="16" />
+    <Image name="FrameBottom" xPos="260" yPos="60" width="128" height="16" />
+    <Image name="FrameLeft" xPos="260" yPos="80" width="16" height="128" />
+    <Image name="FrameRight" xPos="280" yPos="80" width="16" height="128" />
+    <Image name="TitleRule" xPos="260" yPos="220" width="64" height="4" />
+    <Image name="CloseButtonNormal" xPos="260" yPos="230" width="48" height="48" />
+    <Image name="CloseButtonHover" xPos="312" yPos="230" width="48" height="48" />
+    <Image name="CloseButtonPressed" xPos="364" yPos="230" width="48" height="48" />
+</Imageset>

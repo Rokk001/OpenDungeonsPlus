@@ -215,15 +215,25 @@ for count in (5, 11):
     step = 0.78 / count
     assert 0.12 + (count - 1) * step + step * 38 / 46 < 0.9
 
-# The Dungeonbook creature profile page is laid out with relative areas only, so it follows the fitted window at every
-# screen size and UI scale; it has no scrollbar and shows Magical and Element Defense (check_dungeonbook_profile_layout.py
-# verifies the line heights at 640x480 to 8K and 80 to 120 percent).
-dungeonbook_page = (repo / 'gui/WindowDungeonbookProfile.layout').read_text(encoding='utf-8')
-assert 'Scrollbar' not in dungeonbook_page, 'the Dungeonbook profile page must not use inner scrollbars'
-assert 'Magical Defense' in dungeonbook_page and 'Element Defense' in dungeonbook_page
-for area in re.findall(r'name="Area" value="([^"]*)"', dungeonbook_page):
-    assert all(offset == 0 for _scale, offset in udims(area)), 'the Dungeonbook profile page uses relative areas only'
-print('Dungeonbook profile page fits at every scale (relative areas, no scrollbar)')
+# The Dungeonbook (start page and the four pages of one creature) is laid out with relative areas only inside its
+# fixed window, so it follows the fitted window at every screen size and UI scale; its values sheet has no scrollbar and
+# shows Magical and Element Defense (check_dungeonbook_profile_layout.py verifies the line heights at 640x480 to 8K and
+# 80 to 120 percent).
+dungeonbook = ET.parse(repo / 'gui/WindowSocial.layout').getroot().find('Window')
+assert not (repo / 'gui/WindowDungeonbookProfile.layout').exists(), 'the old profile page with its buttons is gone'
+values_sheet = dungeonbook.find("Window[@name='ValuesPage']")
+assert values_sheet is not None and values_sheet.find(".//Property[@name='VertScrollbar']") is None, \
+    'the Dungeonbook values sheet must not use inner scrollbars'
+assert 'Magical Defense' in ET.tostring(values_sheet, encoding='unicode')
+assert 'Element Defense' in ET.tostring(values_sheet, encoding='unicode')
+for part in dungeonbook.iter('Window'):
+    if part is dungeonbook:
+        continue
+    for prop in part.findall('Property'):
+        if prop.get('name') == 'Area':
+            assert all(offset == 0 for _scale, offset in udims(prop.get('value'))), \
+                part.get('name') + ' of the Dungeonbook uses a fixed pixel area'
+print('Dungeonbook pages fit at every scale (relative areas, no scrollbar on the values sheet)')
 
 # The Workers window (key J) is part of the checked windows, fits every tested screen without being shrunk below its
 # text, and everything inside it uses relative areas (check_workers_window.py pins its parts and behaviour).

@@ -60,7 +60,8 @@ GhostEntity::GhostEntity(GameMap* map, const Creature& corpse) : GhostEntity(map
     mCreatureName = corpse.getName();
     mLevel = corpse.getLevel();
     setSeat(corpse.getSeat());
-    setMeshName(corpse.getDefinition()->getMeshName());
+    // Every ghost shows the one shrouded ghost figure, whatever creature it was.
+    setMeshName("Ghost");
     mPosition = corpse.getPosition();
     mPosition.z = 0.0f;
     mPrevAnimationState = EntityAnimation::idle_anim;
@@ -315,8 +316,8 @@ void GhostEntity::updateLook()
         alpha *= static_cast<float>(1.0 - progress);
     else if(mState == GhostState::boxed)
         alpha = 0.0f;
-    const double levelSteps=static_cast<double>(std::max(1u,std::min(MAX_LEVEL,mLevel))-1u);
-    const double scale=(1.0+ConfigManager::getSingleton().getCreatureLevelGrowthMax()*levelSteps/static_cast<double>(MAX_LEVEL-1u))*(1.0-mCaptureProgress);
+    // One size for every ghost; it only shrinks while it is being captured.
+    const double scale=1.0-mCaptureProgress;
     node->setScale(Ogre::Vector3::UNIT_SCALE*static_cast<Ogre::Real>(scale));
     node->setVisible(mState != GhostState::boxed);
     node->setPosition(mPosition + Ogre::Vector3(0, 0, height));
@@ -328,10 +329,7 @@ void GhostEntity::createMeshLocal(NodeType type)
     RenderedMovableEntity::createMeshLocal(type);
     if(!getIsOnServerMap())
     {
-        const double levelSteps = static_cast<double>(std::max(1u, std::min(MAX_LEVEL, mLevel)) - 1u);
-        const Ogre::Real scale = static_cast<Ogre::Real>(1.0 + ConfigManager::getSingleton().getCreatureLevelGrowthMax() *
-            levelSteps / static_cast<double>(MAX_LEVEL - 1u));
-        getEntityNode()->setScale(Ogre::Vector3::UNIT_SCALE * scale);
+        getEntityNode()->setScale(Ogre::Vector3::UNIT_SCALE);
         updateLook();
     }
 }
@@ -395,7 +393,7 @@ bool GhostEntity::importFromStream(std::istream& stream)
     const CreatureDefinition* definition = getGameMap()->getClassDescription(mClassName);
     if(getSeat() == nullptr || definition == nullptr)
         return false;
-    setMeshName(definition->getMeshName());
+    setMeshName("Ghost");
     mPosition.z = 0.0f;
     if(mAssignedHunter == "none")
         mAssignedHunter.clear();

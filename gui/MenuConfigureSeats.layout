@@ -20,7 +20,7 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/FrameWindow" name="ListPlayers" >
+        <Window type="OD/MenuFrameWindow" name="ListPlayers" >
             <Property name="Area" value="{{0.5,-500},{0.5,-210},{0.5,500},{0.5,270}}" />
             <Property name="Text" value="Please configure players..." />
             <Property name="MinSize" value="{{0,630},{0,480}}" />
@@ -75,7 +75,7 @@
                 <Property name="Text" value="Start Game" />
             </Window>
         </Window>
-        <Window type="OD/FrameWindow" name="GameSettingsWindow" >
+        <Window type="OD/MenuFrameWindow" name="GameSettingsWindow" >
             <Property name="Area" value="{{0.5,-320},{0.5,-230},{0.5,320},{0.5,230}}" />
             <Property name="Text" value="Game settings" />
             <Property name="MaxSize" value="{{1,0},{1,0}}" />

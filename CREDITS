@@ -1326,7 +1326,7 @@ materials/textures/loading/loading_*.jpg    OD Team    GPLv3+    Twenty-five ori
 =======================================================
 assets-src/menu-scene/*.blend          OD Team                 GPLv3+                  Original fortress sources, individual ruin variants and independently AI-authored graveyard props generated for this project with Blender; one model per file. The thirteen fortress families retain fractured masonry, damaged guardians, worn iron, torn cloth and wet rubble. Separate new sources add skeletal remains, graves, ruined weapons, trophies, vermin, web victims, hanging title and crest, blood moon and burning distant ruins. Geometry and skeletal animation are original project work using the five credited detail texture pairs.
 models/Menu*.mesh, models/Menu*.skeleton OD Team                 GPLv3+                  Original fortress geometry, individual damage variants and looping cloth, crow, title and chained-remain skeletons, generated for this project with tools/blender-assets/menu_scene_models.py and the existing Ogre exporter; per-object texture variation is baked into the exported UVs. Independently AI-authored graveyard, ruined weapons, remains, trophies, vermin, web victims, hanging title, blood moon and distant burning ruins retain the original project source and GPLv3+ licence. Courtyard, gate, both wall segments and campaign hall are re-exported from the unchanged project sources with full-width vertex indices.
-models/MenuCrowA.mesh, models/MenuCrowA.skeleton, models/MenuCrowB.*, models/MenuCrowC.*, models/MenuCrowD.* OD Team GPLv3+ Own work, created with Blender (AI-assisted): crow with large wings, perched Watch clip plus the Flap, FlapIn, TakeOff and Land wing-beat clips, generated for this project by tools/blender-assets/menu_scene_models.py; supersedes the earlier crow geometry named in the line above.
+models/MenuCrowA.mesh, models/MenuCrowA.skeleton, models/MenuCrowB.*, models/MenuCrowC.*, models/MenuCrowD.* OD Team GPLv3+ Own work, created with Blender (AI-assisted): heavy, powerful black crow with a hooked beak, shaggy throat hackles, layered feathers, a long wedge tail, big talons and large wings with fingered primaries, built after the chosen design (2026-11-05); perched Watch clip plus the Flap, FlapIn, TakeOff and Land wing-beat clips with a full up-and-down stroke; supersedes the earlier crow geometry of tools/blender-assets/menu_scene_models.py named in the lines above.
 materials/textures/menu/MenuStone.png, materials/textures/menu/MenuStoneNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; seamless dark stone albedo and matching normal map.
 materials/textures/menu/MenuFortressStone.png, materials/textures/menu/MenuFortressStoneNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; cracked, soot-weathered fortress masonry albedo and matching tangent-space normal map.
 materials/textures/menu/MenuWetPaving.png, materials/textures/menu/MenuWetPavingNormal.png OD Team GPLv3+ AI-generated with the built-in image generator for this project; fractured wet paving albedo and matching tangent-space normal map.
@@ -1397,6 +1397,9 @@ gui/items/ItemBag.png	AI-generated with Codex	GPLv3+	Original cloth item sack ic
 gui/items/GiftBoxItem.png	AI-generated with Codex	GPLv3+	Original wooden item gift box icon, created for this project; prompt in materials/items/PROMPTS.md.
 gui/Items.png	OpenDungeonsPlus contributors	GPLv3+	Atlas assembled from the original item, potion and herb icons credited in this file.
 materials/textures/MerchantFloor*.png	OpenDungeonsPlus contributors	CC0	Original procedural planks and carpet remnants from tools/room-floors/generate_room_floors.py.
+materials/textures/MerchantHide.png    AI-generated with Claude Code    GPLv3+    Original sallow old skin texture of the merchant with fine wrinkles and liver spots, procedurally painted, 2026-11-05
+materials/textures/MerchantLeather.png    AI-generated with Claude Code    GPLv3+    Original worn leather texture of the merchant's belt, pouch and boots, procedurally painted, 2026-11-05
+materials/textures/MerchantRobe.png    AI-generated with Claude Code    GPLv3+    Original ragged dark wool texture of the merchant's robe with patches, holes and grime, procedurally painted, 2026-11-05
 materials/textures/AlchemyLabFloor*.png	OpenDungeonsPlus contributors	CC0	Original procedural stone slabs and herbal spills from tools/room-floors/generate_room_floors.py.
 materials/textures/HerbGardenFloor*.png	OpenDungeonsPlus contributors	CC0	Original procedural garden soil and timber bed edges from tools/room-floors/generate_room_floors.py.
 materials/scripts/ItemRoomFloors.material	OpenDungeonsPlus contributors	GPLv3+	Original material definitions for the merchant, alchemy laboratory and herb garden floors.
@@ -1420,7 +1423,7 @@ models/SalesTable.mesh    OD Team    GPLv3+    Original project model made in Bl
 assets-src/items/SalesTable.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 models/MerchantShelf.mesh    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 assets-src/items/MerchantShelf.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
-models/Merchant.mesh    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
+models/Merchant.mesh    AI-generated with Claude Code    GPLv3+    Original hunchbacked merchant in a ragged hooded robe with brass scales, pouch and a gold tooth, rebuilt in Blender after the chosen design, 2026-11-05
 assets-src/items/Merchant.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 models/Cauldron.mesh    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 assets-src/items/Cauldron.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
@@ -1458,7 +1461,7 @@ models/SunthornSapling.mesh    OD Team    GPLv3+    Original project model made 
 assets-src/items/SunthornSapling.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 models/SunthornRipe.mesh    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 assets-src/items/SunthornRipe.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
-models/Merchant.skeleton    OD Team    GPLv3+    Original project skeleton and native animation clips, exported from assets-src/items/Merchant.blend.
+models/Merchant.skeleton    AI-generated with Claude Code    GPLv3+    Original Merchant rig and Idle, Walk, CountGold and RubHands animation clips, rebuilt 2026-11-05
 models/Cauldron.skeleton    OD Team    GPLv3+    Original project skeleton and native animation clips, exported from assets-src/items/Cauldron.blend.
 materials/scripts/ItemProps.material    OD Team    GPLv3+    Original prop surfaces and quality materials; quality surfaces retain the existing source textures and their existing credits.
 materials/scripts/ItemQualityWeapons.material    OD Team    GPLv3+    Original prop surfaces and quality materials; quality surfaces retain the existing source textures and their existing credits.
@@ -1701,22 +1704,22 @@ materials/scripts/TavernObjects.material    AI-generated with Codex    GPLv3+   
 materials/scripts/TavernWall.material    AI-generated with Codex    GPLv3+    Original tavern material using existing project shader and transparency patterns, 2026-10-25
 materials/textures/tavern/DuelBird.png    AI-generated with Codex    GPLv3+    Three-bird orbit atlas assembled from the original painted source, 64 phases, 2026-10-25
 materials/textures/tavern/TavernBrass.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
-materials/textures/tavern/TavernCloth.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernCloth.png    AI-generated with Claude Code    GPLv3+    Original innkeeper cloth atlas: stained apron, leather straps and red-striped towel, procedurally painted, 2026-11-05
 materials/textures/tavern/TavernFloor.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
 materials/textures/tavern/TavernFloorNormal.png    AI-generated with Codex    GPLv3+    Original tangent-space normal map from the matching tavern surface height field, 2026-10-25
 materials/textures/tavern/TavernFoam.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
-materials/textures/tavern/TavernHood.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernHood.png    AI-generated with Claude Code    GPLv3+    Original worn dark wool texture of the innkeeper's hood and robe, procedurally painted, 2026-11-05
 materials/textures/tavern/TavernIron.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
-materials/textures/tavern/TavernSign.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
-materials/textures/tavern/TavernSkin.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
+materials/textures/tavern/TavernSign.png    AI-generated with Claude Code    GPLv3+    Original green patina texture of the hanging counter sign, procedurally painted, 2026-11-05
+materials/textures/tavern/TavernSkin.png    AI-generated with Claude Code    GPLv3+    Original innkeeper hide atlas with eye, tusk, claw and mouth patches, procedurally painted, 2026-11-05
 materials/textures/tavern/TavernStone.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
 materials/textures/tavern/TavernVomit.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
 materials/textures/tavern/TavernWall.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
 materials/textures/tavern/TavernWallNormal.png    AI-generated with Codex    GPLv3+    Original tangent-space normal map from the matching tavern surface height field, 2026-10-25
 materials/textures/tavern/TavernWood.png    AI-generated with Codex    GPLv3+    Original dungeon tavern surface texture, 2026-10-25
-models/Innkeeper.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
-models/Innkeeper.skeleton    AI-generated with Codex    GPLv3+    Original Innkeeper rig and Idle, Pour and Cheer animation clips, 2026-10-25
-models/TavernCounter.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
+models/Innkeeper.mesh    AI-generated with Claude Code    GPLv3+    Original hooded innkeeper with apron and shoulder cloth, rebuilt in Blender after the chosen design, 2026-11-05
+models/Innkeeper.skeleton    AI-generated with Claude Code    GPLv3+    Original Innkeeper rig and Idle, Pour and Cheer animation clips, rebuilt 2026-11-05
+models/TavernCounter.mesh    AI-generated with Claude Code    GPLv3+    Original plank counter closed to the floor with brass foot rail, iron hinges and green hanging sign, rebuilt in Blender after the chosen design, 2026-11-05
 models/TavernKeg.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 models/TavernMug.mesh    AI-generated with Codex    GPLv3+    Original wooden mug exported with a grip-centred origin and the existing right-hand weapon-mount orientation, 2026-10-25
 models/TavernTable.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25; two tiles long since 2026-11-02
@@ -1950,7 +1953,7 @@ particles/ChickenFeathers.particle (SpaMudSplash) OD Team GPLv3+ Original brown 
 
 assets-src/gui/icons/tiles/SpaButton.png AI-generated with Codex GPLv3+ Original painted steaming mud pool and towel in the existing room icon style, generated with built-in imagegen and downsampled to the 256-pixel source, 2026-10-26
 
-materials/scripts/Spa.material OD Team GPLv3+ Original mud, ember seam, dark wood, stone and attendant material bindings using existing project textures; AI-generated with Codex
+materials/scripts/Spa.material OD Team GPLv3+ Original mud, ember seam, dark wood, stone and attendant material bindings; the attendant skin, suit and towel use the textures credited below (2026-11-05); AI-generated with Codex and Claude Code
 assets-src/rooms/spa/SpaMudPool.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
 models/SpaMudPool.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
 assets-src/rooms/spa/SpaPoolRim.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
@@ -1960,8 +1963,11 @@ models/SpaChair.mesh OD Team CC0 Original hot mud bath model exported with the p
 assets-src/rooms/spa/SpaSpringboard.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
 models/SpaSpringboard.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
 assets-src/rooms/spa/PoolAttendant.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
-models/PoolAttendant.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
-models/PoolAttendant.skeleton OD Team CC0 Original articulated pool attendant with Sit, Whistle, TowelWave, Doze, Walk, Climb and Jump clips, each two seconds; AI-generated with Codex
+models/PoolAttendant.mesh AI-generated with Claude Code GPLv3+ Original pot-bellied pool attendant in a striped bathing suit with a towel over the shoulder and a whistle on a cord, rebuilt in Blender after the chosen design, 2026-11-05
+models/PoolAttendant.skeleton AI-generated with Claude Code GPLv3+ Original pool attendant rig with Sit, Whistle, TowelWave, Doze, Walk, Climb and Jump clips, each two seconds, rebuilt 2026-11-05
+materials/textures/SpaAttendantSkin.png AI-generated with Claude Code GPLv3+ Original ruddy skin texture of the pool attendant with body hair and two faint scratches, procedurally painted, 2026-11-05
+materials/textures/SpaAttendantSuit.png AI-generated with Claude Code GPLv3+ Original worn cream and navy striped knitted bathing suit texture, procedurally painted, 2026-11-05
+materials/textures/SpaAttendantTowel.png AI-generated with Claude Code GPLv3+ Original grubby terry towel texture with red end stripes, procedurally painted, 2026-11-05
 
 == Real hot mud bath recordings ==
 
@@ -2045,6 +2051,8 @@ assets-src/rooms/ghostroom/create_models.py    AI-generated with Codex    GPLv3+
 assets-src/rooms/ghostroom/GhostCauldron.blend    AI-generated with Codex    GPLv3+    Original iron press cauldron on four clawed feet, brass pipes and a real glazed opening, 2026-10-26
 models/GhostCauldron.mesh    AI-generated with Codex    GPLv3+    Export of the original GhostCauldron Blender source; two-tile footprint, 2026-10-26
 materials/scripts/Ghost.material    AI-generated with Codex    GPLv3+    Original weathered room-object surfaces, flowing ghost glow, glass and warning-lamp pulse, 2026-10-26
+models/Ghost.mesh    AI-generated with Claude Code    GPLv3+    Original ragged hooded ghost in a torn shroud with bony clawed hands and wisps streaming back, the one figure of every ghost, built in Blender after the chosen design, 2026-11-05
+models/Ghost.skeleton    AI-generated with Claude Code    GPLv3+    Original ghost rig with the floating Idle and gliding Walk clips, 2026-11-05
 materials/textures/GhostBrass.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
 materials/textures/GhostGaugeFace.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
 materials/textures/GhostIron.png    AI-generated with Codex    GPLv3+    Original Blender-baked surface or two-colour lamp-pulse frame from the editable model authoring source, 2026-10-26
@@ -2164,3 +2172,5 @@ assets-src/gui/icons/tiles/Worker*.png    AI-generated with Codex image generati
 
 assets-src/gui/icons/tiles/WorkersButton.png and WorkerCheckbox{Empty,Checked}.png    AI-generated with Codex image generation    GPLv3+    Original painted worker HUD icon and replacement checkbox states; prompts in assets-src/gui/icons/WORKERS-ICONS.md.
 assets-src/gui/icons/tiles/WorkerArrow*.png, WorkerFreePortrait.png, WorkerHandActive.png, WorkerHandInactive.png, WorkerCarryGold.png, WorkersTitlePlaque.png    AI-generated with Codex image generation    GPLv3+    Repainted Workers window controls and blank title plaque; prompts in assets-src/gui/icons/WORKERS-ICONS.md.
+
+gui/DungeonbookIcons.png    AI-generated (drawn by a script written with an AI assistant)    GPLv3+    Original Dungeonbook navigation, arrow, mood, lock and value-sheet symbols, procedurally drawn for this project, 2026-11-05.

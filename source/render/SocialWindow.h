@@ -18,6 +18,8 @@
 #ifndef SOCIALWINDOW_H
 #define SOCIALWINDOW_H
 
+#include "social/PostLog.h"
+
 #include <CEGUI/Event.h>
 #include <CEGUI/EventArgs.h>
 
@@ -27,30 +29,29 @@
 
 class GameMap;
 
-namespace social
-{
-struct Post;
-}
-
 namespace CEGUI
 {
+class Image;
+class Scrollbar;
 class Window;
 }
 
-//! \brief The Dungeonbook: a window with the list of the creatures of the local player on the left and,
-//! on the right, either the feed of their posts (see social/PostLog.h) or the profile of the selected
-//! creature (switched by two tab buttons, selecting a creature shows its profile). The window itself comes
-//! from gui/WindowSocial.layout, the event handlers are connected by the game mode. The window only
-//! redraws while it is visible and only when the post log or the roster changed.
+//! \brief The Dungeonbook (gui/WindowSocial.layout). Its start page lists the creatures of the local player and its
+//! allies on the left (portrait, name, level and mood, filtered by All, Workers, Fighters or Unhappy) and the feed of
+//! all their posts (see social/PostLog.h) on the right. A click on a creature opens its own pages: its feed, its social
+//! profile, its values and its inventory, switched by the navigation bar at the bottom. The head of these pages has a
+//! back arrow to the start page and arrows to the previous and next creature of the list. The window connects its own
+//! controls; the game mode connects the close button, the HUD button and the key. It only redraws while it is visible
+//! and only when the post log or the roster changed, or every few seconds for the ages of the posts.
 class SocialWindow
 {
 public:
     SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap);
     ~SocialWindow();
 
-    //! \brief Shows the window on top of the other ones and draws list and feed.
+    //! \brief Shows the window on top of the other ones and draws the shown page.
     void show();
-    //! \brief Same, with the given creature selected in the list (all creatures are listed then).
+    //! \brief Same, with the profile page of the given creature (all creatures are listed then).
     void showCreature(const std::string& creatureName);
     void hide();
     bool isVisible() const;
@@ -59,17 +60,6 @@ public:
     void update(float elapsed);
 
     bool onCloseClicked(const CEGUI::EventArgs& e);
-    bool onFilterClicked(const CEGUI::EventArgs& e);
-    bool onFeedModeClicked(const CEGUI::EventArgs& e);
-    bool onSelectionChanged(const CEGUI::EventArgs& e);
-    bool onFeedTabClicked(const CEGUI::EventArgs& e);
-    bool onProfileTabClicked(const CEGUI::EventArgs& e);
-    //! \brief A friend or foe name in the profile: selects that creature.
-    bool onLinkClicked(const CEGUI::EventArgs& e);
-    //! \brief Switches between the attributes and the existing social profile.
-    bool onProfileViewClicked(const CEGUI::EventArgs& e);
-    //! \brief Switches the Dungeonbook profile between its first page and the statistics page.
-    bool onStatisticsViewClicked(const CEGUI::EventArgs& e);
 
     //! \brief Marks the tab button as the active one (gold, in brackets); the button stays enabled.
     static void setTabState(CEGUI::Window* tab, const std::string& label, bool active);
@@ -89,37 +79,81 @@ private:
         Unhappy
     };
 
+    //! The pages of the book: the start page and the four pages of one creature
+    enum class Page
+    {
+        Home,
+        Feed,
+        Profile,
+        Values,
+        Inventory
+    };
+
+    //! \brief One of the four filter buttons of the start page (user string "Filter").
+    bool onFilterClicked(const CEGUI::EventArgs& e);
+    //! \brief A creature of the list (user string "Row"): opens its profile page.
+    bool onListRowClicked(const CEGUI::EventArgs& e);
+    //! \brief A button of the navigation bar (user string "Page").
+    bool onNavClicked(const CEGUI::EventArgs& e);
+    //! \brief The back arrow: returns to the start page, the creature stays selected.
+    bool onBackClicked(const CEGUI::EventArgs& e);
+    //! \brief The arrows around the name: the previous or next creature of the list, on the same page.
+    bool onPreviousClicked(const CEGUI::EventArgs& e);
+    bool onNextClicked(const CEGUI::EventArgs& e);
+    //! \brief A friend or foe name in the profile: shows the profile of that creature.
+    bool onLinkClicked(const CEGUI::EventArgs& e);
+    //! \brief The scrollbars of the list and of the feeds move the shown rows.
+    bool onListScrolled(const CEGUI::EventArgs& e);
+    bool onFeedScrolled(const CEGUI::EventArgs& e);
+    //! \brief The mouse wheel over the list or over a feed moves its scrollbar.
+    bool onListWheel(const CEGUI::EventArgs& e);
+    bool onFeedWheel(const CEGUI::EventArgs& e);
+
+    //! \brief Subscribes to an event of a window of the book; the connection is released with the book.
+    void connect(CEGUI::Window* window, const CEGUI::String& event, const CEGUI::Event::Subscriber& subscriber);
+    //! \brief Builds the roster (server roster or locally known creatures) and the filtered, sorted list.
     void rebuildCreatureList();
+    //! \brief Shows the creatures of the list from the scroll position on, the selected one highlighted.
+    void refreshListRows();
+    //! \brief Fills the feed of the shown page: all posts on the start page, the posts of the creature on its feed.
     void rebuildFeed();
-    //! \brief Shows the feed (false) or the profile (true) in the right part of the window.
-    void showTab(bool profile);
-    //! \brief Selects the creature in the list (resetting the filter if it hides the creature) and shows its profile.
-    void selectCreature(const std::string& creatureName);
-    //! \brief Fills the shared scrolling profile with the selected creature and its recent posts.
-    void refreshProfile();
+    //! \brief Shows a page, updates the navigation bar and the head and fills the page.
+    void showPage(Page page);
+    //! \brief Selects the creature (resetting the filter if it hides the creature) and shows the given page.
+    void selectCreature(const std::string& creatureName, Page page);
+    //! \brief Selects the previous (-1) or next (+1) creature of the list, wrapping around.
+    void stepCreature(int direction);
+    //! \brief Fills the shown page of the selected creature.
+    void refreshPage();
+    void refreshHeader(const social::DungeonbookEntry& entry);
+    void refreshProfile(const social::DungeonbookEntry& entry);
+    void refreshValues(const social::DungeonbookEntry& entry);
+    void refreshInventory(const social::DungeonbookEntry& entry);
+    //! \brief The roster entry of the creature, null if it is not in the roster.
+    const social::DungeonbookEntry* findEntry(const std::string& creatureName) const;
+    //! \brief The composed picture of the creature (round or square), else its round tinted portrait; null if neither exists.
+    const CEGUI::Image* findPortrait(const std::string& creatureName, const std::string& className, bool worker,
+        bool circular) const;
+    //! \brief Mood word and symbol of the creature for the list and the profile.
+    void describeMood(const social::DungeonbookEntry& entry, std::string& text, std::string& icon) const;
 
     GameMap& mGameMap;
     CEGUI::Window* mWindow;
     //! Which creatures the list shows
     CreatureFilter mFilter;
-    //! True if the feed only shows the posts of the selected creature
-    bool mSelectedOnly;
-    //! True while the list is rebuilt, selection events are ignored then
-    bool mRebuildingList;
+    //! The shown page
+    Page mPage;
+    //! True while rows and scrollbars are filled, their scroll events are ignored then
+    bool mUpdatingRows;
     //! Name of the selected creature, empty if none is selected
     std::string mSelectedCreature;
-    //! Creature names of the list items, indexed by the item id
+    //! All creatures of the roster, as received from the server or collected from the known creatures
+    std::vector<social::DungeonbookEntry> mEntries;
+    //! Names of the creatures the filtered list shows, in list order
     std::vector<std::string> mListedCreatures;
-    //! True while the profile (and not the feed) is shown
-    bool mProfileTab;
-    //! The profile page inside the profile pane, created when it is needed the first time
+    //! The shared social profile page inside the profile page, created when it is needed the first time
     CEGUI::Window* mProfilePage;
-    //! Attribute page and selected profile view.
-    CEGUI::Window* mDungeonbookPage;
-    bool mShowingSocial;
-    //! True while the second page of the Dungeonbook profile (the statistics) is shown
-    bool mShowingStatistics;
-    //! Click subscriptions of the friend and foe names of the profile page
+    //! Subscriptions of the controls of the book and of the friend and foe names of the profile page
     std::vector<CEGUI::Event::Connection> mLinkConnections;
     //! Roster version of the post log the list was built for
     uint32_t mShownRosterVersion;
@@ -129,9 +163,9 @@ private:
     float mSinceRefreshCheck;
     //! Seconds since the feed was last rebuilt
     float mSinceFeedRebuild;
-    //! Post version of the post log the profile was built for
+    //! Post version of the post log the creature page was built for
     uint32_t mShownProfilePostVersion;
-    //! Seconds since the profile was last refreshed
+    //! Seconds since the creature page was last refreshed
     float mSinceProfileRefresh;
 };
 
