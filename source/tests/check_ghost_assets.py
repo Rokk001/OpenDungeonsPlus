@@ -56,7 +56,24 @@ def main():
     for name in models:
         credited('models/'+name+'.mesh',credits)
         credited('assets-src/rooms/ghostroom/'+name+'.blend',credits)
+    # Apparatus models: the mana still (state clips) and the mana crystal item; their Blender sources live outside Git.
+    for path in ('models/ManaStill.mesh','models/ManaStill.skeleton','models/ManaCrystal.mesh','materials/textures/GhostCobweb.png'):
+        credited(path,credits)
+    spec = importlib.util.spec_from_file_location('ghost_still_chunks', repo/'tools/blender-assets/splice_animation_chunks.py')
+    chunks_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(chunks_module)
+    _, chunks = chunks_module.chunks((repo/'models/ManaStill.skeleton').read_bytes())
+    still_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
+    assert {'Working','Idle','Locked'} <= still_clips, still_clips
+    assert b'ManaStill.skeleton' in (repo/'models/ManaStill.mesh').read_bytes()
+    apparatus = read('source/rooms/RoomGhostRoom.cpp')
+    assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill",',apparatus), 'mana still mesh'
+    assert 'MANA_CRYSTAL_MESH = "ManaCrystal"' in read('source/entities/ItemBagEntity.cpp')
+    still_material = read('materials/scripts/Ghost.material')
+    for name in ('ManaCrystal','ManaCrystalDull','ManaStillGlass','GhostEmbers','GhostCoal','GhostGlassDull','GhostCobweb'):
+        assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     bounds = read('source/gamemap/RoomObjectBounds.h')
+    assert re.search(r'\{"ManaStill"\s*,',bounds), 'ManaStill'
     for name in models[:7]+models[10:]:
         assert re.search(r'\{"'+name+r'"\s*,',bounds), name
     for path in ('materials/scripts/Ghost.material','materials/scripts/GhostRoomFloor.material',
