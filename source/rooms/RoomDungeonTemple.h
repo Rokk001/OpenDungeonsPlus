@@ -115,6 +115,8 @@ public:
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
+    //! \brief True for a mana crystal while the keeper's free mana is at least the crystal's mana.
+    bool canBreakManaCrystal(GameEntity& carriedEntity) const;
 
     virtual void restoreInitialEntityState() override;
 

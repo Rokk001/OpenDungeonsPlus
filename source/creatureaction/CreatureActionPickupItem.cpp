@@ -65,6 +65,9 @@ bool CreatureActionPickupItem::handle(Creature& creature, bool stealing)
             const ItemInstance* item = bag->getItem();
             if(item == nullptr || bag->getCarryLock(creature))
                 continue;
+            // Ectoplasm, mana crystals and research books are keeper goods that only workers carry
+            if(item->mGhostItem != GhostItem::none)
+                continue;
             const bool enemy = bag->getSeat() != nullptr && !creature.getSeat()->isAlliedSeat(bag->getSeat());
             if(stealing && !enemy)
                 continue;

@@ -288,6 +288,10 @@ class GameEntity
     inline bool getCarryLock(const Creature& worker) const
     { return mCarryLock; }
 
+    //! \brief True while a worker carries this entity.
+    inline bool isCarryLocked() const
+    { return mCarryLock; }
+
     inline void setCarryLock(const Creature& worker, bool lock)
     { mCarryLock = lock; }
 

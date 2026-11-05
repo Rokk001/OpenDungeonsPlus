@@ -6166,16 +6166,31 @@ bool GameMode::hideGhostRoomWindow(const CEGUI::EventArgs&)
     return true;
 }
 
-//! \brief Cycles research, mana and crystal for the selected keeper.
+//! \brief Cycles the unlocked apparatuses (mana still, ghost press, soul forge) the next ectoplasm is carried to.
 bool GameMode::cycleGhostProduct(const CEGUI::EventArgs&)
 {
     Player* player = mGameMap->getLocalPlayer();
     if(player == nullptr || player->getSeat() == nullptr)
         return true;
     Seat* seat = player->getSeat();
-    const uint32_t next = (static_cast<uint32_t>(seat->getGhostProduct()) + 1) %
-        (static_cast<uint32_t>(GhostProduct::crystal) + 1);
-    seat->setGhostProduct(static_cast<GhostProduct>(next));
+    // Order of the room research unlocks; a locked apparatus is skipped
+    static const GhostProduct ORDER[] = {GhostProduct::mana, GhostProduct::research, GhostProduct::crystal};
+    const GhostProduct current = RoomGhostRoom::getChosenApparatus(*seat);
+    size_t position = 0;
+    for(size_t index = 0; index < 3; ++index)
+        if(ORDER[index] == current) position = index;
+    GhostProduct nextKind = current;
+    for(size_t step = 1; step <= 3; ++step)
+    {
+        const GhostProduct candidate = ORDER[(position + step) % 3];
+        if(RoomGhostRoom::isApparatusUnlocked(*seat, candidate))
+        {
+            nextKind = candidate;
+            break;
+        }
+    }
+    const uint32_t next = static_cast<uint32_t>(nextKind);
+    seat->setGhostProduct(nextKind);
     ODClient::getSingleton().queueClientNotification(ClientNotificationType::askGhostRoomSettings,
         mGhostRoomX, mGhostRoomY, next, seat->getGhostRevive(), true);
     refreshGhostRoomWindow();
@@ -6222,13 +6237,17 @@ void GameMode::refreshGhostRoomWindow()
         return;
     }
     Seat* seat = player->getSeat();
+    // Only the progress to the next ectoplasm: every full one is already an item next to its cauldron
+    const double perEctoplasm = RoomGhostRoom::getLevelsPerEctoplasm(*seat);
+    const double progress = perEctoplasm > 0.0 ? std::fmod(seat->getEctoplasmLevels(), perEctoplasm) : 0.0;
     std::ostringstream text;
-    text << std::fixed << std::setprecision(1) << "Ectoplasm: " << seat->getEctoplasmLevels() << " / "
-        << RoomGhostRoom::getLevelsPerEctoplasm(*seat) << " ghost levels";
+    text << std::fixed << std::setprecision(1) << "Ectoplasm: " << progress << " / " << perEctoplasm << " ghost levels";
     mRootWindow->getChild("GhostRoomWindow/GhostBarText")->setText(text.str());
-    std::string product = "Product: Research points";
-    if(seat->getGhostProduct() == GhostProduct::mana) product = "Product: Mana";
-    else if(seat->getGhostProduct() == GhostProduct::crystal) product = "Product: Soul crystal";
+    // A locked choice is shown and used as the mana still
+    std::string product = "Apparatus: Mana still";
+    const GhostProduct chosen = RoomGhostRoom::getChosenApparatus(*seat);
+    if(chosen == GhostProduct::research) product = "Apparatus: Ghost press";
+    else if(chosen == GhostProduct::crystal) product = "Apparatus: Soul forge";
     mRootWindow->getChild("GhostRoomWindow/GhostProductButton")->setText(product);
     mRootWindow->getChild("GhostRoomWindow/GhostReviveButton")->setText(seat->getGhostRevive() ? "Revive own: On" : "Revive own: Off");
 }

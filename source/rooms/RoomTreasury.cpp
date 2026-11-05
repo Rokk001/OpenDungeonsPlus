@@ -612,6 +612,8 @@ bool RoomTreasury::hasCarryEntitySpot(GameEntity* carriedEntity)
         {
             const ItemInstance* item = static_cast<ItemBagEntity*>(carriedEntity)->getItem();
             if(item != nullptr && item->mMerchantGoods) return false;
+            // Ectoplasm waits for an apparatus; only the finished ghost products are stored here
+            if(item != nullptr && item->mGhostItem == GhostItem::ectoplasm) return false;
         }
         return getItemDeliveryTile(carriedEntity) != nullptr;
     }

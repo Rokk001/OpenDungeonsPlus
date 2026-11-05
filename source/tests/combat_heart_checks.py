@@ -37,6 +37,8 @@ def configure_heart_probe(probe):
  double getRoomConfigDoubleOrDefault(const std::string&, double fallback) const { return fallback; }
  // Return the configured heal rate (the only room value the heart reads with this getter).
  double getRoomConfigDouble(const std::string& key) const { return key == "DungeonHeartHealPerSecond" ? 3.775 : 0.0; }
+ // Return the configured mana limit of a keeper (global.cfg MaxManaPerSeat), read by the mana crystal rule.
+ double getMaxManaPerSeat() const { return 200000.0; }
 '''
     # The research of the heart: the fixture skill manager applies a factor per effect (1 = no research); the skill
     # type arguments of the production code are replaced by a plain number because the fixtures declare no skill types

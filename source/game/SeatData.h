@@ -34,7 +34,9 @@ class ODPacket;
 enum class SkillType;
 enum class RoomType;
 
-//! \brief Selects the product made by each finished ectoplasm.
+//! \brief Selects the ghost room apparatus the workers carry the next ectoplasm to, named by its product:
+//! research = ghost press (research book), mana = mana still (mana crystal), crystal = soul forge (level crystal).
+//! The values are the saved values of the former product choice, so old saves map 1:1.
 enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
 
 //! \brief Base class for Seat that only embeds the data for the seat used through the network. It allows to use unit tests without having
@@ -46,9 +48,9 @@ public:
     double getEctoplasmLevels() const { return mEctoplasmLevels; }
     //! \brief Sets the exact shared bar after catching or consuming ghost levels.
     void setEctoplasmLevels(double levels) { mEctoplasmLevels = levels; }
-    //! \brief Returns this keeper's selected ectoplasm product.
+    //! \brief Returns this keeper's chosen apparatus (see GhostProduct).
     GhostProduct getGhostProduct() const { return mGhostProduct; }
-    //! \brief Sets this keeper's selected ectoplasm product.
+    //! \brief Sets this keeper's chosen apparatus (see GhostProduct).
     void setGhostProduct(GhostProduct product) { mGhostProduct = product; }
     //! \brief Returns whether hunters attempt to revive this keeper's own ghosts.
     bool getGhostRevive() const { return mGhostRevive; }
@@ -218,7 +220,8 @@ protected:
     uint32_t mFreeWorkers = 0;
     //! \brief Shared ghost-room state, also retained by Seat save records.
     double mEctoplasmLevels = 0.0;
-    GhostProduct mGhostProduct = GhostProduct::research;
+    //! A new game starts with the mana still chosen
+    GhostProduct mGhostProduct = GhostProduct::mana;
     bool mGhostRevive = true;
     //! \brief Reads the shared room-settings data without adopting incomplete values.
     bool importItemSettingsFromPacket(ODPacket& packet);
