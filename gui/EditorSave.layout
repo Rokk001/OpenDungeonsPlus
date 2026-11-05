@@ -11,7 +11,7 @@
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
         </Window>
-        <Window type="OD/FrameWindow" name="LevelWindowFrame" >
+        <Window type="OD/MenuFrameWindow" name="LevelWindowFrame" >
             <Property name="Area" value="{{0.5,-250},{0.5,-180},{0.5,250},{0.5,240}}" />
             <Property name="Text" value="Please choose a Level..." />
             <Property name="MaxSize" value="{{0,1000},{0,1000}}" />

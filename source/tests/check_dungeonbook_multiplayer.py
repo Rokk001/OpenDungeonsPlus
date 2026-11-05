@@ -137,8 +137,15 @@ assert 'if(!(packetReceived >>' in client_case, 'incomplete snapshots must not r
 assert 'if(sock->getDungeonbookRosterOpen())' in server
 window = read('source/render/SocialWindow.cpp')
 assert 'askDungeonbookRoster, true' in window and 'askDungeonbookRoster, false' in window
-assert 'getDungeonbookRoster()' in window and 'selected->keeper' in window
-assert 'getCreature(selected->name)' not in window, 'roster rendering must not require a visible map entity'
+assert 'getDungeonbookRoster()' in window and '"Keeper: " + entry.keeper' in window
+# Roster rendering must not require a visible map entity: every page works with the roster entry alone, a creature
+# known on this side only adds its relationships, its mood level and its items
+assert 'getCreature(selected->name)' not in window
+assert window.count('mGameMap.getCreature(') == 4, 'every use of a map entity in the book is one of the four below'
+assert 'const CreatureMoodLevel level = creature == nullptr ? CreatureMoodLevel::Unknown' in window
+assert 'holder->setVisible(creature != nullptr);' in window and 'fallback->setVisible(creature == nullptr);' in window
+assert 'Creature::fillItemSlotWindows(creature, slots, true)' in window and 'if(creature == nullptr)' in window
+assert 'if(creature != nullptr)\n            token = CreatureAppearanceLogic::toToken' in window
 print('allied Dungeonbook snapshot field order and subscription wiring ok')
 
 # Roster messages are enabled only after both peers agree; absent optional fields default to false.

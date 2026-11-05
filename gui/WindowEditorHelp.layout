@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="EditorHelpWindow" >
+    <Window type="OD/MenuFrameWindow" name="EditorHelpWindow" >
         <Property name="Area" value="{{0.5,-230},{0.5,-230},{0.5,230},{0.5,230}}" />
         <Property name="Text" value="Editor Controls" />
         <Property name="SizingEnabled" value="False" />

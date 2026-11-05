@@ -256,6 +256,12 @@ public:
     //! caller decides what a click does. Shows transmitted slots and permanent spawn hands with frames and tooltips.
     //! Returns the bottom edge of the page content in design pixels.
     float fillProfilePage(CEGUI::Window* page);
+    //! \brief Fills 13 item slot windows (right hand, left hand, head, armour, boots, ring, three potions, four
+    //! inventory slots; each with the children "SlotType" and "QualityFrame") with the item picture, quality frame and
+    //! tooltip, or with the painted slot-type symbol when the slot is empty. Used by the creature card and by the
+    //! Dungeonbook inventory page. A null creature (items not known) shows every slot empty. With showLocks every slot
+    //! window also has a child "Lock": a potion slot the creature has not unlocked by its level is greyed out and shows it.
+    static void fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks);
 
     //! \brief Gender of the creature ("Female", "Male" or empty), derived from its name and class. Same
     //! value as the profile gender shown on the client, so it can be used on the server.
@@ -1502,11 +1508,45 @@ public:
     { return mGoldCarried; }
 
     inline void resetGoldCarried()
-    { mGoldCarried = 0; }
+    { mGoldCarried = 0; mGoldStolen = 0; }
 
-    //! \brief Adds or spends purse gold, including fractional admission fees.
+    //! \brief Adds or spends purse gold, including fractional admission fees. Spending takes the other gold first
+    //! and the stolen gold last, so the stolen part never exceeds the purse.
     inline void addGoldCarried(double gold)
-    { mGoldCarried += gold; }
+    {
+        mGoldCarried += gold;
+        clampGoldStolen();
+    }
+
+    //! \brief Gold that was stolen (from the ground or by a level script) and is still carried, part of the purse.
+    inline double getGoldStolen() const
+    { return mGoldStolen; }
+
+    //! \brief Adds stolen gold to the purse and to the stolen part.
+    inline void addGoldStolen(double gold)
+    {
+        if(gold <= 0)
+            return;
+        mGoldCarried += gold;
+        mGoldStolen += gold;
+        clampGoldStolen();
+    }
+
+    //! \brief Sets the stolen part from a save or a packet; it never exceeds the purse.
+    inline void setGoldStolen(double gold)
+    {
+        mGoldStolen = gold;
+        clampGoldStolen();
+    }
+
+    //! \brief Keeps the stolen part between 0 and the purse.
+    inline void clampGoldStolen()
+    {
+        if(mGoldStolen > mGoldCarried)
+            mGoldStolen = mGoldCarried;
+        if(mGoldStolen < 0)
+            mGoldStolen = 0;
+    }
 
     //! \brief Returns how much gold the creature can carry before it has to haul it to a treasury: MaxGoldCarryable
     //! x (1 + GoldCarryPerStrength x (Strength - start Strength)) x (1 + carry% / 100), rounded down (0 for a
@@ -2077,6 +2117,8 @@ private:
     uint32_t        mMissedWages;
     //! \brief Gold carried by the creature that will be dropped if it gets killed
     double          mGoldCarried;
+    //! \brief The part of mGoldCarried that was stolen (saved, sent to the clients for the thief sack)
+    double          mGoldStolen = 0.0;
     //! \brief Server side. The fraction of mined gold that is not carried yet (below 1, not saved)
     double          mGoldRemainder;
     //! \brief The merchant mood an old save held, only read from old saves (the merchant now changes the stored mood).

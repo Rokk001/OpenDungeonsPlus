@@ -1292,6 +1292,352 @@
     </WidgetLook>
 
     <WidgetLook name="OD/FrameWindow">
+        <PropertyLinkDefinition initialValue="FFD8CCB8" name="CaptionColour" targetProperty="CaptionColour" widget="__auto_titlebar__" />
+        <PropertyLinkDefinition initialValue="MedievalSharp-10" name="TitlebarFont" targetProperty="Font" widget="__auto_titlebar__" />
+        <Property name="NSSizingCursorImage" value="OpenDungeonsSkin/MouseNoSoCursor" />
+        <Property name="EWSizingCursorImage" value="OpenDungeonsSkin/MouseEsWeCursor" />
+        <Property name="NWSESizingCursorImage" value="OpenDungeonsSkin/MouseNwSeCursor" />
+        <Property name="NESWSizingCursorImage" value="OpenDungeonsSkin/MouseNeSwCursor" />
+        <NamedArea name="ClientWithTitleWithFrame">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameLeft" /></Dim>
+                <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameRight" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImageDim dimension="Height" name="OpenDungeonsGameWindow/FrameBottom" /></OperatorDim></Dim>
+            </Area>
+
+        </NamedArea>
+        <NamedArea name="ClientWithTitleNoFrame">
+            <Area>
+                <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                <Dim type="BottomEdge"><WidgetDim dimension="BottomEdge" /></Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="ClientNoTitleWithFrame">
+            <Area>
+                <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameTopLeft" /></Dim>
+                <Dim type="TopEdge"><ImageDim dimension="Height" name="OpenDungeonsGameWindow/FrameTop" /></Dim>
+                <Dim type="RightEdge">
+                    <OperatorDim op="Subtract">
+                        <UnifiedDim scale="1" type="RightEdge" />
+                        <ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameTopRight" />
+                    </OperatorDim>
+                </Dim>
+                <Dim type="BottomEdge">
+                    <OperatorDim op="Subtract">
+                        <UnifiedDim scale="1" type="BottomEdge" />
+                        <ImageDim dimension="Height" name="OpenDungeonsGameWindow/FrameBottom" />
+                    </OperatorDim>
+                </Dim>
+            </Area>
+        </NamedArea>
+        <NamedArea name="ClientNoTitleNoFrame">
+            <Area>
+                <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+            </Area>
+        </NamedArea>
+        <Child nameSuffix="__auto_titlebar__" type="OD/GameTitlebar">
+            <Area>
+                <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                <Dim type="Height">
+                    <FontDim font="MedievalSharp-10" padding="12" type="LineSpacing" />
+                </Dim>
+            </Area>
+            <Property name="AlwaysOnTop" value="False" />
+            <Property name="WantsMultiClickEvents" value="False" />
+            <Property name="NonClient" value="true" />
+        </Child>
+        <Child nameSuffix="__auto_closebutton__" type="OD/SystemButton">
+            <Area>
+                <Dim type="LeftEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="LeftEdge" /><WidgetDim dimension="Height" widget="__auto_titlebar__" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                <Dim type="Width"><WidgetDim dimension="Height" widget="__auto_titlebar__" /></Dim>
+                <Dim type="Height"><WidgetDim dimension="Height" widget="__auto_titlebar__" /></Dim>
+            </Area>
+            <Property name="NonClient" value="true" />
+            <Property name="AlwaysOnTop" value="True" />
+            <Property name="NormalImage" value="OpenDungeonsGameWindow/CloseButtonNormal" />
+            <Property name="HoverImage" value="OpenDungeonsGameWindow/CloseButtonHover" />
+            <Property name="PushedImage" value="OpenDungeonsGameWindow/CloseButtonPressed" />
+        </Child>
+        <ImagerySection name="withtitle_frame">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
+                </Area>
+                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
+                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
+                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </FrameComponent>
+        </ImagerySection>
+        <ImagerySection name="notitle_frame">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsGameWindow/FrameTopLeft" />
+                <Image component="TopRightCorner" name="OpenDungeonsGameWindow/FrameTopRight" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
+                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
+                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </FrameComponent>
+        </ImagerySection>
+        <ImagerySection name="withtitle_noframe_client_area">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge">
+                        <WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" />
+                        <UnifiedDim offset="0" type="Height" />
+                    </Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
+                </Area>
+                <Image name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="notitle_noframe_client_area">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </ImageryComponent>
+        </ImagerySection>
+        <StateImagery name="ActiveWithTitleWithFrame">
+            <Layer>
+                <Section section="withtitle_frame" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="InactiveWithTitleWithFrame">
+            <Layer>
+                <Section section="withtitle_frame" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="DisabledWithTitleWithFrame">
+            <Layer>
+                <Section section="withtitle_frame_disabled">
+                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
+                </Section>
+            </Layer>
+        </StateImagery>
+        <StateImagery name="ActiveWithTitleNoFrame">
+            <Layer>
+                <Section section="withtitle_noframe_client_area" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="InactiveWithTitleNoFrame">
+            <Layer>
+                <Section section="withtitle_noframe_client_area" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="DisabledWithTitleNoFrame">
+            <Layer>
+                <Section section="withtitle_noframe_client_area_disabled">
+                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
+                </Section>
+            </Layer>
+        </StateImagery>
+        <StateImagery name="ActiveNoTitleWithFrame">
+            <Layer>
+                <Section section="notitle_frame" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="InactiveNoTitleWithFrame">
+            <Layer>
+                <Section section="notitle_frame" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="DisabledNoTitleWithFrame">
+            <Layer>
+                <Section section="notitle_frame_disabled">
+                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
+                </Section>
+            </Layer>
+        </StateImagery>
+        <StateImagery name="ActiveNoTitleNoFrame">
+            <Layer>
+                <Section section="notitle_noframe_client_area" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="InactiveNoTitleNoFrame">
+            <Layer>
+                <Section section="notitle_noframe_client_area" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="DisabledNoTitleNoFrame">
+            <Layer>
+                <Section section="notitle_noframe_client_area_disabled">
+                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
+                </Section>
+            </Layer>
+        </StateImagery>
+            <ImagerySection name="withtitle_frame_disabled">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
+                </Area>
+                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
+                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
+                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </FrameComponent>
+        </ImagerySection>
+        <ImagerySection name="withtitle_noframe_client_area_disabled">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge">
+                        <WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" />
+                        <UnifiedDim offset="0" type="Height" />
+                    </Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
+                </Area>
+                <Image name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="notitle_frame_disabled">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsGameWindow/FrameTopLeft" />
+                <Image component="TopRightCorner" name="OpenDungeonsGameWindow/FrameTopRight" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
+                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
+                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </FrameComponent>
+        </ImagerySection>
+        <ImagerySection name="notitle_noframe_client_area_disabled">
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </ImageryComponent>
+        </ImagerySection>
+    </WidgetLook>
+
+    <WidgetLook name="OD/GameTitlebar">
+        <PropertyDefinition initialValue="FFD8CCB8" name="CaptionColour" redrawOnWrite="true" />
+        <ImagerySection name="main">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsGameWindow/FrameTopLeft" />
+                <Image component="TopRightCorner" name="OpenDungeonsGameWindow/FrameTopRight" />
+                <Image component="TopEdge" name="OpenDungeonsGameWindow/FrameTop" />
+                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
+                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
+                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
+                <VertFormat type="Tiled" />
+                <HorzFormat type="Tiled" />
+            </FrameComponent>
+            <ImageryComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameLeft" /></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImageDim dimension="Height" name="OpenDungeonsGameWindow/TitleRule" /></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameRight" /></OperatorDim></Dim>
+                    <Dim type="Height"><ImageDim dimension="Height" name="OpenDungeonsGameWindow/TitleRule" /></Dim>
+                </Area>
+                <Image name="OpenDungeonsGameWindow/TitleRule" />
+                <VertFormat type="Stretched" />
+                <HorzFormat type="Tiled" />
+            </ImageryComponent>
+        </ImagerySection>
+        <ImagerySection name="caption">
+            <TextComponent>
+                <Area>
+                    <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameTopLeft" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim offset="-75" scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <ColourProperty name="CaptionColour" />
+                <VertFormat type="CentreAligned" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Active">
+            <Layer>
+                <Section section="main" />
+                <Section section="caption" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="Inactive">
+            <Layer>
+                <Section section="main" />
+                <Section section="caption" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="Disabled">
+            <Layer>
+                <Section section="main">
+                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
+                </Section>
+                <Section section="caption">
+                    <Colours bottomLeft="FF7F7F7F" bottomRight="FF7F7F7F" topLeft="FF7F7F7F" topRight="FF7F7F7F" />
+                </Section>
+            </Layer>
+        </StateImagery>
+    </WidgetLook>
+
+    <WidgetLook name="OD/MenuFrameWindow">
         <PropertyLinkDefinition initialValue="FFF6D690" name="CaptionColour" targetProperty="CaptionColour" widget="__auto_titlebar__" />
         <PropertyLinkDefinition initialValue="MedievalSharp-10" name="TitlebarFont" targetProperty="Font" widget="__auto_titlebar__" />
         <Property name="NSSizingCursorImage" value="OpenDungeonsSkin/MouseNoSoCursor" />
@@ -7698,15 +8044,15 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-                <Image component="TopLeftCorner" name="OpenDungeonsSkin/WindowTopLeft" />
-                <Image component="TopRightCorner" name="OpenDungeonsSkin/WindowTopRight" />
-                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/WindowBottomLeft" />
-                <Image component="BottomRightCorner" name="OpenDungeonsSkin/WindowBottomRight" />
-                <Image component="LeftEdge" name="OpenDungeonsSkin/WindowLeftEdge" />
-                <Image component="RightEdge" name="OpenDungeonsSkin/WindowRightEdge" />
-                <Image component="TopEdge" name="OpenDungeonsSkin/WindowTopEdge" />
-                <Image component="BottomEdge" name="OpenDungeonsSkin/WindowBottomEdge" />
-                <Image component="Background" name="OpenDungeonsSkin/ClientBrush" />
+                <Image component="TopLeftCorner" name="OpenDungeonsGameWindow/FrameTopLeft" />
+                <Image component="TopRightCorner" name="OpenDungeonsGameWindow/FrameTopRight" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
+                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
+                <Image component="TopEdge" name="OpenDungeonsGameWindow/FrameTop" />
+                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
             </FrameComponent>
@@ -7723,15 +8069,15 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-                <Image component="TopLeftCorner" name="OpenDungeonsSkin/WindowTopLeft__Disabled" />
-                <Image component="TopRightCorner" name="OpenDungeonsSkin/WindowTopRight__Disabled" />
-                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/WindowBottomLeft__Disabled" />
-                <Image component="BottomRightCorner" name="OpenDungeonsSkin/WindowBottomRight__Disabled" />
-                <Image component="LeftEdge" name="OpenDungeonsSkin/WindowLeftEdge__Disabled" />
-                <Image component="RightEdge" name="OpenDungeonsSkin/WindowRightEdge__Disabled" />
-                <Image component="TopEdge" name="OpenDungeonsSkin/WindowTopEdge__Disabled" />
-                <Image component="BottomEdge" name="OpenDungeonsSkin/WindowBottomEdge__Disabled" />
-                <Image component="Background" name="OpenDungeonsSkin/ClientBrush__Disabled" />
+                <Image component="TopLeftCorner" name="OpenDungeonsGameWindow/FrameTopLeft" />
+                <Image component="TopRightCorner" name="OpenDungeonsGameWindow/FrameTopRight" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
+                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
+                <Image component="TopEdge" name="OpenDungeonsGameWindow/FrameTop" />
+                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
             </FrameComponent>

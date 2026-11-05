@@ -1899,6 +1899,7 @@ float Gui::layoutProfileTextRow(CEGUI::Window* window, float y, float scale)
 }
 
 //! \brief Fits equipment beside the portrait, attributes below, and social rows in the existing scroll document.
+//! With a hidden portrait (the compact page of the Dungeonbook profile) the rows start at the top of the page.
 float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
 {
     const float scale = getLayoutScale();
@@ -1929,7 +1930,9 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     const float equipmentHeight = 5.0f * edge;
     setScaledArea(equipment, CEGUI::URect(CEGUI::UDim(0, 148), CEGUI::UDim(0, 34),
         CEGUI::UDim(1, -PROFILE_RIGHT_MARGIN), CEGUI::UDim(0, 34 + equipmentHeight)));
-    float y = std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);
+    // The Dungeonbook profile shows portrait, name and items on its own; it hides them here and the rows start at the top
+    const bool compact = !page->getChild("Portrait")->isVisible();
+    float y = compact ? PROFILE_ROW_GAP : std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);
     y = layoutProfileTextRow(page->getChild("AttributesText"), y, scale);
 
 

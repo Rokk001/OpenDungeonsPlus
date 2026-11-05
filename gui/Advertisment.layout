@@ -8,7 +8,7 @@
         <Property name="FrameEnabled" value="False" />
         <Property name="BackgroundEnabled" value="False" />
 
-        <Window type="OD/FrameWindow" name="CommunityPanel" >
+        <Window type="OD/MenuFrameWindow" name="CommunityPanel" >
             <Property name="LookNFeel" value="OD/CommunityPanel" />
             <Property name="Area" value="{{0.5,-300},{0.5,-155},{0.5,300},{0.5,155}}" />
             <Property name="SizingEnabled" value="False" />

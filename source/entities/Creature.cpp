@@ -1207,6 +1207,10 @@ void Creature::exportToStream(std::ostream& os) const
     if(mMissedWages > 0)
         os << "\t[Wages] " << mMissedWages << " [/Wages]";
 
+    // Optional stolen gold block, missing in old saves and when nothing stolen is carried
+    if(mGoldStolen > 0.0)
+        os << "\t[Stolen] " << mGoldStolen << " [/Stolen]";
+
     // Optional needs block (urge and creature dirt), last; missing in old saves and when both are 0
     if((mUrge > 0.0) || (mCreatureDirt > 0.0))
         os << "\t" << NEEDS_SAVE_OPEN << " " << mUrge << " " << mCreatureDirt << " " << NEEDS_SAVE_CLOSE;
@@ -1489,6 +1493,16 @@ bool Creature::importFromStream(std::istream& is)
             {
                 OD_LOG_WRN("Invalid mana token=" + appearanceToken);
             }
+            continue;
+        }
+
+        if(appearanceToken == "[Stolen]")
+        {
+            std::string stolenClose;
+            double stolenLoaded = 0.0;
+            if(!(is >> stolenLoaded >> stolenClose) || (stolenClose != "[/Stolen]") || !std::isfinite(stolenLoaded))
+                return false;
+            setGoldStolen(stolenLoaded);
             continue;
         }
 
@@ -2552,6 +2566,8 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
+    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    os << mGoldStolen;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2630,6 +2646,8 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
+    OD_ASSERT_TRUE(is >> mGoldStolen);
+    clampGoldStolen();
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -2860,6 +2878,7 @@ void Creature::dropCarriedEquipment()
         obj->createMesh();
         obj->setPosition(spawnPosition);
         mGoldCarried = 0;
+        mGoldStolen = 0;
     }
 
     if(mSkillTypeDropDeath != SkillType::nullSkillType)
@@ -5592,6 +5611,8 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
+    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    os << mGoldStolen;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -5752,6 +5773,8 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
+    OD_ASSERT_TRUE(is >> mGoldStolen);
+    clampGoldStolen();
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -6493,6 +6516,74 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
     return effects;
 }
 
+//! \brief Shows the 13 slots of the creature (or empty slots for a null creature) with pictures, tooltips and locks.
+void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks)
+{
+    const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
+        "Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"};
+    const Seat* localSeat = nullptr;
+    if(creature != nullptr && creature->getGameMap()->getLocalPlayer() != nullptr)
+        localSeat = creature->getGameMap()->getLocalPlayer()->getSeat();
+    // Only the owning seat receives private slots; foreign copies reveal the two hands.
+    for(std::size_t slot = 0; (slot < 13) && (slot < slots.size()); ++slot)
+    {
+        std::unique_ptr<ItemInstance> spawnFallback;
+        const ItemInstance* item = nullptr;
+        bool locked = false;
+        if(creature != nullptr)
+        {
+            const bool own = (localSeat == creature->getSeat());
+            if(slot < creature->mEquipment.size())
+                item = creature->mEquipment[slot].get();
+            else if(own && slot < 9 && slot - 6 < creature->mPotionSlots.size())
+                item = creature->mPotionSlots[slot - 6].get();
+            else if(own && slot >= 9)
+                item = creature->mInventory[slot - 9].get();
+            if(!own && slot >= VISIBLE_ITEM_HAND_SLOTS)
+                item = nullptr;
+            // Empty worn hand slots retain the creature's visible permanent spawn equipment.
+            if(item == nullptr && slot < VISIBLE_ITEM_HAND_SLOTS)
+            {
+                const Weapon* weapon = slot == 0 ? creature->mWeaponR : creature->mWeaponL;
+                if(weapon != nullptr)
+                {
+                    spawnFallback = ItemDrops::poorWeapon(*weapon);
+                    item = spawnFallback.get();
+                }
+            }
+            // Every seat knows how many potion slots the creature has unlocked by its level
+            locked = showLocks && slot >= 6 && slot < 9 && slot - 6 >= creature->mPotionSlots.size();
+        }
+        CEGUI::Window* image = slots[slot];
+        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
+        image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
+            name : "OpenDungeonsIcons/ItemSlotEmpty");
+        CEGUI::Window* slotType = image->getChild("SlotType");
+        slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
+        slotType->setVisible(item == nullptr);
+        image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap()));
+        CEGUI::Window* frame = image->getChild("QualityFrame");
+        frame->setVisible(item != nullptr);
+        if(item != nullptr)
+            frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(item->mQuality));
+        if(!showLocks)
+            continue;
+
+        // A locked potion slot keeps its symbol, greyed out, under the lock
+        const char* const colours = locked ? "tl:FF606060 tr:FF606060 bl:FF606060 br:FF606060" :
+            "tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF";
+        image->setProperty("ImageColours", colours);
+        slotType->setProperty("ImageColours", colours);
+        image->getChild("Lock")->setVisible(locked);
+        if(locked)
+        {
+            const char* const levelKey = (slot == 7) ? "PotionSlotLevel2" : "PotionSlotLevel3";
+            const int32_t level = static_cast<int32_t>(ConfigManager::getSingleton().getItemSetting("Potions", levelKey));
+            image->setTooltipText("Potion slot locked: it opens at level " + Helper::toString(level));
+        }
+    }
+}
+
 //! \brief Fills the social page and transmitted item slots before its normal responsive layout.
 float Creature::fillProfilePage(CEGUI::Window* page)
 {
@@ -6556,44 +6647,10 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     page->getChild("JobText")->setText("Job: " + profile.mJob);
     page->getChild("AttributesText")->setText(getAttributeSummaryText());
     page->getChild("EquipmentText")->setText("Equipment: " + getEquipmentText());
-    // Only the owning seat receives private slots; foreign copies reveal the two hands.
+    std::vector<CEGUI::Window*> slotWindows;
     for(std::size_t slot = 0; slot < 13; ++slot)
-    {
-        std::unique_ptr<ItemInstance> spawnFallback;
-        const ItemInstance* item = nullptr;
-        if(slot < mEquipment.size())
-            item = mEquipment[slot].get();
-        else if(localSeat == getSeat() && slot < 9 && slot - 6 < mPotionSlots.size())
-            item = mPotionSlots[slot - 6].get();
-        else if(localSeat == getSeat() && slot >= 9)
-            item = mInventory[slot - 9].get();
-        if(localSeat != getSeat() && slot >= VISIBLE_ITEM_HAND_SLOTS)
-            item = nullptr;
-        // Empty worn hand slots retain the creature's visible permanent spawn equipment.
-        if(item == nullptr && slot < VISIBLE_ITEM_HAND_SLOTS)
-        {
-            const Weapon* weapon = slot == 0 ? mWeaponR : mWeaponL;
-            if(weapon != nullptr)
-            {
-                spawnFallback = ItemDrops::poorWeapon(*weapon);
-                item = spawnFallback.get();
-            }
-        }
-        CEGUI::Window* image = page->getChild("EquipmentRow/Slot" + Helper::toString(slot));
-        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
-        image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
-            name : "OpenDungeonsIcons/ItemSlotEmpty");
-        const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
-            "Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"};
-        CEGUI::Window* slotType = image->getChild("SlotType");
-        slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
-        slotType->setVisible(item == nullptr);
-        image->setTooltipText(item == nullptr ? "" : item->describe(getGameMap()));
-        CEGUI::Window* frame = image->getChild("QualityFrame");
-        frame->setVisible(item != nullptr);
-        if(item != nullptr)
-            frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(item->mQuality));
-    }
+        slotWindows.push_back(page->getChild("EquipmentRow/Slot" + Helper::toString(slot)));
+    fillItemSlotWindows(this, slotWindows, false);
     page->getChild("PathText")->setText("Path: " + getSkillPathText());
     page->getChild("SkillsText")->setText("Skills: " + getSkillListText());
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");
@@ -8174,7 +8231,7 @@ void Creature::drop(const Ogre::Vector3& v)
             double deposited = position->getCoveringRoom()->depositGold(mGoldCarried, position);
             if(deposited > 0)
             {
-                mGoldCarried -= deposited;
+                addGoldCarried(-deposited);
                 return;
             }
         }
@@ -12100,6 +12157,7 @@ void Creature::dropExcessGold()
 
     TreasuryObject* obj = new TreasuryObject(getGameMap(), mGoldCarried - capacity);
     mGoldCarried = capacity;
+    clampGoldStolen();
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(myTile->getX()),
                                 static_cast<Ogre::Real>(myTile->getY()), 0.0f);
     obj->addToGameMap();

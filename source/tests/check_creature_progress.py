@@ -35,6 +35,8 @@ overlay_source = (root / 'source/render/CreatureOverlayStatus.cpp').read_text().
 # Mana is the inner ring of the badge flower, health the outer ring; both shrink from the top.
 assert 'MANA_RING' not in overlay_source
 assert 'MANA_FLOWER_SHARE' not in overlay_source
+assert 'getLifeColour(mSeat, localSeat)' in overlay_source and 'seat->getColorValue()' in overlay_source
+assert 'getLocalPlayer()' in overlay_source and 'LIFE_COLOUR_REPLACES_RED' in overlay_source and 'LIFE_COLOUR_REPLACES_BLUE' in overlay_source
 assert 'BADGE_FLOWER_PREFIX = "CreatureOverlay";' in overlay_source
 assert 'mAttackRecoveryDuration = std::max(static_cast<double>(skillData.mWarmup), skillData.mCooldown)' in source
 server = (root / 'source/network/ODServer.cpp').read_text()

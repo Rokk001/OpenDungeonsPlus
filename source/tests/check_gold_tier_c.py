@@ -85,5 +85,5 @@ assert 'rrRefreshCreatureGoldSack(this)' in creature
 assert 'rrRefreshCreatureGoldSack(curCreature)' in render
 for gone in ('startTreasuryThiefSack', 'updateTreasuryThiefSacks', 'thiefSackTime'):
     assert gone not in render and gone not in rules, gone
-assert 'getMeshNameForGold(creature->getGoldCarried())' in render
+assert 'getMeshNameForGold(creature->getGoldStolen())' in render
 print('ok')
