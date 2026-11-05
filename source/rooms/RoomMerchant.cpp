@@ -565,7 +565,8 @@ bool RoomMerchant::hasCarryEntitySpot(GameEntity* entity)
 {
     if(entity == nullptr || entity->getObjectType() != GameEntityType::itemBagEntity) return false;
     const ItemInstance* item = static_cast<ItemBagEntity*>(entity)->getItem();
-    return item != nullptr && getFreeTable(item) != nullptr;
+    // Ectoplasm, mana crystals and research books are no goods; the level crystal is sold as the soul crystal
+    return item != nullptr && item->mGhostItem == GhostItem::none && getFreeTable(item) != nullptr;
 }
 //! \brief Directs the worker to the crystal table or an ordinary free goods place.
 Tile* RoomMerchant::askSpotForCarriedEntity(GameEntity* entity)

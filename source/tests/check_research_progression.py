@@ -182,7 +182,7 @@ struct Seat {
     //! \brief Restores the optional treatment switch without affecting research state.
     void setInfirmaryHealOn(bool healOn){mInfirmaryHealOn=healOn;}
     //! \brief Fixture storage for the ghost room block that the extracted seat load and save paths handle.
-    std::set<std::string> mGhostBellTargets;double mEctoplasmLevels=0.0;GhostProduct mGhostProduct=GhostProduct::research;bool mGhostRevive=false;
+    std::set<std::string> mGhostBellTargets;double mEctoplasmLevels=0.0;GhostProduct mGhostProduct=GhostProduct::mana;bool mGhostRevive=false;
     bool mHadLibrary=false;
     int32_t mMerchantMargin=10,mLabMode=0;std::string mMerchantMode="fair";double mMerchantGoldRemainder=0.0;
     //! \brief Stores the shared room settings parsed by the actual optional save block.

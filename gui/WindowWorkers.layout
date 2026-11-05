@@ -909,5 +909,57 @@
             <Property name="TextColours" value="FFF6D690" />
             <Property name="Text" value="Workers" />
         </Window>
+        <Window type="OD/StaticImage" name="DragGhostTablet">
+            <Property name="Area" value="{{0.0146,0},{0.1848,0},{0.2082,0},{0.649,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Visible" value="False" />
+            <Property name="Alpha" value="0.8" />
+            <Window type="OD/StaticImage" name="Frame">
+                <Property name="Area" value="{{-0.4275,0},{-0.1127,0},{1.4275,0},{1.1422,0}}" />
+                <Property name="Image" value="OpenDungeonsIcons/WorkerTabletSelected" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ClippedByParent" value="False" />
+            </Window>
+            <Window type="OD/StaticImage" name="Figure">
+                <Property name="Area" value="{{0.035,0},{0.1,0},{0.965,0},{0.7392,0}}" />
+                <Property name="Image" value="OpenDungeonsIcons/WorkerJobDig" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ClippedByParent" value="False" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="AspectRatio" value="1" />
+            </Window>
+        </Window>
+        <Window type="OD/StaticImage" name="DragGhostCarry">
+            <Property name="Area" value="{{0.0073,0},{0.778,0},{0.1187,0},{0.9891,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Visible" value="False" />
+            <Property name="Alpha" value="0.8" />
+            <Window type="OD/StaticImage" name="Frame">
+                <Property name="Area" value="{{-0.891,0},{-0.278,0},{1.891,0},{1.302,0}}" />
+                <Property name="Image" value="OpenDungeonsIcons/WorkerCarryFrameSelected" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ClippedByParent" value="False" />
+            </Window>
+            <Window type="OD/StaticImage" name="Figure">
+                <Property name="Area" value="{{0.048,0},{0.04,0},{0.952,0},{0.8582,0}}" />
+                <Property name="Image" value="OpenDungeonsIcons/WorkerCarryOwn" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="ClippedByParent" value="False" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="AspectRatio" value="1" />
+            </Window>
+        </Window>
     </Window>
 </GUILayout>

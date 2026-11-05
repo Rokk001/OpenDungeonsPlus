@@ -23,6 +23,8 @@
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
 #include "entities/GiftBoxEntity.h"
+#include "entities/ItemBagEntity.h"
+#include "spells/Spell.h"
 #include "entities/PersistentObject.h"
 #include "entities/Tile.h"
 #include "entities/TreasuryObject.h"
@@ -1057,6 +1059,8 @@ bool RoomDungeonTemple::hasCarryEntitySpot(GameEntity* carriedEntity)
     {
         case GameEntityType::giftBoxEntity:
             return true;
+        case GameEntityType::itemBagEntity:
+            return canBreakManaCrystal(*carriedEntity);
         case GameEntityType::treasuryObject:
             // A 5x5 heart has space for more gold while one ring tile has room; a 3x3 heart
             // never accepts gold (it has no ring)
@@ -1078,6 +1082,8 @@ Tile* RoomDungeonTemple::askSpotForCarriedEntity(GameEntity* carriedEntity)
     {
         case GameEntityType::giftBoxEntity:
             return getCentralTile();
+        case GameEntityType::itemBagEntity:
+            return canBreakManaCrystal(*carriedEntity) ? getCentralTile() : nullptr;
         case GameEntityType::treasuryObject:
         {
             if(!hasCarryEntitySpot(carriedEntity))
@@ -1148,10 +1154,37 @@ void RoomDungeonTemple::notifyCarryingStateChanged(Creature* carrier, GameEntity
             giftBox->deleteYourself();
             return;
         }
+        case GameEntityType::itemBagEntity:
+        {
+            // The worker breaks the mana crystal on the heart; while the mana would not fit, the crystal stays whole
+            // and is carried to the treasury later
+            if(!canBreakManaCrystal(*carriedEntity))
+                return;
+            ItemBagEntity* bag = static_cast<ItemBagEntity*>(carriedEntity);
+            getSeat()->addMana(ConfigManager::getSingleton().getRoomConfigDouble("GhostEctoplasmMana"));
+            Spell::fireSpellEffect(*carrierTile, "SoulCrystalBreak", "");
+            bag->takeItem();
+            bag->removeEntityFromPositionTile();
+            bag->removeFromGameMap();
+            bag->deleteYourself();
+            return;
+        }
         default:
             OD_LOG_ERR("room=" + getName() + ", entity=" + carriedEntity->getName());
             return;
     }
+}
+
+//! \brief A mana crystal is taken only while the keeper's free mana holds the crystal's whole mana.
+bool RoomDungeonTemple::canBreakManaCrystal(GameEntity& carriedEntity) const
+{
+    if(carriedEntity.getObjectType() != GameEntityType::itemBagEntity || getSeat() == nullptr)
+        return false;
+    const ItemInstance* item = static_cast<ItemBagEntity&>(carriedEntity).getItem();
+    if(item == nullptr || item->mGhostItem != GhostItem::manaCrystal)
+        return false;
+    const ConfigManager& config = ConfigManager::getSingleton();
+    return config.getMaxManaPerSeat() - getSeat()->getMana() >= config.getRoomConfigDouble("GhostEctoplasmMana");
 }
 
 void RoomDungeonTemple::restoreInitialEntityState()

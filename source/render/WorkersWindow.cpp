@@ -53,13 +53,19 @@ const char* const CARRY_IMAGES[WorkersWindow::CARRY_COUNT] = {"OpenDungeonsIcons
 const char* const COLOUR_LIT = "FFF2C860";
 //! Colour of the normal texts
 const char* const COLOUR_NORMAL = "FFE8DCC0";
+//! Time in seconds an entry needs to slide to its new place
+const float SLIDE_SECONDS = 0.18f;
+//! Opacity of the original place of a grabbed entry, which is the drop target while the copy follows the pointer
+const float DROP_TARGET_ALPHA = 0.35f;
 }
 
 //! \brief Finds the window and the HUD button, hides both and connects all events of the window.
 WorkersWindow::WorkersWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mGameMap(gameMap),
     mWindow(rootWindow->getChild("WorkersWindow")),
-    mButton(rootWindow->getChild("WorkersButton"))
+    mButton(rootWindow->getChild("WorkersButton")),
+    mTabletSlides(JOB_COUNT),
+    mCarrySlides(CARRY_COUNT)
 {
     mWindow->hide();
     mButton->hide();
@@ -91,6 +97,7 @@ WorkersWindow::WorkersWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         const std::string rank = "Rank" + std::to_string(i);
         CEGUI::Window* tablet = mWindow->getChild(rank);
         tablet->setID(static_cast<unsigned int>(i));
+        mTabletBases.push_back(tablet->getPosition());
         mWindow->getChild(rank + "/Minus")->setID(static_cast<unsigned int>(i));
         mWindow->getChild(rank + "/Plus")->setID(static_cast<unsigned int>(i));
         mConnections.push_back(tablet->subscribeEvent(CEGUI::Window::EventMouseButtonDown,
@@ -107,6 +114,7 @@ WorkersWindow::WorkersWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         const std::string entry = "Carry" + std::to_string(i);
         CEGUI::Window* frame = mWindow->getChild(entry);
         frame->setID(static_cast<unsigned int>(i));
+        mCarryBases.push_back(frame->getPosition());
         mConnections.push_back(frame->subscribeEvent(CEGUI::Window::EventMouseButtonDown,
             CEGUI::Event::Subscriber(&WorkersWindow::onCarryPressed, this)));
         mConnections.push_back(frame->subscribeEvent(CEGUI::Window::EventMouseButtonUp,
@@ -140,6 +148,7 @@ void WorkersWindow::show()
     mDragTablet = -1;
     mDragCarry = -1;
     mShownState.clear();
+    resetFeedback();
     mWindow->show();
     mWindow->moveToFront();
     refresh();
@@ -152,6 +161,7 @@ void WorkersWindow::hide()
     mSelectedCarry = -1;
     mDragTablet = -1;
     mDragCarry = -1;
+    resetFeedback();
     mWindow->hide();
 }
 
@@ -183,7 +193,132 @@ void WorkersWindow::update()
         return;
     }
     if(isVisible())
+    {
         refresh();
+        updateDragFeedback();
+        updateSlides("Rank", mTabletSlides, mTabletBases);
+        updateSlides("Carry", mCarrySlides, mCarryBases);
+    }
+}
+
+//! \brief Forgets running slides and the drag feedback: slots at their places, copies hidden, original places opaque.
+void WorkersWindow::resetFeedback()
+{
+    mShownTabletOrder.clear();
+    mShownCarryOrder.clear();
+    for(std::size_t i = 0; i < JOB_COUNT; ++i)
+    {
+        mTabletSlides[i].mActive = false;
+        CEGUI::Window* tablet = mWindow->getChild("Rank" + std::to_string(i));
+        tablet->setPosition(mTabletBases[i]);
+        tablet->setAlpha(1.0f);
+    }
+    for(std::size_t i = 0; i < CARRY_COUNT; ++i)
+    {
+        mCarrySlides[i].mActive = false;
+        CEGUI::Window* frame = mWindow->getChild("Carry" + std::to_string(i));
+        frame->setPosition(mCarryBases[i]);
+        frame->setAlpha(1.0f);
+    }
+    mWindow->getChild("DragGhostTablet")->hide();
+    mWindow->getChild("DragGhostCarry")->hide();
+}
+
+//! \brief While an entry is grabbed, a copy of its picture follows the pointer and its original place stays dimmed as
+//! the drop target. Without a drag the copies are hidden and every place is opaque.
+void WorkersWindow::updateDragFeedback()
+{
+    Seat* seat = getSeat();
+    const bool dragTablet = (seat != nullptr && mDragTablet >= 0);
+    const bool dragCarry = (seat != nullptr && mDragCarry >= 0);
+    const WorkerJobSettings* settings = (seat != nullptr) ? &seat->getWorkerJobSettings() : nullptr;
+    for(std::size_t i = 0; i < JOB_COUNT; ++i)
+    {
+        const bool origin = dragTablet && settings->priority[i] == static_cast<uint32_t>(mDragTablet);
+        CEGUI::Window* tablet = mWindow->getChild("Rank" + std::to_string(i));
+        const float alpha = origin ? DROP_TARGET_ALPHA : 1.0f;
+        if(tablet->getAlpha() != alpha)
+            tablet->setAlpha(alpha);
+    }
+    for(std::size_t i = 0; i < CARRY_COUNT; ++i)
+    {
+        const bool origin = dragCarry && settings->carryOrder[i] == static_cast<uint32_t>(mDragCarry);
+        CEGUI::Window* frame = mWindow->getChild("Carry" + std::to_string(i));
+        const float alpha = origin ? DROP_TARGET_ALPHA : 1.0f;
+        if(frame->getAlpha() != alpha)
+            frame->setAlpha(alpha);
+    }
+
+    CEGUI::Window* tabletGhost = mWindow->getChild("DragGhostTablet");
+    CEGUI::Window* carryGhost = mWindow->getChild("DragGhostCarry");
+    CEGUI::Window* ghost = dragTablet ? tabletGhost : (dragCarry ? carryGhost : nullptr);
+    if(dragTablet)
+        tabletGhost->getChild("Figure")->setProperty("Image", JOB_IMAGES[mDragTablet]);
+    else if(dragCarry)
+        carryGhost->getChild("Figure")->setProperty("Image", CARRY_IMAGES[mDragCarry]);
+    if(tabletGhost->isVisible() != dragTablet)
+        tabletGhost->setVisible(dragTablet);
+    if(carryGhost->isVisible() != dragCarry)
+        carryGhost->setVisible(dragCarry);
+    if(ghost == nullptr)
+        return;
+    ghost->moveToFront();
+    // The copy is centred on the pointer: the difference between the wanted and the drawn place is added to the position
+    const CEGUI::Vector2f pointer = CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().getPosition();
+    const CEGUI::Rectf drawn = ghost->getUnclippedOuterRect().get();
+    const float moveX = pointer.d_x - drawn.getWidth() * 0.5f - drawn.left();
+    const float moveY = pointer.d_y - drawn.getHeight() * 0.5f - drawn.top();
+    const CEGUI::UVector2 position = ghost->getPosition();
+    ghost->setPosition(CEGUI::UVector2(CEGUI::UDim(position.d_x.d_scale, position.d_x.d_offset + moveX),
+        CEGUI::UDim(position.d_y.d_scale, position.d_y.d_offset + moveY)));
+}
+
+//! \brief Every slot whose entry came from another place slides from that place to its own.
+void WorkersWindow::startSlides(const char* prefix, const std::vector<uint32_t>& before, const std::vector<uint32_t>& after,
+    std::vector<Slide>& slides)
+{
+    const std::vector<CEGUI::UVector2>& bases = (std::string(prefix) == "Rank") ? mTabletBases : mCarryBases;
+    std::vector<CEGUI::Rectf> rects;
+    for(std::size_t i = 0; i < after.size(); ++i)
+    {
+        CEGUI::Window* slot = mWindow->getChild(std::string(prefix) + std::to_string(i));
+        slot->setPosition(bases[i]);
+        rects.push_back(slot->getUnclippedOuterRect().get());
+    }
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    for(std::size_t i = 0; i < after.size(); ++i)
+    {
+        const std::vector<uint32_t>::const_iterator from = std::find(before.begin(), before.end(), after[i]);
+        const std::size_t place = static_cast<std::size_t>(from - before.begin());
+        slides[i].mActive = (from != before.end() && place != i);
+        if(!slides[i].mActive)
+            continue;
+        slides[i].mOffsetX = rects[place].left() - rects[i].left();
+        slides[i].mOffsetY = rects[place].top() - rects[i].top();
+        slides[i].mStart = now;
+    }
+}
+
+//! \brief Moves the sliding slots a step towards their places; the offset shrinks fast first and slowly at the end.
+void WorkersWindow::updateSlides(const char* prefix, std::vector<Slide>& slides, const std::vector<CEGUI::UVector2>& bases)
+{
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    for(std::size_t i = 0; i < slides.size(); ++i)
+    {
+        if(!slides[i].mActive)
+            continue;
+        CEGUI::Window* slot = mWindow->getChild(std::string(prefix) + std::to_string(i));
+        const float time = std::chrono::duration<float>(now - slides[i].mStart).count() / SLIDE_SECONDS;
+        if(time >= 1.0f)
+        {
+            slides[i].mActive = false;
+            slot->setPosition(bases[i]);
+            continue;
+        }
+        const float left = (1.0f - time) * (1.0f - time);
+        slot->setPosition(CEGUI::UVector2(CEGUI::UDim(bases[i].d_x.d_scale, bases[i].d_x.d_offset + slides[i].mOffsetX * left),
+            CEGUI::UDim(bases[i].d_y.d_scale, bases[i].d_y.d_offset + slides[i].mOffsetY * left)));
+    }
 }
 
 //! \brief Close button and Esc; handled so that Esc closes only this window.
@@ -545,6 +680,10 @@ void WorkersWindow::refresh()
 
     // Tablets in rank order
     const std::array<uint32_t, JOB_COUNT> order = getDisplayOrder(settings, defaults);
+    const std::vector<uint32_t> tabletOrder(order.begin(), order.end());
+    if(!mShownTabletOrder.empty() && mShownTabletOrder != tabletOrder)
+        startSlides("Rank", mShownTabletOrder, tabletOrder, mTabletSlides);
+    mShownTabletOrder = tabletOrder;
     for(std::size_t rank = 0; rank < JOB_COUNT; ++rank)
     {
         const uint32_t job = order[rank];
@@ -578,6 +717,10 @@ void WorkersWindow::refresh()
     mWindow->getChild("PriorityLabel")->setProperty("TextColours", priorityMode ? COLOUR_LIT : "FF7A6F5E");
 
     // Carry order
+    const std::vector<uint32_t> carryOrder(settings.carryOrder.begin(), settings.carryOrder.end());
+    if(!mShownCarryOrder.empty() && mShownCarryOrder != carryOrder)
+        startSlides("Carry", mShownCarryOrder, carryOrder, mCarrySlides);
+    mShownCarryOrder = carryOrder;
     std::size_t carryPlace = CARRY_COUNT;
     for(std::size_t place = 0; place < CARRY_COUNT; ++place)
     {
