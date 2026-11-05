@@ -3,6 +3,7 @@
 
 #include "entities/RenderedMovableEntity.h"
 #include "entities/ItemInstance.h"
+#include "rooms/RoomType.h"
 
 //! \brief One unstacked item or potion lying on the ground, held or carried by a worker.
 class ItemBagEntity : public RenderedMovableEntity
@@ -26,6 +27,12 @@ public:
     void restoreItem(std::unique_ptr<ItemInstance> item) { mItem = std::move(item); }
     //! \brief Ages ground bags and claims treasury ownership; successful transfers remove consumed bags.
     void doUpkeep() override;
+    //! \brief Returns the mesh of a crystal or ghost room good, or an empty name for the ordinary bag mesh.
+    static std::string getSpecialMesh(const ItemInstance& item);
+    //! \brief Returns the room type where a worker brings this item to be used (merchant for ordinary items).
+    static RoomType getUseRoomType(const ItemInstance& item);
+    //! \brief True when a reachable room of the carrier's keeper where the item is used takes it now.
+    bool isWantedByUseRoom(Creature& carrier);
     //! \brief Allows the owning keeper to pick up visible bags except sealed merchant goods.
     bool tryPickup(Seat* seat) override;
     //! \brief Allows dropping onto any visible non-solid tile.

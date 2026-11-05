@@ -14,14 +14,64 @@
 #include <istream>
 #include <ostream>
 
-//! \brief Creates a crystal mesh or the common two-material bag for the owned instance.
+namespace
+{
+// Meshes of the ghost room goods. Placeholders until the own models exist: the cauldron fill for ectoplasm and the
+// soul crystal for the mana crystal; the research book keeps the look of today's Grimoire.
+const std::string ECTOPLASM_MESH = "GhostCauldronFill";
+const std::string MANA_CRYSTAL_MESH = "SoulCrystal";
+const std::string RESEARCH_BOOK_MESH = "Grimoire";
+const std::string LEVEL_CRYSTAL_MESH = "SoulCrystal";
+}
+
+//! \brief Names the own mesh of crystals and ghost room goods; ordinary items use the tinted bag.
+std::string ItemBagEntity::getSpecialMesh(const ItemInstance& item)
+{
+    if(item.mSoulCrystal) return LEVEL_CRYSTAL_MESH;
+    switch(item.mGhostItem)
+    {
+        case GhostItem::ectoplasm: return ECTOPLASM_MESH;
+        case GhostItem::manaCrystal: return MANA_CRYSTAL_MESH;
+        case GhostItem::researchBook: return RESEARCH_BOOK_MESH;
+        default: return std::string();
+    }
+}
+
+//! \brief Ectoplasm goes to a ghost room, a mana crystal to the heart, a book to a library, all else to the merchant.
+RoomType ItemBagEntity::getUseRoomType(const ItemInstance& item)
+{
+    switch(item.mGhostItem)
+    {
+        case GhostItem::ectoplasm: return RoomType::ghostRoom;
+        case GhostItem::manaCrystal: return RoomType::dungeonTemple;
+        case GhostItem::researchBook: return RoomType::library;
+        default: return RoomType::merchant;
+    }
+}
+
+//! \brief Checks the rooms of the use type of the carrier's keeper that take the bag now and can be reached.
+bool ItemBagEntity::isWantedByUseRoom(Creature& carrier)
+{
+    Tile* tile = getPositionTile();
+    if(mItem.get() == nullptr || tile == nullptr)
+        return false;
+    for(Room* room : getGameMap()->getRoomsByTypeAndSeat(getUseRoomType(*mItem), carrier.getSeat()))
+    {
+        if(room->hasCarryEntitySpot(this) && room->getCoveredTile(0) != nullptr &&
+            getGameMap()->pathExists(&carrier, tile, room->getCoveredTile(0)))
+            return true;
+    }
+    return false;
+}
+
+//! \brief Creates a crystal or ghost good mesh, or the common two-material bag for the owned instance.
 ItemBagEntity::ItemBagEntity(GameMap* map, std::unique_ptr<ItemInstance> item) :
     RenderedMovableEntity(map, "ItemBag_", "ItemBag", 0.0f, false),
     mItem(std::move(item)), mIdleTurns(0)
 {
     if(mItem.get() != nullptr)
     {
-        if(mItem->mSoulCrystal) setMeshName("SoulCrystal");
+        if(!getSpecialMesh(*mItem).empty()) setMeshName(getSpecialMesh(*mItem));
         map->registerEpic(*mItem);
     }
 }
@@ -78,24 +128,22 @@ void ItemBagEntity::drop(const Ogre::Vector3& position)
     mIdleTurns = 0;
 }
 
-//! \brief Workers move old bags to merchants first and otherwise leave treasury storage undisturbed.
+//! \brief Workers move old bags to their use room first and otherwise leave treasury storage undisturbed.
+//! Ectoplasm, mana crystals and research books, and every ghost good in a ghost room, are carried at once.
 EntityCarryType ItemBagEntity::getEntityCarryType(Creature* carrier)
 {
     if(carrier == nullptr || mItem.get() == nullptr || !getIsOnMap() || getCarryLock(*carrier))
         return EntityCarryType::notCarryable;
-    const uint32_t idleLimit = static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemDrops", "ItemBagIdleTurns"));
-    if(mIdleTurns < idleLimit)
-        return EntityCarryType::notCarryable;
     Tile* tile = getPositionTile();
     Room* storage = tile == nullptr ? nullptr : tile->getCoveringRoom();
-    bool merchantWantsBag = false;
-    for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::merchant, carrier->getSeat()))
-    {
-        if(room->hasCarryEntitySpot(this) && tile != nullptr && room->getCoveredTile(0) != nullptr &&
-            getGameMap()->pathExists(carrier, tile, room->getCoveredTile(0)))
-            merchantWantsBag = true;
-    }
-    if((mItem->mMerchantGoods || (storage != nullptr && storage->getType() == RoomType::treasury)) && !merchantWantsBag)
+    const bool inGhostRoom = storage != nullptr && storage->getType() == RoomType::ghostRoom;
+    const uint32_t idleLimit = static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemDrops", "ItemBagIdleTurns"));
+    if(mIdleTurns < idleLimit && mItem->mGhostItem == GhostItem::none && !(mItem->mSoulCrystal && inGhostRoom))
+        return EntityCarryType::notCarryable;
+    // A research book on a library shelf stays there until a researcher opens it
+    if(mItem->mGhostItem == GhostItem::researchBook && storage != nullptr && storage->getType() == RoomType::library)
+        return EntityCarryType::notCarryable;
+    if((mItem->mMerchantGoods || (storage != nullptr && storage->getType() == RoomType::treasury)) && !isWantedByUseRoom(*carrier))
         return EntityCarryType::notCarryable;
     return EntityCarryType::itemBag;
 }
@@ -148,7 +196,7 @@ bool ItemBagEntity::importFromStream(std::istream& stream)
     }
     if(mItem.get() == nullptr)
         return false;
-    if(mItem->mSoulCrystal) setMeshName("SoulCrystal");
+    if(!getSpecialMesh(*mItem).empty()) setMeshName(getSpecialMesh(*mItem));
     getGameMap()->registerEpic(*mItem);
     return true;
 }
@@ -168,7 +216,7 @@ void ItemBagEntity::importFromPacket(ODPacket& packet)
     if(item->importFromPacket(packet))
     {
         mItem = std::move(item);
-        if(mItem->mSoulCrystal) setMeshName("SoulCrystal");
+        if(!getSpecialMesh(*mItem).empty()) setMeshName(getSpecialMesh(*mItem));
     }
 }
 
@@ -176,6 +224,6 @@ void ItemBagEntity::importFromPacket(ODPacket& packet)
 void ItemBagEntity::createMeshLocal(NodeType type)
 {
     RenderedMovableEntity::createMeshLocal(type);
-    if(!getIsOnServerMap() && mItem.get() != nullptr && !mItem->mSoulCrystal)
+    if(!getIsOnServerMap() && mItem.get() != nullptr && getSpecialMesh(*mItem).empty())
         RenderManager::getSingleton().rrRefreshItemBag(this);
 }

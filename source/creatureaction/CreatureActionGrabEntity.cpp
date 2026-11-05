@@ -24,7 +24,10 @@
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "entities/GiftBoxEntity.h"
+#include "entities/ItemBagEntity.h"
+#include "game/Seat.h"
 #include "rooms/Room.h"
+#include "rooms/RoomGhostRoom.h"
 #include "rooms/RoomType.h"
 #include <algorithm>
 #include "gamemap/GameMap.h"
@@ -136,7 +139,16 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
     std::vector<Tile*> tilesDest;
     bool hasPreferredRoom = false;
     RoomType preferredRoom = RoomType::nullRoomType;
-    if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity)
+    ItemInstance* bagItem = entityToCarry->getObjectType() == GameEntityType::itemBagEntity ?
+        static_cast<ItemBagEntity*>(entityToCarry)->getItem() : nullptr;
+    if(bagItem != nullptr)
+    {
+        // Ectoplasm goes to the apparatus the keeper has chosen at the moment the worker picks it up
+        if(bagItem->mGhostItem == GhostItem::ectoplasm)
+            bagItem->mGhostTarget = static_cast<int32_t>(RoomGhostRoom::getChosenApparatus(*creature.getSeat()));
+        preferredRoom = ItemBagEntity::getUseRoomType(*bagItem);
+    }
+    else if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity)
         preferredRoom = RoomType::merchant;
     else if(entityToCarry->getObjectType() == GameEntityType::giftBoxEntity &&
         static_cast<GiftBoxEntity*>(entityToCarry)->getGiftBoxType() == GiftBoxType::item)
@@ -156,6 +168,12 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
         if(building->hasCarryEntitySpot(entityToCarry))
         {
             Tile* tile = building->getCoveredTile(0);
+            // Ectoplasm goes to the nearest apparatus of the chosen kind in any of the keeper's ghost rooms
+            if(bagItem != nullptr && bagItem->mGhostItem == GhostItem::ectoplasm && building->getObjectType() == GameEntityType::room &&
+                static_cast<Room*>(building)->getType() == RoomType::ghostRoom)
+                tile = static_cast<RoomGhostRoom*>(building)->getApparatusStandTile(static_cast<GhostProduct>(bagItem->mGhostTarget));
+            if(tile == nullptr)
+                continue;
             tilesDest.push_back(tile);
             if(building->getObjectType() == GameEntityType::room && static_cast<Room*>(building)->getType() == RoomType::infirmary)
                 break;
