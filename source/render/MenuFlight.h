@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <vector>
 
 //! \brief Timing limits for the configured three-dimensional menu camera paths.
 namespace MenuFlightSettings
@@ -46,6 +47,7 @@ public:
     {
         if(!std::isfinite(seconds) || seconds <= 0.0f)
             return;
+        mSamples.push_back(seconds);
         ++mFrames;
         mTotal += seconds;
         mLongest = std::max(mLongest, seconds);
@@ -65,11 +67,24 @@ public:
     double getMeanMilliseconds() const
     { return mFrames == 0 ? 0.0 : mTotal * 1000.0 / mFrames; }
 
+    //! \brief Returns the nearest-rank 95th percentile frame time in milliseconds.
+    double getP95Milliseconds() const
+    {
+        if(mSamples.empty())
+            return 0.0;
+        std::vector<float> sorted = mSamples;
+        std::sort(sorted.begin(), sorted.end());
+        const std::size_t rank = (sorted.size() * 95 + 99) / 100;
+        return sorted[rank - 1] * 1000.0;
+    }
+
     //! \brief Returns the longest frame time in milliseconds.
     double getMaxMilliseconds() const
     { return mLongest * 1000.0; }
 
 private:
+    //! Unclamped frame durations used for the percentile.
+    std::vector<float> mSamples;
     //! Frames counted so far.
     uint32_t mFrames = 0;
     //! Frames above the smooth limit.

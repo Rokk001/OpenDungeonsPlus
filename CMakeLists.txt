@@ -867,6 +867,7 @@ if(WIN32 AND MSVC)
     # same set of functions, once for Ogre, once for OD. It is harmless in our case
     # to select this option.
     SET_TARGET_PROPERTIES(${PROJECT_BINARY_NAME} PROPERTIES LINK_FLAGS " /FORCE:MULTIPLE")
+    set_property(TARGET ${PROJECT_BINARY_NAME} APPEND_STRING PROPERTY LINK_FLAGS_RELEASE " /DEBUG:FULL")
 endif()
 
 if(OD_HAS_BUILD_SUFFIX)

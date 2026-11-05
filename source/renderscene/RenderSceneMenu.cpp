@@ -220,6 +220,7 @@ void RenderSceneMenu::logFlightFrames(const char* outcome) const
     line << std::fixed << std::setprecision(2) << "Menu flight " << mCurrentPlace << " -> " << mFlightPlace
         << " " << outcome << ": frames=" << mFlightFrames.getFrames()
         << " meanMs=" << mFlightFrames.getMeanMilliseconds()
+        << " p95Ms=" << mFlightFrames.getP95Milliseconds()
         << " maxMs=" << mFlightFrames.getMaxMilliseconds()
         << " framesOver33Ms=" << mFlightFrames.getSlowFrames();
     OD_LOG_INF(line.str());
