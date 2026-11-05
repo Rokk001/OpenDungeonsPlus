@@ -98,7 +98,7 @@ drag_start = function_body(carry, 'void CreatureActionCarryEntity::startDrag(')
 assert 'notifyDragStart(' in drag_start and 'carryEntity' not in drag_start and 'notifyEntityCarryOn' not in drag_start
 assert 'dragged_anim' in drag_start
 dtor = function_body(carry, 'CreatureActionCarryEntity::~CreatureActionCarryEntity(')
-assert 'notifyDragEnd()' in dtor and re.search(r'if\(!mIsDrag\)\s*mCreature\.releaseCarriedEntity\(\);', dtor)
+assert 'notifyDragEnd()' in dtor and re.search(r'if\(!mIsDrag(\s*&&\s*mEntityToCarry\s*!=\s*nullptr)?\)\s*mCreature\.releaseCarriedEntity\(\);', dtor)
 release = function_body(carry, 'void CreatureActionCarryEntity::releaseEntity(')
 assert 'notifyDragEnd()' in release and 'releaseCarriedEntity' in release and 'notifyEntityCarryOff' in release
 assert 'handleDragCreature, this' in carry
