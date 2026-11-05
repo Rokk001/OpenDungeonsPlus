@@ -63,6 +63,8 @@ public:
     //! \brief Returns whether an arrival, outward or return flight is active.
     bool isFlightActive() const
     { return mFlight.isActive(); }
+    //! \brief Samples a flight once per rendered frame, independently of scene animation updates.
+    void recordFrameStatistics(float seconds);
     //! \brief Returns the last settled menu place; it changes only after a flight completes.
     const std::string& getCurrentPlace() const
     { return mCurrentPlace; }

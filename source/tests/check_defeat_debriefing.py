@@ -182,7 +182,15 @@ struct System
 };
 }
 namespace Gui {inline int convertButton(OIS::MouseButtonID) {return 0;}}
-struct AbstractApplicationMode {bool mouseMoved(const OIS::MouseEvent&) {++gMoveInjected;return true;}};
+//! \brief Mirrors the base-mode GUI injection used by the production defeat guards.
+struct AbstractApplicationMode
+{
+    bool mouseMoved(const OIS::MouseEvent&) {++gMoveInjected;return true;}
+    bool mousePressed(const OIS::MouseEvent&, OIS::MouseButtonID id)
+    {return CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(Gui::convertButton(id));}
+    bool mouseReleased(const OIS::MouseEvent&, OIS::MouseButtonID id)
+    {return CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));}
+};
 namespace Ogre
 {
 struct ColourValue

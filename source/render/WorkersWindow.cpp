@@ -16,6 +16,7 @@
  */
 
 #include "render/WorkersWindow.h"
+#include "render/ODFrameListener.h"
 
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -376,6 +377,7 @@ bool WorkersWindow::onTabletPressed(const CEGUI::EventArgs& e)
     mSelectedJob = static_cast<int32_t>(settings.priority[static_cast<std::size_t>(rank)]);
     mDragTablet = mSelectedJob;
     mDragCarry = -1;
+    ODFrameListener::getSingleton().getFrameStatistics().beginDrag();
     return true;
 }
 
@@ -401,6 +403,8 @@ void WorkersWindow::finishDrag()
 {
     const int32_t draggedTablet = mDragTablet;
     const int32_t draggedCarry = mDragCarry;
+    if(draggedTablet >= 0 || draggedCarry >= 0)
+        ODFrameListener::getSingleton().getFrameStatistics().endDrag();
     mDragTablet = -1;
     mDragCarry = -1;
     Seat* seat = getSeat();
@@ -491,6 +495,7 @@ bool WorkersWindow::onCarryPressed(const CEGUI::EventArgs& e)
     mSelectedCarry = static_cast<int32_t>(seat->getWorkerJobSettings().carryOrder[static_cast<std::size_t>(place)]);
     mDragCarry = mSelectedCarry;
     mDragTablet = -1;
+    ODFrameListener::getSingleton().getFrameStatistics().beginDrag();
     return true;
 }
 

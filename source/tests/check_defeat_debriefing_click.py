@@ -86,6 +86,7 @@ struct MouseEvent {float x;float y;};
 enum MouseButtonID {MB_Left};
 }
 namespace Gui {inline CEGUI::MouseButton convertButton(OIS::MouseButtonID) {return CEGUI::LeftButton;}}
+//! \brief Mirrors the base-mode GUI injection now shared by all production mouse handlers.
 struct AbstractApplicationMode
 {
     // As in the game: the absolute pointer position goes to the default GUI context
@@ -93,6 +94,10 @@ struct AbstractApplicationMode
     {
         return CEGUI::System::getSingleton().getDefaultGUIContext().injectMousePosition(arg.x, arg.y);
     }
+    bool mousePressed(const OIS::MouseEvent&, OIS::MouseButtonID id)
+    {return CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(Gui::convertButton(id));}
+    bool mouseReleased(const OIS::MouseEvent&, OIS::MouseButtonID id)
+    {return CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));}
 };
 namespace Ogre
 {
