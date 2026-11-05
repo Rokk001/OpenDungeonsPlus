@@ -6516,6 +6516,74 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
     return effects;
 }
 
+//! \brief Shows the 13 slots of the creature (or empty slots for a null creature) with pictures, tooltips and locks.
+void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks)
+{
+    const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
+        "Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"};
+    const Seat* localSeat = nullptr;
+    if(creature != nullptr && creature->getGameMap()->getLocalPlayer() != nullptr)
+        localSeat = creature->getGameMap()->getLocalPlayer()->getSeat();
+    // Only the owning seat receives private slots; foreign copies reveal the two hands.
+    for(std::size_t slot = 0; (slot < 13) && (slot < slots.size()); ++slot)
+    {
+        std::unique_ptr<ItemInstance> spawnFallback;
+        const ItemInstance* item = nullptr;
+        bool locked = false;
+        if(creature != nullptr)
+        {
+            const bool own = (localSeat == creature->getSeat());
+            if(slot < creature->mEquipment.size())
+                item = creature->mEquipment[slot].get();
+            else if(own && slot < 9 && slot - 6 < creature->mPotionSlots.size())
+                item = creature->mPotionSlots[slot - 6].get();
+            else if(own && slot >= 9)
+                item = creature->mInventory[slot - 9].get();
+            if(!own && slot >= VISIBLE_ITEM_HAND_SLOTS)
+                item = nullptr;
+            // Empty worn hand slots retain the creature's visible permanent spawn equipment.
+            if(item == nullptr && slot < VISIBLE_ITEM_HAND_SLOTS)
+            {
+                const Weapon* weapon = slot == 0 ? creature->mWeaponR : creature->mWeaponL;
+                if(weapon != nullptr)
+                {
+                    spawnFallback = ItemDrops::poorWeapon(*weapon);
+                    item = spawnFallback.get();
+                }
+            }
+            // Every seat knows how many potion slots the creature has unlocked by its level
+            locked = showLocks && slot >= 6 && slot < 9 && slot - 6 >= creature->mPotionSlots.size();
+        }
+        CEGUI::Window* image = slots[slot];
+        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
+        image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
+            name : "OpenDungeonsIcons/ItemSlotEmpty");
+        CEGUI::Window* slotType = image->getChild("SlotType");
+        slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
+        slotType->setVisible(item == nullptr);
+        image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap()));
+        CEGUI::Window* frame = image->getChild("QualityFrame");
+        frame->setVisible(item != nullptr);
+        if(item != nullptr)
+            frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(item->mQuality));
+        if(!showLocks)
+            continue;
+
+        // A locked potion slot keeps its symbol, greyed out, under the lock
+        const char* const colours = locked ? "tl:FF606060 tr:FF606060 bl:FF606060 br:FF606060" :
+            "tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF";
+        image->setProperty("ImageColours", colours);
+        slotType->setProperty("ImageColours", colours);
+        image->getChild("Lock")->setVisible(locked);
+        if(locked)
+        {
+            const char* const levelKey = (slot == 7) ? "PotionSlotLevel2" : "PotionSlotLevel3";
+            const int32_t level = static_cast<int32_t>(ConfigManager::getSingleton().getItemSetting("Potions", levelKey));
+            image->setTooltipText("Potion slot locked: it opens at level " + Helper::toString(level));
+        }
+    }
+}
+
 //! \brief Fills the social page and transmitted item slots before its normal responsive layout.
 float Creature::fillProfilePage(CEGUI::Window* page)
 {
@@ -6579,44 +6647,10 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     page->getChild("JobText")->setText("Job: " + profile.mJob);
     page->getChild("AttributesText")->setText(getAttributeSummaryText());
     page->getChild("EquipmentText")->setText("Equipment: " + getEquipmentText());
-    // Only the owning seat receives private slots; foreign copies reveal the two hands.
+    std::vector<CEGUI::Window*> slotWindows;
     for(std::size_t slot = 0; slot < 13; ++slot)
-    {
-        std::unique_ptr<ItemInstance> spawnFallback;
-        const ItemInstance* item = nullptr;
-        if(slot < mEquipment.size())
-            item = mEquipment[slot].get();
-        else if(localSeat == getSeat() && slot < 9 && slot - 6 < mPotionSlots.size())
-            item = mPotionSlots[slot - 6].get();
-        else if(localSeat == getSeat() && slot >= 9)
-            item = mInventory[slot - 9].get();
-        if(localSeat != getSeat() && slot >= VISIBLE_ITEM_HAND_SLOTS)
-            item = nullptr;
-        // Empty worn hand slots retain the creature's visible permanent spawn equipment.
-        if(item == nullptr && slot < VISIBLE_ITEM_HAND_SLOTS)
-        {
-            const Weapon* weapon = slot == 0 ? mWeaponR : mWeaponL;
-            if(weapon != nullptr)
-            {
-                spawnFallback = ItemDrops::poorWeapon(*weapon);
-                item = spawnFallback.get();
-            }
-        }
-        CEGUI::Window* image = page->getChild("EquipmentRow/Slot" + Helper::toString(slot));
-        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
-        image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
-            name : "OpenDungeonsIcons/ItemSlotEmpty");
-        const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
-            "Potion", "Potion", "Potion", "Bag", "Bag", "Bag", "Bag"};
-        CEGUI::Window* slotType = image->getChild("SlotType");
-        slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
-        slotType->setVisible(item == nullptr);
-        image->setTooltipText(item == nullptr ? "" : item->describe(getGameMap()));
-        CEGUI::Window* frame = image->getChild("QualityFrame");
-        frame->setVisible(item != nullptr);
-        if(item != nullptr)
-            frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(item->mQuality));
-    }
+        slotWindows.push_back(page->getChild("EquipmentRow/Slot" + Helper::toString(slot)));
+    fillItemSlotWindows(this, slotWindows, false);
     page->getChild("PathText")->setText("Path: " + getSkillPathText());
     page->getChild("SkillsText")->setText("Skills: " + getSkillListText());
     page->getChild("BioText")->setText("\"" + profile.mBio + "\"");

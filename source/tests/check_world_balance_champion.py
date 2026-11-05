@@ -124,8 +124,11 @@ creature = read("source/entities/Creature.cpp")
 assert 'handle += " - " + CHAMPION_CROWN_MARKUP;' in creature
 assert 'tempSS << "Level: " << CHAMPION_CROWN_MARKUP' in creature
 social = read("source/render/SocialWindow.cpp")
-assert "entry.mCrownMarkup = CHAMPION_CROWN_MARKUP;" in social
-assert re.search(r"escapeMarkup\(elideToWidth\(.*\)\) \+\s+entries\[i\]\.mCrownMarkup", social), "name part elided, tag appended"
-assert "item->setTextParsingEnabled(true);" in social and "item->setTextParsingEnabled(false);" in social
+# The Dungeonbook list and feed: the crown stands in the level place, the name is elided and escaped on its own
+assert 'row->getChild("Level")->setText(entry->champion ? CHAMPION_CROWN_MARKUP : "Lv. "' in social
+assert 'setElidedText(row->getChild("Name"), profile.getFullName())' in social
+assert "window->setText(escapeMarkup(elideToWidth(window->getFont(), text, window->getPixelSize().d_width)));" in social
+assert "entry->champion ? std::string(CHAMPION_CROWN_MARKUP)" in social
+assert 'std::string("Champion ") + CHAMPION_CROWN_MARKUP' in social
 
 print("world balance champion checks passed")

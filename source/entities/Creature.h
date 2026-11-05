@@ -256,6 +256,12 @@ public:
     //! caller decides what a click does. Shows transmitted slots and permanent spawn hands with frames and tooltips.
     //! Returns the bottom edge of the page content in design pixels.
     float fillProfilePage(CEGUI::Window* page);
+    //! \brief Fills 13 item slot windows (right hand, left hand, head, armour, boots, ring, three potions, four
+    //! inventory slots; each with the children "SlotType" and "QualityFrame") with the item picture, quality frame and
+    //! tooltip, or with the painted slot-type symbol when the slot is empty. Used by the creature card and by the
+    //! Dungeonbook inventory page. A null creature (items not known) shows every slot empty. With showLocks every slot
+    //! window also has a child "Lock": a potion slot the creature has not unlocked by its level is greyed out and shows it.
+    static void fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks);
 
     //! \brief Gender of the creature ("Female", "Male" or empty), derived from its name and class. Same
     //! value as the profile gender shown on the client, so it can be used on the server.

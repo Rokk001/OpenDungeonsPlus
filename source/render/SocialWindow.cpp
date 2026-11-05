@@ -39,14 +39,15 @@
 
 #include <CEGUI/Font.h>
 #include <CEGUI/Image.h>
-#include <CEGUI/widgets/Listbox.h>
+#include <CEGUI/InputEvent.h>
+#include <CEGUI/PropertyHelper.h>
 #include <CEGUI/widgets/PushButton.h>
-#include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/Scrollbar.h>
 #include <CEGUI/Window.h>
 #include <CEGUI/WindowManager.h>
 
 #include <algorithm>
+#include <cmath>
 #include <deque>
 #include <iomanip>
 #include <sstream>
@@ -55,17 +56,18 @@ namespace
 {
 //! Number of posts shown in the feed at most
 const std::size_t MAX_FEED_ROWS = 25;
-//! Number of posts shown below the profile at most
+//! Number of posts shown in the posts column of the profile at most
 const std::size_t MAX_OWN_POSTS = 5;
-//! Space the creature list keeps free right of its items (design pixels), so the horizontal scrollbar never appears
-const float LIST_TEXT_MARGIN = 34.0f;
+//! Rows of the creature list and of the two feeds in gui/WindowSocial.layout (ListRows/Row0.., FeedRows/Row0..)
+const std::size_t LIST_ROWS = 7;
+const std::size_t FEED_ROWS = 6;
+//! Number of item slots of the inventory page (6 equipment, 3 potions, 4 inventory)
+const std::size_t ITEM_SLOTS = 13;
 //! The window checks for changes at most this often (real seconds), so at most 4 redraws per second
 const float REFRESH_CHECK_INTERVAL = 0.25f;
 //! The relative times of the feed are refreshed at least this often while the window is open
 const float FEED_TIME_REFRESH_INTERVAL = 5.0f;
 
-//! Caption of the filter button for the unfiltered list
-const char* const FILTER_LABEL_ALL = "Show: all creatures";
 //! Posts younger than this many seconds are shown as "just now"
 const double AGE_JUST_NOW_SECONDS = 10.0;
 const double SECONDS_PER_MINUTE = 60.0;
@@ -78,18 +80,14 @@ const char* const FEED_NAME_COLOUR = "[colour='FFF2C860']";
 const char* const FEED_TIME_COLOUR = "[colour='FFB8AC90']";
 const char* const FEED_TEXT_COLOUR = "[colour='FFE8DCC0']";
 
-struct CreatureListEntry
-{
-    std::string mSortKey;
-    std::string mText;
-    std::string mName;
-    //! Crown markup appended after the shortened text, empty for every creature but the champion
-    std::string mCrownMarkup;
-};
+//! Names of the filter buttons and of the navigation buttons, in the order of the filters and of the pages
+const char* const FILTER_BUTTONS[] = {"FilterAll", "FilterWorkers", "FilterFighters", "FilterUnhappy"};
+const char* const FILTER_LABELS[] = {"All", "Workers", "Fighters", "Unhappy"};
+const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
 
-bool isEntryBefore(const CreatureListEntry& a, const CreatureListEntry& b)
+bool isEntryBefore(const std::pair<std::string, std::string>& a, const std::pair<std::string, std::string>& b)
 {
-    return a.mSortKey < b.mSortKey;
+    return a.first < b.first;
 }
 
 //! \brief CEGUI reads [ as the start of a tag in parsed text
@@ -145,20 +143,6 @@ std::string renderPostText(const social::Post& post, const social::CreatureProfi
         post.mCategory >= social::PostCategory::Bought ? post.mOther : "");
 }
 
-//! \brief One entry of the feed: name and age on the first line, the text below
-std::string renderFeedEntry(const social::Post& post, int64_t turnNow)
-{
-    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-    const social::CreatureProfile& profile = cache.getProfile(post.mCreature, post.mClassName, post.mIsWorker);
-    std::string text = renderPostText(post, profile);
-    if(text.empty())
-        return text;
-
-    std::string entry = std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR +
-        "   " + formatAge(turnNow - post.mTurn) + "\n" + FEED_TEXT_COLOUR + escapeMarkup(text) + "\n\n";
-    return entry;
-}
-
 //! One line of the recent posts of a creature: the text and its age
 std::string renderOwnPostLine(const social::Post& post, int64_t turnNow)
 {
@@ -169,7 +153,7 @@ std::string renderOwnPostLine(const social::Post& post, int64_t turnNow)
         return text;
 
     return std::string(FEED_TEXT_COLOUR) + escapeMarkup(text) + FEED_TIME_COLOUR + "  (" +
-        formatAge(turnNow - post.mTurn) + ")\n";
+        formatAge(turnNow - post.mTurn) + ")\n\n";
 }
 
 //! \brief The text shortened with "..." so it is not wider than the given pixel width
@@ -182,6 +166,12 @@ std::string elideToWidth(const CEGUI::Font* font, const std::string& text, float
     while(!shortened.empty() && (font->getTextExtent(shortened + "...") > maxWidth))
         shortened.erase(shortened.size() - 1);
     return shortened + "...";
+}
+
+//! \brief Sets the plain text of a single-line window, shortened with "..." to the width of the window.
+void setElidedText(CEGUI::Window* window, const std::string& text)
+{
+    window->setText(escapeMarkup(elideToWidth(window->getFont(), text, window->getPixelSize().d_width)));
 }
 
 //! \brief True if the text of the window is not higher than the given pixel height.
@@ -240,15 +230,63 @@ std::string formatProfileValue(double value)
     return result;
 }
 
-//! \brief Fills a Dungeonbook value tile with a title line and its value in the small font.
-//! The value is shortened with "..." until it fits the tile height, so the tile never needs a scrollbar.
-void setProfileTile(CEGUI::Window* tile, const std::string& title, const std::string& value)
+//! \brief Splits a statistics value like "12.5 / 40" at its " / " separators.
+std::vector<std::string> splitStatisticsValue(const std::string& value)
 {
-    const std::string head = "[font='MedievalSharp-8'][colour='FFF2C860']" + title +
-        "\n[font='MedievalSharp-6'][colour='FFE8DCC0']";
-    const float height = tile->getPixelSize().d_height;
-    tile->setText(head + escapeMarkup(value));
-    if(height <= 0.0f || isTileTextFitting(tile, height))
+    std::vector<std::string> parts;
+    std::string::size_type start = 0;
+    while(true)
+    {
+        const std::string::size_type separator = value.find(" / ", start);
+        parts.push_back(value.substr(start, separator == std::string::npos ? std::string::npos : separator - start));
+        if(separator == std::string::npos)
+            return parts;
+        start = separator + 3;
+    }
+}
+
+//! \brief The statistics value with every part that is a plain number rounded like the other values of the book.
+std::string formatStatisticsNumbers(const std::string& value)
+{
+    if(value.empty())
+        return "-";
+
+    const std::vector<std::string> parts = splitStatisticsValue(value);
+    std::string result;
+    for(std::size_t i = 0; i < parts.size(); ++i)
+    {
+        std::istringstream parser(parts[i]);
+        double number = 0.0;
+        std::string rest;
+        const bool isNumber = static_cast<bool>(parser >> number) && !(parser >> rest);
+        result += (i > 0 ? " / " : "") + (isNumber ? formatProfileValue(number) : parts[i]);
+    }
+    return result;
+}
+
+//! \brief "filled / slots" for a statistics value listing one item or "-" per slot ("Healing Draught / - / -").
+std::string countFilledSlots(const std::string& value)
+{
+    if(value.empty())
+        return "-";
+
+    const std::vector<std::string> parts = splitStatisticsValue(value);
+    std::size_t filled = 0;
+    for(const std::string& part : parts)
+    {
+        if(!part.empty() && part != "-")
+            ++filled;
+    }
+    return std::to_string(filled) + " / " + std::to_string(parts.size());
+}
+
+//! \brief Fills a text window with a head (markup) and a value, shortening the value with "..." until the text
+//! fits the height of the window, so the window never needs a scrollbar.
+void fitTextToWindow(CEGUI::Window* window, const std::string& head, const std::string& value)
+{
+    const float height = window->getPixelSize().d_height;
+    window->setText(head + escapeMarkup(value));
+    if(height <= 0.0f || isTileTextFitting(window, height))
         return;
 
     // Binary search for the longest prefix (cut at a character boundary) that fits together with the dots
@@ -259,13 +297,50 @@ void setProfileTile(CEGUI::Window* tile, const std::string& title, const std::st
         std::size_t middle = (low + high + 1) / 2;
         while(middle > 0 && (static_cast<unsigned char>(value[middle]) & 0xC0) == 0x80)
             --middle;
-        tile->setText(head + escapeMarkup(value.substr(0, middle) + "..."));
-        if(middle > low && isTileTextFitting(tile, height))
+        window->setText(head + escapeMarkup(value.substr(0, middle) + "..."));
+        if(middle > low && isTileTextFitting(window, height))
             low = middle;
         else
             high = (middle > low) ? middle - 1 : low;
     }
-    tile->setText(head + escapeMarkup(value.substr(0, low) + "..."));
+    window->setText(head + escapeMarkup(value.substr(0, low) + "..."));
+}
+
+//! \brief Lets the mouse wheel of every window below the given one reach it.
+void propagateMouseInput(CEGUI::Window* window)
+{
+    for(std::size_t i = 0; i < window->getChildCount(); ++i)
+    {
+        CEGUI::Window* child = window->getChildAtIdx(i);
+        child->setMouseInputPropagationEnabled(true);
+        propagateMouseInput(child);
+    }
+}
+
+//! \brief Sets the range of a row scrollbar (one step per row) and returns the first shown row.
+std::size_t setupRowScroll(CEGUI::Scrollbar* bar, std::size_t count, std::size_t rows)
+{
+    bar->setDocumentSize(static_cast<float>(count));
+    bar->setPageSize(static_cast<float>(rows));
+    bar->setStepSize(1.0f);
+    bar->setVisible(count > rows);
+    const float maximum = count > rows ? static_cast<float>(count - rows) : 0.0f;
+    const float position = std::floor(std::max(0.0f, std::min(bar->getScrollPosition(), maximum)) + 0.5f);
+    if(position != bar->getScrollPosition())
+        bar->setScrollPosition(position);
+    return static_cast<std::size_t>(position);
+}
+
+//! \brief Shows the image of the given name in the window, or no image.
+void setImage(CEGUI::Window* window, const CEGUI::Image* image)
+{
+    window->setProperty("Image", image == nullptr ? "" : image->getName());
+}
+
+//! \brief Colours the label of a navigation button gold while its page is shown.
+void setNavState(CEGUI::Window* button, bool active)
+{
+    button->getChild("Label")->setProperty("TextColours", active ? TAB_COLOUR_ACTIVE : TAB_COLOUR_INACTIVE);
 }
 }
 
@@ -273,13 +348,9 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mGameMap(gameMap),
     mWindow(rootWindow->getChild("SocialWindow")),
     mFilter(CreatureFilter::All),
-    mSelectedOnly(false),
-    mRebuildingList(false),
-    mProfileTab(false),
+    mPage(Page::Home),
+    mUpdatingRows(false),
     mProfilePage(nullptr),
-    mDungeonbookPage(nullptr),
-    mShowingSocial(false),
-    mShowingStatistics(false),
     mShownRosterVersion(0),
     mShownPostVersion(0),
     mSinceRefreshCheck(0.0f),
@@ -287,9 +358,47 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mShownProfilePostVersion(0),
     mSinceProfileRefresh(0.0f)
 {
+    CEGUI::Window* home = mWindow->getChild("HomePage");
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        CEGUI::Window* filter = home->getChild(FILTER_BUTTONS[i]);
+        filter->setUserString("Filter", std::to_string(i));
+        connect(filter, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFilterClicked, this));
+        CEGUI::Window* nav = mWindow->getChild(std::string("NavBar/") + NAV_BUTTONS[i]);
+        // The pages of one creature follow the start page in the order of the navigation buttons
+        nav->setUserString("Page", std::to_string(i + 1));
+        connect(nav, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onNavClicked, this));
+    }
+    for(std::size_t i = 0; i < LIST_ROWS; ++i)
+    {
+        CEGUI::Window* button = home->getChild("ListRows/Row" + std::to_string(i) + "/Button");
+        button->setUserString("Row", std::to_string(i));
+        connect(button, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onListRowClicked, this));
+    }
+    connect(mWindow->getChild("Header/BackButton"), CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber(&SocialWindow::onBackClicked, this));
+    connect(mWindow->getChild("Header/PrevButton"), CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber(&SocialWindow::onPreviousClicked, this));
+    connect(mWindow->getChild("Header/NextButton"), CEGUI::PushButton::EventClicked,
+        CEGUI::Event::Subscriber(&SocialWindow::onNextClicked, this));
+    connect(home->getChild("ListScroll"), CEGUI::Scrollbar::EventScrollPositionChanged,
+        CEGUI::Event::Subscriber(&SocialWindow::onListScrolled, this));
+    connect(home->getChild("ListRows"), CEGUI::Window::EventMouseWheel,
+        CEGUI::Event::Subscriber(&SocialWindow::onListWheel, this));
+    propagateMouseInput(home->getChild("ListRows"));
+    const char* const feedPages[] = {"HomePage", "FeedPage"};
+    for(const char* feedPage : feedPages)
+    {
+        CEGUI::Window* page = mWindow->getChild(feedPage);
+        connect(page->getChild("FeedScroll"), CEGUI::Scrollbar::EventScrollPositionChanged,
+            CEGUI::Event::Subscriber(&SocialWindow::onFeedScrolled, this));
+        connect(page->getChild("FeedRows"), CEGUI::Window::EventMouseWheel,
+            CEGUI::Event::Subscriber(&SocialWindow::onFeedWheel, this));
+        propagateMouseInput(page->getChild("FeedRows"));
+    }
 }
 
-//! \brief Disconnects profile events and destroys pages created for this game.
+//! \brief Disconnects the controls and destroys the page created for this game.
 SocialWindow::~SocialWindow()
 {
     for(CEGUI::Event::Connection& connection : mLinkConnections)
@@ -297,8 +406,11 @@ SocialWindow::~SocialWindow()
     CEGUI::WindowManager& windows = CEGUI::WindowManager::getSingleton();
     if(mProfilePage != nullptr)
         windows.destroyWindow(mProfilePage);
-    if(mDungeonbookPage != nullptr)
-        windows.destroyWindow(mDungeonbookPage);
+}
+
+void SocialWindow::connect(CEGUI::Window* window, const CEGUI::String& event, const CEGUI::Event::Subscriber& subscriber)
+{
+    mLinkConnections.push_back(window->subscribeEvent(event, subscriber));
 }
 
 void SocialWindow::setTabState(CEGUI::Window* tab, const std::string& label, bool active)
@@ -324,19 +436,15 @@ void SocialWindow::show()
     mWindow->show();
     mWindow->moveToFront();
     rebuildCreatureList();
-    rebuildFeed();
-    showTab(mProfileTab);
+    showPage(mSelectedCreature.empty() ? Page::Home : mPage);
     mSinceRefreshCheck = 0.0f;
 }
 
 void SocialWindow::showCreature(const std::string& creatureName)
 {
     mFilter = CreatureFilter::All;
-    mWindow->getChild("FilterButton")->setText(FILTER_LABEL_ALL);
     mSelectedCreature = creatureName;
-    mShowingSocial = false;
-    mShowingStatistics = false;
-    mProfileTab = true;
+    mPage = Page::Profile;
     show();
 }
 
@@ -390,8 +498,9 @@ void SocialWindow::update(float elapsed)
         rebuildCreatureList();
     if((log.getVersion() != mShownPostVersion) || (mSinceFeedRebuild >= FEED_TIME_REFRESH_INTERVAL))
         rebuildFeed();
-    if(mProfileTab && ((log.getVersion() != mShownProfilePostVersion) || (mSinceProfileRefresh >= FEED_TIME_REFRESH_INTERVAL)))
-        refreshProfile();
+    if((mPage != Page::Home) &&
+       ((log.getVersion() != mShownProfilePostVersion) || (mSinceProfileRefresh >= FEED_TIME_REFRESH_INTERVAL)))
+        refreshPage();
 }
 
 bool SocialWindow::onCloseClicked(const CEGUI::EventArgs& /*e*/)
@@ -400,75 +509,76 @@ bool SocialWindow::onCloseClicked(const CEGUI::EventArgs& /*e*/)
     return true;
 }
 
-bool SocialWindow::onFilterClicked(const CEGUI::EventArgs& /*e*/)
+bool SocialWindow::onFilterClicked(const CEGUI::EventArgs& e)
 {
-    const char* label = FILTER_LABEL_ALL;
-    switch(mFilter)
+    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
+    const std::string index = args.window->getUserString("Filter").c_str();
+    const CreatureFilter filters[] = {CreatureFilter::All, CreatureFilter::Workers, CreatureFilter::Fighters,
+        CreatureFilter::Unhappy};
+    for(std::size_t i = 0; i < 4; ++i)
     {
-        case CreatureFilter::All:
-            mFilter = CreatureFilter::Workers;
-            label = "Show: workers";
-            break;
-        case CreatureFilter::Workers:
-            mFilter = CreatureFilter::Fighters;
-            label = "Show: fighters";
-            break;
-        case CreatureFilter::Fighters:
-            mFilter = CreatureFilter::Unhappy;
-            label = "Show: unhappy creatures";
-            break;
-        default:
-            mFilter = CreatureFilter::All;
-            break;
+        if(index == std::to_string(i))
+            mFilter = filters[i];
     }
-    mWindow->getChild("FilterButton")->setText(label);
     rebuildCreatureList();
     return true;
 }
 
-bool SocialWindow::onFeedModeClicked(const CEGUI::EventArgs& /*e*/)
+bool SocialWindow::onListRowClicked(const CEGUI::EventArgs& e)
 {
-    mSelectedOnly = !mSelectedOnly;
-    mWindow->getChild("FeedPane/FeedModeButton")->setText(mSelectedOnly ? "Posts of: selected creature" : "Posts of: everyone");
-    rebuildFeed();
-    return true;
-}
-
-bool SocialWindow::onSelectionChanged(const CEGUI::EventArgs& /*e*/)
-{
-    if(mRebuildingList)
+    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
+    std::istringstream parser(args.window->getUserString("Row").c_str());
+    std::size_t row = 0;
+    if(!(parser >> row))
         return true;
 
-    CEGUI::Listbox* list = static_cast<CEGUI::Listbox*>(mWindow->getChild("CreatureList"));
-    CEGUI::ListboxItem* selected = list->getFirstSelectedItem();
-    if((selected != nullptr) && (selected->getID() < mListedCreatures.size()))
-        mSelectedCreature = mListedCreatures[selected->getID()];
-    else
-        mSelectedCreature.clear();
-
+    CEGUI::Scrollbar* bar = static_cast<CEGUI::Scrollbar*>(mWindow->getChild("HomePage/ListScroll"));
+    const std::size_t index = static_cast<std::size_t>(bar->getScrollPosition() + 0.5f) + row;
     // Selecting a creature shows its profile right away
-    if(!mSelectedCreature.empty())
+    if(index < mListedCreatures.size())
+        selectCreature(mListedCreatures[index], Page::Profile);
+    return true;
+}
+
+bool SocialWindow::onNavClicked(const CEGUI::EventArgs& e)
+{
+    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
+    const std::string index = args.window->getUserString("Page").c_str();
+    const Page pages[] = {Page::Feed, Page::Profile, Page::Values, Page::Inventory};
+    Page page = Page::Home;
+    for(std::size_t i = 0; i < 4; ++i)
     {
-        mShowingSocial = false;
-    mShowingStatistics = false;
-        showTab(true);
+        if(index == std::to_string(i + 1))
+            page = pages[i];
     }
-    else if(mProfileTab)
-        refreshProfile();
-    if(mSelectedOnly)
-        rebuildFeed();
+    // The feed button of the start page is the start page itself; the other buttons need a creature, the selected
+    // one or else the first of the list
+    if(mPage == Page::Home && page == Page::Feed)
+        return true;
+    if(mSelectedCreature.empty() && !mListedCreatures.empty())
+        mSelectedCreature = mListedCreatures[0];
+    if(mSelectedCreature.empty())
+        return true;
+
+    showPage(page);
     return true;
 }
 
-bool SocialWindow::onFeedTabClicked(const CEGUI::EventArgs& /*e*/)
+bool SocialWindow::onBackClicked(const CEGUI::EventArgs& /*e*/)
 {
-    showTab(false);
+    showPage(Page::Home);
     return true;
 }
 
-bool SocialWindow::onProfileTabClicked(const CEGUI::EventArgs& /*e*/)
+bool SocialWindow::onPreviousClicked(const CEGUI::EventArgs& /*e*/)
 {
-    showTab(true);
+    stepCreature(-1);
+    return true;
+}
+
+bool SocialWindow::onNextClicked(const CEGUI::EventArgs& /*e*/)
+{
+    stepCreature(1);
     return true;
 }
 
@@ -476,252 +586,192 @@ bool SocialWindow::onLinkClicked(const CEGUI::EventArgs& e)
 {
     const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
     if(args.window->isUserStringDefined("Creature"))
-        selectCreature(std::string(args.window->getUserString("Creature").c_str()));
+        selectCreature(std::string(args.window->getUserString("Creature").c_str()), Page::Profile);
     return true;
 }
 
-//! \brief Switches between the selected creature attributes and social profile.
-bool SocialWindow::onProfileViewClicked(const CEGUI::EventArgs&)
+bool SocialWindow::onListScrolled(const CEGUI::EventArgs& /*e*/)
 {
-    mShowingSocial = !mShowingSocial;
-    refreshProfile();
+    if(!mUpdatingRows)
+        refreshListRows();
     return true;
 }
 
-//! \brief Switches the Dungeonbook profile between its first page and the statistics page.
-bool SocialWindow::onStatisticsViewClicked(const CEGUI::EventArgs&)
+bool SocialWindow::onFeedScrolled(const CEGUI::EventArgs& /*e*/)
 {
-    mShowingStatistics = !mShowingStatistics;
-    refreshProfile();
+    if(!mUpdatingRows)
+        rebuildFeed();
     return true;
 }
 
-void SocialWindow::selectCreature(const std::string& creatureName)
+bool SocialWindow::onListWheel(const CEGUI::EventArgs& e)
+{
+    const CEGUI::MouseEventArgs& args = static_cast<const CEGUI::MouseEventArgs&>(e);
+    CEGUI::Scrollbar* bar = static_cast<CEGUI::Scrollbar*>(mWindow->getChild("HomePage/ListScroll"));
+    if(!bar->isVisible())
+        return false;
+
+    bar->setScrollPosition(bar->getScrollPosition() - args.wheelChange);
+    return true;
+}
+
+bool SocialWindow::onFeedWheel(const CEGUI::EventArgs& e)
+{
+    const CEGUI::MouseEventArgs& args = static_cast<const CEGUI::MouseEventArgs&>(e);
+    CEGUI::Window* page = mWindow->getChild(mPage == Page::Home ? "HomePage" : "FeedPage");
+    CEGUI::Scrollbar* bar = static_cast<CEGUI::Scrollbar*>(page->getChild("FeedScroll"));
+    if(!bar->isVisible())
+        return false;
+
+    bar->setScrollPosition(bar->getScrollPosition() - args.wheelChange);
+    return true;
+}
+
+void SocialWindow::selectCreature(const std::string& creatureName, Page page)
 {
     if((mFilter != CreatureFilter::All) &&
        (std::find(mListedCreatures.begin(), mListedCreatures.end(), creatureName) == mListedCreatures.end()))
     {
         mFilter = CreatureFilter::All;
-        mWindow->getChild("FilterButton")->setText(FILTER_LABEL_ALL);
     }
     mSelectedCreature = creatureName;
-    mShowingSocial = false;
-    mShowingStatistics = false;
     rebuildCreatureList();
-    if(mSelectedOnly)
-        rebuildFeed();
-    showTab(true);
+    if(!mSelectedCreature.empty())
+        showPage(page);
 }
 
-void SocialWindow::showTab(bool profile)
+void SocialWindow::stepCreature(int direction)
 {
-    mProfileTab = profile;
-    mWindow->getChild("FeedPane")->setVisible(!profile);
-    mWindow->getChild("ProfilePane")->setVisible(profile);
-    setTabState(mWindow->getChild("FeedTab"), "Feed", !profile);
-    setTabState(mWindow->getChild("ProfileTab"), "Profile", profile);
-    if(profile)
-        refreshProfile();
+    if(mListedCreatures.empty())
+        return;
+
+    const std::size_t count = mListedCreatures.size();
+    std::vector<std::string>::const_iterator it = std::find(mListedCreatures.cbegin(), mListedCreatures.cend(),
+        mSelectedCreature);
+    std::size_t index = 0;
+    if(it != mListedCreatures.cend())
+        index = (static_cast<std::size_t>(it - mListedCreatures.cbegin()) + count + (direction < 0 ? count - 1 : 1)) % count;
+    mSelectedCreature = mListedCreatures[index];
+    refreshListRows();
+    showPage(mPage);
 }
 
-//! \brief Fills the selected creature and its recent posts into one scrollable profile.
-void SocialWindow::refreshProfile()
+void SocialWindow::showPage(Page page)
 {
-    social::PostLog& log = social::PostLog::getSingleton();
-    mShownProfilePostVersion = log.getVersion();
-    mSinceProfileRefresh = 0.0f;
-
-    CEGUI::Window* pane = mWindow->getChild("ProfilePane");
-    Creature* creature = mSelectedCreature.empty() ? nullptr : mGameMap.getCreature(mSelectedCreature);
-    CEGUI::Window* holder = pane->getChild("ProfileHolder");
-    Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
-    const bool localRoster = useLocalCreatureRoster();
-    if(localRoster)
+    // Right after opening, the server roster is still on its way; the page of the creature is filled when it arrives
+    const bool waitingForRoster = !mSelectedCreature.empty() && !useLocalCreatureRoster() &&
+        !social::PostLog::getSingleton().isDungeonbookRosterReady();
+    if(page != Page::Home && findEntry(mSelectedCreature) == nullptr && !waitingForRoster)
+        page = Page::Home;
+    mPage = page;
+    const char* const pageNames[] = {"HomePage", "FeedPage", "ProfilePage", "ValuesPage", "InventoryPage"};
+    const Page pages[] = {Page::Home, Page::Feed, Page::Profile, Page::Values, Page::Inventory};
+    for(std::size_t i = 0; i < 5; ++i)
+        mWindow->getChild(pageNames[i])->setVisible(pages[i] == page);
+    mWindow->getChild("Header")->setVisible(page != Page::Home);
+    // The start page is the feed of all creatures, so its feed button is the active one there
+    const Page navPages[] = {Page::Feed, Page::Profile, Page::Values, Page::Inventory};
+    for(std::size_t i = 0; i < 4; ++i)
     {
-        // Recorded or legacy peers cannot provide server-only values; retain the existing social profile.
-        pane->getChild("ProfileHint")->setVisible(creature == nullptr);
-        holder->setVisible(creature != nullptr);
-        pane->getChild("ProfileBackButton")->hide();
-        if(mDungeonbookPage != nullptr)
-            mDungeonbookPage->hide();
-        if(creature == nullptr)
-            return;
+        const bool active = (navPages[i] == page) || (page == Page::Home && i == 0);
+        setNavState(mWindow->getChild(std::string("NavBar/") + NAV_BUTTONS[i]), active);
+        mWindow->getChild(std::string("NavBar/") + NAV_BUTTONS[i])->setEnabled(
+            i == 0 || !mSelectedCreature.empty() || !mListedCreatures.empty());
     }
+    if(page == Page::Home)
+        refreshListRows();
+    if(page == Page::Home || page == Page::Feed)
+        rebuildFeed();
+    refreshPage();
+}
+
+const social::DungeonbookEntry* SocialWindow::findEntry(const std::string& creatureName) const
+{
+    if(creatureName.empty())
+        return nullptr;
+
+    for(const social::DungeonbookEntry& entry : mEntries)
+    {
+        if(entry.name == creatureName)
+            return &entry;
+    }
+    return nullptr;
+}
+
+const CEGUI::Image* SocialWindow::findPortrait(const std::string& creatureName, const std::string& className,
+    bool worker, bool circular) const
+{
+    // The roster carries the appearance of every listed creature; a creature that left it may still be known here
+    std::string token;
+    const social::DungeonbookEntry* entry = findEntry(creatureName);
+    if(entry != nullptr)
+        token = entry->appearance;
     else
     {
-        const std::vector<social::DungeonbookEntry>& roster = log.getDungeonbookRoster();
-        const social::DungeonbookEntry* selected = nullptr;
-        for(const social::DungeonbookEntry& entry : roster)
-            if(entry.name == mSelectedCreature)
-                selected = &entry;
-        pane->getChild("ProfileHint")->setVisible(selected == nullptr);
-        holder->setVisible(selected != nullptr);
-        if(selected == nullptr)
-        {
-            pane->getChild("ProfileBackButton")->hide();
-            return;
-        }
-        if(mDungeonbookPage == nullptr)
-        {
-            mDungeonbookPage = CEGUI::WindowManager::getSingleton().loadLayoutFromFile("WindowDungeonbookProfile.layout");
-            holder->addChild(mDungeonbookPage);
-            gui.registerWindowHierarchy(mDungeonbookPage);
-            mLinkConnections.push_back(mDungeonbookPage->getChild("SocialButton")->subscribeEvent(
-                CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileViewClicked, this)));
-            mLinkConnections.push_back(mDungeonbookPage->getChild("StatisticsButton")->subscribeEvent(
-                CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onStatisticsViewClicked, this)));
-            mLinkConnections.push_back(mDungeonbookPage->getChild("StatisticsPage/BackButton")->subscribeEvent(
-                CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onStatisticsViewClicked, this)));
-            mLinkConnections.push_back(pane->getChild("ProfileBackButton")->subscribeEvent(
-                CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onProfileViewClicked, this)));
-        }
-        const bool showSocial = mShowingSocial && creature != nullptr;
-        mDungeonbookPage->setVisible(!showSocial);
-        if(mProfilePage != nullptr)
-            mProfilePage->setVisible(showSocial);
-        pane->getChild("ProfileBackButton")->setVisible(showSocial);
-        gui.setScaledArea(holder, CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0),
-            CEGUI::UDim(showSocial ? 0.91f : 1.0f, 0)));
-        if(!showSocial)
-        {
-            social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-            const social::CreatureProfile& profile = cache.getProfile(selected->name, selected->className, selected->worker);
-            mDungeonbookPage->getChild("NameText")->setText(escapeMarkup(profile.getFullName()));
-            mDungeonbookPage->getChild("KeeperText")->setText("Keeper: " + escapeMarkup(selected->keeper));
-            mDungeonbookPage->getChild("SocialButton")->setEnabled(creature != nullptr);
-            CreatureAppearance appearance;
-            CreatureAppearanceLogic::fromToken(selected->appearance, appearance);
-            const CEGUI::Image* portrait = getCircularCreatureAppearanceImage(selected->name, appearance);
-            const CreatureDefinition* definition = mGameMap.getClassDescription(selected->className);
-            if(portrait == nullptr && definition != nullptr)
-                portrait = &getCircularCreatureProfilePortraitImage(selected->name, definition->getMeshName(), profile.mGender);
-            mDungeonbookPage->getChild("Portrait/Image")->setProperty("Image", portrait == nullptr ? "" : portrait->getName());
-            const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};
-            const double values[] = {selected->strength, selected->dexterity, selected->life, selected->mana};
-            for(std::size_t i = 0; i < 4; ++i)
-            {
-                std::ostringstream text;
-                text << names[i] << "\n" << formatProfileValue(values[i]);
-                mDungeonbookPage->getChild(std::string("Attributes/") + names[i])->setText(text.str());
-            }
-            setProfileTile(mDungeonbookPage->getChild("EquipmentPanel"), "Equipment", selected->equipment);
-            setProfileTile(mDungeonbookPage->getChild("PathPanel"), "Path", selected->path);
-            setProfileTile(mDungeonbookPage->getChild("SkillsPanel"), "Skills", selected->skills);
-            // The labels are fixed in the layout; the value column holds one line per label, right aligned.
-            std::ostringstream combat;
-            combat << formatProfileValue(selected->critical) << " %\n" << formatProfileValue(selected->attackRating) << "\n"
-                << formatProfileValue(selected->defenseRating);
-            mDungeonbookPage->getChild("CombatValues")->setText(combat.str());
-            std::ostringstream defense;
-            defense << formatProfileValue(selected->physicalDefense) << "\n" << formatProfileValue(selected->magicalDefense) << "\n"
-                << formatProfileValue(selected->elementDefense);
-            mDungeonbookPage->getChild("DefenseValues")->setText(defense.str());
-            // The second page covers the first one; its values come from the lines of the statistics text
-            CEGUI::Window* statisticsPage = mDungeonbookPage->getChild("StatisticsPage");
-            statisticsPage->setVisible(mShowingStatistics);
-            for(std::size_t i = 0; i < mDungeonbookPage->getChildCount(); ++i)
-            {
-                CEGUI::Window* child = mDungeonbookPage->getChildAtIdx(i);
-                if(child != statisticsPage && child->getName() != "PageBackground")
-                    child->setVisible(!mShowingStatistics);
-            }
-            if(mShowingStatistics)
-            {
-                CEGUI::Window* title = statisticsPage->getChild("Title");
-                title->setText(escapeMarkup(elideToWidth(title->getFont(), profile.getFullName(), title->getPixelSize().d_width)));
-                struct StatisticsLine { const char* window; const char* title; const char* label; };
-                const StatisticsLine lines[] = {
-                    {"Experience", "Experience", "Experience"}, {"HP", "Hit points", "HP"}, {"Gold", "Gold", "Gold"},
-                    {"SightRadius", "Sight radius", "Sight radius"}, {"Potions", "Potions", "Potions"},
-                    {"Inventory", "Inventory", "Inventory"}, {"DamagePerSecond", "Damage per second", "Raw damage per second"},
-                    {"SkillPoints", "Skill points", "Skill points earned / spent"}};
-                for(const StatisticsLine& line : lines)
-                {
-                    std::string value = findStatisticsValue(selected->stats, line.label);
-                    if(value.empty())
-                        value = "-";
-                    setProfileTile(statisticsPage->getChild(std::string(line.window) + "Panel"), line.title, value);
-                }
-            }
-            return;
-        }
+        Creature* creature = mGameMap.getCreature(creatureName);
+        if(creature != nullptr)
+            token = CreatureAppearanceLogic::toToken(creature->getAppearance());
     }
-    bool hasCreature = true;
+    CreatureAppearance appearance;
+    const CEGUI::Image* image = nullptr;
+    if(!token.empty() && CreatureAppearanceLogic::fromToken(token, appearance))
+        image = circular ? getCircularCreatureAppearanceImage(creatureName, appearance) :
+            getCreatureAppearanceImage(creatureName, appearance);
+    if(image != nullptr)
+        return image;
 
-    if(hasCreature)
+    const CreatureDefinition* definition = mGameMap.getClassDescription(className);
+    if(definition == nullptr)
+        return nullptr;
+    const social::CreatureProfile& profile = social::SocialProfileCache::getSingleton().getProfile(creatureName,
+        className, worker);
+    // The book never shows the square preview portrait of the creature bar; its fallback is the round tinted one
+    return &getCircularCreatureProfilePortraitImage(creatureName, definition->getMeshName(), profile.mGender);
+}
+
+void SocialWindow::describeMood(const social::DungeonbookEntry& entry, std::string& text, std::string& icon) const
+{
+    // The own creatures carry their mood level on this side; for the others only the unhappy mark of the roster is known
+    Creature* creature = mGameMap.getCreature(entry.name);
+    const CreatureMoodLevel level = creature == nullptr ? CreatureMoodLevel::Unknown : creature->getMoodValue();
+    const uint32_t bits = creature == nullptr ? 0 : creature->getOverlayMoodValue();
+    icon = "DungeonbookIcons/MoodUnhappy";
+    if((bits & CreatureMoodValues::Hungry) != 0)
+        text = "Hungry";
+    else if((bits & CreatureMoodValues::Tired) != 0)
+        text = "Tired";
+    else if(level == CreatureMoodLevel::Happy)
     {
-        if(mProfilePage == nullptr)
-        {
-            mProfilePage = gui.createCreatureProfilePage(holder);
-            // The names in the friends and foe rows select that creature
-            const char* const linkNames[] = {"FriendLink0", "FriendLink1", "FoeLink"};
-            for(const char* linkName : linkNames)
-            {
-                mLinkConnections.push_back(mProfilePage->getChild(linkName)->subscribeEvent(
-                    CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this)));
-            }
-        }
-
-        mProfilePage->setVisible(true);
-
-        // A newly selected creature opens on its essential information, while timed refreshes keep the scroll position.
-        if(!mProfilePage->isUserStringDefined("ProfileCreature") ||
-            mProfilePage->getUserString("ProfileCreature") != mSelectedCreature)
-        {
-            static_cast<CEGUI::Scrollbar*>(mProfilePage->getChild("ProfileScrollbar"))->setScrollPosition(0);
-            mProfilePage->setUserString("ProfileCreature", mSelectedCreature);
-        }
-
-        // The full pane is the opening page; the recent posts follow the profile in the same scroll area.
-        gui.setScaledArea(holder, CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, 0), CEGUI::UDim(1, 0),
-            CEGUI::UDim(localRoster ? 1.0f : 0.91f, 0)));
+        text = "Happy";
+        icon = "DungeonbookIcons/MoodHappy";
     }
-
-    std::string posts;
-    if(hasCreature)
+    else if(level == CreatureMoodLevel::Neutral)
     {
-        int64_t turnNow = mGameMap.getTurnNumber();
-        std::size_t rows = 0;
-        const std::deque<social::Post>& allPosts = log.getPosts();
-        for(std::deque<social::Post>::const_reverse_iterator it = allPosts.rbegin();
-            (it != allPosts.rend()) && (rows < MAX_OWN_POSTS); ++it)
-        {
-            if(it->mCreature != mSelectedCreature)
-                continue;
-
-            std::string line = renderOwnPostLine(*it, turnNow);
-            if(line.empty())
-                continue;
-
-            posts += line;
-            ++rows;
-        }
-        // The profile already says "nothing posted yet", so the recent posts are left out when there are none
-        if(!posts.empty())
-            posts = std::string(FEED_NAME_COLOUR) + "Recent posts\n" + posts;
+        text = "Neutral";
+        icon = "DungeonbookIcons/MoodNeutral";
     }
-    if(mProfilePage != nullptr)
+    else if(level == CreatureMoodLevel::Upset)
+        text = "Upset";
+    else if(level == CreatureMoodLevel::Angry)
+        text = "Angry";
+    else if(level == CreatureMoodLevel::Furious)
+        text = "Furious";
+    else if(entry.unhappy)
+        text = "Unhappy";
+    else
     {
-        CEGUI::Window* ownPosts = mProfilePage->getChild("OwnPostsText");
-        ownPosts->setText(posts);
-        ownPosts->setVisible(hasCreature && !posts.empty());
-    }
-    if(hasCreature)
-    {
-        // The same code fills the creature card; here it also measures the recent posts after all social rows.
-        creature->fillProfilePage(mProfilePage);
+        text = "Content";
+        icon = "DungeonbookIcons/MoodHappy";
     }
 }
 
-//! \brief Lists the server roster of own and allied creatures with their keeper.
+//! \brief Lists the server roster of own and allied creatures (or the locally known ones) with the active filter.
 void SocialWindow::rebuildCreatureList()
 {
-    CEGUI::Listbox* list = static_cast<CEGUI::Listbox*>(mWindow->getChild("CreatureList"));
     mShownRosterVersion = social::PostLog::getSingleton().getRosterVersion();
-
-    std::vector<CreatureListEntry> entries;
-    std::vector<social::DungeonbookEntry> localCreatures;
-    if(useLocalCreatureRoster())
+    const bool localRoster = useLocalCreatureRoster();
+    mEntries.clear();
+    if(localRoster)
     {
         Player* localPlayer = mGameMap.getLocalPlayer();
         if(localPlayer != nullptr && localPlayer->getSeat() != nullptr)
@@ -736,22 +786,24 @@ void SocialWindow::rebuildCreatureList()
                     entry.name = creature->getName();
                     entry.className = creature->getDefinition()->getClassName();
                     entry.keeper = seat->getPlayer()->getNick();
+                    entry.appearance = CreatureAppearanceLogic::toToken(creature->getAppearance());
                     entry.level = creature->getLevel();
                     entry.worker = creature->getDefinition()->isWorker();
                     entry.champion = creature->getDefinition()->isChampion();
                     entry.unhappy = (creature->getOverlayMoodValue() &
                         (CreatureMoodValues::Hungry | CreatureMoodValues::Tired)) != 0 ||
                         static_cast<int32_t>(creature->getMoodValue()) >= static_cast<int32_t>(CreatureMoodLevel::Upset);
-                    localCreatures.push_back(entry);
+                    mEntries.push_back(entry);
                 }
             }
         }
     }
-    const std::vector<social::DungeonbookEntry>& creatures = useLocalCreatureRoster() ? localCreatures :
-        social::PostLog::getSingleton().getDungeonbookRoster();
-    const std::size_t total = creatures.size();
+    else
+        mEntries = social::PostLog::getSingleton().getDungeonbookRoster();
+
     social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-    for(const social::DungeonbookEntry& creature : creatures)
+    std::vector<std::pair<std::string, std::string> > sorted;
+    for(const social::DungeonbookEntry& creature : mEntries)
     {
         if((mFilter == CreatureFilter::Workers) && !creature.worker)
             continue;
@@ -760,107 +812,354 @@ void SocialWindow::rebuildCreatureList()
         if((mFilter == CreatureFilter::Unhappy) && !creature.unhappy)
             continue;
         const social::CreatureProfile& profile = cache.getProfile(creature.name, creature.className, creature.worker);
-        std::ostringstream text;
-        text << "[" << creature.keeper << "] " << profile.getFullName() << " (" <<
-            social::SocialGenerator::displayClassName(cache.getData(), creature.className) << ")  ";
-        CreatureListEntry entry;
-        // The champion shows a crown instead of its level
-        if(creature.champion)
-            entry.mCrownMarkup = CHAMPION_CROWN_MARKUP;
-        else
-            text << "L" << creature.level;
-        entry.mSortKey = creature.className + "|" + profile.getFullName() + "|" + creature.name;
-        entry.mText = text.str();
-        entry.mName = creature.name;
-        entries.push_back(entry);
+        sorted.push_back(std::make_pair(creature.className + "|" + profile.getFullName() + "|" + creature.name,
+            creature.name));
     }
-    std::sort(entries.begin(), entries.end(), isEntryBefore);
-
-    // Items wider than the list would bring up a horizontal scrollbar, so long texts are shortened
-    const float maxTextWidth = list->getPixelSize().d_width - list->getVertScrollbar()->getPixelSize().d_width -
-        LIST_TEXT_MARGIN * ODFrameListener::getSingleton().getModeManager()->getGui().getLayoutScale();
-
-    mRebuildingList = true;
-    float scroll = list->getVertScrollbar()->getScrollPosition();
-    list->resetList();
+    std::sort(sorted.begin(), sorted.end(), isEntryBefore);
     mListedCreatures.clear();
-    bool selectionFound = false;
-    for(std::size_t i = 0; i < entries.size(); ++i)
-    {
-        mListedCreatures.push_back(entries[i].mName);
-        CEGUI::ListboxTextItem* item = nullptr;
-        if(entries[i].mCrownMarkup.empty())
-        {
-            item = new CEGUI::ListboxTextItem(elideToWidth(list->getFont(), entries[i].mText, maxTextWidth),
-                static_cast<CEGUI::uint>(i));
-            item->setTextParsingEnabled(false);
-        }
-        else
-        {
-            // Only the name part is shortened and escaped, the crown markup is appended afterwards and has to be parsed
-            item = new CEGUI::ListboxTextItem(escapeMarkup(elideToWidth(list->getFont(), entries[i].mText, maxTextWidth)) +
-                entries[i].mCrownMarkup, static_cast<CEGUI::uint>(i));
-            item->setTextParsingEnabled(true);
-        }
-        item->setTooltipText(entries[i].mText);
-        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionFill");
-        list->addItem(item);
-        if(entries[i].mName == mSelectedCreature)
-        {
-            list->setItemSelectState(item, true);
-            selectionFound = true;
-        }
-    }
-    list->getVertScrollbar()->setScrollPosition(scroll);
-    mRebuildingList = false;
+    for(const std::pair<std::string, std::string>& entry : sorted)
+        mListedCreatures.push_back(entry.second);
 
-    if(!selectionFound && (useLocalCreatureRoster() || social::PostLog::getSingleton().isDungeonbookRosterReady()))
+    // A creature that left the roster (it died or changed sides) cannot be shown any more
+    if(findEntry(mSelectedCreature) == nullptr && (localRoster || social::PostLog::getSingleton().isDungeonbookRosterReady()))
         mSelectedCreature.clear();
-    if(mProfileTab)
-        refreshProfile();
 
+    CEGUI::Window* home = mWindow->getChild("HomePage");
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        const CreatureFilter filters[] = {CreatureFilter::All, CreatureFilter::Workers, CreatureFilter::Fighters,
+            CreatureFilter::Unhappy};
+        setTabState(home->getChild(FILTER_BUTTONS[i]), FILTER_LABELS[i], filters[i] == mFilter);
+    }
     std::ostringstream label;
-    label << (useLocalCreatureRoster() ? "Known creatures (" : "Creatures (") << entries.size();
-    if(entries.size() != total)
-        label << " of " << total;
+    label << (localRoster ? "Known creatures (" : "Creatures (") << mListedCreatures.size();
+    if(mListedCreatures.size() != mEntries.size())
+        label << " of " << mEntries.size();
     label << ")";
-    mWindow->getChild("CreaturesLabel")->setText(label.str());
-    list->setTooltipText(useLocalCreatureRoster() ?
+    setElidedText(home->getChild("CreaturesLabel"), label.str());
+    home->getChild("ListRows")->setTooltipText(localRoster ?
         "Only locally known creatures are shown; detailed server statistics are unavailable." :
-        "Click a creature to see its profile.");
+        "Click a creature to see its pages.");
+
+    refreshListRows();
+    if(mPage != Page::Home && mSelectedCreature.empty())
+        showPage(Page::Home);
+    else if(mPage != Page::Home)
+        refreshPage();
+    // The levels in the feed come from the roster
+    rebuildFeed();
 }
 
+void SocialWindow::refreshListRows()
+{
+    CEGUI::Window* home = mWindow->getChild("HomePage");
+    mUpdatingRows = true;
+    const std::size_t first = setupRowScroll(static_cast<CEGUI::Scrollbar*>(home->getChild("ListScroll")),
+        mListedCreatures.size(), LIST_ROWS);
+    mUpdatingRows = false;
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    for(std::size_t i = 0; i < LIST_ROWS; ++i)
+    {
+        CEGUI::Window* row = home->getChild("ListRows/Row" + std::to_string(i));
+        const std::size_t index = first + i;
+        const social::DungeonbookEntry* entry = index < mListedCreatures.size() ? findEntry(mListedCreatures[index]) : nullptr;
+        row->setVisible(entry != nullptr);
+        if(entry == nullptr)
+            continue;
+
+        const social::CreatureProfile& profile = cache.getProfile(entry->name, entry->className, entry->worker);
+        row->getChild("Highlight")->setVisible(entry->name == mSelectedCreature);
+        setImage(row->getChild("Portrait"), findPortrait(entry->name, entry->className, entry->worker, false));
+        setElidedText(row->getChild("Name"), profile.getFullName());
+        // The champion shows a crown instead of its level
+        row->getChild("Level")->setText(entry->champion ? CHAMPION_CROWN_MARKUP : "Lv. " + std::to_string(entry->level));
+        std::string mood;
+        std::string icon;
+        describeMood(*entry, mood, icon);
+        row->getChild("MoodIcon")->setProperty("Image", icon);
+        setElidedText(row->getChild("Mood"), mood);
+        row->getChild("Button")->setTooltipText(profile.getFullName() + " (" +
+            social::SocialGenerator::displayClassName(cache.getData(), entry->className) + "), keeper " + entry->keeper);
+    }
+}
+
+//! \brief Fills the rows of the feed of the shown page from the scroll position on.
 void SocialWindow::rebuildFeed()
 {
     social::PostLog& log = social::PostLog::getSingleton();
     mShownPostVersion = log.getVersion();
     mSinceFeedRebuild = 0.0f;
+    if(mPage != Page::Home && mPage != Page::Feed)
+        return;
 
-    std::string text;
-    if(mSelectedOnly && mSelectedCreature.empty())
+    const bool all = (mPage == Page::Home);
+    CEGUI::Window* page = mWindow->getChild(all ? "HomePage" : "FeedPage");
+    std::vector<const social::Post*> posts;
+    const std::deque<social::Post>& allPosts = log.getPosts();
+    for(std::deque<social::Post>::const_reverse_iterator it = allPosts.rbegin();
+        (it != allPosts.rend()) && (posts.size() < MAX_FEED_ROWS); ++it)
     {
-        text = "Select a creature in the list to see its posts.";
+        if(!all && (it->mCreature != mSelectedCreature))
+            continue;
+        if(renderPostTextForLog(*it).empty())
+            continue;
+        posts.push_back(&*it);
+    }
+
+    mUpdatingRows = true;
+    const std::size_t first = setupRowScroll(static_cast<CEGUI::Scrollbar*>(page->getChild("FeedScroll")),
+        posts.size(), FEED_ROWS);
+    mUpdatingRows = false;
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    const int64_t turnNow = mGameMap.getTurnNumber();
+    for(std::size_t i = 0; i < FEED_ROWS; ++i)
+    {
+        CEGUI::Window* row = page->getChild("FeedRows/Row" + std::to_string(i));
+        const std::size_t index = first + i;
+        row->setVisible(index < posts.size());
+        if(index >= posts.size())
+            continue;
+
+        const social::Post& post = *posts[index];
+        const social::CreatureProfile& profile = cache.getProfile(post.mCreature, post.mClassName, post.mIsWorker);
+        const std::string text = renderPostText(post, profile);
+        setImage(row->getChild("Portrait"), findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false));
+        // Name, then the level of a listed creature (the crown for the champion) and the age of the post
+        const social::DungeonbookEntry* entry = findEntry(post.mCreature);
+        std::string level;
+        if(entry != nullptr)
+            level = (entry->champion ? std::string(CHAMPION_CROWN_MARKUP) : "Lv. " + std::to_string(entry->level)) + " - ";
+        const std::string age = formatAge(turnNow - post.mTurn);
+        // The name gives way to level and age; the crown is about as wide as two letters
+        CEGUI::Window* head = row->getChild("Head");
+        const std::string plainMeta = "   " + (entry == nullptr ? std::string() :
+            (entry->champion ? std::string("WW - ") : level)) + age;
+        const float nameWidth = head->getPixelSize().d_width -
+            (head->getFont() == nullptr ? 0.0f : head->getFont()->getTextExtent(plainMeta));
+        head->setText(std::string(FEED_NAME_COLOUR) + escapeMarkup(elideToWidth(head->getFont(), profile.getFullName(),
+            std::max(0.0f, nameWidth))) + FEED_TIME_COLOUR + "   " + level + age);
+        CEGUI::Window* textWindow = row->getChild("Text");
+        fitTextToWindow(textWindow, FEED_TEXT_COLOUR, text);
+        textWindow->setTooltipText(text);
+    }
+    CEGUI::Window* empty = page->getChild("FeedEmpty");
+    empty->setVisible(posts.empty());
+    empty->setText(all ? "Quiet in the dungeon. Somewhere, a kobold is shovelling." : "Nothing posted yet.");
+}
+
+void SocialWindow::refreshPage()
+{
+    social::PostLog& log = social::PostLog::getSingleton();
+    mShownProfilePostVersion = log.getVersion();
+    mSinceProfileRefresh = 0.0f;
+    const social::DungeonbookEntry* entry = findEntry(mSelectedCreature);
+    if(mPage == Page::Home || entry == nullptr)
+        return;
+
+    // The feed of the creature is filled by rebuildFeed(), like the feed of the start page
+    refreshHeader(*entry);
+    if(mPage == Page::Profile)
+        refreshProfile(*entry);
+    else if(mPage == Page::Values)
+        refreshValues(*entry);
+    else if(mPage == Page::Inventory)
+        refreshInventory(*entry);
+}
+
+void SocialWindow::refreshHeader(const social::DungeonbookEntry& entry)
+{
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    const social::CreatureProfile& profile = cache.getProfile(entry.name, entry.className, entry.worker);
+    CEGUI::Window* header = mWindow->getChild("Header");
+    setElidedText(header->getChild("NameText"), profile.getFullName());
+    // The arrows switch through the list as it is filtered; with a single creature there is nothing to switch to
+    const bool canSwitch = mListedCreatures.size() > 1;
+    header->getChild("PrevButton")->setEnabled(canSwitch);
+    header->getChild("NextButton")->setEnabled(canSwitch);
+}
+
+//! \brief Fills the profile page: portrait, name, keeper, class and mood, the social rows and the recent posts.
+void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
+{
+    CEGUI::Window* page = mWindow->getChild("ProfilePage");
+    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
+    const social::CreatureProfile& profile = cache.getProfile(entry.name, entry.className, entry.worker);
+    setImage(page->getChild("Portrait"), findPortrait(entry.name, entry.className, entry.worker, false));
+    setElidedText(page->getChild("NameText"), profile.getFullName());
+    setElidedText(page->getChild("KeeperText"), "Keeper: " + entry.keeper);
+    std::string mood;
+    std::string icon;
+    describeMood(entry, mood, icon);
+    page->getChild("InfoText")->setText(escapeMarkup(social::SocialGenerator::displayClassName(cache.getData(),
+        entry.className)) + " - " + (entry.worker ? "Worker" : "Fighter") + "\n" +
+        (entry.champion ? std::string("Champion ") + CHAMPION_CROWN_MARKUP : "Level " + std::to_string(entry.level)) +
+        "\nMood: " + mood);
+
+    // With the creature known here the shared social profile shows the real relationships, friends and status
+    Creature* creature = mGameMap.getCreature(entry.name);
+    CEGUI::Window* holder = page->getChild("SocialHolder");
+    CEGUI::Window* fallback = page->getChild("SocialText");
+    holder->setVisible(creature != nullptr);
+    fallback->setVisible(creature == nullptr);
+    if(creature != nullptr)
+    {
+        if(mProfilePage == nullptr)
+        {
+            Gui& gui = ODFrameListener::getSingleton().getModeManager()->getGui();
+            mProfilePage = gui.createCreatureProfilePage(holder);
+            // Portrait, name and items have their own places in the book, the shared page shows the social rows only
+            const char* const hidden[] = {"Portrait", "NameText", "AttributesText", "EquipmentText", "EquipmentRow",
+                "OwnPostsText"};
+            for(const char* name : hidden)
+                mProfilePage->getChild(name)->setVisible(false);
+            // The names in the friends and foe rows select that creature
+            const char* const linkNames[] = {"FriendLink0", "FriendLink1", "FoeLink"};
+            for(const char* linkName : linkNames)
+            {
+                connect(mProfilePage->getChild(linkName), CEGUI::PushButton::EventClicked,
+                    CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this));
+            }
+        }
+        // A newly selected creature opens on its first rows, while timed refreshes keep the scroll position.
+        if(!mProfilePage->isUserStringDefined("ProfileCreature") ||
+            mProfilePage->getUserString("ProfileCreature") != mSelectedCreature)
+        {
+            static_cast<CEGUI::Scrollbar*>(mProfilePage->getChild("ProfileScrollbar"))->setScrollPosition(0);
+            mProfilePage->setUserString("ProfileCreature", mSelectedCreature);
+        }
+        // The same code fills the creature card
+        creature->fillProfilePage(mProfilePage);
     }
     else
     {
-        int64_t turnNow = mGameMap.getTurnNumber();
-        std::size_t rows = 0;
-        const std::deque<social::Post>& posts = log.getPosts();
-        for(std::deque<social::Post>::const_reverse_iterator it = posts.rbegin();
-            (it != posts.rend()) && (rows < MAX_FEED_ROWS); ++it)
+        // Out of sight the profile still comes from the name, with the path and skills of the roster
+        std::vector<std::string> likes;
+        std::vector<std::string> dislikes;
+        for(std::size_t i = 0; i < 2; ++i)
         {
-            if(mSelectedOnly && (it->mCreature != mSelectedCreature))
-                continue;
+            if(!profile.mLikes[i].empty())
+                likes.push_back(profile.mLikes[i]);
+            if(!profile.mDislikes[i].empty())
+                dislikes.push_back(profile.mDislikes[i]);
+        }
+        std::string text = "Age: " + profile.mAgeText + (profile.mGender.empty() ? "" : " - " + profile.mGender) +
+            "\nRelationship: " + profile.mRelationship + "\nFrom: " + profile.mHometown + "\nJob: " + profile.mJob +
+            "\nPath: " + entry.path + "\nSkills: " + entry.skills + "\nLikes: ";
+        for(std::size_t i = 0; i < likes.size(); ++i)
+            text += (i > 0 ? ", " : "") + likes[i];
+        text += "\nDislikes: ";
+        for(std::size_t i = 0; i < dislikes.size(); ++i)
+            text += (i > 0 ? ", " : "") + dislikes[i];
+        text += "\n\n\"" + profile.mBio + "\"";
+        fallback->setText(escapeMarkup(text));
+    }
 
-            std::string entry = renderFeedEntry(*it, turnNow);
-            if(entry.empty())
-                continue;
+    // The posts of the creature: their number and the newest ones
+    social::PostLog& log = social::PostLog::getSingleton();
+    const int64_t turnNow = mGameMap.getTurnNumber();
+    std::size_t count = 0;
+    std::size_t rows = 0;
+    std::string posts;
+    const std::deque<social::Post>& allPosts = log.getPosts();
+    for(std::deque<social::Post>::const_reverse_iterator it = allPosts.rbegin(); it != allPosts.rend(); ++it)
+    {
+        if(it->mCreature != mSelectedCreature)
+            continue;
 
-            text += entry;
+        std::string line = renderOwnPostLine(*it, turnNow);
+        if(line.empty())
+            continue;
+
+        ++count;
+        if(rows < MAX_OWN_POSTS)
+        {
+            posts += line;
             ++rows;
         }
-        if(text.empty())
-            text = "Quiet in the dungeon. Somewhere, a kobold is shovelling.";
     }
-    mWindow->getChild("FeedPane/FeedText")->setText(text);
+    page->getChild("PostsTitle")->setText("Posts (" + std::to_string(count) + ")");
+    page->getChild("PostsText")->setText(posts.empty() ? std::string(FEED_TEXT_COLOUR) + "Nothing posted yet." : posts);
+}
+
+//! \brief Fills the values sheet: the statistics column, the portrait ring, the attributes, the combat and defense
+//! blocks and the equipment, path and skills tiles. Without server values (replays, older peers) they show "-".
+void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
+{
+    CEGUI::Window* page = mWindow->getChild("ValuesPage");
+    const bool known = !useLocalCreatureRoster();
+    setImage(page->getChild("Portrait/Image"), findPortrait(entry.name, entry.className, entry.worker, true));
+
+    // The column of the former statistics page: window, label in the statistics text, how the value is shown
+    struct StatisticsLine { const char* window; const char* label; bool slots; };
+    const StatisticsLine lines[] = {
+        {"Experience", "Experience", false}, {"HitPoints", "HP", false}, {"Gold", "Gold", false},
+        {"SightRadius", "Sight radius", false}, {"Potions", "Potions", true}, {"Inventory", "Inventory", true},
+        {"DamagePerSecond", "Raw damage per second", false}, {"SkillPoints", "Skill points earned / spent", false}};
+    for(const StatisticsLine& line : lines)
+    {
+        const std::string value = known ? findStatisticsValue(entry.stats, line.label) : std::string();
+        CEGUI::Window* valueWindow = page->getChild(std::string(line.window) + "Value");
+        setElidedText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));
+        // The item names of the potion and inventory slots and the meaning of the skill points stay readable
+        std::string tooltip = value;
+        if(std::string(line.window) == "SkillPoints" && !value.empty())
+            tooltip = "Skill points earned / spent: " + value;
+        valueWindow->setTooltipText(tooltip);
+        page->getChild(std::string(line.window) + "Label")->setTooltipText(tooltip);
+    }
+
+    const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};
+    const double values[] = {entry.strength, entry.dexterity, entry.life, entry.mana};
+    for(std::size_t i = 0; i < 4; ++i)
+    {
+        std::ostringstream text;
+        text << names[i] << "\n" << (known ? formatProfileValue(values[i]) : std::string("-"));
+        page->getChild(names[i])->setText(text.str());
+    }
+    // The labels are fixed in the layout; the value column holds one line per label, right aligned.
+    std::ostringstream combat;
+    std::ostringstream defense;
+    if(known)
+    {
+        combat << formatProfileValue(entry.critical) << " %\n" << formatProfileValue(entry.attackRating) << "\n"
+            << formatProfileValue(entry.defenseRating);
+        defense << formatProfileValue(entry.physicalDefense) << "\n" << formatProfileValue(entry.magicalDefense) << "\n"
+            << formatProfileValue(entry.elementDefense);
+    }
+    else
+    {
+        combat << "-\n-\n-";
+        defense << "-\n-\n-";
+    }
+    page->getChild("CombatValues")->setText(combat.str());
+    page->getChild("DefenseValues")->setText(defense.str());
+
+    const char* const tiles[] = {"Equipment", "Path", "Skills"};
+    const std::string tileValues[] = {entry.equipment, entry.path, entry.skills};
+    for(std::size_t i = 0; i < 3; ++i)
+    {
+        const std::string value = (known && !tileValues[i].empty()) ? tileValues[i] : std::string("-");
+        CEGUI::Window* tile = page->getChild(std::string(tiles[i]) + "Value");
+        fitTextToWindow(tile, FEED_TEXT_COLOUR, value);
+        tile->setTooltipText(value);
+    }
+}
+
+//! \brief Fills the 13 slots of the inventory page with the items the creature shows to the local player.
+void SocialWindow::refreshInventory(const social::DungeonbookEntry& entry)
+{
+    CEGUI::Window* page = mWindow->getChild("InventoryPage");
+    setImage(page->getChild("Portrait"), findPortrait(entry.name, entry.className, entry.worker, false));
+    std::vector<CEGUI::Window*> slots;
+    for(std::size_t slot = 0; slot < ITEM_SLOTS; ++slot)
+        slots.push_back(page->getChild("SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)));
+    Creature* creature = mGameMap.getCreature(entry.name);
+    Creature::fillItemSlotWindows(creature, slots, true);
+
+    std::string hint;
+    if(creature == nullptr)
+        hint = "This creature is out of sight; its items are not known here.";
+    else if(mGameMap.getLocalPlayer() == nullptr || creature->getSeat() != mGameMap.getLocalPlayer()->getSeat())
+        hint = "Only the hands of a creature of another keeper can be seen.";
+    page->getChild("HintText")->setText(hint);
 }

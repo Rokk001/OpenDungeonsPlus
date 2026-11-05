@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Imageset name="DungeonbookIcons" imagefile="DungeonbookIcons.png" nativeHorzRes="1024" nativeVertRes="768" autoScaled="false" version="2">
+    <Image name="NavFeed" xPos="0" yPos="0" width="128" height="128" />
+    <Image name="NavProfile" xPos="128" yPos="0" width="128" height="128" />
+    <Image name="NavValues" xPos="256" yPos="0" width="128" height="128" />
+    <Image name="NavInventory" xPos="384" yPos="0" width="128" height="128" />
+    <Image name="ArrowBack" xPos="0" yPos="128" width="128" height="128" />
+    <Image name="ArrowPrev" xPos="128" yPos="128" width="128" height="128" />
+    <Image name="ArrowNext" xPos="256" yPos="128" width="128" height="128" />
+    <Image name="Lock" xPos="384" yPos="128" width="128" height="128" />
+    <Image name="MoodHappy" xPos="0" yPos="256" width="128" height="128" />
+    <Image name="MoodNeutral" xPos="128" yPos="256" width="128" height="128" />
+    <Image name="MoodUnhappy" xPos="256" yPos="256" width="128" height="128" />
+    <Image name="Swords" xPos="384" yPos="256" width="128" height="128" />
+    <Image name="Shield" xPos="0" yPos="384" width="128" height="128" />
+    <Image name="Equipment" xPos="128" yPos="384" width="128" height="128" />
+    <Image name="Path" xPos="256" yPos="384" width="128" height="128" />
+    <Image name="Skills" xPos="384" yPos="384" width="128" height="128" />
+</Imageset>

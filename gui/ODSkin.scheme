@@ -3,6 +3,7 @@
     <Imageset filename="ODGameWindow.imageset" name="OpenDungeonsGameWindow" />
     <Imageset filename="DungeonbookPage.imageset" name="DungeonbookArt" />
     <Imageset filename="DungeonbookFrame.imageset" name="DungeonbookFrame" />
+    <Imageset filename="DungeonbookIcons.imageset" name="DungeonbookIcons" />
     <Imageset filename="ODIcons.imageset" name="OpenDungeonsIcons" />
     <Imageset filename="Items.imageset" name="ItemImages" />
     <Imageset filename="SlotTypes.imageset" name="SlotTypes" />
