@@ -56,6 +56,7 @@ static const MeshBounds meshBounds[] = {
     {"GhostRack", -.5f, -.08f, .5f, .08f, 1.0000001f},
     {"GhostWallGauges", -.45f, -.1f, .45f, .1f, .9000001f},
     {"ManaStill", -.4565963f, -.3909285f, .5109774f, .3909285f, 1.62f},
+    {"GhostPress", -.4934854f, -.3029316f, .4934854f, .3244827f, 1.5f},
     {"GoblinBed", -.450071f, -.436337f, .444606f, .44576f, .073802f},
     {"GoldstackLv1", -.197478f, -.175391f, .186379f, .185685f},
     {"GoldstackLv2", -.185184f, -.182552f, .185553f, .182552f},
@@ -152,7 +153,7 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
        name == "PortalObject" || isDungeonHeartMesh(name) ||
        name == "SalesTable" || name == "MerchantShelf" || name == "Cauldron" ||
        name == "HerbBed" || name == "StillShelf" || name == "WaterTrough" ||
-       name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron" || name == "ManaStill" ||
+       name == "MushroomLamp" || name == "ItemBag" || name == "GhostCauldron" || name == "ManaStill" || name == "GhostPress" ||
        name == "SpaChair" || name == "SpaMudPool" || name == "SpaPoolRim" || name == "SpaSpringboard" ||
        name == "TavernCounter" || name == "TavernKeg" || name == "TavernTable")
         return {1.0f, 1.0f};

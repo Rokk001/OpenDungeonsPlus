@@ -72,8 +72,20 @@ def main():
     still_material = read('materials/scripts/Ghost.material')
     for name in ('ManaCrystal','ManaCrystalDull','ManaStillGlass','GhostEmbers','GhostCoal','GhostGlassDull','GhostCobweb'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
+    # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.
+    for path in ('models/GhostPress.mesh','models/GhostPress.skeleton'):
+        credited(path,credits)
+    _, chunks = chunks_module.chunks((repo/'models/GhostPress.skeleton').read_bytes())
+    press_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
+    assert {'Working','Idle','Locked'} <= press_clips, press_clips
+    assert b'GhostPress.skeleton' in (repo/'models/GhostPress.mesh').read_bytes()
+    assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress",',apparatus), 'ghost press mesh'
+    assert 'RESEARCH_BOOK_MESH = "Grimoire"' in read('source/entities/ItemBagEntity.cpp')
+    for name in ('GhostBookLeather','GhostBookPages'):
+        assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     bounds = read('source/gamemap/RoomObjectBounds.h')
     assert re.search(r'\{"ManaStill"\s*,',bounds), 'ManaStill'
+    assert re.search(r'\{"GhostPress"\s*,',bounds), 'GhostPress'
     for name in models[:7]+models[10:]:
         assert re.search(r'\{"'+name+r'"\s*,',bounds), name
     for path in ('materials/scripts/Ghost.material','materials/scripts/GhostRoomFloor.material',

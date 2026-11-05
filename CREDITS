@@ -2081,6 +2081,8 @@ assets-src/rooms/ghostroom/GhostRack.blend    AI-generated with Codex    GPLv3+ 
 models/GhostRack.mesh    AI-generated with Codex    GPLv3+    Open free-standing iron rack frame that carries the bell, hooks and gauges on the room edge; original editable source and export, 2026-10-27
 models/ManaStill.mesh    AI-generated with Claude    GPLv3+    Original iron mana still (funnel, coil column, ember cage, crystal bell jar) after the ghost apparatus mockup A; working, unlit and cobwebbed parts in one mesh, 2026-11-05
 models/ManaStill.skeleton    AI-generated with Claude    GPLv3+    Original five-bone state rig (Root, Glow, Coil, Dull, Webs) with the clips Working (turning coil), Idle and Locked, 2026-11-05
+models/GhostPress.mesh    AI-generated with Claude    GPLv3+    Original iron ghost press (arched base, riveted columns, crowned yoke, screw with T-handle, front chains) after the ghost apparatus mockup A; working book, unlit and cobwebbed parts in one mesh, 2026-11-05
+models/GhostPress.skeleton    AI-generated with Claude    GPLv3+    Original seven-bone state rig (Root, Press, Handle, Glow, Drips, Dull, Webs) with the clips Working (turning handle, pressing platen), Idle and Locked, 2026-11-05
 models/ManaCrystal.mesh    AI-generated with Claude    GPLv3+    Original clear pale-green hexagonal mana crystal with two side shards and a glowing core, 2026-11-05
 materials/textures/GhostCobweb.png    AI-generated with Claude    GPLv3+    Original procedurally painted translucent cobweb for the locked ghost apparatuses, 512 pixels, 2026-11-05
 
