@@ -24,6 +24,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 #include "utils/MakeUnique.h"
+#include <functional>
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
@@ -541,7 +542,7 @@ void RoomGhostRoom::layoutApparatuses()
     std::sort(ordered.begin(),ordered.end(),tileOrder);
     const int dx[]={0,-1,1,0},dy[]={1,0,0,-1};
     // An orthogonal neighbour that is a wall (or the map edge)
-    const auto atWall=[&](Tile* tile)
+    const std::function<bool(Tile*)> atWall=[&](Tile* tile)
     {
         for(int i=0;i<4;++i)
         {
@@ -551,7 +552,7 @@ void RoomGhostRoom::layoutApparatuses()
         return false;
     };
     // A door opening: an orthogonal neighbour outside the room that can be walked on
-    const auto inOpening=[&](Tile* tile)
+    const std::function<bool(Tile*)> inOpening=[&](Tile* tile)
     {
         for(int i=0;i<4;++i)
         {
@@ -561,7 +562,7 @@ void RoomGhostRoom::layoutApparatuses()
         return false;
     };
     // Every free floor tile stays connected to every other one when the given tiles are taken
-    const auto keepsReachable=[&](const std::vector<Tile*>& taken)
+    const std::function<bool(const std::vector<Tile*>&)> keepsReachable=[&](const std::vector<Tile*>& taken)
     {
         std::set<Tile*> open;
         for(Tile* tile : mCoveredTiles)
