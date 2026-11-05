@@ -8232,7 +8232,8 @@ bool Creature::resizeMeshAfterDrop()
 }
 
 
-bool Creature::wallDigPath(Tile* wallTile, Tile* nTile, uint32_t slot, std::vector<Ogre::Vector2>& path)
+bool Creature::wallDigPath(Tile* wallTile, Tile* nTile, uint32_t slot, std::vector<Ogre::Vector2>& path,
+    RoomObjectNavigation::RouteCache* routeCache)
 {
     if(nTile == nullptr || wallTile == nullptr || getPositionTile() == nullptr || slot >= 3)
         return false;
@@ -8249,7 +8250,10 @@ bool Creature::wallDigPath(Tile* wallTile, Tile* nTile, uint32_t slot, std::vect
     const std::list<Tile*> tiles = getGameMap()->path(this, destination);
     tileToVector2(tiles, path, true, 0.0f);
     path.push_back(point);
-    RoomObjectNavigation::refine(*this, path);
+    if(routeCache != nullptr)
+        RoomObjectNavigation::refine(*this, path, *routeCache);
+    else
+        RoomObjectNavigation::refine(*this, path);
     if(!RoomObjectPath::clearPoint(RoomObjectNavigation::bodyObstacles(*this), point, facing) ||
         path.empty() || path.back() != point ||
         RoomObjectNavigation::blocked(*this, path))

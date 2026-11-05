@@ -87,6 +87,11 @@ class ParticleSystem;
 class BillboardChain;
 }
 
+namespace RoomObjectNavigation
+{
+class RouteCache;
+}
+
 //! \brief The kinds of drink a creature can take (see Creature::drinkTaken).
 enum class DrinkKind
 {
@@ -460,7 +465,11 @@ public:
     //! \param nTile the neighbouring tile the creature walks to first.
     //! \return false if a tile is missing or the creature has no position tile, true once the walk and the parking action are set.
     bool parkToWallTile(Tile* wallTile, Tile* nTile);
-    bool wallDigPath(Tile* wallTile, Tile* nTile, uint32_t slot, std::vector<Ogre::Vector2>& path);
+    //! \brief Computes the walk to dig place slot of the face of wallTile next to nTile; false if it cannot be reached.
+    //! \param routeCache Failed route searches of this creature from earlier calls in the same unchanged game state,
+    //! reused and extended (see RoomObjectNavigation::RouteCache); null for a call on its own.
+    bool wallDigPath(Tile* wallTile, Tile* nTile, uint32_t slot, std::vector<Ogre::Vector2>& path,
+        RoomObjectNavigation::RouteCache* routeCache = nullptr);
     
     bool setDestination(Tile* tile);
 

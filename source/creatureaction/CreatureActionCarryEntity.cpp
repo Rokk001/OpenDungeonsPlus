@@ -162,8 +162,8 @@ CreatureActionCarryEntity::~CreatureActionCarryEntity()
         }
     }
 
-    // A pulled creature was never in the carry node of the worker
-    if(!mIsDrag)
+    // A pulled creature was never in the carry node of the worker, and released cargo left it in releaseEntity
+    if(!mIsDrag && mEntityToCarry != nullptr)
         mCreature.releaseCarriedEntity();
 
     if(mBuildingDest != nullptr)
@@ -186,7 +186,9 @@ std::function<bool()> CreatureActionCarryEntity::action()
     if(mIsDrag)
         return std::bind(&CreatureActionCarryEntity::handleDragCreature, this);
 
-    if(mEntityToCarry != nullptr && mEntityToCarry->getObjectType() == GameEntityType::treasuryObject)
+    // Cargo let go on the way (removed, dead or picked up, see releaseEntity) ends the carry in handleCarryGold
+    // without an error log
+    if(mEntityToCarry == nullptr || mEntityToCarry->getObjectType() == GameEntityType::treasuryObject)
         return std::bind(&CreatureActionCarryEntity::handleCarryGold, this);
 
     return std::bind(&CreatureActionCarryEntity::handleCarryEntity,

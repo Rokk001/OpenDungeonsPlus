@@ -13,6 +13,7 @@
 #include "game/Seat.h"
 #include "game/WorkerAllocation.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "rooms/Room.h"
 #include "traps/Trap.h"
 #include "utils/ConfigManager.h"
@@ -61,7 +62,9 @@ bool hasClaimedNeighbour(Tile& tile, Seat& seat)
 }
 
 //! \brief Adds every reachable marked dig place, including places already occupied.
-void collectDig(WorkerTargetLists& targets, Seat& seat, Tile& tile, const std::vector<Creature*>& workers)
+//! \param routeCaches Failed route searches of each worker during this refresh, shared by all dig places
+void collectDig(WorkerTargetLists& targets, Seat& seat, Tile& tile, const std::vector<Creature*>& workers,
+                std::map<const Creature*, RoomObjectNavigation::RouteCache>& routeCaches)
 {
     if(!tile.getMarkedForDigging(seat.getPlayer()) || !tile.isDiggable(&seat))
         return;
@@ -77,7 +80,7 @@ void collectDig(WorkerTargetLists& targets, Seat& seat, Tile& tile, const std::v
                 if(!territoryAllowed(*worker, *standing))
                     continue;
                 std::vector<Ogre::Vector2> path;
-                if(!worker->wallDigPath(&tile, standing, slot, path))
+                if(!worker->wallDigPath(&tile, standing, slot, path, &routeCaches[worker]))
                     continue;
                 appendTile(targets, WorkerJob::dig, WorkerTargetKind::dig, &tile, standing, slot);
                 break;
@@ -310,13 +313,16 @@ void refreshWorkerTargets(Seat& seat)
             buildings.emplace(worker, map->getReachableBuildingsPerSeat(&seat, worker->getPositionTile(), worker));
     if(!workers.empty())
     {
+        // Nothing moves and nothing is built during the refresh: a route search of a worker that failed for one dig
+        // place is not run again for the dig places behind the same closed gap
+        std::map<const Creature*, RoomObjectNavigation::RouteCache> routeCaches;
         for(int32_t x = 0; x < map->getMapSizeX(); ++x)
             for(int32_t y = 0; y < map->getMapSizeY(); ++y)
             {
                 Tile* tile = map->getTile(x, y);
                 if(tile == nullptr)
                     continue;
-                collectDig(targets, seat, *tile, workers);
+                collectDig(targets, seat, *tile, workers, routeCaches);
                 collectClaim(targets, seat, *tile, workers);
                 collectCleaningTile(targets, seat, *tile, workers);
                 collectCarryTile(targets, *tile, workers, allWorkers, buildings);

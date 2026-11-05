@@ -3,6 +3,8 @@
 
 #include "gamemap/RoomObjectPath.h"
 
+#include <map>
+
 class GameMap;
 class Creature;
 class BuildingObject;
@@ -44,9 +46,29 @@ bool foodApproach(Creature& creature, const Ogre::Vector2& food, std::vector<Ogr
 //! \brief Prefers clear working bodies, then retains the original valid room-reserved placement when crowded.
 bool workApproach(Creature& creature, const BuildingObject& object, const Ogre::Vector2& wanted,
     const Ogre::Vector2& facingOffset, std::vector<Ogre::Vector2>& path);
+//! \brief The failed route searches of one creature, kept for later refine() calls while the game state stays the
+//! same: the creature does not move and no creature, tile or furniture changes in between (for example all the dig
+//! places a worker is tested for in one go). A route search that they prove to fail is not run again, so testing
+//! many places behind the same closed gap costs one failed search instead of one per place. Every answer of
+//! refine() stays the same.
+class RouteCache
+{
+public:
+    //! \brief The failed searches of the creature around all furniture except the interaction object. A cache that
+    //! was used for another creature forgets its searches.
+    RoomObjectPath::RouteFailures& failures(const Creature& creature, const BuildingObject* interaction);
+
+private:
+    //! The creature the searches belong to
+    const Creature* mCreature = nullptr;
+    //! The failed searches per interaction object (left out of the obstacles)
+    std::map<const BuildingObject*, RoomObjectPath::RouteFailures> mFailures;
+};
 // Replaces the path by one that leads around furniture, if the path crosses any. Returns
 // true if the path was changed or removed (no route) and false if it can be walked as it is.
 bool refine(Creature& creature, std::vector<Ogre::Vector2>& path);
+//! \brief refine() that reuses and adds to the failed searches of the cache (see RouteCache).
+bool refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache);
 // Tells whether the path crosses furniture. With includeWalkDistortion, the client jitter
 // of the walk is taken into account as well.
 bool blocked(Creature& creature, const std::vector<Ogre::Vector2>& path, bool includeWalkDistortion = false);

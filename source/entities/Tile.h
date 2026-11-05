@@ -49,6 +49,11 @@ class ChickenEntity;
 class CraftedTrap;
 class BuildingObject;
 class PersistentObject;
+
+namespace RoomObjectNavigation
+{
+class RouteCache;
+}
 class ODPacket;
 
 
@@ -652,7 +657,9 @@ public:
     bool removeWorkerClaiming(const Creature& worker);
     //! \brief Feels the tile vector with the available tiles the worker can
     //! go to
-    void canWorkerDig(Creature& worker, std::vector<Tile*>& tiles);
+    //! \param routeCache Failed route searches of the worker in the same unchanged game state, shared by the dig
+    //! places tested one after the other (see RoomObjectNavigation::RouteCache); null for a test on its own.
+    void canWorkerDig(Creature& worker, std::vector<Tile*>& tiles, RoomObjectNavigation::RouteCache* routeCache = nullptr);
     //! \brief Returns whether any worker has reserved a digging place on this tile.
     bool hasWorkerDigging() const;
     int getWorkerDiggingSlot(const Creature& worker, const Tile& tile) const;

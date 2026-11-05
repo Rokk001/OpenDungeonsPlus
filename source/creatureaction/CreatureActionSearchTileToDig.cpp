@@ -26,6 +26,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/Pathfinding.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "utils/Helper.h"
 #include "utils/MakeUnique.h"
 #include "utils/LogManager.h"
@@ -97,6 +98,9 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
     float distBest = 0.0f;
     Tile* tileToDig = nullptr;
     Tile* tilePos = nullptr;
+    // Nothing moves while the dig places are tested, so a route search that failed for one place is not run again
+    // for the places behind the same closed gap
+    RoomObjectNavigation::RouteCache routeCache;
     for(Tile* tile : workerSearchTiles(creature, WorkerJob::dig))
     {
         if(tile == nullptr || tempPlayer == nullptr || !tile->getMarkedForDigging(tempPlayer))
@@ -104,7 +108,7 @@ bool CreatureActionSearchTileToDig::handleSearchTileToDig(Creature& creature, in
         const bool gold = tile->getType() == TileType::gold || tile->getType() == TileType::gem;
         const int group = (goldFirst && !gold ? 2 : 0) + (tile->hasWorkerDigging() ? 1 : 0);
         std::vector<Tile*> positions;
-        tile->canWorkerDig(creature, positions);
+        tile->canWorkerDig(creature, positions, &routeCache);
         for(Tile* standing : positions)
         {
             const bool inSight = std::find(sight.begin(), sight.end(), standing) != sight.end();
