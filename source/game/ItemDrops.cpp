@@ -7,6 +7,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 
+#include <algorithm>
 #include <sstream>
 #include <vector>
 
@@ -156,11 +157,37 @@ void ItemDrops::outfit(Creature& creature, const std::string& kind)
         (config.getSoulCrystalHeroRareEnd() - config.getSoulCrystalHeroRareStart()) *
         static_cast<double>(level - 1) / static_cast<double>(MAX_LEVEL - 1);
     const double crystalChance = (dropSetting("HeroItemBase") + dropSetting("HeroItemPerLevel") * level) * rareChance;
-    if(kind == "hero" && Random::Double(0.0, 1.0) < crystalChance)
+    // Only heroes carry one ghost product, never more: a mana crystal, a research book or a level crystal
+    if(kind == "hero" && Random::Double(0.0, 1.0) < heroGhostProductChance(crystalChance))
         for(size_t slot = 0; slot < creature.getInventory().size(); ++slot)
             if(creature.getInventory()[slot].get() == nullptr)
             {
-                creature.setInventorySlot(slot, ItemInstance::createSoulCrystal());
+                creature.setInventorySlot(slot, heroGhostProduct(Random::Double(0.0, 1.0)));
                 break;
             }
+}
+
+double ItemDrops::heroGhostProductChance(double crystalChance)
+{
+    return std::min(1.0, crystalChance * ConfigManager::getSingleton().getRoomConfigDouble("GhostHeroProductFactor"));
+}
+
+std::unique_ptr<ItemInstance> ItemDrops::heroGhostProduct(double draw)
+{
+    // The weights are in inverse proportion to the ectoplasm each product costs
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double mana = config.getRoomConfigDouble("GhostHeroProductWeightMana");
+    const double book = config.getRoomConfigDouble("GhostHeroProductWeightBook");
+    const double crystal = config.getRoomConfigDouble("GhostHeroProductWeightCrystal");
+    const double point = draw * (mana + book + crystal);
+    if(point < mana) return ItemInstance::createGhostItem(GhostItem::manaCrystal);
+    if(point < mana + book) return ItemInstance::createGhostItem(GhostItem::researchBook);
+    return ItemInstance::createSoulCrystal();
+}
+
+std::unique_ptr<ItemInstance> ItemDrops::randomGhostProduct(double draw)
+{
+    if(draw < 1.0 / 3.0) return ItemInstance::createGhostItem(GhostItem::manaCrystal);
+    if(draw < 2.0 / 3.0) return ItemInstance::createGhostItem(GhostItem::researchBook);
+    return ItemInstance::createSoulCrystal();
 }

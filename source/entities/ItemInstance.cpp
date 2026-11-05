@@ -125,6 +125,15 @@ std::unique_ptr<ItemInstance> ItemInstance::createSoulCrystal()
     return item;
 }
 
+//! \brief Creates a ghost room good; ectoplasm has no apparatus until a worker picks it up.
+std::unique_ptr<ItemInstance> ItemInstance::createGhostItem(GhostItem kind)
+{
+    std::unique_ptr<ItemInstance> item(new ItemInstance);
+    item->mGhostItem = kind;
+    item->mDefinitionId = kind == GhostItem::ectoplasm ? "Ectoplasm" : kind == GhostItem::manaCrystal ? "ManaCrystal" : "ResearchBook";
+    return item;
+}
+
 //! \brief Writes the prescribed instance line using none for empty string fields.
 void ItemInstance::exportToStream(std::ostream& stream) const
 {
@@ -136,7 +145,8 @@ void ItemInstance::exportToStream(std::ostream& stream) const
     for(const std::pair<std::string, double>& effect : mEffects)
         stream << ' ' << effect.first << ' ' << effect.second;
     stream << ' ' << mEpicSerial << ' ' << mMerchantGoods << ' ' << mGifted << ' '
-        << (mPotionId.empty() ? "none" : mPotionId) << " SoulCrystal " << mSoulCrystal;
+        << (mPotionId.empty() ? "none" : mPotionId) << " SoulCrystal " << mSoulCrystal
+        << " GhostItem " << static_cast<uint32_t>(mGhostItem) << ' ' << mGhostTarget;
 }
 
 //! \brief Reads the full instance; firstId is the id already consumed by a nullable holder slot.
@@ -170,7 +180,8 @@ bool ItemInstance::importFromStream(std::istream& stream, const std::string& fir
     }
     if(!(stream >> item.mEpicSerial >> item.mMerchantGoods >> item.mGifted >> item.mPotionId))
         return false;
-    if(!stream.eof())
+    // Optional trailing fields: older saves end before them; every known marker is read
+    while(!stream.eof())
     {
         const std::streampos optionalPosition = stream.tellg();
         std::string marker;
@@ -178,10 +189,17 @@ bool ItemInstance::importFromStream(std::istream& stream, const std::string& fir
         {
             if(!(stream >> item.mSoulCrystal)) return false;
         }
+        else if(marker == "GhostItem")
+        {
+            uint32_t kind = 0;
+            if(!(stream >> kind >> item.mGhostTarget) || kind > static_cast<uint32_t>(GhostItem::researchBook)) return false;
+            item.mGhostItem = static_cast<GhostItem>(kind);
+        }
         else
         {
             stream.clear();
             stream.seekg(optionalPosition);
+            break;
         }
     }
     if(item.mDefinitionId == "none") item.mDefinitionId.clear();
@@ -199,7 +217,8 @@ void ItemInstance::exportToPacket(ODPacket& packet) const
     packet << static_cast<uint32_t>(mEffects.size());
     for(const std::pair<std::string, double>& effect : mEffects)
         packet << effect.first << effect.second;
-    packet << mEpicSerial << mMerchantGoods << mGifted << mPotionId << std::string("SoulCrystal") << mSoulCrystal;
+    packet << mEpicSerial << mMerchantGoods << mGifted << mPotionId << std::string("SoulCrystal") << mSoulCrystal
+        << std::string("GhostItem") << static_cast<uint32_t>(mGhostItem) << mGhostTarget;
 }
 
 //! \brief Rejects short packet instances without adopting any partially received fields.
@@ -235,6 +254,14 @@ bool ItemInstance::importFromPacket(ODPacket& packet)
         if(!(optional >> item.mSoulCrystal)) return false;
         packet = optional;
     }
+    ODPacket ghost = packet;
+    uint32_t kind = 0;
+    if(ghost >> marker && marker == "GhostItem")
+    {
+        if(!(ghost >> kind >> item.mGhostTarget) || kind > static_cast<uint32_t>(GhostItem::researchBook)) return false;
+        item.mGhostItem = static_cast<GhostItem>(kind);
+        packet = ghost;
+    }
     *this = item;
     return true;
 }
@@ -248,6 +275,9 @@ double ItemInstance::getEffect(const std::string& id) const { return sumValues(m
 std::string ItemInstance::getDisplayName(const GameMap* map) const
 {
     if(mSoulCrystal) return "Soul crystal";
+    if(mGhostItem == GhostItem::ectoplasm) return "Ectoplasm";
+    if(mGhostItem == GhostItem::manaCrystal) return "Mana crystal";
+    if(mGhostItem == GhostItem::researchBook) return "Research book";
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
@@ -264,6 +294,8 @@ std::string ItemInstance::getDisplayName(const GameMap* map) const
 double ItemInstance::getPrice(const GameMap* map) const
 {
     if(mSoulCrystal) return ConfigManager::getSingleton().getSoulCrystalPrice();
+    // Ectoplasm, mana crystals and research books are used by the keeper and are never traded
+    if(mGhostItem != GhostItem::none) return 0.0;
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);
@@ -298,7 +330,8 @@ uint32_t ItemInstance::getLevelMin(const GameMap* map) const
 //! \brief Uses a matching weapon-class base image for Poor spawn gear, otherwise the catalogue image.
 std::string ItemInstance::getImageName() const
 {
-    if(mSoulCrystal) return "soul_crystal";
+    // The ghost goods share the crystal picture until pictures of their own exist
+    if(mSoulCrystal || mGhostItem != GhostItem::none) return "soul_crystal";
     if(!mPotionId.empty())
     {
         const PotionDefinition* potion = ConfigManager::getSingleton().getPotion(mPotionId);

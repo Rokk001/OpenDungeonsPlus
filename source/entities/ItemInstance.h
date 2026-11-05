@@ -7,12 +7,16 @@
 
 class GameMap;
 
+//! \brief The ghost room goods that travel as items; the level crystal is the soul crystal (mSoulCrystal).
+enum class GhostItem : uint32_t { none = 0, ectoplasm = 1, manaCrystal = 2, researchBook = 3 };
+
 //! \brief A rolled item, potion or soul crystal owned by its current holder.
 class ItemInstance
 {
 public:
     //! \brief Creates an empty instance with no ownership flags or Epic registration.
-    ItemInstance() : mQuality(Quality::poor), mEpicSerial(0), mMerchantGoods(false), mGifted(false), mSoulCrystal(false) {}
+    ItemInstance() : mQuality(Quality::poor), mEpicSerial(0), mMerchantGoods(false), mGifted(false), mSoulCrystal(false),
+        mGhostItem(GhostItem::none), mGhostTarget(-1) {}
     //! \brief Rolls the ordered bonuses of a definition using the server random generator.
     static std::unique_ptr<ItemInstance> create(const ItemDefinition& definition, Quality quality);
     //! \brief Creates the catalogue Poor item for an equipment slot.
@@ -21,6 +25,10 @@ public:
     static std::unique_ptr<ItemInstance> createPotion(const std::string& id);
     //! \brief Creates a bonus-free soul crystal for an inventory slot.
     static std::unique_ptr<ItemInstance> createSoulCrystal();
+    //! \brief Creates one ghost room good (ectoplasm, mana crystal or research book) without bonuses.
+    static std::unique_ptr<ItemInstance> createGhostItem(GhostItem kind);
+    //! \brief True for ectoplasm, mana crystals, research books and level (soul) crystals.
+    bool isGhostGood() const { return mSoulCrystal || mGhostItem != GhostItem::none; }
     //! \brief Writes one complete instance line without a trailing newline.
     void exportToStream(std::ostream& stream) const;
     //! \brief Reads an instance without modifying the destination on a short or invalid line.
@@ -63,6 +71,10 @@ public:
     std::string mPotionId;
     //! \brief Identifies a soul crystal independently of equipment quality.
     bool mSoulCrystal;
+    //! \brief The ghost room good this instance is, none for every other item.
+    GhostItem mGhostItem;
+    //! \brief For ectoplasm: the apparatus (GhostProduct value) chosen when a worker picked it up, -1 if none.
+    int32_t mGhostTarget;
 };
 
 #endif
