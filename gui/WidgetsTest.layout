@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="FrameWindow" >
+    <Window type="OD/MenuFrameWindow" name="FrameWindow" >
         <Property name="Area" value="{{0,213},{0,126},{0,855},{0,532}}" />
         <Property name="Text" value="Frame Window" />
         <Window type="OD/VerticalSlider" name="VerticalSlider" >

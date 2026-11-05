@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <GUILayout version="4" >
-    <Window type="OD/FrameWindow" name="EditorPortalWavesWindow" >
+    <Window type="OD/MenuFrameWindow" name="EditorPortalWavesWindow" >
         <Property name="Area" value="{{0.5,-270},{0.5,-240},{0.5,270},{0.5,240}}" />
         <Property name="Text" value="Wave portal" />
         <Property name="SizingEnabled" value="False" />

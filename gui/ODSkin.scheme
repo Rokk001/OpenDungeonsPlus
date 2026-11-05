@@ -1,5 +1,6 @@
 <GUIScheme name="OpenDungeons" version="5">
     <Imageset filename="ODSkin.imageset" name="OpenDungeonsSkin" />
+    <Imageset filename="ODGameWindow.imageset" name="OpenDungeonsGameWindow" />
     <Imageset filename="DungeonbookPage.imageset" name="DungeonbookArt" />
     <Imageset filename="DungeonbookFrame.imageset" name="DungeonbookFrame" />
     <Imageset filename="ODIcons.imageset" name="OpenDungeonsIcons" />
@@ -36,6 +37,8 @@
     <FalagardMapping lookNFeel="OD/Checkbox" renderer="Core/ToggleButton" targetType="CEGUI/ToggleButton" windowType="OD/Checkbox" />
     <FalagardMapping lookNFeel="OD/RadioButton" renderer="Core/ToggleButton" targetType="CEGUI/RadioButton" windowType="OD/RadioButton" />
     <FalagardMapping lookNFeel="OD/FrameWindow" renderer="Core/FrameWindow" targetType="CEGUI/FrameWindow" windowType="OD/FrameWindow" />
+    <FalagardMapping lookNFeel="OD/MenuFrameWindow" renderer="Core/FrameWindow" targetType="CEGUI/FrameWindow" windowType="OD/MenuFrameWindow" />
+    <FalagardMapping lookNFeel="OD/GameTitlebar" renderer="Core/Titlebar" targetType="CEGUI/Titlebar" windowType="OD/GameTitlebar" />
     <FalagardMapping lookNFeel="OD/Titlebar" renderer="Core/Titlebar" targetType="CEGUI/Titlebar" windowType="OD/Titlebar" />
     <FalagardMapping lookNFeel="OD/Editbox" renderer="Core/Editbox" targetType="CEGUI/Editbox" windowType="OD/Editbox" />
     <FalagardMapping lookNFeel="OD/MultiLineEditbox" renderer="Core/MultiLineEditbox" targetType="CEGUI/MultiLineEditbox" windowType="OD/MultiLineEditbox" />
