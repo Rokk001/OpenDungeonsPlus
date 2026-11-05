@@ -3,6 +3,7 @@
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
+#include "game/ItemDrops.h"
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "network/ODPacket.h"
@@ -10,6 +11,7 @@
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
+#include "utils/Random.h"
 
 #include <istream>
 #include <ostream>
@@ -185,7 +187,12 @@ bool ItemBagEntity::importFromStream(std::istream& stream)
     std::string id;
     if(!(stream >> id))
         return false;
-    if(id == "RandomEpic") mItem = getGameMap()->rollItem(Quality::epic);
+    const bool randomBag = id == "RandomEpic" || id == "RandomRare" || id == "RandomCommon";
+    // A random item bag of a map holds one of the three ghost products instead of its item with GhostProductBoxChance
+    if(randomBag && !getGameMap()->isInEditorMode() &&
+        Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getRoomConfigDouble("GhostProductBoxChance"))
+        mItem = ItemDrops::randomGhostProduct(Random::Double(0.0, 1.0));
+    else if(id == "RandomEpic") mItem = getGameMap()->rollItem(Quality::epic);
     else if(id == "RandomRare") mItem = getGameMap()->rollItem(Quality::rare);
     else if(id == "RandomCommon") mItem = getGameMap()->rollItem(Quality::common);
     else
