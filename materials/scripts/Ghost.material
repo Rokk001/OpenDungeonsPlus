@@ -374,3 +374,38 @@ material GhostForgeFire
         }
     }
 }
+
+// Ectoplasm item (ghost apparatus): translucent lime-green slime shell around the glowing core.
+material EctoplasmShell
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.42 0.70 0.20 0.30
+            ambient 0.42 0.70 0.20
+            emissive 0.18 0.32 0.09
+            specular 0.30 0.40 0.24 1 24
+        }
+    }
+}
+
+// Ectoplasm item: pale glowing swirls inside the slime.
+material EctoplasmSwirl
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.74 0.98 0.48 0.70
+            ambient 0.74 0.98 0.48
+            emissive 0.55 0.80 0.36
+        }
+    }
+}
