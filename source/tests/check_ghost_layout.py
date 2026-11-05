@@ -6,6 +6,7 @@ def layout_fixture():
     source = read('source/rooms/RoomGhostRoom.cpp')
     declarations = r'''
 #include <array>
+#include <functional>
 //! \brief Stores cauldron geometry independently of the production placement algorithm.
 struct RoomGhostRoom:Room{GameMap* map=nullptr;std::vector<Tile*> mCoveredTiles;
  //! \brief Stores the actual anchor/reservation pair.
