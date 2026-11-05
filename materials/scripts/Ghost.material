@@ -793,6 +793,118 @@ material GhostForgeFire
     }
 }
 
+// Soul forge: weathered dark stone of the plinth, body, waist and horned anvil top (block seams, cracks, rust stains).
+material SoulForgeStone
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.75 0.75 0.75
+            diffuse 0.92 0.92 0.92 1
+            specular 0.03 0.03 0.03 1 4
+            texture_unit
+            {
+                texture SoulForgeStone.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Soul forge: heavily rusted iron of the bands, brackets, firebox frame, rings, foot shoes and the hammer.
+material SoulForgeIron
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.75 0.75 0.75
+            diffuse 0.92 0.92 0.92 1
+            specular 0.22 0.17 0.12 1 16
+            texture_unit
+            {
+                texture SoulForgeIron.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Soul forge (working): flickering green ghost flames behind the firebox bars.
+material SoulForgeFire
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                anim_texture SoulForgeFire_0.png SoulForgeFire_1.png SoulForgeFire_2.png SoulForgeFire_3.png 0.5
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Soul forge (working): green glow spilling out of the firebox and round the crystal on the anvil.
+material SoulForgeGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillGlowRamp.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.16 0.62 0.22
+            }
+        }
+    }
+}
+
+// Soul forge (working): spark streaks flying off the crystal when the hammer lands.
+material SoulForgeSpark
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture SoulForgeSpark.png
+                tex_address_mode clamp
+                filtering trilinear
+            }
+        }
+    }
+}
+
 // Ectoplasm item (ghost apparatus): translucent lime-green slime shell around the glowing core.
 material EctoplasmShell
 {

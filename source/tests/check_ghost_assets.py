@@ -136,6 +136,25 @@ def main():
     assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress","SoulForge"\}',apparatus), 'soul forge mesh'
     assert 'ItemInstance::createSoulCrystal()' in apparatus, 'level crystal'
     assert re.search(r'^\s*material\s+GhostForgeFire\s*$',still_material,re.M), 'GhostForgeFire'
+    # Soul forge rework after mockup A (owner decision 665): weathered stone, rusted iron, flickering green flames,
+    # glow, sparks, ectoplasm pool and crystals, vapour, idle embers and stain, draped webs; motion bones of the clips.
+    for texture in ['SoulForgeStone.png','SoulForgeIron.png','SoulForgeSpark.png']+['SoulForgeFire_%d.png'%k for k in range(4)]:
+        credited('materials/textures/'+texture,credits)
+    forge_mesh = (repo/'models/SoulForge.mesh').read_bytes()
+    for name in ('SoulForgeStone','SoulForgeIron','SoulForgeFire','SoulForgeGlow','SoulForgeSpark','GhostCoal','ManaStillEmbers',
+            'ManaStillBanked','GhostEctoplasm','GhostPressFlow','ManaCrystal','GhostCrystalCore','GhostEmbers','GhostPressVapour',
+            'GhostPressResidue','ManaStillWeb','ManaStillWebStrand'):
+        block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
+        assert block, name
+        for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
+            for file in texture.split():
+                if file.endswith('.png'):
+                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+        assert name.encode()+b'\n' in forge_mesh, ('soul forge uses',name)
+    assert re.search(r'anim_texture SoulForgeFire_0\.png( SoulForgeFire_\d\.png){3} [\d.]+',still_material), 'forge flame flicker'
+    for bone in (b'Root',b'Hammer',b'Sparks',b'Glow',b'Dull',b'Webs',b'Spirit',b'Flame1',b'Embers',b'FireGlow',b'Pool',
+            b'CrystalGlow',b'Shock',b'Spark1',b'Wisp1',b'Wisp5',b'Banked',b'Residue',b'WebSway'):
+        assert bone+b'\n' in forge_skeleton, bone
     # Ectoplasm item: its own static mesh replaces the cauldron fill placeholder (the cauldron keeps its fill level).
     credited('models/Ectoplasm.mesh',credits)
     assert (repo/'models/Ectoplasm.mesh').read_bytes()[2:20] == b'[MeshSerializer_v1', 'ectoplasm mesh'

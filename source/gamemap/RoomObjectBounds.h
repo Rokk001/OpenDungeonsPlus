@@ -57,7 +57,7 @@ static const MeshBounds meshBounds[] = {
     {"GhostWallGauges", -.45f, -.1f, .45f, .1f, .9000001f},
     {"ManaStill", -.4985317f, -.315f, .46f, .315f, 1.694392f},
     {"GhostPress", -.4995f, -.3300108f, .4872377f, .31f, 1.605f},
-    {"SoulForge", -.5f, -.335f, .495f, .3801228f, 1.131f},
+    {"SoulForge", -.4999f, -.3741331f, .4999f, .3408f, 1.289f},
     {"GoblinBed", -.450071f, -.436337f, .444606f, .44576f, .073802f},
     {"GoldstackLv1", -.197478f, -.175391f, .186379f, .185685f},
     {"GoldstackLv2", -.185184f, -.182552f, .185553f, .182552f},
