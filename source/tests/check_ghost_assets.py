@@ -72,6 +72,27 @@ def main():
     still_material = read('materials/scripts/Ghost.material')
     for name in ('ManaCrystal','ManaCrystalDull','ManaStillGlass','GhostEmbers','GhostCoal','GhostGlassDull','GhostCobweb'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
+    # Mana still rework after mockup A (owner decision 665): rusty iron, flickering embers, flowing coil, vapour, draped webs.
+    textures = ['ManaStillIron.png','ManaStillFlow.png','ManaStillGlowRamp.png','ManaStillWeb.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
+    for texture in textures:
+        credited('materials/textures/'+texture,credits)
+    still_mesh = (repo/'models/ManaStill.mesh').read_bytes()
+    for name in ('ManaStillIron','ManaStillCoilGlass','ManaStillCoil','ManaStillEmbers','ManaStillBanked','ManaStillFireGlow',
+            'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand'):
+        block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
+        assert block, name
+        for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
+            for file in texture.split():
+                if file.endswith('.png'):
+                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+        assert name.encode()+b'\n' in still_mesh, ('mana still uses',name)
+    # Visible motion: the embers flicker by texture, the coil ectoplasm flows, the vapour drifts.
+    assert re.search(r'anim_texture ManaStillEmbers_0\.png( ManaStillEmbers_\d\.png){5} [\d.]+',still_material), 'ember flicker'
+    assert re.search(r'material ManaStillCoil\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'coil flow'
+    still_skeleton = (repo/'models/ManaStill.skeleton').read_bytes()
+    for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway'):
+        assert bone+b'\n' in still_skeleton, bone
+    assert b'ManaCrystal\n' in (repo/'models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
     # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.
     for path in ('models/GhostPress.mesh','models/GhostPress.skeleton'):
         credited(path,credits)
