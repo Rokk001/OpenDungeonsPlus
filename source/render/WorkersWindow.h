@@ -23,6 +23,7 @@
 #include <CEGUI/Event.h>
 #include <CEGUI/EventArgs.h>
 #include <CEGUI/UDim.h>
+#include <CEGUI/Vector.h>
 
 #include <array>
 #include <chrono>
