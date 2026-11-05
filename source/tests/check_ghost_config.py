@@ -40,9 +40,21 @@ def main():
         "GhostReviveHpShare":.35,"CryptCorpsesPerLich":10,"CryptLichLevelBonus":0,
         "GhostRoomCostPerTile":620,"GhostRoomHP":50,"GhostRoomMinSide":4,
         "GhostRiseSeconds":1.5,"GhostDissolveSeconds":1.5,"GhostHowlMinSeconds":10,
-        "GhostHowlMaxSeconds":20,"GhostBellSeconds":3,"GhostBoxThrowSeconds":.5,"GhostRepathTurns":5}
+        "GhostHowlMaxSeconds":20,"GhostBellSeconds":3,"GhostBoxThrowSeconds":.5,"GhostRepathTurns":5,
+        "GhostApparatusTurns":5.5,"GhostHeroProductFactor":4.333333333333333,"GhostHeroProductWeightMana":6,
+        "GhostHeroProductWeightBook":6,"GhostHeroProductWeightCrystal":1,"GhostProductBoxChance":.05}
     for key, value in expected.items():
         assert room[key] == value, (key, room.get(key), value)
+    # Every apparatus value has a documentation line directly above its key (a comment or a key of the same block)
+    rows = read('config/rooms.cfg').splitlines()
+    for key in ('GhostApparatusTurns','GhostHeroProductFactor','GhostHeroProductWeightMana','GhostProductBoxChance'):
+        index = next(i for i, row in enumerate(rows) if row.split()[:1] == [key])
+        assert rows[index-1].lstrip().startswith('#'), (key, 'documentation line')
+    for key in ('GhostHeroProductWeightBook','GhostHeroProductWeightCrystal'):
+        index = next(i for i, row in enumerate(rows) if row.split()[:1] == [key])
+        assert rows[index-1].split()[0].startswith('GhostHeroProductWeight'), (key, 'documented weight block')
+    # Chances are fractions, never percentages
+    assert 0 < room['GhostProductBoxChance'] < 1
     assert room['GhostRoomCostPerTile'] == room['CryptCostPerTile']
     assert room['GhostRoomHP'] == room['CryptHP']
     trap = numbers('config/traps.cfg')
