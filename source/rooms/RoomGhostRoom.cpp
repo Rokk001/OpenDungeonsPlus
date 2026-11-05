@@ -288,7 +288,7 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
                     object->getPosition().x-std::sin(angle)*behind,object->getPosition().y+std::cos(angle)*behind,0.0f,
                     object->getRotationAngle(),false);
                 rack->setFurnitureScale(Ogre::Vector2(static_cast<float>(std::min(1.0,gap)),1.0f));
-                rack->addToGameMap(map);rack->createMesh();mWallObjects.push_back(rack);
+                rack->addToGameMap(map);rack->setPosition(rack->getPosition(),map);rack->createMesh();mWallObjects.push_back(rack);
             }
         }
     }
@@ -526,7 +526,8 @@ GhostProduct RoomGhostRoom::getChosenApparatus(const Seat& seat)
 const std::string& RoomGhostRoom::getApparatusMesh(GhostProduct kind)
 {
     static const std::string meshes[APPARATUS_COUNT]={"ManaStill","GhostPress","SoulForge"};
-    return meshes[static_cast<uint32_t>(kind)];
+    // GhostProduct counts research=0, mana=1, crystal=2 (old saves), so the kind is no index into this list
+    return meshes[kind==GhostProduct::mana?0:kind==GhostProduct::research?1:2];
 }
 
 Tile* RoomGhostRoom::getApparatusStandTile(GhostProduct kind) const
@@ -642,7 +643,9 @@ void RoomGhostRoom::createApparatusObjects(GameMap* map)
             static_cast<float>(tile->getX()-std::sin(angle)*forward),static_cast<float>(tile->getY()+std::cos(angle)*forward),
             0.0f,static_cast<float>(rotation),false);
         object->setFurnitureScale(Ogre::Vector2(1.0f,1.0f));
-        object->addToGameMap(map);object->createMesh();mWallObjects.push_back(object);
+        // The constructor only stores the position; setPosition puts the object into its tile, whose seats with vision
+        // then send it to the clients. Without it the apparatus exists on the server only and is never seen.
+        object->addToGameMap(map);object->setPosition(object->getPosition(),map);object->createMesh();mWallObjects.push_back(object);
         apparatus.object=object;
     }
 }
