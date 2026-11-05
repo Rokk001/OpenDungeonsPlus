@@ -334,7 +334,12 @@ bool RoomTrainingHall::importTileDataFromStream(std::istream& is, Tile* tile, Ti
         return false;
     BuildingObject* rack = new BuildingObject(getGameMap(), *this, mesh, tile,
         position.x, position.y, position.z, rotation, false);
-    addBuildingObject(tile, rack);
+    // The map is still loading: the tile set that gives the height of a tile is not known before
+    // GameMap::createAllEntities, which also puts every loaded rendered entity on its tile. So the rack is only
+    // registered here, without addBuildingObject placing it on its tile.
+    mBuildingObjects[tile] = rack;
+    getGameMap()->markWallTorchesDirty();
+    rack->addToGameMap();
     return true;
 }
 
