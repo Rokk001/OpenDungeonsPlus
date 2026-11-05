@@ -2154,3 +2154,4 @@ gui/DungeonbookFrame.png    AI-generated with Codex image generation    GPLv3+  
 assets-src/gui/icons/tiles/Worker*.png    AI-generated with Codex image generation    GPLv3+    Original painted Workers window icons and interface states, 2026-11-04; prompts in assets-src/gui/icons/WORKERS-ICONS.md.
 
 assets-src/gui/icons/tiles/WorkersButton.png and WorkerCheckbox{Empty,Checked}.png    AI-generated with Codex image generation    GPLv3+    Original painted worker HUD icon and replacement checkbox states; prompts in assets-src/gui/icons/WORKERS-ICONS.md.
+assets-src/gui/icons/tiles/WorkerArrow*.png, WorkerFreePortrait.png, WorkerHandActive.png, WorkerHandInactive.png, WorkerCarryGold.png, WorkersTitlePlaque.png    AI-generated with Codex image generation    GPLv3+    Repainted Workers window controls and blank title plaque; prompts in assets-src/gui/icons/WORKERS-ICONS.md.

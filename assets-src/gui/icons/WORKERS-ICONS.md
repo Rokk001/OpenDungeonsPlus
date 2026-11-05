@@ -227,3 +227,15 @@ Use case: stylized-concept. One empty square checkbox sprite for a painted fanta
 ```text
 Use case: precise-object-edit. Edit this empty painted checkbox into its checked state. Keep the entire strong iron frame, stone inset, proportions and transparent exterior unchanged. Add one large, bold, clearly readable gold-coloured check mark centered on the dark inset. No text, no other symbols, no glow.
 ```
+
+## I1 replacements
+
+Built-in image generation with transparent backgrounds, fitted to atlas tiles. GPLv3+.
+
+- WorkerArrowUpNormal: Game UI sprite: one triangular UP arrow without a shaft, small gold triangle centered inside a large square dark iron button with copper worn frame. Match the reference interface, not the scene. Completely transparent outside the frame. No text.
+- WorkerArrowDownNormal, WorkerArrow{Up,Down}{Hover,Pressed,Disabled}: Paint one [direction and state] button for the reference fantasy interface. A single simple triangular arrowhead without shaft inside a square black iron and copper beveled button, dark stone inset, nearly fills canvas, genuinely transparent outside frame, no text. Hover specifies bright copper rim; pressed specifies dark recessed rim; disabled specifies desaturated gray.
+- WorkerFreePortrait: Game UI sprite: a violet bare-chested pointed-eared worker as in the reference, seen from waist up in a large circular black iron medallion. Whole medallion on genuinely transparent background. No goggles, no wrench, no text.
+- WorkerHandActive: Game UI sprite: a simple gold silhouette of a human open hand, five fingers, palm facing viewer, no ornament, no star, no frame. Entire hand on genuinely transparent background. Match the reference UI hand.
+- WorkerHandInactive: Paint a single simple dark gray open human hand silhouette, five fingers, palm facing viewer, matching the inactive mode hand in the reference fantasy UI. No ornaments, star, frame, panel, text or background; genuinely transparent outside the hand. Fill the canvas.
+- WorkerCarryGold: Repaint this gold coin pile as a large isolated game UI sprite, same silhouette and stacks. Fill the canvas with the pile and only a narrow margin. Pure transparent background, no halo or glow, no panel, no text.
+- WorkersTitlePlaque: Paint a large wide horizontal title plaque for a fantasy game interface: black stone inset and ornate beveled black iron frame with worn copper edges, symmetrical pointed ends, blank center for runtime text. Fill canvas with little margin. Transparent background, no letters.

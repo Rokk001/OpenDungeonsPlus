@@ -560,6 +560,44 @@ job_cap = cap_height(child(child(window, 'Rank0'), 'Name'), 1920, 1200, 1.0)
 carry_cap = cap_height(child(child(window, 'Carry0'), 'Name'), 1920, 1200, 1.0)
 target('job name cap height', (17,), (job_cap,))
 target('carry name cap height', (15,), (carry_cap,))
+def painted(node, parent_rect, picture):
+    """Size in pixels of the visible part of the picture of a layout window (a button shows its normal picture)."""
+    rect = child_rect(node, parent_rect, scale)
+    fraction = visible_box(picture)
+    return (rect[2] * fraction[0], rect[3] * fraction[1])
+
+
+# Owner check of build 31 (decision 622): the five elements that were too small, measured in the mockup (about 1215 pixels wide
+# window, 1480 here) and scaled by 1.218 to the 1920x1200 window; the size is that of the visible part of the picture
+target('priority arrow up (framed button)', (61, 59), painted(child(window, 'PriorityUp'), client, 'WorkerArrowUpNormal'))
+target('priority arrow down (framed button)', (61, 59), painted(child(window, 'PriorityDown'), client, 'WorkerArrowDownNormal'))
+target('carry arrow up (framed button)', (59, 61), painted(child(window, 'CarryUp'), client, 'WorkerArrowUpNormal'))
+target('carry arrow down (framed button)', (59, 61), painted(child(window, 'CarryDown'), client, 'WorkerArrowDownNormal'))
+target('gold pile of Gold first', (78, 57), painted(child(window, 'GoldCoins'), client, 'WorkerCarryGold'))
+target('free workers portrait (round frame)', (144, 144), painted(child(window, 'FreePortrait'), client, 'WorkerFreePortrait'))
+for mode in ('ModeAutomatic', 'ModePriority'):
+    mode_rect = child_rect(child(window, mode), client, scale)
+    target('hand symbol of ' + mode, (56, 54), painted(child(child(window, mode), 'Hand'), mode_rect, 'WorkerHandInactive'))
+target('title plaque', (305, 100), painted(child(window, 'TitlePlaque'), client, 'WorkersTitlePlaque'))
+assert props(child(window, 'TitlePlaque'))['Image'].endswith('WorkersTitlePlaque') and 'WorkersTitlePlaque' in atlas
+assert props(child(window, 'TitleText'))['Text'] == 'Workers', 'the title stands on the plaque'
+plaque = child_rect(child(window, 'TitlePlaque'), client, scale)
+assert abs(plaque[0] + plaque[2] / 2 - (client[0] + client[2] / 2)) < 2, 'the plaque is centred on the window'
+# The arrows, the gold pile and the hands do not run into their neighbours
+up, down = (child_rect(child(window, n), client, scale) for n in ('PriorityUp', 'PriorityDown'))
+assert up[0] + up[2] <= down[0], 'the priority arrows do not overlap'
+carry_up, carry_down = (child_rect(child(window, n), client, scale) for n in ('CarryUp', 'CarryDown'))
+assert carry_up[1] + carry_up[3] <= carry_down[1], 'the carry arrows do not overlap'
+last_carry = child_rect(child(window, 'Carry6'), client, scale)
+gold_panel = child_rect(child(window, 'GoldPanel'), client, scale)
+assert last_carry[0] + last_carry[2] <= carry_up[0] and carry_up[0] + carry_up[2] <= gold_panel[0], 'the carry arrows sit between the entries and Gold first'
+for mode in ('ModeAutomatic', 'ModePriority'):
+    hand = udims(props(child(child(window, mode), 'Hand'))['Area'])
+    label = udims(props(child(child(window, mode), 'Label'))['Area'])
+    assert hand[2][0] <= label[0][0], 'the hand does not cover the label of ' + mode
+free_label = child_rect(child(window, 'FreeLabel'), client, scale)
+free_portrait = child_rect(child(window, 'FreePortrait'), client, scale)
+assert free_portrait[0] + free_portrait[2] <= free_label[0], 'the portrait does not cover the free workers text'
 for name in ('FreeLabel', 'PriorityLabel', 'DragHint', 'GoldLabel', 'CarryTitle', 'FreeCount'):
     assert cap_height(child(window, name), 1920, 1200, 1.0) <= 23, (name, 'window text larger than in the mockup')
 assert cap_height(child(window, 'Working0'), 1920, 1200, 1.0) <= carry_cap + 1, 'the Working line is in the small text size'

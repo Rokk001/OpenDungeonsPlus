@@ -1131,5 +1131,13 @@
     "xPos": "256",
     "yPos": "2176",
     "source": "tiles/WorkersButton.png"
+  },
+  {
+    "height": "128",
+    "name": "WorkersTitlePlaque",
+    "width": "256",
+    "xPos": "384",
+    "yPos": "2176",
+    "source": "tiles/WorkersTitlePlaque.png"
   }
 ]
