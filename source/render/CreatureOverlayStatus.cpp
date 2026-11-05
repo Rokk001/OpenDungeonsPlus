@@ -30,7 +30,12 @@
 #include "utils/LogManager.h"
 #include "utils/RunLevelTest.h"
 
+#include "game/Player.h"
+
 #include <OgreEntity.h>
+
+#include <algorithm>
+#include <cmath>
 
 const std::string CREATURE_OVERLAY_STATUS_PREFIX = "CreatureOverlayStatus_";
 
@@ -79,7 +84,7 @@ const std::string BADGE_INNER_RING_PREFIX = "CreatureOverlayManaStage";
 const Ogre::Real MANA_COLOUR_RED = 25.0f;
 const Ogre::Real MANA_COLOUR_GREEN = 90.0f;
 const Ogre::Real MANA_COLOUR_BLUE = 255.0f;
-//! Colour channels (0 to 255) of the life part of the flower, a strong red for every seat
+//! Colour channels (0 to 255) of the life part of the flower, a strong red for the creatures of the local player
 const Ogre::Real LIFE_COLOUR_RED = 220.0f;
 const Ogre::Real LIFE_COLOUR_GREEN = 25.0f;
 const Ogre::Real LIFE_COLOUR_BLUE = 25.0f;
@@ -97,12 +102,53 @@ static Ogre::ColourValue getManaColour()
 }
 
 
-//! \brief Returns the colour of the life part of the badge flower, a strong red for every seat.
-static Ogre::ColourValue getLifeColour()
+//! Ring colour of a seat whose own colour is too close to the red of the own creatures (orange)
+const Ogre::ColourValue LIFE_COLOUR_REPLACES_RED(1.0f, 0.55f, 0.0f);
+//! Ring colour of a seat whose own colour is too close to the blue of the mana ring (turquoise)
+const Ogre::ColourValue LIFE_COLOUR_REPLACES_BLUE(0.0f, 0.9f, 0.75f);
+//! Hue ranges in degrees that are kept free for the red of the own creatures and the blue of the mana ring
+const float HUE_RED_RANGE = 20.0f;
+const float HUE_BLUE_MIN = 205.0f;
+const float HUE_BLUE_MAX = 265.0f;
+
+//! \brief Returns the colour of the outer life ring: red for the creatures of the local player, otherwise the
+//! seat colour of the keeper at full brightness. A seat colour that is too close to red or to the mana blue
+//! is replaced so that the ring never looks like an own creature or like the mana ring.
+static Ogre::ColourValue getLifeColour(const Seat* seat, const Seat* localSeat)
 {
-    return Ogre::ColourValue(LIFE_COLOUR_RED / COLOUR_CHANNEL_MAX, LIFE_COLOUR_GREEN / COLOUR_CHANNEL_MAX,
+    const Ogre::ColourValue red(LIFE_COLOUR_RED / COLOUR_CHANNEL_MAX, LIFE_COLOUR_GREEN / COLOUR_CHANNEL_MAX,
         LIFE_COLOUR_BLUE / COLOUR_CHANNEL_MAX);
+    if((seat == nullptr) || (seat == localSeat))
+        return red;
+
+    const Ogre::ColourValue own = seat->getColorValue();
+    const float top = std::max(own.r, std::max(own.g, own.b));
+    const float bottom = std::min(own.r, std::min(own.g, own.b));
+    if(top <= 0.0f)
+        return LIFE_COLOUR_REPLACES_BLUE;
+
+    const float range = top - bottom;
+    float hue = 0.0f;
+    if(range > 0.0f)
+    {
+        if(top == own.r)
+            hue = 60.0f * std::fmod((own.g - own.b) / range, 6.0f);
+        else if(top == own.g)
+            hue = 60.0f * ((own.b - own.r) / range + 2.0f);
+        else
+            hue = 60.0f * ((own.r - own.g) / range + 4.0f);
+        if(hue < 0.0f)
+            hue += 360.0f;
+    }
+    const bool saturated = (range / top) > 0.5f;
+    if(saturated && ((hue < HUE_RED_RANGE) || (hue > 360.0f - HUE_RED_RANGE)))
+        return LIFE_COLOUR_REPLACES_RED;
+    if(saturated && (hue >= HUE_BLUE_MIN) && (hue <= HUE_BLUE_MAX))
+        return LIFE_COLOUR_REPLACES_BLUE;
+
+    return Ogre::ColourValue(own.r / top, own.g / top, own.b / top);
 }
+
 //! \brief Shows the level of a creature in the recovery overlay: the level number, or for the champion an empty
 //! caption and the crown.
 //! \param overlay The overlay of the creature.
@@ -243,9 +289,12 @@ void CreatureOverlayStatus::updateHealth()
         mHealthValue = mCreature->getOverlayHealthValue();
         mSeat = mCreature->getSeat();
         mHasMana = hasMana;
+        const Player* localPlayer = mCreature->getGameMap()->getLocalPlayer();
+        const Seat* localSeat = (localPlayer != nullptr) ? localPlayer->getSeat() : nullptr;
         // With mana only the outer ring shows the health, the inner ring belongs to the mana
         std::string material = RenderManager::getSingleton().rrBuildTintedMaterial(
-            (hasMana ? BADGE_OUTER_RING_PREFIX : BADGE_FLOWER_PREFIX) + Helper::toString(mHealthValue), getLifeColour());
+            (hasMana ? BADGE_OUTER_RING_PREFIX : BADGE_FLOWER_PREFIX) + Helper::toString(mHealthValue),
+            getLifeColour(mSeat, localSeat));
         uint32_t healthId = mOverlayIds[static_cast<uint32_t>(CreatureOverlays::health)];
         mMovableTextOverlay->setMaterialName(healthId, material);
     }
