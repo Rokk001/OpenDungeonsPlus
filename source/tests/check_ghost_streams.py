@@ -276,7 +276,7 @@ const uint32_t MOOD_SAVE_MAX_ITEMS=1000;
 struct CreatureTail{std::vector<CreatureMoodEffect> mMoodEffects={CreatureMoodEffect("MakeUnhappy",-1.5,200.25),CreatureMoodEffect("Rested",2.5,12)};Seat* owner=nullptr;double mGoldCarried=12.25,mGoldStolen=4.5,mInfirmaryMood=7.5,mUrge=9.125,mCreatureDirt=2.75,mThirst=80,mTavernMood=-2.5,mDrunk=4.125,mHangoverTurns=3.375,mSpaMood=5.5,mRelaxTurns=6.25,mCorpseTurns=167.875,mDecayTurns=22.125,mGhostThrowTurns=.375,mGhostThrowClientTurns=0;bool mGhostBackpack=true;std::string mGhostBeamTarget="ghost",mGhostThrowTarget="target";uint32_t mGhostBoxMode=2;int skill=3,items=4;
  //! \brief Returns owner for exact existing visibility masks.
  Seat* getSeat()const{return owner;}
- //! rief Keeps the stolen part between 0 and the purse, as the real creature does.
+ //! \brief Keeps the stolen part between 0 and the purse, as the real creature does.
  void clampGoldStolen(){if(mGoldStolen>mGoldCarried)mGoldStolen=mGoldCarried;if(mGoldStolen<0)mGoldStolen=0;}
  //! \brief Supplies distinct unchanged skill-prefix tokens.
  void exportSkillBuildToPacket(ODPacket& os)const{os<<skill;}
