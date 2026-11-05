@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 
-<Window type="OD/FrameWindow" name="LevelWindowFrame" >
+<Window type="OD/MenuFrameWindow" name="LevelWindowFrame" >
             <Property name="Area" value="{{0.5,-230},{0.5,-180},{0.5,230},{0.5,180}}" />
             <Property name="Text" value="Please set your level main properties..." />
             <Property name="SizingEnabled" value="False" />
