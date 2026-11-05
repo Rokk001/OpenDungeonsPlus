@@ -75,7 +75,7 @@ struct BuildingObject{std::string mesh;double angle;Ogre::Vector3 position;Ogre:
  //! \brief Returns the original object mesh.
  const std::string& getMeshName()const{return mesh;}
  //! \brief Receives actual face-subdivision placement.
- void setPosition(const Ogre::Vector3& value){position=value;}
+ void setPosition(const Ogre::Vector3& value,GameMap* =nullptr){position=value;}
  //! \brief Receives native-width-derived subdivision scale.
  void setFurnitureScale(const Ogre::Vector2& value){scale=value;}
  //! \brief Receives normal world registration.
