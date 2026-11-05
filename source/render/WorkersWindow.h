@@ -68,7 +68,7 @@ public:
     //! \brief Called every frame by the game mode: shows the HUD button for a keeper only and redraws the open window
     //! when what it shows has changed.
     void update();
-    //! rief True while a tablet or a carry entry is being dragged; the keeper hand then shows its grabbing pose.
+    //! \brief True while a tablet or a carry entry is being dragged; the keeper hand then shows its grabbing pose.
     bool isDragging() const { return mDragTablet >= 0 || mDragCarry >= 0; }
 
     //! \brief The close button and Esc.
@@ -163,12 +163,12 @@ private:
     void finishDrag();
     //! \brief Forgets running slides and the drag feedback: slots at their places, copies hidden, original places opaque.
     void resetFeedback();
-    //! rief Shows the copy of the grabbed picture at the pointer and the original place as drop target, or hides both.
+    //! \brief Shows the copy of the grabbed picture at the pointer and the original place as drop target, or hides both.
     void updateDragFeedback();
-    //! rief Starts the slide of every slot whose entry moved from another place.
+    //! \brief Starts the slide of every slot whose entry moved from another place.
     void startSlides(const char* prefix, const std::vector<uint32_t>& before, const std::vector<uint32_t>& after,
         std::vector<Slide>& slides);
-    //! rief Moves the sliding slots a step towards their places.
+    //! \brief Moves the sliding slots a step towards their places.
     void updateSlides(const char* prefix, std::vector<Slide>& slides, const std::vector<CEGUI::UVector2>& bases);
     //! \brief Reads the slot index from the window of an event, -1 if there is none.
     static int32_t getSlotId(const CEGUI::EventArgs& e);
