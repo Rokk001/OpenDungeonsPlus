@@ -83,9 +83,22 @@ def main():
     assert 'RESEARCH_BOOK_MESH = "Grimoire"' in read('source/entities/ItemBagEntity.cpp')
     for name in ('GhostBookLeather','GhostBookPages'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
+    # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
+    for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):
+        credited(path,credits)
+    forge_skeleton = (repo/'models/SoulForge.skeleton').read_bytes()
+    _, chunks = chunks_module.chunks(forge_skeleton)
+    forge_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
+    assert {'Working','Idle','Locked'} <= forge_clips, forge_clips
+    assert b'Hammer' in forge_skeleton, 'soul forge hammer bone'
+    assert b'SoulForge.skeleton' in (repo/'models/SoulForge.mesh').read_bytes()
+    assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress","SoulForge"\}',apparatus), 'soul forge mesh'
+    assert 'ItemInstance::createSoulCrystal()' in apparatus, 'level crystal'
+    assert re.search(r'^\s*material\s+GhostForgeFire\s*$',still_material,re.M), 'GhostForgeFire'
     bounds = read('source/gamemap/RoomObjectBounds.h')
     assert re.search(r'\{"ManaStill"\s*,',bounds), 'ManaStill'
     assert re.search(r'\{"GhostPress"\s*,',bounds), 'GhostPress'
+    assert re.search(r'\{"SoulForge"\s*,',bounds), 'SoulForge'
     for name in models[:7]+models[10:]:
         assert re.search(r'\{"'+name+r'"\s*,',bounds), name
     for path in ('materials/scripts/Ghost.material','materials/scripts/GhostRoomFloor.material',

@@ -524,8 +524,7 @@ GhostProduct RoomGhostRoom::getChosenApparatus(const Seat& seat)
 
 const std::string& RoomGhostRoom::getApparatusMesh(GhostProduct kind)
 {
-    // The soul forge uses the iron rack until its own model exists
-    static const std::string meshes[APPARATUS_COUNT]={"ManaStill","GhostPress","GhostRack"};
+    static const std::string meshes[APPARATUS_COUNT]={"ManaStill","GhostPress","SoulForge"};
     return meshes[static_cast<uint32_t>(kind)];
 }
 
