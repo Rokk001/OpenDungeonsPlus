@@ -357,3 +357,20 @@ material GhostBookPages
         }
     }
 }
+
+// Soul forge (ghost apparatus): green fire in the firebox of the working forge.
+material GhostForgeFire
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.35 0.85 0.18 0.85
+            ambient 0.35 0.85 0.18
+            emissive 0.30 0.75 0.15
+        }
+    }
+}
