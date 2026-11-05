@@ -18,9 +18,9 @@
 
 namespace
 {
-// Meshes of the ghost room goods. Placeholders until the own models exist: the cauldron fill for ectoplasm and the
-// soul crystal for the mana crystal; the research book keeps the look of today's Grimoire.
-const std::string ECTOPLASM_MESH = "GhostCauldronFill";
+// Meshes of the ghost room goods. The research book keeps the look of today's Grimoire and the level crystal is today's
+// soul crystal.
+const std::string ECTOPLASM_MESH = "Ectoplasm";
 const std::string MANA_CRYSTAL_MESH = "ManaCrystal";
 const std::string RESEARCH_BOOK_MESH = "Grimoire";
 const std::string LEVEL_CRYSTAL_MESH = "SoulCrystal";

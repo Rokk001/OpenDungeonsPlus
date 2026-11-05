@@ -95,6 +95,12 @@ def main():
     assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress","SoulForge"\}',apparatus), 'soul forge mesh'
     assert 'ItemInstance::createSoulCrystal()' in apparatus, 'level crystal'
     assert re.search(r'^\s*material\s+GhostForgeFire\s*$',still_material,re.M), 'GhostForgeFire'
+    # Ectoplasm item: its own static mesh replaces the cauldron fill placeholder (the cauldron keeps its fill level).
+    credited('models/Ectoplasm.mesh',credits)
+    assert (repo/'models/Ectoplasm.mesh').read_bytes()[2:20] == b'[MeshSerializer_v1', 'ectoplasm mesh'
+    assert 'ECTOPLASM_MESH = "Ectoplasm"' in read('source/entities/ItemBagEntity.cpp')
+    for name in ('EctoplasmShell','EctoplasmSwirl','GhostEctoplasm'):
+        assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     bounds = read('source/gamemap/RoomObjectBounds.h')
     assert re.search(r'\{"ManaStill"\s*,',bounds), 'ManaStill'
     assert re.search(r'\{"GhostPress"\s*,',bounds), 'GhostPress'
