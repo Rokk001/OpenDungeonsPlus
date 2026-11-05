@@ -72,6 +72,27 @@ def main():
     still_material = read('materials/scripts/Ghost.material')
     for name in ('ManaCrystal','ManaCrystalDull','ManaStillGlass','GhostEmbers','GhostCoal','GhostGlassDull','GhostCobweb'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
+    # Mana still rework after mockup A (owner decision 665): rusty iron, flickering embers, flowing coil, vapour, draped webs.
+    textures = ['ManaStillIron.png','ManaStillFlow.png','ManaStillGlowRamp.png','ManaStillWeb.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
+    for texture in textures:
+        credited('materials/textures/'+texture,credits)
+    still_mesh = (repo/'models/ManaStill.mesh').read_bytes()
+    for name in ('ManaStillIron','ManaStillCoilGlass','ManaStillCoil','ManaStillEmbers','ManaStillBanked','ManaStillFireGlow',
+            'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand'):
+        block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
+        assert block, name
+        for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
+            for file in texture.split():
+                if file.endswith('.png'):
+                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+        assert name.encode()+b'\n' in still_mesh, ('mana still uses',name)
+    # Visible motion: the embers flicker by texture, the coil ectoplasm flows, the vapour drifts.
+    assert re.search(r'anim_texture ManaStillEmbers_0\.png( ManaStillEmbers_\d\.png){5} [\d.]+',still_material), 'ember flicker'
+    assert re.search(r'material ManaStillCoil\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'coil flow'
+    still_skeleton = (repo/'models/ManaStill.skeleton').read_bytes()
+    for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway'):
+        assert bone+b'\n' in still_skeleton, bone
+    assert b'ManaCrystal\n' in (repo/'models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
     # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.
     for path in ('models/GhostPress.mesh','models/GhostPress.skeleton'):
         credited(path,credits)
@@ -83,6 +104,26 @@ def main():
     assert 'RESEARCH_BOOK_MESH = "Grimoire"' in read('source/entities/ItemBagEntity.cpp')
     for name in ('GhostBookLeather','GhostBookPages'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
+    # Ghost press rework after mockup A (owner decision 665): rusty iron, pulsing emblems, open book with turning runes,
+    # flowing ectoplasm, vapour, idle stain and draped webs.
+    for texture in ['GhostPressIron.png','GhostPressPages.png','GhostPressRune.png','GhostPressStain.png']+['GhostPressGlow_%d.png'%k for k in range(4)]:
+        credited('materials/textures/'+texture,credits)
+    press_mesh = (repo/'models/GhostPress.mesh').read_bytes()
+    for name in ('GhostPressIron','GhostPressEngraving','GhostPressEmblem','GhostPressPages','GhostPressRune','GhostPressFlow',
+            'GhostPressVapour','GhostPressResidue','GhostBookLeather','GhostBrass','GhostEctoplasm','ManaStillWeb','ManaStillWebStrand'):
+        block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
+        assert block, name
+        for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
+            for file in texture.split():
+                if file.endswith('.png'):
+                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+        assert name.encode()+b'\n' in press_mesh, ('ghost press uses',name)
+    assert re.search(r'anim_texture GhostPressGlow_0\.png( GhostPressGlow_\d\.png){3} [\d.]+',still_material), 'emblem pulse'
+    assert re.search(r'material GhostPressFlow\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'ectoplasm flow'
+    press_skeleton = (repo/'models/GhostPress.skeleton').read_bytes()
+    for bone in (b'Root',b'Press',b'Handle',b'Glow',b'Drips',b'Dull',b'Webs',b'SpringL',b'Stream',b'RuneL',b'Drip1',b'Drop1',
+            b'Wisp1',b'Mist',b'Residue',b'WebSway'):
+        assert bone+b'\n' in press_skeleton, bone
     # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
     for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):
         credited(path,credits)
@@ -95,6 +136,25 @@ def main():
     assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress","SoulForge"\}',apparatus), 'soul forge mesh'
     assert 'ItemInstance::createSoulCrystal()' in apparatus, 'level crystal'
     assert re.search(r'^\s*material\s+GhostForgeFire\s*$',still_material,re.M), 'GhostForgeFire'
+    # Soul forge rework after mockup A (owner decision 665): weathered stone, rusted iron, flickering green flames,
+    # glow, sparks, ectoplasm pool and crystals, vapour, idle embers and stain, draped webs; motion bones of the clips.
+    for texture in ['SoulForgeStone.png','SoulForgeIron.png','SoulForgeSpark.png']+['SoulForgeFire_%d.png'%k for k in range(4)]:
+        credited('materials/textures/'+texture,credits)
+    forge_mesh = (repo/'models/SoulForge.mesh').read_bytes()
+    for name in ('SoulForgeStone','SoulForgeIron','SoulForgeFire','SoulForgeGlow','SoulForgeSpark','GhostCoal','ManaStillEmbers',
+            'ManaStillBanked','GhostEctoplasm','GhostPressFlow','ManaCrystal','GhostCrystalCore','GhostEmbers','GhostPressVapour',
+            'GhostPressResidue','ManaStillWeb','ManaStillWebStrand'):
+        block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
+        assert block, name
+        for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
+            for file in texture.split():
+                if file.endswith('.png'):
+                    assert (repo/'materials/textures'/file).is_file(), (name,file)
+        assert name.encode()+b'\n' in forge_mesh, ('soul forge uses',name)
+    assert re.search(r'anim_texture SoulForgeFire_0\.png( SoulForgeFire_\d\.png){3} [\d.]+',still_material), 'forge flame flicker'
+    for bone in (b'Root',b'Hammer',b'Sparks',b'Glow',b'Dull',b'Webs',b'Spirit',b'Flame1',b'Embers',b'FireGlow',b'Pool',
+            b'CrystalGlow',b'Shock',b'Spark1',b'Wisp1',b'Wisp5',b'Banked',b'Residue',b'WebSway'):
+        assert bone+b'\n' in forge_skeleton, bone
     # Ectoplasm item: its own static mesh replaces the cauldron fill placeholder (the cauldron keeps its fill level).
     credited('models/Ectoplasm.mesh',credits)
     assert (repo/'models/Ectoplasm.mesh').read_bytes()[2:20] == b'[MeshSerializer_v1', 'ectoplasm mesh'
