@@ -1953,7 +1953,7 @@ particles/ChickenFeathers.particle (SpaMudSplash) OD Team GPLv3+ Original brown 
 
 assets-src/gui/icons/tiles/SpaButton.png AI-generated with Codex GPLv3+ Original painted steaming mud pool and towel in the existing room icon style, generated with built-in imagegen and downsampled to the 256-pixel source, 2026-10-26
 
-materials/scripts/Spa.material OD Team GPLv3+ Original mud, ember seam, dark wood, stone and attendant material bindings using existing project textures; AI-generated with Codex
+materials/scripts/Spa.material OD Team GPLv3+ Original mud, ember seam, dark wood, stone and attendant material bindings; the attendant skin, suit and towel use the textures credited below (2026-11-05); AI-generated with Codex and Claude Code
 assets-src/rooms/spa/SpaMudPool.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
 models/SpaMudPool.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
 assets-src/rooms/spa/SpaPoolRim.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
@@ -1963,8 +1963,11 @@ models/SpaChair.mesh OD Team CC0 Original hot mud bath model exported with the p
 assets-src/rooms/spa/SpaSpringboard.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
 models/SpaSpringboard.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
 assets-src/rooms/spa/PoolAttendant.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
-models/PoolAttendant.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
-models/PoolAttendant.skeleton OD Team CC0 Original articulated pool attendant with Sit, Whistle, TowelWave, Doze, Walk, Climb and Jump clips, each two seconds; AI-generated with Codex
+models/PoolAttendant.mesh AI-generated with Claude Code GPLv3+ Original pot-bellied pool attendant in a striped bathing suit with a towel over the shoulder and a whistle on a cord, rebuilt in Blender after the chosen design, 2026-11-05
+models/PoolAttendant.skeleton AI-generated with Claude Code GPLv3+ Original pool attendant rig with Sit, Whistle, TowelWave, Doze, Walk, Climb and Jump clips, each two seconds, rebuilt 2026-11-05
+materials/textures/SpaAttendantSkin.png AI-generated with Claude Code GPLv3+ Original ruddy skin texture of the pool attendant with body hair and two faint scratches, procedurally painted, 2026-11-05
+materials/textures/SpaAttendantSuit.png AI-generated with Claude Code GPLv3+ Original worn cream and navy striped knitted bathing suit texture, procedurally painted, 2026-11-05
+materials/textures/SpaAttendantTowel.png AI-generated with Claude Code GPLv3+ Original grubby terry towel texture with red end stripes, procedurally painted, 2026-11-05
 
 == Real hot mud bath recordings ==
 
