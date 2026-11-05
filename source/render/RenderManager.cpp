@@ -8319,7 +8319,9 @@ void RenderManager::rrSetHandPose(bool pointing, bool digging, bool building)
 {
     const bool holding = mHeldCreatureDisplayEnabled && mHeldCreatureGrip->numChildren() != 0;
     std::string pose = "Idle";
-    if(digging)
+    if(mHandGrabbing)
+        pose = "Hold";
+    else if(digging)
         pose = "Dig";
     else if(building)
         pose = "Build";

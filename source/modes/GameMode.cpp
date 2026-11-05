@@ -5191,6 +5191,8 @@ void GameMode::refreshActionFeedback(float elapsed)
     const bool building = !overGui && !holding && !mGameMap->getGamePaused() && tile != nullptr &&
         (mPlayerSelection.getCurrentAction() == SelectedAction::buildRoom ||
          mPlayerSelection.getCurrentAction() == SelectedAction::buildTrap);
+    // While a tablet or carry entry of the Workers window is dragged, the hand grabs instead of pointing
+    RenderManager::getSingleton().rrSetHandGrabbing(mWorkersWindow != nullptr && mWorkersWindow->isDragging());
     RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging, building);
     updateIdleHand(elapsed, !holding &&
         !mGameMap->getGamePaused() && !cameraInputBlocked() &&

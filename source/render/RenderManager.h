@@ -317,6 +317,9 @@ public:
     void rrToggleHandSelectorVisibility();
     //! Selects the hand pose; digging takes precedence over building, building over pointing.
     void rrSetHandPose(bool pointing, bool digging, bool building = false);
+    //! While true the hand shows its grabbing pose (the closed hand of a picked up creature) before every other pose.
+    //! Used while an entry of a window is dragged; false returns the hand to the pointer.
+    void rrSetHandGrabbing(bool grabbing) { mHandGrabbing = grabbing; }
     //! Plays the one-shot hammer strike used when a build request is accepted.
     void rrPlayBuildAnimation();
     //! Starts a random idle hand effect; returns false if the hand is hidden, holding or busy.
@@ -1130,6 +1133,8 @@ private:
     //! \brief Node holding the other held creatures, which are not shown.
     Ogre::SceneNode* mHeldCreatureStorage = nullptr;
     bool mHeldCreatureDisplayEnabled = false;
+    //! The hand shows the grabbing pose because an entry of a window is dragged.
+    bool mHandGrabbing = false;
     Ogre::SceneNode* mDummyNode;
     Ogre::SceneNode* mHandLightNode;
     Ogre::SceneNode* mHandLightNode2;
