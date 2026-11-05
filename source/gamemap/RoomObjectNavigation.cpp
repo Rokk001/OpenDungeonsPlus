@@ -675,7 +675,7 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
     return separateCached(creature, path, adjacent, room, cache);
 }
 
-bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path)
+bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache)
 {
     if(path.empty())
         return false;
@@ -733,14 +733,20 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     const int minY = std::max(0, int(std::floor(minimum.y)) - 2);
     const int maxX = std::min(map.getMapSizeX() - 1, int(std::ceil(maximum.x)) + 2);
     const int maxY = std::min(map.getMapSizeY() - 1, int(std::ceil(maximum.y)) + 2);
-    const std::function<bool(const std::vector<RoomObjectPath::Obstacle>&, std::vector<Ogre::Vector2>&)> findRoute = [&](const std::vector<RoomObjectPath::Obstacle>& solid, std::vector<Ogre::Vector2>& route)
+    // Failed searches around all the furniture, also of earlier calls with the same cache, and failed searches of
+    // this call around the furniture without its low steps. A failed search of the first area whose closed side did
+    // not touch its border also proves that the wider second search fails, so that one is not run.
+    RoomObjectPath::RouteFailures& furnitureFailures = cache.failures(creature, interaction);
+    RoomObjectPath::RouteFailures stepFailures;
+    const std::function<bool(const std::vector<RoomObjectPath::Obstacle>&, std::vector<Ogre::Vector2>&, RoomObjectPath::RouteFailures&)> findRoute =
+        [&](const std::vector<RoomObjectPath::Obstacle>& solid, std::vector<Ogre::Vector2>& route, RoomObjectPath::RouteFailures& failures)
     {
         // The second search is wider but stays near the path: a search over the whole map for a creature that is
         // closed in by furniture visits everything it can reach and takes seconds
-        return RoomObjectPath::route(start, goal, solid, minX, minY, maxX, maxY, terrain, route) ||
+        return RoomObjectPath::route(start, goal, solid, minX, minY, maxX, maxY, terrain, route, true, &failures) ||
             RoomObjectPath::route(start, goal, solid, std::max(0, minX - ROUTE_PADDING_TILES),
                 std::max(0, minY - ROUTE_PADDING_TILES), std::min(map.getMapSizeX() - 1, maxX + ROUTE_PADDING_TILES),
-                std::min(map.getMapSizeY() - 1, maxY + ROUTE_PADDING_TILES), terrain, route);
+                std::min(map.getMapSizeY() - 1, maxY + ROUTE_PADDING_TILES), terrain, route, true, &failures);
     };
     const std::function<float(const std::vector<Ogre::Vector2>&)> length = [&](const std::vector<Ogre::Vector2>& route)
     {
@@ -753,7 +759,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
         }
         return distance;
     };
-    bool found = findRoute(obstacles, result);
+    bool found = findRoute(obstacles, result, furnitureFailures);
     if(found && result.size() == 1)
     {
         // A clear straight route cannot be improved by adding a step.
@@ -794,7 +800,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
         }
     }
     std::vector<Ogre::Vector2> crossing;
-    if(!steps.empty() && findRoute(solid, crossing))
+    if(!steps.empty() && findRoute(solid, crossing, stepFailures))
     {
         float cost = length(crossing);
         for(size_t i = 0; i < steps.size(); ++i)
@@ -824,6 +830,25 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     smoothCorridor(creature, passable, obstacles, result);
     path.swap(result);
     return true;
+}
+
+bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path)
+{
+    // The failed searches of this call only
+    RouteCache cache;
+    return refine(creature, path, cache);
+}
+
+RoomObjectPath::RouteFailures& RoomObjectNavigation::RouteCache::failures(const Creature& creature,
+    const BuildingObject* interaction)
+{
+    // The searches of another creature start elsewhere and walk on other tiles
+    if(mCreature != &creature)
+    {
+        mFailures.clear();
+        mCreature = &creature;
+    }
+    return mFailures[interaction];
 }
 
 //! \brief Prefers an unoccupied feeding body while retaining reachable crowded feeding as a last resort.

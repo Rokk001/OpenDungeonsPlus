@@ -5,10 +5,12 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace RoomObjectPath
@@ -267,14 +269,51 @@ inline float pathLength(const Ogre::Vector2& start, const std::vector<Ogre::Vect
     return cost;
 }
 
+// Number of a grid node that is the same in every search area: the grid lines are counted from tile 0, not from the
+// corner of the area.
+inline int64_t routeNodeKey(int gridX, int gridY)
+{
+    return (static_cast<int64_t>(gridX) << 32) ^ static_cast<int64_t>(static_cast<uint32_t>(gridY));
+}
+
+// One side of a failed route search that ran out of nodes without being stopped by the border of its search area.
+// A goal side holds every grid node from which the goal can be reached, a start side every grid node that can be
+// reached from the start. Neither node set depends on the search area, so no route exists on that grid in any area:
+// - start side: for a goal none of whose first nodes is in the set (the start side has all nodes the start reaches),
+// - goal side: for a goal all of whose first nodes are in the set (every node that reaches them is in the set, and
+//   the search found none of the first nodes of the start in it).
+struct ClosedSearchSide
+{
+    // Start, grid offset and start exit of the search: a later search uses the side only if they are the same
+    Ogre::Vector2 start;
+    Ogre::Vector2 gridOffset;
+    bool allowStartExit;
+    // The nodes the search tried as first nodes of the start (counted as in routeNodeKey): a later search uses the
+    // side only if it tries no other ones
+    int seedGridFirstX, seedGridLastX, seedGridFirstY, seedGridLastY;
+    // True for a goal side, false for a start side
+    bool goalSide;
+    // The nodes of the side (routeNodeKey)
+    std::unordered_set<int64_t> nodes;
+};
+
+// The closed sides of the failed searches of one creature, for one set of obstacles and one terrain in one unchanged
+// game state. A search that is given them is not run when they prove that it fails, and adds its own closed side
+// when it fails; its answer is always the one of the full search.
+struct RouteFailures
+{
+    std::vector<ClosedSearchSide> sides;
+};
+
 // Searches the shortest route from the start to the nearest of the goals around the
 // obstacles, within the given tile range, and returns the index of the goal in
 // chosenGoal. Routes longer than maximumCost are not accepted.
+// failures (single goal only, may be null): failed searches with the same obstacles and terrain, see RouteFailures.
 inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vector2>& goals,
     const std::vector<Obstacle>& obstacles, int minX, int minY, int maxX, int maxY,
     const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, size_t& chosenGoal, bool allowStartExit = true,
     const Ogre::Vector2& gridOffset = Ogre::Vector2::ZERO,
-    float maximumCost = std::numeric_limits<float>::infinity())
+    float maximumCost = std::numeric_limits<float>::infinity(), RouteFailures* failures = nullptr)
 {
     result.clear();
     if(goals.empty())
@@ -347,10 +386,59 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
     // newly placed furniture overlaps the start, connect an outward exit first.
     const Ogre::Vector2 initialHeading = obstacles.empty() ? Ogre::Vector2(0, -1) : obstacles.front().initialHeading;
     const float reach = !allowStartExit || clearPoint(obstacles, start, initialHeading) ? routeStartReach : routeEscapeReach;
-    const int firstX = std::max(0, int(std::floor((start.x - reach - minX - gridOffset.x) * routeCellsPerTile)));
-    const int lastX = std::min(width - 1, int(std::ceil((start.x + reach - minX - gridOffset.x) * routeCellsPerTile)));
-    const int firstY = std::max(0, int(std::floor((start.y - reach - minY - gridOffset.y) * routeCellsPerTile)));
-    const int lastY = std::min(height - 1, int(std::ceil((start.y + reach - minY - gridOffset.y) * routeCellsPerTile)));
+    const int seedFirstX = int(std::floor((start.x - reach - minX - gridOffset.x) * routeCellsPerTile));
+    const int seedLastX = int(std::ceil((start.x + reach - minX - gridOffset.x) * routeCellsPerTile));
+    const int seedFirstY = int(std::floor((start.y - reach - minY - gridOffset.y) * routeCellsPerTile));
+    const int seedLastY = int(std::ceil((start.y + reach - minY - gridOffset.y) * routeCellsPerTile));
+    const int firstX = std::max(0, seedFirstX);
+    const int lastX = std::min(width - 1, seedLastX);
+    const int firstY = std::max(0, seedFirstY);
+    const int lastY = std::min(height - 1, seedLastY);
+    // The nodes tried as first nodes of the start, counted from tile 0 (see routeNodeKey)
+    const int seedGridFirstX = minX * routeCellsPerTile + seedFirstX, seedGridLastX = minX * routeCellsPerTile + seedLastX;
+    const int seedGridFirstY = minY * routeCellsPerTile + seedFirstY, seedGridLastY = minY * routeCellsPerTile + seedLastY;
+    // Failed searches are only remembered without a cost limit: with one, a route that is too long also fails
+    const bool useFailures = failures != nullptr && goals.size() == 1;
+    const bool rememberFailure = useFailures && !std::isfinite(maximumCost);
+    if(useFailures && clearPoint(obstacles, goals.front()) && terrain(goals.front(), goals.front()))
+    {
+        // The first nodes of the goal, chosen exactly as the search below chooses them
+        const Ogre::Vector2& goal = goals.front();
+        std::vector<int64_t> goalNodes;
+        const int goalFirstX = std::max(0, int(std::floor((goal.x - routeGoalReach - minX - gridOffset.x) * routeCellsPerTile)));
+        const int goalLastX = std::min(width - 1, int(std::ceil((goal.x + routeGoalReach - minX - gridOffset.x) * routeCellsPerTile)));
+        const int goalFirstY = std::max(0, int(std::floor((goal.y - routeGoalReach - minY - gridOffset.y) * routeCellsPerTile)));
+        const int goalLastY = std::min(height - 1, int(std::ceil((goal.y + routeGoalReach - minY - gridOffset.y) * routeCellsPerTile)));
+        for(int y = goalFirstY; y <= goalLastY; ++y)
+            for(int x = goalFirstX; x <= goalLastX; ++x)
+            {
+                const Ogre::Vector2 point = position(y * width + x);
+                if(point.squaredDistance(goal) <= routeGoalReach * routeGoalReach && clearSegment(obstacles, point, goal) && terrain(point, goal))
+                    goalNodes.push_back(routeNodeKey(minX * routeCellsPerTile + x, minY * routeCellsPerTile + y));
+            }
+        for(const ClosedSearchSide& side : failures->sides)
+        {
+            // The first nodes of the start of this search must be among those the failed search tried
+            if(side.start != start || side.gridOffset != gridOffset || side.allowStartExit != allowStartExit ||
+               seedGridFirstX < side.seedGridFirstX || seedGridLastX > side.seedGridLastX ||
+               seedGridFirstY < side.seedGridFirstY || seedGridLastY > side.seedGridLastY)
+                continue;
+            bool inside = false, outside = false;
+            for(int64_t node : goalNodes)
+            {
+                if(side.nodes.count(node) > 0)
+                    inside = true;
+                else
+                    outside = true;
+            }
+            // A goal side holding all first nodes of the goal, or a start side holding none of them
+            if((side.goalSide && !outside) || (!side.goalSide && !inside))
+                return false;
+        }
+    }
+    // A side is closed while the border of the area has not stopped it; the start side also needs all its first nodes
+    bool startClosed = seedFirstX >= 0 && seedLastX <= width - 1 && seedFirstY >= 0 && seedLastY <= height - 1;
+    bool goalClosed = true;
     for(int y = firstY; y <= lastY; ++y)
         for(int x = firstX; x <= lastX; ++x)
         {
@@ -480,8 +568,32 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
         for(int dy = -1; dy <= 1; ++dy)
             for(int dx = -1; dx <= 1; ++dx)
             {
-                if((dx == 0 && dy == 0) || x + dx < 0 || x + dx >= width || y + dy < 0 || y + dy >= height)
+                if(dx == 0 && dy == 0)
                     continue;
+                if(x + dx < 0 || x + dx >= width || y + dy < 0 || y + dy >= height)
+                {
+                    // A free edge out of the area: in a larger area this side would go on
+                    bool& closed = forward ? startClosed : goalClosed;
+                    if(rememberFailure && closed)
+                    {
+                        const Ogre::Vector2 outside = Ogre::Vector2(minX + (x + dx) * routeCellSize,
+                            minY + (y + dy) * routeCellSize) + gridOffset;
+                        const Ogre::Vector2 from = forward ? point : outside;
+                        const Ogre::Vector2 to = forward ? outside : point;
+                        const int heading = forward ? (1 - dy) * 3 + 1 - dx : (dy + 1) * 3 + dx + 1;
+                        // The node is in no cell of the area, so the edge is tested against all obstacles
+                        bool free = true;
+                        for(const Obstacle& obstacle : edgeObstacles[heading])
+                            if(obstacle.intersects(from, to))
+                            {
+                                free = false;
+                                break;
+                            }
+                        if(free && terrain(from, to))
+                            closed = false;
+                    }
+                    continue;
+                }
                 const int next = (y + dy) * width + x + dx;
                 const Ogre::Vector2 target = position(next);
                 const float nextCost = nodes[current].*distance + point.distance(target);
@@ -507,7 +619,21 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
             }
     }
     if(destination < 0)
+    {
+        // The side that ran out of nodes proves the failure for any area if the border never stopped it
+        const bool goalSide = open.empty() && goalClosed;
+        if(rememberFailure && (goalSide || (forwardOpen.empty() && startClosed)))
+        {
+            ClosedSearchSide side{start, gridOffset, allowStartExit, seedGridFirstX, seedGridLastX, seedGridFirstY,
+                seedGridLastY, goalSide, {}};
+            for(const std::pair<const int, SearchNode>& entry : nodes)
+                if(std::isfinite(goalSide ? entry.second.cost : entry.second.forwardCost))
+                    side.nodes.insert(routeNodeKey(minX * routeCellsPerTile + entry.first % width,
+                        minY * routeCellsPerTile + entry.first / width));
+            failures->sides.push_back(std::move(side));
+        }
         return false;
+    }
     for(int index = destination; index >= 0; index = nodes[index].forwardParent)
         result.push_back(position(index));
     std::reverse(result.begin(), result.end());
@@ -535,12 +661,15 @@ inline bool routeToAny(const Ogre::Vector2& start, const std::vector<Ogre::Vecto
 
 // Like routeToAny(), but also tries grids that are shifted to the centre of the body and
 // of the furniture, so that narrow lanes between furniture are found.
+// failures (may be null): failed searches with the same obstacles and terrain, see RouteFailures.
 inline bool routeToAnyAligned(const Ogre::Vector2& start, const std::vector<Ogre::Vector2>& goals,
     const std::vector<Obstacle>& obstacles, int minX, int minY, int maxX, int maxY,
-    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, size_t& chosenGoal, bool allowStartExit = true)
+    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, size_t& chosenGoal, bool allowStartExit = true,
+    RouteFailures* failures = nullptr)
 {
     bool found = routeToAny(start, goals, obstacles, minX, minY, maxX, maxY,
-        terrain, result, chosenGoal, allowStartExit);
+        terrain, result, chosenGoal, allowStartExit, Ogre::Vector2::ZERO, std::numeric_limits<float>::infinity(),
+        failures);
     if(found && result.size() == 1)
         return true;
     // Mesh roots are not necessarily centered on the body or furniture. A valid
@@ -588,7 +717,7 @@ inline bool routeToAnyAligned(const Ogre::Vector2& start, const std::vector<Ogre
             const size_t selectedGoal = chosenGoal;
             const std::vector<Ogre::Vector2> targets = selectedEndpoint ? std::vector<Ogre::Vector2>{goals[chosenGoal]} : goals;
             if(routeToAny(start, targets, obstacles, minX, minY, maxX, maxY,
-                terrain, candidate, candidateGoal, allowStartExit, offset, bestCost))
+                terrain, candidate, candidateGoal, allowStartExit, offset, bestCost, failures))
             {
                 bestCost = pathLength(start, candidate);
                 result.swap(candidate);
@@ -600,13 +729,15 @@ inline bool routeToAnyAligned(const Ogre::Vector2& start, const std::vector<Ogre
 }
 
 // Searches the shortest route from the start to a single goal.
+// failures (may be null): failed searches with the same obstacles and terrain, see RouteFailures.
 inline bool route(const Ogre::Vector2& start, const Ogre::Vector2& goal,
     const std::vector<Obstacle>& obstacles, int minX, int minY, int maxX, int maxY,
-    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, bool allowStartExit = true)
+    const TerrainSegment& terrain, std::vector<Ogre::Vector2>& result, bool allowStartExit = true,
+    RouteFailures* failures = nullptr)
 {
     size_t chosenGoal = 0;
     return routeToAnyAligned(start, {goal}, obstacles, minX, minY, maxX, maxY,
-        terrain, result, chosenGoal, allowStartExit);
+        terrain, result, chosenGoal, allowStartExit, failures);
 }
 }
 
