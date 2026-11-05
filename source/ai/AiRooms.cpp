@@ -15,6 +15,7 @@
 #include "network/ODPacket.h"
 #include "rooms/Room.h"
 #include "rooms/RoomCasino.h"
+#include "rooms/RoomGhostRoom.h"
 #include "rooms/RoomSpa.h"
 #include "rooms/RoomTavern.h"
 #include "utils/ConfigManager.h"
@@ -842,7 +843,8 @@ void auditInfirmary(KeeperAI& ai)
     ACTS::setRoomSetting(ai, rooms.front(), packet);
 }
 
-//! \brief Selects research, scarce mana or saleable crystals and affordable own-body revival.
+//! \brief Chooses the apparatus by its product (ghost press for research, mana still for scarce mana, soul forge for
+//! saleable crystals) and affordable own-body revival. A locked apparatus is never chosen: the choice becomes the mana still.
 void ghostProduct(KeeperAI& ai)
 {
     // AI row B17
@@ -873,6 +875,8 @@ void ghostProduct(KeeperAI& ai)
     else if(!ai.getGameMap().getRoomsByTypeAndSeat(RoomType::merchant, seat).empty() &&
         seat->getGold() < ECON::wageBill(ai))
         product = GhostProduct::crystal;
+    if(!RoomGhostRoom::isApparatusUnlocked(*seat, product))
+        product = GhostProduct::mana;
     const double price = SkillManager::getResearchValue(seat, SkillType::roomGhostRoom,
         config.getRoomConfigDouble("GhostReviveMana"), ResearchEffect::RevivePrice);
     const bool revive = seat->getMana() > config.getAiConfigDouble("ReviveManaFactor") * price;

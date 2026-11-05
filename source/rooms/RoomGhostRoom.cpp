@@ -24,9 +24,13 @@
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 #include "utils/MakeUnique.h"
+#include <functional>
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
+#include <istream>
 #include <limits>
+#include <ostream>
 #include <set>
 
 namespace
@@ -187,18 +191,20 @@ void RoomGhostRoom::createCauldronObjects()
     }
 }
 
-Tile* RoomGhostRoom::findCrystalDropTile(const Tile& cauldron) const
+Tile* RoomGhostRoom::findDropTile(const Tile& origin, double offset) const
 {
     Tile* best=nullptr;double distance=std::numeric_limits<double>::max();
     for(Tile* tile : mCoveredTiles)
     {
-        // Tiles under any cauldron are never used; the bag itself is no obstacle, so every other floor tile keeps all passages free.
+        // Tiles under any cauldron or apparatus are never used; the bag itself is no obstacle, so every other floor tile keeps all passages free.
         bool underCauldron=false;
         for(const Cauldron& placed : mCauldrons)
             if(tile->getX()>=placed.anchor->getX() && tile->getX()<=placed.anchor->getX()+1 &&
                tile->getY()>=placed.anchor->getY() && tile->getY()<=placed.anchor->getY()+1) underCauldron=true;
+        for(const Apparatus& apparatus : mApparatuses)
+            if(apparatus.tile==tile) underCauldron=true;
         if(underCauldron) continue;
-        const double dx=tile->getX()-(cauldron.getX()+0.5),dy=tile->getY()-(cauldron.getY()+0.5);
+        const double dx=tile->getX()-(origin.getX()+offset),dy=tile->getY()-(origin.getY()+offset);
         const double squared=dx*dx+dy*dy;
         if(best==nullptr || squared<distance || (squared==distance && tileOrder(tile,best))) { best=tile;distance=squared; }
     }
@@ -210,6 +216,7 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
     if(!getIsOnServerMap() || mLayingOut) return;
     mLayingOut=true;
     layoutCauldrons();
+    layoutApparatuses();
     clearWallObjects();
     mDecorationTiles.clear();mHookTiles.clear();mHookObjects.clear();
     std::vector<Tile*> ordered=mCoveredTiles;
@@ -226,6 +233,15 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
             walls.push_back(Wall(tile,i==0?activeSpotTop:i==1?activeSpotLeft:i==2?activeSpotRight:activeSpotBottom));
         }
     }
+    // The apparatuses stand at the wall: their wall faces keep no decoration while other wall faces remain
+    std::vector<Wall> freeWalls;
+    for(const Wall& wall : walls)
+    {
+        bool apparatusTile=false;
+        for(const Apparatus& apparatus : mApparatuses) if(apparatus.tile==wall.first) apparatusTile=true;
+        if(!apparatusTile) freeWalls.push_back(wall);
+    }
+    if(!freeWalls.empty()) walls=freeWalls;
     // A free-standing room has no adjacent wall: bell, hooks and gauges then stand on racks along the open room edge.
     // They stay decoration (no obstacle), so every passage remains free, and the supply is not reduced.
     const bool rackEdge=walls.empty();
@@ -277,6 +293,7 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
         }
     }
     createCauldronObjects();
+    createApparatusObjects(map);
     std::vector<Creature*> hunters;
     for(const std::pair<Creature* const,Tile*>& hook : mHooks) hunters.push_back(hook.first);
     mHooks.clear();mHookSlots.clear();
@@ -376,6 +393,15 @@ void RoomGhostRoom::interruptHunters()
 void RoomGhostRoom::absorbRoom(Room* room)
 {
     RoomGhostRoom* other=static_cast<RoomGhostRoom*>(room);
+    // The joined room keeps one apparatus of each kind: the other room's waiting and running ectoplasm queue here
+    // (the running work time is lost, the ectoplasm is not) and its forged ectoplasm joins this level crystal.
+    for(uint32_t index=0;index<APPARATUS_COUNT;++index)
+    {
+        Apparatus& mine=mApparatuses[index];Apparatus& theirs=other->mApparatuses[index];
+        mine.queue+=theirs.queue+(theirs.working?1:0);
+        mine.crystalEctoplasm+=theirs.crystalEctoplasm;
+        theirs.queue=0;theirs.working=false;theirs.workTurns=0.0;theirs.crystalEctoplasm=0;
+    }
     mCauldrons.insert(mCauldrons.end(),other->mCauldrons.begin(),other->mCauldrons.end());
     for(Creature* hunter : getGameMap()->getCreaturesBySeat(getSeat()))
         hunter->transferGhostHuntRoom(other->getName(),getName(),true,true);
@@ -430,11 +456,13 @@ bool RoomGhostRoom::removeCoveredTile(Tile* tile)
            tile->getY()>=cauldron.anchor->getY() && tile->getY()<=cauldron.anchor->getY()+1 && cauldron.hunter!=nullptr)
             cauldron.hunter->interruptGhostHunt();
     const bool removed=Room::removeCoveredTile(tile);
+    // The last tile is sold or destroyed: everything the apparatuses hold falls to the floor as ectoplasm
+    if(removed && mCoveredTiles.empty()) dropHeldEctoplasm(tile);
     updateActiveSpots();return removed;
 }
 
 void RoomGhostRoom::changeOwner(Seat* seat)
-{ interruptHunters(); Room::changeOwner(seat); updateActiveSpots(); }
+{ interruptHunters(); dropHeldEctoplasm(nullptr); Room::changeOwner(seat); updateActiveSpots(); }
 
 void RoomGhostRoom::removeFromGameMap(GameMap* map)
 { interruptHunters();clearWallObjects();Room::removeFromGameMap(map); }
@@ -459,42 +487,333 @@ void RoomGhostRoom::emptyGhost(Creature& hunter, GhostEntity& ghost)
     }
     seat->setEctoplasmLevels(seat->getEctoplasmLevels()+ghost.getLevel());
     ghost.removeFromGameMap();ghost.deleteYourself();
-    ConfigManager& config=ConfigManager::getSingleton();
+    produceEctoplasm(*cauldron);
+}
+
+void RoomGhostRoom::produceEctoplasm(Tile& cauldron)
+{
+    Seat* seat=getSeat();
+    // The keeper value keeps only the progress to the next ectoplasm; every full one comes out of the cauldron as an item
     while(seat->getEctoplasmLevels()>=getLevelsPerEctoplasm(*seat))
     {
+        Tile* drop=findDropTile(cauldron,0.5);
+        if(drop==nullptr) break;
+        // The AI chooses its apparatus for every finished ectoplasm, before a worker picks it up
         KeeperAI::updateGhostRoomSettings(*seat);
-        const bool crystal=seat->getGhostProduct()==GhostProduct::crystal;
-        // A soul crystal costs several ectoplasm; the bar keeps its rest until enough levels are collected.
-        const double cost=getLevelsPerEctoplasm(*seat)*(crystal?config.getRoomConfigDouble("GhostEctoplasmPerCrystal"):1.0);
-        if(seat->getEctoplasmLevels()<cost) break;
-        Tile* drop=crystal?findCrystalDropTile(*cauldron):nullptr;
-        if(crystal && drop==nullptr) break;
-        seat->setEctoplasmLevels(seat->getEctoplasmLevels()-cost);
-        Spell::fireSpellEffect(*cauldron,"EctoplasmBurst","");
-        CreatureActionHuntGhost::playSound(*getGameMap(),*cauldron,"Rooms/GhostRoom/PressHiss");
-        if(seat->getGhostProduct()==GhostProduct::mana) seat->addMana(config.getRoomConfigDouble("GhostEctoplasmMana"));
-        else if(seat->getGhostProduct()==GhostProduct::research) seat->addSkillPoints(config.getRoomConfigDouble("GhostEctoplasmResearchPoints"));
-        else
+        seat->setEctoplasmLevels(seat->getEctoplasmLevels()-getLevelsPerEctoplasm(*seat));
+        Spell::fireSpellEffect(cauldron,"EctoplasmBurst","");
+        CreatureActionHuntGhost::playSound(*getGameMap(),cauldron,"Rooms/GhostRoom/PressHiss");
+        spawnItem(*drop,ItemInstance::createGhostItem(GhostItem::ectoplasm),seat);
+    }
+}
+
+void RoomGhostRoom::spawnItem(Tile& tile, std::unique_ptr<ItemInstance> item, Seat* seat)
+{
+    ItemBagEntity* bag=new ItemBagEntity(getGameMap(),std::move(item));
+    bag->setSeat(seat);bag->setPosition(Ogre::Vector3(tile.getX(),tile.getY(),0.0f));
+    bag->addToGameMap();bag->createMesh();
+}
+
+uint32_t RoomGhostRoom::getUnlockLevel(GhostProduct kind)
+{ return kind==GhostProduct::mana?1:kind==GhostProduct::research?2:3; }
+
+bool RoomGhostRoom::isApparatusUnlocked(const Seat& seat, GhostProduct kind)
+{ return seat.getSkillLevel(SkillType::roomGhostRoom)>=getUnlockLevel(kind); }
+
+GhostProduct RoomGhostRoom::getChosenApparatus(const Seat& seat)
+{ return isApparatusUnlocked(seat,seat.getGhostProduct())?seat.getGhostProduct():GhostProduct::mana; }
+
+const std::string& RoomGhostRoom::getApparatusMesh(GhostProduct kind)
+{
+    static const std::string meshes[APPARATUS_COUNT]={"ManaStill","GhostPress","SoulForge"};
+    return meshes[static_cast<uint32_t>(kind)];
+}
+
+Tile* RoomGhostRoom::getApparatusStandTile(GhostProduct kind) const
+{ return static_cast<uint32_t>(kind)<APPARATUS_COUNT?mApparatuses[static_cast<uint32_t>(kind)].stand:nullptr; }
+
+void RoomGhostRoom::layoutApparatuses()
+{
+    for(Apparatus& apparatus : mApparatuses) { apparatus.tile=nullptr;apparatus.stand=nullptr; }
+    std::set<Tile*> floor(mCoveredTiles.begin(),mCoveredTiles.end()),blocked;
+    for(const Cauldron& cauldron : mCauldrons)
+        for(int y=0;y<2;++y) for(int x=0;x<2;++x) blocked.insert(getGameMap()->getTile(cauldron.anchor->getX()+x,cauldron.anchor->getY()+y));
+    std::vector<Tile*> ordered=mCoveredTiles;
+    std::sort(ordered.begin(),ordered.end(),tileOrder);
+    const int dx[]={0,-1,1,0},dy[]={1,0,0,-1};
+    // An orthogonal neighbour that is a wall (or the map edge)
+    const std::function<bool(Tile*)> atWall=[&](Tile* tile)
+    {
+        for(int i=0;i<4;++i)
         {
-            // The finished crystal falls as a bag onto a free floor tile of the room.
-            ItemBagEntity* bag=new ItemBagEntity(getGameMap(),ItemInstance::createSoulCrystal());
-            bag->setSeat(seat);bag->setPosition(Ogre::Vector3(drop->getX(),drop->getY(),0.0f));
-            bag->addToGameMap();bag->createMesh();
-            CreatureActionHuntGhost::playSound(*getGameMap(),*drop,"Rooms/GhostRoom/CrystalRing");
+            Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
+            if(neighbor==nullptr || neighbor->isFullTile()) return true;
+        }
+        return false;
+    };
+    // A door opening: an orthogonal neighbour outside the room that can be walked on
+    const std::function<bool(Tile*)> inOpening=[&](Tile* tile)
+    {
+        for(int i=0;i<4;++i)
+        {
+            Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
+            if(neighbor!=nullptr && floor.count(neighbor)==0 && !neighbor->isFullTile()) return true;
+        }
+        return false;
+    };
+    // Every free floor tile stays connected to every other one when the given tiles are taken
+    const std::function<bool(const std::vector<Tile*>&)> keepsReachable=[&](const std::vector<Tile*>& taken)
+    {
+        std::set<Tile*> open;
+        for(Tile* tile : mCoveredTiles)
+            if(blocked.count(tile)==0 && std::find(taken.begin(),taken.end(),tile)==taken.end()) open.insert(tile);
+        if(open.empty()) return true;
+        std::set<Tile*> reached;std::vector<Tile*> pending(1,*open.begin());reached.insert(*open.begin());
+        while(!pending.empty())
+        {
+            Tile* tile=pending.back();pending.pop_back();
+            for(int i=0;i<4;++i)
+            {
+                Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
+                if(neighbor!=nullptr && open.count(neighbor)!=0 && reached.insert(neighbor).second) pending.push_back(neighbor);
+            }
+        }
+        return reached.size()==open.size();
+    };
+    // Pass 0: wall tiles outside door openings with a free tile between the apparatuses; pass 1: also side by side;
+    // pass 2 (a free-standing room has no wall): any free floor tile.
+    std::vector<Tile*> chosen;
+    for(int pass=0;pass<3 && chosen.size()<APPARATUS_COUNT;++pass)
+    {
+        for(Tile* tile : ordered)
+        {
+            if(chosen.size()>=APPARATUS_COUNT) break;
+            if(blocked.count(tile)!=0 || std::find(chosen.begin(),chosen.end(),tile)!=chosen.end()) continue;
+            if(pass<2 && (!atWall(tile) || inOpening(tile))) continue;
+            bool beside=false;
+            for(Tile* placed : chosen)
+                if(std::abs(placed->getX()-tile->getX())<=1 && std::abs(placed->getY()-tile->getY())<=1) beside=true;
+            if(pass==0 && beside) continue;
+            std::vector<Tile*> taken=chosen;taken.push_back(tile);
+            if(!keepsReachable(taken)) continue;
+            chosen.push_back(tile);
         }
     }
+    // Left to right as in the room picture: mana still, ghost press, soul forge
+    const GhostProduct order[APPARATUS_COUNT]={GhostProduct::mana,GhostProduct::research,GhostProduct::crystal};
+    for(size_t index=0;index<chosen.size();++index)
+    {
+        Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(order[index])];
+        apparatus.tile=chosen[index];apparatus.stand=chosen[index];
+        // Workers put the ectoplasm down on a free neighbour in front of it, an orthogonal one first
+        const int ndx[]={0,-1,1,0,-1,1,-1,1},ndy[]={1,0,0,-1,1,1,-1,-1};
+        for(int i=0;i<8;++i)
+        {
+            Tile* neighbor=getGameMap()->getTile(chosen[index]->getX()+ndx[i],chosen[index]->getY()+ndy[i]);
+            if(neighbor==nullptr || floor.count(neighbor)==0 || blocked.count(neighbor)!=0 ||
+               std::find(chosen.begin(),chosen.end(),neighbor)!=chosen.end()) continue;
+            apparatus.stand=neighbor;break;
+        }
+    }
+}
+
+void RoomGhostRoom::createApparatusObjects(GameMap* map)
+{
+    for(uint32_t index=0;index<APPARATUS_COUNT;++index)
+    {
+        Apparatus& apparatus=mApparatuses[index];
+        apparatus.object=nullptr;apparatus.shownState.clear();
+        if(apparatus.tile==nullptr) continue;
+        Tile* tile=apparatus.tile;
+        // It stands with its back to the wall, facing the room
+        double rotation=0.0;
+        const int dx[]={0,-1,1,0},dy[]={1,0,0,-1};const double rotations[]={0.0,90.0,270.0,180.0};
+        for(int i=0;i<4;++i)
+        {
+            Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
+            if(neighbor==nullptr || neighbor->isFullTile()) { rotation=rotations[i];break; }
+        }
+        const std::string& mesh=getApparatusMesh(static_cast<GhostProduct>(index));
+        double depth=0.0;
+        for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
+            if(mesh==bounds.name) { depth=bounds.maxY-bounds.minY;break; }
+        const double angle=rotation*RoomObjectPath::degreesToRadians,forward=0.5-depth/2.0;
+        BuildingObject* object=new BuildingObject(getGameMap(),*this,mesh,tile,
+            static_cast<float>(tile->getX()-std::sin(angle)*forward),static_cast<float>(tile->getY()+std::cos(angle)*forward),
+            0.0f,static_cast<float>(rotation),false);
+        object->setFurnitureScale(Ogre::Vector2(1.0f,1.0f));
+        object->addToGameMap(map);object->createMesh();mWallObjects.push_back(object);
+        apparatus.object=object;
+    }
+}
+
+void RoomGhostRoom::workApparatuses()
+{
+    const double turns=ConfigManager::getSingleton().getRoomConfigDouble("GhostApparatusTurns");
+    const double perCrystal=ConfigManager::getSingleton().getRoomConfigDouble("GhostEctoplasmPerCrystal");
+    for(uint32_t index=0;index<APPARATUS_COUNT;++index)
+    {
+        Apparatus& apparatus=mApparatuses[index];
+        const GhostProduct kind=static_cast<GhostProduct>(index);
+        const bool unlocked=isApparatusUnlocked(*getSeat(),kind);
+        if(unlocked && apparatus.tile!=nullptr)
+        {
+            // Forged ectoplasm joined from another room can complete a level crystal
+            while(kind==GhostProduct::crystal && apparatus.crystalEctoplasm>=perCrystal)
+            {
+                apparatus.crystalEctoplasm-=static_cast<uint32_t>(perCrystal);
+                Tile* drop=findDropTile(*apparatus.tile,0.0);
+                spawnItem(drop==nullptr?*apparatus.tile:*drop,ItemInstance::createSoulCrystal(),getSeat());
+            }
+            // The next waiting ectoplasm starts; a fraction left from the previous one carries over
+            if(!apparatus.working && apparatus.queue>0)
+            {
+                --apparatus.queue;apparatus.working=true;apparatus.workTurns+=turns;
+            }
+            if(apparatus.working)
+            {
+                apparatus.workTurns-=1.0;
+                // A working apparatus steams
+                Spell::fireSpellEffect(*apparatus.tile,"EctoplasmBurst","");
+                if(apparatus.workTurns<=0.0)
+                {
+                    apparatus.working=false;
+                    finishEctoplasm(kind);
+                }
+            }
+        }
+        const std::string state=!unlocked?"Locked":apparatus.working?"Working":"Idle";
+        if(apparatus.object!=nullptr && apparatus.shownState!=state)
+        {
+            apparatus.shownState=state;
+            apparatus.object->setAnimationState(state,true);
+        }
+    }
+}
+
+void RoomGhostRoom::finishEctoplasm(GhostProduct kind)
+{
+    Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];
+    if(apparatus.tile==nullptr) return;
+    Tile& tile=*apparatus.tile;
+    CreatureActionHuntGhost::playSound(*getGameMap(),tile,"Rooms/GhostRoom/PressHiss");
+    std::unique_ptr<ItemInstance> product;
+    if(kind==GhostProduct::crystal)
+    {
+        // The soul forge collects ectoplasm until one level crystal is complete
+        ++apparatus.crystalEctoplasm;
+        if(apparatus.crystalEctoplasm<ConfigManager::getSingleton().getRoomConfigDouble("GhostEctoplasmPerCrystal")) return;
+        apparatus.crystalEctoplasm=0;
+        product=ItemInstance::createSoulCrystal();
+        CreatureActionHuntGhost::playSound(*getGameMap(),tile,"Rooms/GhostRoom/CrystalRing");
+    }
+    else
+        product=ItemInstance::createGhostItem(kind==GhostProduct::mana?GhostItem::manaCrystal:GhostItem::researchBook);
+    // The product falls next to the apparatus; workers carry it to where it is used, or to the treasury
+    Tile* drop=findDropTile(tile,0.0);
+    spawnItem(drop==nullptr?tile:*drop,std::move(product),getSeat());
+}
+
+void RoomGhostRoom::dropHeldEctoplasm(Tile* tile)
+{
+    if(getSeat()==nullptr) return;
+    for(Apparatus& apparatus : mApparatuses)
+    {
+        const uint32_t count=apparatus.queue+(apparatus.working?1:0)+apparatus.crystalEctoplasm;
+        Tile* place=tile!=nullptr?tile:apparatus.stand!=nullptr?apparatus.stand:mCoveredTiles.empty()?nullptr:mCoveredTiles.front();
+        if(place==nullptr) continue;
+        for(uint32_t index=0;index<count;++index)
+            spawnItem(*place,ItemInstance::createGhostItem(GhostItem::ectoplasm),getSeat());
+        apparatus.queue=0;apparatus.working=false;apparatus.workTurns=0.0;apparatus.crystalEctoplasm=0;
+    }
+}
+
+GhostProduct RoomGhostRoom::getDeliveryTarget(const GameEntity& carriedEntity, const ItemInstance& item) const
+{
+    // A carried ectoplasm keeps the apparatus chosen when it was picked up; a lying one follows the current choice
+    if(carriedEntity.isCarryLocked() && item.mGhostTarget>=0 && item.mGhostTarget<static_cast<int32_t>(APPARATUS_COUNT))
+        return static_cast<GhostProduct>(item.mGhostTarget);
+    return getChosenApparatus(*getSeat());
+}
+
+bool RoomGhostRoom::hasCarryEntitySpot(GameEntity* carriedEntity)
+{
+    if(carriedEntity==nullptr || carriedEntity->getObjectType()!=GameEntityType::itemBagEntity || getSeat()==nullptr) return false;
+    const ItemInstance* item=static_cast<ItemBagEntity*>(carriedEntity)->getItem();
+    if(item==nullptr || item->mGhostItem!=GhostItem::ectoplasm) return false;
+    const GhostProduct kind=getDeliveryTarget(*carriedEntity,*item);
+    return isApparatusUnlocked(*getSeat(),kind) && getApparatusStandTile(kind)!=nullptr;
+}
+
+Tile* RoomGhostRoom::askSpotForCarriedEntity(GameEntity* carriedEntity)
+{
+    if(!hasCarryEntitySpot(carriedEntity)) return nullptr;
+    return getApparatusStandTile(getDeliveryTarget(*carriedEntity,*static_cast<ItemBagEntity*>(carriedEntity)->getItem()));
+}
+
+void RoomGhostRoom::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
+{
+    if(carrier==nullptr || carriedEntity==nullptr || carriedEntity->getObjectType()!=GameEntityType::itemBagEntity ||
+       !carriedEntity->getIsOnMap() || getSeat()==nullptr) return;
+    ItemBagEntity* bag=static_cast<ItemBagEntity*>(carriedEntity);
+    if(bag->getItem()==nullptr || bag->getItem()->mGhostItem!=GhostItem::ectoplasm) return;
+    Tile* tile=bag->getPositionTile();
+    if(tile==nullptr || tile->getCoveringRoom()!=this) return;
+    // The carry has ended, so the apparatus chosen at pick up is read from the ectoplasm itself
+    const int32_t target=bag->getItem()->mGhostTarget;
+    const GhostProduct kind=target>=0 && target<static_cast<int32_t>(APPARATUS_COUNT)?static_cast<GhostProduct>(target):getChosenApparatus(*getSeat());
+    Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];
+    if(!isApparatusUnlocked(*getSeat(),kind) || apparatus.tile==nullptr) return;
+    bag->takeItem();
+    bag->removeFromGameMap();bag->deleteYourself();
+    ++apparatus.queue;
+}
+
+void RoomGhostRoom::exportToStream(std::ostream& os) const
+{
+    Room::exportToStream(os);
+    if(getGameMap()->isInEditorMode()) return;
+    const std::streamsize precision=os.precision();
+    os << "GhostApparatus" << std::setprecision(17);
+    for(const Apparatus& apparatus : mApparatuses)
+        os << ' ' << apparatus.queue << ' ' << apparatus.working << ' ' << apparatus.workTurns << ' ' << apparatus.crystalEctoplasm;
+    os << "\n";
+    os.precision(precision);
+}
+
+bool RoomGhostRoom::importFromStream(std::istream& is)
+{
+    if(!Room::importFromStream(is)) return false;
+    // Old saves end the room here: the apparatuses start idle and empty
+    const std::streampos position=is.tellg();
+    std::string marker;
+    if(!(is >> marker) || marker!="GhostApparatus")
+    {
+        is.clear();is.seekg(position);
+        return true;
+    }
+    for(Apparatus& apparatus : mApparatuses)
+        if(!(is >> apparatus.queue >> apparatus.working >> apparatus.workTurns >> apparatus.crystalEctoplasm) ||
+           !std::isfinite(apparatus.workTurns)) return false;
+    return true;
 }
 
 void RoomGhostRoom::doUpkeep()
 {
     Room::doUpkeep();
     mAlarmTurns=std::max(0.0,mAlarmTurns-1.0);
+    workApparatuses();
     const double fill=getSeat()->getEctoplasmLevels()/getLevelsPerEctoplasm(*getSeat());
     for(const std::pair<Tile* const,BuildingObject*>& entry : getBuildingObjects())
         entry.second->setGhostRoomState(entry.second->getMeshName()=="GhostCauldron"?fill:-1.0,mAlarmTurns);
     for(BuildingObject* object : mWallObjects) object->setGhostRoomState(-1.0,mAlarmTurns);
     const std::vector<Room*> rooms=getGameMap()->getRoomsByTypeAndSeat(RoomType::ghostRoom,getSeat());
     if(rooms.empty() || rooms.front()!=this) return;
+    // A locked choice (for example after loading) becomes the mana still
+    if(getChosenApparatus(*getSeat())!=getSeat()->getGhostProduct()) getSeat()->setGhostProduct(GhostProduct::mana);
+    // Full ectoplasm still in the keeper value (an old save, or a cauldron without a free floor tile) comes out next
+    // to the first cauldron of the keeper's first ghost room
+    if(!mCauldrons.empty()) produceEctoplasm(*mCauldrons.front().anchor);
     CreatureActionHuntGhost::assignHunters(*getGameMap(),*getSeat());
 }
 
@@ -550,6 +869,7 @@ RoomGhostRoom::~RoomGhostRoom()
 
 void RoomGhostRoom::clearWallObjects()
 {
+    for(Apparatus& apparatus : mApparatuses) apparatus.object=nullptr;
     for(BuildingObject* object : mWallObjects)
         if(std::find(getGameMap()->getRenderedMovableEntities().begin(),getGameMap()->getRenderedMovableEntities().end(),object)!=getGameMap()->getRenderedMovableEntities().end())
         { object->removeFromGameMap();object->deleteYourself(); }

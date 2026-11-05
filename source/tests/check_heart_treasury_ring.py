@@ -48,6 +48,7 @@ split_room = function(temple, 'void RoomDungeonTemple::splitRoom(')
 create_tile_data = function(temple, 'RoomTreasuryTileData* RoomDungeonTemple::createTileData(')
 has_carry_spot = function(temple, 'bool RoomDungeonTemple::hasCarryEntitySpot(')
 ask_carry_spot = function(temple, 'Tile* RoomDungeonTemple::askSpotForCarriedEntity(')
+can_break_mana_crystal = function(temple, 'bool RoomDungeonTemple::canBreakManaCrystal(')
 remove_covered_tile = function(temple, 'bool RoomDungeonTemple::removeCoveredTile(')
 do_upkeep = function(temple, 'void RoomDungeonTemple::doUpkeep(')
 mesh_name = function(treasury_object, 'const char* TreasuryObject::getMeshNameForGold(')
@@ -66,6 +67,7 @@ assert 'GoldstackLv1' in treasury_object and 'GoldstackLv4' in treasury_object
 
 probe = r"""
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <map>
@@ -114,8 +116,11 @@ struct Player {
 //! \brief Connects a visible seat to its optional player.
 struct Seat {
  Player* player=nullptr;
+ double mana=0.0;
  //! \brief Returns the fixture player, including null for seats without one.
  Player* getPlayer()const{return player;}
+ //! \brief Returns the keeper's free mana read by the mana crystal rule.
+ double getMana()const{return mana;}
 };
 //! \brief Supplies the existing delivery identifier used by production deposits.
 enum class CosmeticEventType {goldDelivery=21};
@@ -146,13 +151,35 @@ struct GameMap {
  bool editor=false;
  bool isInEditorMode()const{return editor;}
 };
-enum class GameEntityType {creature, giftBoxEntity, skillEntity, treasuryObject, other};
+enum class GameEntityType {creature, giftBoxEntity, itemBagEntity, skillEntity, treasuryObject, other};
 struct GameEntity {
  std::string mName;
  GameEntity(Seat* s=nullptr){(void)s;}
  virtual ~GameEntity()=default;
  const std::string& getName()const{return mName;}
  virtual GameEntityType getObjectType()const{return GameEntityType::other;}
+};
+//! \brief The gift box kinds read by the extracted carry rules (item boxes belong to the workshop).
+enum class GiftBoxType {skill, mana, item};
+//! \brief A carried gift box with its kind, as the extracted carry rules cast it.
+struct GiftBoxEntity:GameEntity {
+ GiftBoxType mGiftBoxType=GiftBoxType::mana;
+ GiftBoxEntity():GameEntity(nullptr){}
+ GiftBoxType getGiftBoxType()const{return mGiftBoxType;}
+ virtual GameEntityType getObjectType()const{return GameEntityType::giftBoxEntity;}
+};
+//! \brief The ghost room goods as in ItemInstance.h; only a mana crystal can be broken on the heart.
+enum class GhostItem : uint32_t { none = 0, ectoplasm = 1, manaCrystal = 2, researchBook = 3 };
+//! \brief The item field read by the extracted mana crystal rule.
+struct ItemInstance {
+ GhostItem mGhostItem=GhostItem::none;
+};
+//! \brief A carried item bag holding one instance, as the extracted carry rules cast it.
+struct ItemBagEntity:GameEntity {
+ ItemInstance mItem;
+ ItemBagEntity():GameEntity(nullptr){}
+ const ItemInstance* getItem()const{return &mItem;}
+ virtual GameEntityType getObjectType()const{return GameEntityType::itemBagEntity;}
 };
 struct Building:GameEntity {
  Building():GameEntity(nullptr){}
@@ -235,6 +262,7 @@ struct RoomDungeonTemple:Room {
  RoomTreasuryTileData* createTileData(Tile*);
  bool hasCarryEntitySpot(GameEntity*);
  Tile* askSpotForCarriedEntity(GameEntity*);
+ bool canBreakManaCrystal(GameEntity&) const;
  void doUpkeep()override;
  bool removeCoveredTile(Tile*)override;
 };
@@ -254,6 +282,7 @@ __SPLIT_ROOM__
 __CREATE_TILE_DATA__
 __HAS_CARRY_SPOT__
 __ASK_CARRY_SPOT__
+__CAN_BREAK_MANA_CRYSTAL__
 __REMOVE_COVERED_TILE__
 __DO_UPKEEP__
 __MESH_NAME__
@@ -261,9 +290,8 @@ struct CarriedTreasure:GameEntity {
  CarriedTreasure():GameEntity(nullptr){}
  virtual GameEntityType getObjectType()const{return GameEntityType::treasuryObject;}
 };
-struct CarriedGift:GameEntity {
- CarriedGift():GameEntity(nullptr){}
- virtual GameEntityType getObjectType()const{return GameEntityType::giftBoxEntity;}
+struct CarriedGift:GiftBoxEntity {
+ CarriedGift(){}
 };
 struct CarriedSkill:GameEntity {
  CarriedSkill():GameEntity(nullptr){}
@@ -380,6 +408,11 @@ int main(){
  check(heart.askSpotForCarriedEntity(&gift)==center,"gifts land on the central tile");
  check(!heart.hasCarryEntitySpot(&skill),"the heart does not accept research books");
  check(heart.askSpotForCarriedEntity(&skill)==nullptr,"research books have no delivery spot");
+ // Item bags: only a mana crystal is broken on the heart, and only for an owning keeper whose mana holds it
+ ItemBagEntity bag;
+ check(!heart.hasCarryEntitySpot(&bag)&&heart.askSpotForCarriedEntity(&bag)==nullptr,"the heart takes no ordinary item bag");
+ bag.mItem.mGhostItem=GhostItem::manaCrystal;
+ check(!heart.hasCarryEntitySpot(&bag)&&heart.askSpotForCarriedEntity(&bag)==nullptr,"a heart without a keeper takes no mana crystal");
 """
 
 probe += r"""
@@ -483,6 +516,7 @@ probe = probe.replace('__SPLIT_ROOM__', split_room)
 probe = probe.replace('__CREATE_TILE_DATA__', create_tile_data)
 probe = probe.replace('__HAS_CARRY_SPOT__', has_carry_spot)
 probe = probe.replace('__ASK_CARRY_SPOT__', ask_carry_spot)
+probe = probe.replace('__CAN_BREAK_MANA_CRYSTAL__', can_break_mana_crystal)
 probe = probe.replace('__REMOVE_COVERED_TILE__', remove_covered_tile)
 probe = probe.replace('__DO_UPKEEP__', do_upkeep)
 probe = probe.replace('__MESH_NAME__', mesh_name)

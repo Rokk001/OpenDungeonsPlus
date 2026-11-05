@@ -5,10 +5,17 @@ from check_ghost_rules import PRELUDE, GHOST_WORLD, function, read, run_probe
 def layout_fixture():
     source = read('source/rooms/RoomGhostRoom.cpp')
     declarations = r'''
+#include <array>
+#include <functional>
 //! \brief Stores cauldron geometry independently of the production placement algorithm.
 struct RoomGhostRoom:Room{GameMap* map=nullptr;std::vector<Tile*> mCoveredTiles;
  //! \brief Stores the actual anchor/reservation pair.
  struct Cauldron{Tile* anchor;Creature* hunter;};std::vector<Cauldron> mCauldrons;
+ //! \brief Stores the wall tile and the delivery tile of one apparatus, as the production placement sets them.
+ struct Apparatus{Tile* tile=nullptr;Tile* stand=nullptr;};
+ static const uint32_t APPARATUS_COUNT=3;std::array<Apparatus,APPARATUS_COUNT> mApparatuses;
+ //! \brief Runs the actual apparatus placement at the room wall.
+ void layoutApparatuses();
  //! \brief Returns the controlled map.
  GameMap* getGameMap(){return map;}
  //! \brief Runs the actual joined-room minimum-square search.
@@ -20,7 +27,8 @@ struct RoomGhostRoom:Room{GameMap* map=nullptr;std::vector<Tile*> mCoveredTiles;
 };
 '''
     signatures = ['bool tileOrder(', 'bool cauldronOrder(', 'bool RoomGhostRoom::containsMinimumBlock(',
-        'uint32_t RoomGhostRoom::getBackpackCount()', 'void RoomGhostRoom::layoutCauldrons(']
+        'uint32_t RoomGhostRoom::getBackpackCount()', 'void RoomGhostRoom::layoutCauldrons(',
+        'void RoomGhostRoom::layoutApparatuses(']
     return PRELUDE+GHOST_WORLD+declarations+''.join(function(source, sig) for sig in signatures)
 
 # Test minimum dimensions, merged ownership, spacing, deterministic order and occupied-anchor retention.
@@ -94,7 +102,9 @@ struct BuildingObject{std::string mesh;double angle;Ogre::Vector3 position;Ogre:
     update = function(source,'void RoomGhostRoom::updateActiveSpots(')
     body = update[update.index('    std::vector<Tile*> ordered='):update.index('    createCauldronObjects();')]
     code += function(source,'BuildingObject* RoomGhostRoom::notifyActiveSpotCreated(')
-    code += '\nvoid RoomGhostRoom::createWalls(GameMap* map){'+body+'}\n'
+    # As in updateActiveSpots, the apparatuses are placed before the wall faces are handed out
+    assert 'layoutCauldrons();\n    layoutApparatuses();' in update
+    code += '\nvoid RoomGhostRoom::createWalls(GameMap* map){\n    layoutApparatuses();\n'+body+'}\n'
     code += r'''
 //! \brief Checks hooks on true full neighbor walls, including native subdivision beyond wall-face capacity.
 int main(){

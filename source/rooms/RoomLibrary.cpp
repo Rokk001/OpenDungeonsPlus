@@ -27,6 +27,7 @@
 #include "entities/ItemEffects.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
+#include "entities/ItemBagEntity.h"
 #include "entities/Tile.h"
 #include "game/Player.h"
 #include "game/Skill.h"
@@ -389,12 +390,72 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
         * SkillManager::getResearchValue(getSeat(), SkillType::roomTrainingHall, 1.0, ResearchEffect::XpPerHit) * getDirtOutputFactor());
     addUseDirt(creature, tileCreature, "LibraryDirtPerWork");
 
+    // A researcher at work opens one research book from the shelves; only then are its points credited
+    openResearchBook();
+
     // Credit whole research points immediately and retain the fractional remainder.
     mSkillPoints += pointsEarned;
     const int32_t wholePoints = static_cast<int32_t>(mSkillPoints);
     mSkillPoints -= wholePoints;
     getSeat()->addSkillPoints(wholePoints);
 
+    return false;
+}
+
+bool RoomLibrary::hasCarryEntitySpot(GameEntity* carriedEntity)
+{
+    if(carriedEntity == nullptr || carriedEntity->getObjectType() != GameEntityType::itemBagEntity || mCoveredTiles.empty())
+        return false;
+    const ItemInstance* item = static_cast<ItemBagEntity*>(carriedEntity)->getItem();
+    return item != nullptr && item->mGhostItem == GhostItem::researchBook;
+}
+
+Tile* RoomLibrary::askSpotForCarriedEntity(GameEntity* carriedEntity)
+{
+    if(!hasCarryEntitySpot(carriedEntity))
+        return nullptr;
+    for(Tile* tile : mCoveredTiles)
+    {
+        BuildingObject* object = getBuildingObjectFromTile(tile);
+        if(object != nullptr && object->getMeshName() == "Bookshelf")
+            return tile;
+    }
+    return mCoveredTiles.front();
+}
+
+void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
+{
+    if(carrier == nullptr || carriedEntity == nullptr || !carriedEntity->getIsOnMap() || !hasCarryEntitySpot(carriedEntity))
+        return;
+    Tile* tile = carriedEntity->getPositionTile();
+    if(tile == nullptr || tile->getCoveringRoom() != this)
+        return;
+    carriedEntity->setSeat(getSeat());
+    BuildingObject* shelf = getBuildingObjectFromTile(tile);
+    if(shelf != nullptr && shelf->getMeshName() == "Bookshelf")
+        carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x, shelf->getPosition().y, 0.0f));
+}
+
+bool RoomLibrary::openResearchBook()
+{
+    for(Tile* tile : mCoveredTiles)
+    {
+        const std::vector<GameEntity*> entities = tile->getEntitiesInTile();
+        for(GameEntity* entity : entities)
+        {
+            if(entity->getObjectType() != GameEntityType::itemBagEntity || entity->isCarryLocked())
+                continue;
+            ItemBagEntity* bag = static_cast<ItemBagEntity*>(entity);
+            if(bag->getItem() == nullptr || bag->getItem()->mGhostItem != GhostItem::researchBook)
+                continue;
+            mSkillPoints += ConfigManager::getSingleton().getRoomConfigDouble("GhostEctoplasmResearchPoints");
+            bag->takeItem();
+            bag->removeEntityFromPositionTile();
+            bag->removeFromGameMap();
+            bag->deleteYourself();
+            return true;
+        }
+    }
     return false;
 }
 
