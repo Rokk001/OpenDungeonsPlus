@@ -63,6 +63,15 @@ public:
     void absorbRoom(Room *r) override;
     //! \brief Earns research points using room research and the wearer's Scholar effect.
     bool useRoom(Creature& creature, bool forced) override;
+    //! \brief Takes every research book from the ghost press; it stays on a shelf until a researcher opens it.
+    bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
+    //! \brief Directs the worker to a bookshelf of the library.
+    Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
+    //! \brief Puts a delivered research book onto the shelf.
+    void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
+    //! \brief Opens one research book on this library's shelves and credits its research points.
+    //! \return true if a book was opened
+    bool openResearchBook();
 
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;

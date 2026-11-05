@@ -305,7 +305,15 @@ def main():
     keys = ["SoulCrystalPrice", "SoulCrystalBreakBelow", "SoulCrystalNormalXpPerSecond", "SoulCrystalHeroRareStart",
         "SoulCrystalHeroRareEnd", "TimePayDay", "HeroItemBase", "HeroItemPerLevel", "MaxItemEffects"]
     values = {key: scalar(global_cfg, key) for key in keys}
-    values.update({key: scalar(rooms_cfg, key) for key in ("MerchantBuyShare", "MerchantGoodsPerTable", "MerchantGiftMood", "MerchantTradeChance")})
+    values.update({key: scalar(rooms_cfg, key) for key in ("MerchantBuyShare", "MerchantGoodsPerTable", "MerchantGiftMood", "MerchantTradeChance",
+        "GhostHeroProductFactor", "GhostHeroProductWeightMana", "GhostHeroProductWeightBook", "GhostHeroProductWeightCrystal",
+        "GhostEctoplasmPerCrystal")})
+    # The hero product factor keeps the average carried ectoplasm value of the former soul crystal (decision G8)
+    weights = (values["GhostHeroProductWeightMana"], values["GhostHeroProductWeightBook"], values["GhostHeroProductWeightCrystal"])
+    costs = (1.0, 1.0, values["GhostEctoplasmPerCrystal"])
+    average = sum(weight * cost for weight, cost in zip(weights, costs)) / sum(weights)
+    assert abs(values["GhostHeroProductFactor"] - values["GhostEctoplasmPerCrystal"] / average) < 1e-12, values["GhostHeroProductFactor"]
+    assert weights == (6.0, 6.0, 1.0), weights
     creatures = re.sub(r"#[^\n]*", "", read("config/creatures.cfg"))
     tables = [list(map(float, block.split())) for block in re.findall(r"\[XP\](.*?)\[/XP\]", creatures, re.S) if block.strip()]
     assert tables and all(table == tables[0] for table in tables), "the crystal wage cases require the actual shared XP table"
@@ -324,7 +332,8 @@ def main():
         ("ODPacket& operator <<(ODPacket& packet, Quality", "ODPacket& operator >>(ODPacket& packet, Quality", "const ItemQuality& ItemDefinition::getQuality("))
     code += "\n" + function(instance, "const ItemDefinition* resolveItemDefinition(")
     code += "\n" + "\n".join(function(instance, signature) for signature in
-        ("std::unique_ptr<ItemInstance> ItemInstance::createSoulCrystal(", "void ItemInstance::exportToStream(",
+        ("std::unique_ptr<ItemInstance> ItemInstance::createSoulCrystal(", "std::unique_ptr<ItemInstance> ItemInstance::createGhostItem(",
+         "void ItemInstance::exportToStream(",
          "bool ItemInstance::importFromStream(", "void ItemInstance::exportToPacket(", "bool ItemInstance::importFromPacket(",
          "double ItemInstance::getPrice("))
     creature_definition = read("source/entities/CreatureDefinition.cpp")
@@ -339,9 +348,13 @@ def main():
     code += "\n" + function(ai, "bool deliverGift(")
     code += "\n" + function(ai, "bool CreatureMerchantAI::decideSoulCrystal(")
     code += "\n" + function(ai, "bool CreatureMerchantAI::offerGift(")
-    outfit = function(read("source/game/ItemDrops.cpp"), "void ItemDrops::outfit(")
+    drops = read("source/game/ItemDrops.cpp")
+    outfit = function(drops, "void ItemDrops::outfit(")
     tail = outfit[outfit.index("    const ConfigManager& config = ConfigManager::getSingleton();"):]
-    code += "\n//! \\brief Executes the unchanged final crystal roll of the real outfit method.\nvoid heroCrystal(Creature& creature,const std::string& kind){const uint32_t level=creature.getLevel();\n" + tail
+    code += "\n//! \\brief Declares the real hero ghost product rules of ItemDrops.\nnamespace ItemDrops{double heroGhostProductChance(double crystalChance);std::unique_ptr<ItemInstance> heroGhostProduct(double draw);}\n"
+    code += "\n" + function(drops, "double ItemDrops::heroGhostProductChance(") + "\n" + function(drops, "std::unique_ptr<ItemInstance> ItemDrops::heroGhostProduct(")
+    code += "\nusing ItemDrops::heroGhostProductChance;using ItemDrops::heroGhostProduct;"
+    code += "\n//! \\brief Executes the unchanged final ghost product roll of the real outfit method.\nvoid heroCrystal(Creature& creature,const std::string& kind){const uint32_t level=creature.getLevel();\n" + tail
     initialization = "\n".join('config.values["%s"] = %.17g;' % item for item in values.items())
     code += TESTS.replace("CONFIG_VALUES", initialization).replace("XP_VALUES", ",".join(map(repr, tables[0]))).replace("FEE_LEVEL_VALUES", ",".join(map(str, fee_per_level)))
     run_probe(code)
@@ -408,12 +421,23 @@ int main(){try{
  for(std::unique_ptr<ItemInstance>& held:creature.inventory)held.reset(new ItemInstance);
  check(!CreatureMerchantAI::decideSoulCrystal(creature),"full inventory refuses purchase");for(std::unique_ptr<ItemInstance>& held:creature.inventory)held.reset();
  creature.inventory[0]=ItemInstance::createSoulCrystal();creature.mExp=definition.mXPTable[13]*.5;check(!CreatureMerchantAI::decideSoulCrystal(creature),"already-held crystal prevents second purchase");creature.inventory[0].reset();
- const uint32_t levels[5]={1,5,10,20,30};const double chances[5]={.0144,.048,.099,.231,.403};
- for(int index=0;index<5;++index){creature.mLevel=levels[index];Random::draw=chances[index]-1e-10;heroCrystal(creature,"hero");check(creature.inventory[0]!=nullptr,"hero roll succeeds just below decided chance");creature.inventory[0].reset();
-  Random::draw=chances[index]+1e-10;heroCrystal(creature,"hero");check(creature.inventory[0]==nullptr,"hero roll fails just above decided chance");}
+ // The former soul crystal chance times GhostHeroProductFactor (13/3), capped at 1, gives one ghost product
+ const uint32_t levels[5]={1,5,10,20,30};const double crystalChances[5]={.0144,.048,.099,.231,.403};const double factor=config.values.at("GhostHeroProductFactor");
+ near(factor,13.0/3.0,"hero product factor is 13/3");
+ for(int index=0;index<5;++index){creature.mLevel=levels[index];const double chance=std::min(1.0,crystalChances[index]*factor);
+  if(chance<1.0){Random::draw=chance-1e-10;heroCrystal(creature,"hero");check(creature.inventory[0]!=nullptr&&creature.inventory[0]->isGhostGood(),"hero roll succeeds just below decided chance");check(creature.inventory[1]==nullptr,"a hero carries never more than one product");creature.inventory[0].reset();
+   Random::draw=chance+1e-10;heroCrystal(creature,"hero");check(creature.inventory[0]==nullptr,"hero roll fails just above decided chance");}
+  else{check(levels[index]>=20,"the chance reaches the cap only for strong heroes");Random::draw=1.0-1e-10;heroCrystal(creature,"hero");check(creature.inventory[0]!=nullptr&&creature.inventory[0]->isGhostGood()&&creature.inventory[1]==nullptr,"capped chance: every hero carries exactly one product");creature.inventory[0].reset();}}
+ // Weights 6/6/1: mana crystal below 6/13, research book below 12/13, level crystal above
+ std::unique_ptr<ItemInstance> pick=heroGhostProduct(0.0);check(pick->mGhostItem==GhostItem::manaCrystal&&!pick->mSoulCrystal,"lowest draw gives a mana crystal");
+ pick=heroGhostProduct(6.0/13.0-1e-9);check(pick->mGhostItem==GhostItem::manaCrystal,"mana crystal share is 6/13");
+ pick=heroGhostProduct(6.0/13.0+1e-9);check(pick->mGhostItem==GhostItem::researchBook,"research book starts at 6/13");
+ pick=heroGhostProduct(12.0/13.0-1e-9);check(pick->mGhostItem==GhostItem::researchBook,"research book share is 6/13");
+ pick=heroGhostProduct(12.0/13.0+1e-9);check(pick->mSoulCrystal&&pick->mGhostItem==GhostItem::none,"level crystal share is 1/13");
+ pick=heroGhostProduct(1.0-1e-12);check(pick->mSoulCrystal,"highest draw gives a level crystal");
  creature.mLevel=30;Random::draw=0;for(std::unique_ptr<ItemInstance>& held:creature.inventory)held.reset(new ItemInstance);
- heroCrystal(creature,"hero");for(const std::unique_ptr<ItemInstance>& held:creature.inventory)check(!held->mSoulCrystal,"full hero inventory gains no crystal");
- for(std::unique_ptr<ItemInstance>& held:creature.inventory)held.reset();heroCrystal(creature,"portal");check(creature.inventory[0]==nullptr,"nonhero receives no extra crystal roll");
+ heroCrystal(creature,"hero");for(const std::unique_ptr<ItemInstance>& held:creature.inventory)check(!held->isGhostGood(),"full hero inventory gains no product");
+ for(std::unique_ptr<ItemInstance>& held:creature.inventory)held.reset();heroCrystal(creature,"portal");check(creature.inventory[0]==nullptr,"nonhero receives no extra product roll");
  ItemInstance original=*ItemInstance::createSoulCrystal(),loaded;original.mBonuses={{"Strength",.125}};original.mEffects={{"Thrift",.0625}};
  std::stringstream stream;original.exportToStream(stream);stream<<" NEXT";check(loaded.importFromStream(stream)&&loaded.mSoulCrystal&&loaded.mDefinitionId==original.mDefinitionId,"stream crystal roundtrip");std::string next;stream>>next;check(next=="NEXT","new stream marker preserves next record");
  std::stringstream legacy("old 0 0 0 0 0 0 none NEXT");check(loaded.importFromStream(legacy)&&!loaded.mSoulCrystal,"old stream defaults crystal false");legacy>>next;check(next=="NEXT","old stream lookahead restores next record");
@@ -431,6 +455,14 @@ int main(){try{
  check(!loaded.importFromPacket(shortMarker)&&loaded.mDefinitionId==original.mDefinitionId&&loaded.mSoulCrystal,"short optional packet marker is transactional");
  ODPacket invalid;invalid<<std::string("bad")<<int32_t(99)<<uint32_t(0);check(!loaded.importFromPacket(invalid)&&loaded.mDefinitionId==original.mDefinitionId,"invalid quality cannot partially adopt");
  ODPacket excessive;excessive<<std::string("bad")<<Quality::poor<<uint32_t(18);check(!loaded.importFromPacket(excessive)&&loaded.mSoulCrystal,"invalid bonus count rejected");
+ // Ghost room goods keep their kind and the apparatus chosen at pick up through save and network
+ for(GhostItem kind:{GhostItem::ectoplasm,GhostItem::manaCrystal,GhostItem::researchBook}){ItemInstance good=*ItemInstance::createGhostItem(kind);good.mGhostTarget=2;
+  std::stringstream ghostStream;good.exportToStream(ghostStream);ghostStream<<" NEXT";ItemInstance loadedGood;check(loadedGood.importFromStream(ghostStream)&&loadedGood.mGhostItem==kind&&loadedGood.mGhostTarget==2&&!loadedGood.mSoulCrystal&&loadedGood.mDefinitionId==good.mDefinitionId,"stream ghost good roundtrip");ghostStream>>next;check(next=="NEXT","ghost marker preserves next record");
+  ODPacket ghostPacket;good.exportToPacket(ghostPacket);ghostPacket<<std::string("NEXT");ItemInstance received;check(received.importFromPacket(ghostPacket)&&received.mGhostItem==kind&&received.mGhostTarget==2,"packet ghost good roundtrip");ghostPacket>>next;check(next=="NEXT","packet ghost marker preserves next record");
+  check(good.getPrice()==0.0,"ghost goods are never traded");}
+ std::stringstream crystalOnly("old 0 0 0 0 0 0 none SoulCrystal 1 NEXT");ItemInstance oldCrystal;check(oldCrystal.importFromStream(crystalOnly)&&oldCrystal.mSoulCrystal&&oldCrystal.mGhostItem==GhostItem::none&&oldCrystal.mGhostTarget==-1,"a save before the ghost goods loads as no ghost good");crystalOnly>>next;check(next=="NEXT","old crystal line restores next record");
+ loaded=original;std::stringstream badKind("bad 0 0 0 0 0 0 none SoulCrystal 0 GhostItem 9 0");check(!loaded.importFromStream(badKind)&&loaded.mSoulCrystal&&loaded.mDefinitionId==original.mDefinitionId,"unknown ghost good kind cannot partially adopt");
+ loaded=original;std::stringstream shortGhost("bad 0 0 0 0 0 0 none SoulCrystal 0 GhostItem 1");check(!loaded.importFromStream(shortGhost)&&loaded.mSoulCrystal,"short ghost marker is transactional");
  std::cout<<"soul crystal production rules: ok\n";
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}
 '''

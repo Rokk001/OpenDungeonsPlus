@@ -3,10 +3,14 @@
 
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
+#include "game/SeatData.h"
+#include <array>
 #include <map>
+#include <memory>
 #include <set>
 
 class GhostEntity;
+class ItemInstance;
 
 //! \brief Owns the deterministic cauldron floor and hunting equipment of a ghost room.
 class RoomGhostRoom : public Room
@@ -18,6 +22,29 @@ public:
         Tile* anchor;
         Creature* hunter;
     };
+    //! \brief One apparatus of the room. The index in the room is its GhostProduct value: research = ghost press,
+    //! mana = mana still, crystal = soul forge.
+    struct Apparatus
+    {
+        //! Floor tile at the room wall it stands on, null while the room has no place for it
+        Tile* tile = nullptr;
+        //! Floor tile where workers put down the ectoplasm for it
+        Tile* stand = nullptr;
+        //! Its furniture
+        BuildingObject* object = nullptr;
+        //! Ectoplasm waiting in front of it
+        uint32_t queue = 0;
+        //! True while it works on one ectoplasm
+        bool working = false;
+        //! Remaining work turns of that ectoplasm; a fraction below zero carries over to the next one
+        double workTurns = 0.0;
+        //! Soul forge: ectoplasm already put into the unfinished level crystal
+        uint32_t crystalEctoplasm = 0;
+        //! The shown state ("Working", "Locked" or "Idle")
+        std::string shownState;
+    };
+    //! \brief Number of apparatuses in every ghost room.
+    static const uint32_t APPARATUS_COUNT = 3;
     //! \brief Creates a room without cauldrons or reservations.
     RoomGhostRoom(GameMap* map);
     //! \brief Releases separately owned wall decorations before the room floor is destroyed.
@@ -66,9 +93,31 @@ public:
     void releaseHunter(Creature& hunter);
     //! \brief Reserves a free reachable standing place beside an available cauldron.
     Tile* reserveCauldron(Creature& hunter);
-    //! \brief Consumes one boxed ghost and produces complete ectoplasm units.
+    //! \brief Consumes one boxed ghost; every complete ectoplasm appears as an item next to that cauldron.
     void emptyGhost(Creature& hunter, GhostEntity& ghost);
+    //! \brief The room research level that unlocks an apparatus: 1 mana still, 2 ghost press, 3 soul forge.
+    static uint32_t getUnlockLevel(GhostProduct kind);
+    //! \brief True when the keeper's room research has unlocked the apparatus.
+    static bool isApparatusUnlocked(const Seat& seat, GhostProduct kind);
+    //! \brief The keeper's chosen apparatus; a locked choice counts as the mana still.
+    static GhostProduct getChosenApparatus(const Seat& seat);
+    //! \brief The mesh of an apparatus (placeholder until its own model exists).
+    static const std::string& getApparatusMesh(GhostProduct kind);
+    //! \brief Returns one apparatus of this room.
+    const Apparatus& getApparatus(GhostProduct kind) const { return mApparatuses[static_cast<uint32_t>(kind)]; }
+    //! \brief The tile where workers put down ectoplasm for the apparatus, null if the room has none.
+    Tile* getApparatusStandTile(GhostProduct kind) const;
+    //! \brief Takes ectoplasm for an unlocked apparatus; ectoplasm queues there without limit.
+    bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
+    //! \brief Directs the worker to the apparatus chosen when the ectoplasm was picked up.
+    Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
+    //! \brief Puts delivered ectoplasm into the queue of its apparatus.
+    void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
 protected:
+    //! \brief Saves the floor, then the queue, running work and level crystal progress of every apparatus.
+    void exportToStream(std::ostream& os) const override;
+    //! \brief Reads the floor and the apparatus state; old saves without it start with idle apparatuses.
+    bool importFromStream(std::istream& is) override;
     //! \brief Creates the ordered bell, backpack hooks and wall gauges.
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     //! \brief Removes a wall decoration and its reservation.
@@ -78,9 +127,28 @@ private:
     void layoutCauldrons();
     //! \brief Recreates furniture for the current cauldron layout.
     void createCauldronObjects();
-    //! \brief Returns the free floor tile nearest to a cauldron where a finished soul crystal falls, or nullptr if none is free.
-    //! \param cauldron Anchor tile of the cauldron that pressed the crystal.
-    Tile* findCrystalDropTile(const Tile& cauldron) const;
+    //! \brief Returns the floor tile nearest to a cauldron or apparatus where an item falls, or nullptr if none is free.
+    //! Tiles under cauldrons and apparatuses are never used.
+    //! \param origin Anchor tile of the cauldron or tile of the apparatus.
+    //! \param offset 0.5 for a 2x2 cauldron anchor (its centre), 0 for an apparatus tile.
+    Tile* findDropTile(const Tile& origin, double offset) const;
+    //! \brief Turns every complete ectoplasm of the keeper value into an item next to the cauldron.
+    void produceEctoplasm(Tile& cauldron);
+    //! \brief Places an item owned by the keeper on a floor tile.
+    void spawnItem(Tile& tile, std::unique_ptr<ItemInstance> item, Seat* seat);
+    //! \brief Places the three apparatuses on floor tiles at the room wall, keeping every other tile reachable.
+    void layoutApparatuses();
+    //! \brief Creates the apparatus furniture for the current layout.
+    void createApparatusObjects(GameMap* map);
+    //! \brief Advances the work of every apparatus by one turn.
+    void workApparatuses();
+    //! \brief Finishes one ectoplasm in an apparatus and lets its product fall next to it.
+    void finishEctoplasm(GhostProduct kind);
+    //! \brief Lets every waiting, running and forged ectoplasm fall to the floor as items; nothing is lost.
+    //! \param tile The tile where they fall, or null for each apparatus's own place
+    void dropHeldEctoplasm(Tile* tile);
+    //! \brief The apparatus a delivered or carried ectoplasm goes to.
+    GhostProduct getDeliveryTarget(const GameEntity& carriedEntity, const ItemInstance& item) const;
     //! \brief Releases hunters assigned to this room before equipment is lost.
     void interruptHunters();
     std::vector<Cauldron> mCauldrons;
@@ -95,5 +163,6 @@ private:
     std::vector<BuildingObject*> mCauldronObjects;
     bool mLayingOut = false;
     double mAlarmTurns = 0.0;
+    std::array<Apparatus, APPARATUS_COUNT> mApparatuses;
 };
 #endif

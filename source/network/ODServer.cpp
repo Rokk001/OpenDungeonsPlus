@@ -61,6 +61,7 @@
 #include "rooms/RoomMerchant.h"
 #include "rooms/RoomAlchemyLab.h"
 #include "rooms/RoomDungeonTemple.h"
+#include "rooms/RoomGhostRoom.h"
 #include "rooms/RoomHatchery.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomPortalWave.h"
@@ -3568,7 +3569,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             if(room == nullptr || room->getType() != RoomType::ghostRoom || room->getSeat() != player->getSeat())
                 break;
             Seat* seat = player->getSeat();
-            if(isSet && product <= static_cast<uint32_t>(GhostProduct::crystal))
+            // Only an unlocked apparatus can be chosen
+            if(isSet && product <= static_cast<uint32_t>(GhostProduct::crystal) &&
+                RoomGhostRoom::isApparatusUnlocked(*seat, static_cast<GhostProduct>(product)))
             {
                 seat->setGhostProduct(static_cast<GhostProduct>(product));
                 seat->setGhostRevive(revive);

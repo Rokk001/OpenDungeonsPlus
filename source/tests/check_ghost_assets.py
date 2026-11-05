@@ -56,7 +56,55 @@ def main():
     for name in models:
         credited('models/'+name+'.mesh',credits)
         credited('assets-src/rooms/ghostroom/'+name+'.blend',credits)
+    # Apparatus models: the mana still (state clips) and the mana crystal item; their Blender sources live outside Git.
+    for path in ('models/ManaStill.mesh','models/ManaStill.skeleton','models/ManaCrystal.mesh','materials/textures/GhostCobweb.png'):
+        credited(path,credits)
+    spec = importlib.util.spec_from_file_location('ghost_still_chunks', repo/'tools/blender-assets/splice_animation_chunks.py')
+    chunks_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(chunks_module)
+    _, chunks = chunks_module.chunks((repo/'models/ManaStill.skeleton').read_bytes())
+    still_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
+    assert {'Working','Idle','Locked'} <= still_clips, still_clips
+    assert b'ManaStill.skeleton' in (repo/'models/ManaStill.mesh').read_bytes()
+    apparatus = read('source/rooms/RoomGhostRoom.cpp')
+    assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill",',apparatus), 'mana still mesh'
+    assert 'MANA_CRYSTAL_MESH = "ManaCrystal"' in read('source/entities/ItemBagEntity.cpp')
+    still_material = read('materials/scripts/Ghost.material')
+    for name in ('ManaCrystal','ManaCrystalDull','ManaStillGlass','GhostEmbers','GhostCoal','GhostGlassDull','GhostCobweb'):
+        assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
+    # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.
+    for path in ('models/GhostPress.mesh','models/GhostPress.skeleton'):
+        credited(path,credits)
+    _, chunks = chunks_module.chunks((repo/'models/GhostPress.skeleton').read_bytes())
+    press_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
+    assert {'Working','Idle','Locked'} <= press_clips, press_clips
+    assert b'GhostPress.skeleton' in (repo/'models/GhostPress.mesh').read_bytes()
+    assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress",',apparatus), 'ghost press mesh'
+    assert 'RESEARCH_BOOK_MESH = "Grimoire"' in read('source/entities/ItemBagEntity.cpp')
+    for name in ('GhostBookLeather','GhostBookPages'):
+        assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
+    # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
+    for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):
+        credited(path,credits)
+    forge_skeleton = (repo/'models/SoulForge.skeleton').read_bytes()
+    _, chunks = chunks_module.chunks(forge_skeleton)
+    forge_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
+    assert {'Working','Idle','Locked'} <= forge_clips, forge_clips
+    assert b'Hammer' in forge_skeleton, 'soul forge hammer bone'
+    assert b'SoulForge.skeleton' in (repo/'models/SoulForge.mesh').read_bytes()
+    assert re.search(r'meshes\[APPARATUS_COUNT\]=\{"ManaStill","GhostPress","SoulForge"\}',apparatus), 'soul forge mesh'
+    assert 'ItemInstance::createSoulCrystal()' in apparatus, 'level crystal'
+    assert re.search(r'^\s*material\s+GhostForgeFire\s*$',still_material,re.M), 'GhostForgeFire'
+    # Ectoplasm item: its own static mesh replaces the cauldron fill placeholder (the cauldron keeps its fill level).
+    credited('models/Ectoplasm.mesh',credits)
+    assert (repo/'models/Ectoplasm.mesh').read_bytes()[2:20] == b'[MeshSerializer_v1', 'ectoplasm mesh'
+    assert 'ECTOPLASM_MESH = "Ectoplasm"' in read('source/entities/ItemBagEntity.cpp')
+    for name in ('EctoplasmShell','EctoplasmSwirl','GhostEctoplasm'):
+        assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     bounds = read('source/gamemap/RoomObjectBounds.h')
+    assert re.search(r'\{"ManaStill"\s*,',bounds), 'ManaStill'
+    assert re.search(r'\{"GhostPress"\s*,',bounds), 'GhostPress'
+    assert re.search(r'\{"SoulForge"\s*,',bounds), 'SoulForge'
     for name in models[:7]+models[10:]:
         assert re.search(r'\{"'+name+r'"\s*,',bounds), name
     for path in ('materials/scripts/Ghost.material','materials/scripts/GhostRoomFloor.material',

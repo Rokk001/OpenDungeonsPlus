@@ -17,6 +17,7 @@
 #include "rooms/RoomType.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomMerchant.h"
+#include "rooms/RoomGhostRoom.h"
 #include "rooms/RoomArena.h"
 #include "rooms/RoomCasino.h"
 #include "rooms/RoomTavern.h"
@@ -142,6 +143,7 @@ void roomSetting(KeeperAI& ai, std::istream& input)
         }
         case RoomType::ghostRoom:
             if(input >> x >> y >> value >> flag >> isSet && isSet && value <= static_cast<uint32_t>(GhostProduct::crystal)
+                && RoomGhostRoom::isApparatusUnlocked(*seat, static_cast<GhostProduct>(value))
                 && map.getTile(x, y) != nullptr && map.getTile(x, y)->getCoveringRoom() == room)
             {
                 seat->setGhostProduct(static_cast<GhostProduct>(value));
