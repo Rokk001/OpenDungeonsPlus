@@ -135,7 +135,7 @@ assert 'updateTreasuryRebuild();' in render and 'mTreasuryRebuildQueue.clear()' 
 assert 'static const int& rebuildPerFrame' in rules
 
 # Thieves show a sack sized by the gold the server sends with the creature packet; glow lights per patch.
-assert 'rrRefreshCreatureGoldSack' in render and 'getStealGold() <= 0' in render
+assert 'rrRefreshCreatureGoldSack' in render and 'getGoldStolen() > 0' in render
 assert 'removeTreasuryThiefSack(curCreature)' in render
 assert 'refreshTreasuryGlow' in render and 'glowOfPatch' in render and 'ROOM_LIGHT_MASK' in render
 

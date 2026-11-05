@@ -6442,8 +6442,10 @@ static const float TreasuryCoinEffectHeightOffset = 0.02f;
 static const float TreasuryDentTileCentre = 0.5f;
 //! Scale of the gold sack a treasure thief carries.
 static const float TreasuryThiefSackScale = 0.7f;
-//! Height of the carried gold sack as a factor of the creature's bounding box height.
-static const float TreasuryThiefSackHeightFactor = 0.85f;
+//! Height of the carried gold sack (at the belt) as a factor of the creature's bounding box height.
+static const float TreasuryThiefSackHeightFactor = 0.45f;
+//! Sideways offset of the carried gold sack as a factor of the creature's bounding box half width.
+static const float TreasuryThiefSackSideFactor = 0.6f;
 
 void RenderManager::refreshCreaturesOnTile(Tile* tile)
 {
@@ -7305,16 +7307,16 @@ float RenderManager::getBuriedLift(RenderedMovableEntity* entity, bool settleAtO
 
 void RenderManager::rrRefreshCreatureGoldSack(Creature* creature)
 {
-    // Only the creatures that steal gold show a sack
-    if(creature == nullptr || creature->getDefinition() == nullptr || creature->getDefinition()->getStealGold() <= 0
+    // Only a creature that carries stolen gold shows a sack
+    if(creature == nullptr || creature->getDefinition() == nullptr
         || creature->getEntityNode() == nullptr || !creature->getIsOnMap())
         return;
 
-    // The size follows the gold carried by the thief as the server sent it. Nothing is shown when
-    // the thief carries no gold or the treasury detail option is off.
+    // The size follows the stolen gold still carried, as the server sent it. Wages and other carried gold never show.
+    // Nothing is shown when the creature carries no stolen gold or the treasury detail option is off.
     std::string sackMesh;
-    if(creature->getGoldCarried() > 0)
-        sackMesh = LooseGoldMesh::prepareSack(mSceneManager, TreasuryObject::getMeshNameForGold(creature->getGoldCarried()));
+    if(creature->getGoldStolen() > 0)
+        sackMesh = LooseGoldMesh::prepareSack(mSceneManager, TreasuryObject::getMeshNameForGold(creature->getGoldStolen()));
 
     for(std::vector<TreasuryThiefSack>::iterator it = mTreasuryThiefSacks.begin(); it != mTreasuryThiefSacks.end(); ++it)
     {
@@ -7339,13 +7341,14 @@ void RenderManager::rrRefreshCreatureGoldSack(Creature* creature)
     if(mSceneManager->hasEntity(sackName))
         return;
 
-    // The sack sits on the back of the thief; it does not shrink with the creature
+    // The sack hangs at the belt of the thief, at hip height at its side; it does not shrink with the creature
     Ogre::Entity* creatureEntity = mSceneManager->getEntity(creatureName);
     Ogre::SceneNode* sackNode = creature->getEntityNode()->createChildSceneNode(sackName + "_node");
     sackNode->setInheritScale(false);
     sackNode->setScale(TreasuryThiefSackScale, TreasuryThiefSackScale, TreasuryThiefSackScale);
-    sackNode->setPosition(Ogre::Vector3(0.0f, 0.0f,
-        creatureEntity->getBoundingBox().getMaximum().z * TreasuryThiefSackHeightFactor));
+    const Ogre::AxisAlignedBox& creatureBox = creatureEntity->getBoundingBox();
+    sackNode->setPosition(Ogre::Vector3(creatureBox.getMaximum().x * TreasuryThiefSackSideFactor, 0.0f,
+        creatureBox.getMaximum().z * TreasuryThiefSackHeightFactor));
     Ogre::Entity* sack = mSceneManager->createEntity(sackName, sackMesh + ".mesh");
     sackNode->attachObject(sack);
 
@@ -7730,6 +7733,9 @@ std::string RenderManager::colourizeMaterial(const std::string& materialName, co
 }
 
 
+//! Thickness of the creature contour as a factor of the largest size of the creature mesh.
+static const float OutlinerContourWidthFactor = 0.012f;
+
 void RenderManager::rrAddOutliner(Creature* creature)
 {
     std::string entityName  = creature->getOgreNamePrefix() +  creature->getName();
@@ -7770,7 +7776,12 @@ void RenderManager::rrAddOutliner(Creature* creature)
             OD_LOG_INF("the number of techniques  is " + Helper::toString(myOutliner->getNumTechniques()));
             Ogre::Pass* myPass1 = myOutliner->getTechnique(myOutliner->getNumTechniques() - 1)->createPass();
             OD_LOG_INF("the number of passes is " + Helper::toString(myOutliner->getTechnique(myOutliner->getNumTechniques() - 1)->getNumPasses()));
-            myOutliner->getTechnique(myOutliner->getNumTechniques() - 1)->getPass( myOutliner->getTechnique(myOutliner->getNumTechniques() - 1)->getNumPasses()-1)->setDepthBias(-4, -32);
+            // The contour is a thin shell, pushed out along the normals, of which only the back faces are drawn and
+            // which sits slightly behind the model. The model hides the shell, so only the rim around the silhouette
+            // shows and the creature keeps its own colours.
+            myPass1->setCullingMode(Ogre::CULL_ANTICLOCKWISE);
+            myPass1->setLightingEnabled(false);
+            myPass1->setDepthBias(1.0f, 1.0f);
         
             Ogre::HighLevelGpuProgramManager& mgr =  Ogre::HighLevelGpuProgramManager::getSingleton();
             Ogre::HighLevelGpuProgramPtr vertex_program;
@@ -7788,9 +7799,10 @@ void RenderManager::rrAddOutliner(Creature* creature)
 
             myPass1->setVertexProgram("Enlarge","Graphics");
 
-            Ogre::Vector3 center = mSceneManager->getEntity(entityName)->getMesh()->getBounds().getCenter();
+            const Ogre::Vector3 meshSize = mSceneManager->getEntity(entityName)->getMesh()->getBounds().getSize();
+            const float contourWidth = std::max(meshSize.x, std::max(meshSize.y, meshSize.z)) * OutlinerContourWidthFactor;
          
-            myPass1->getVertexProgramParameters()->setNamedConstant("center", center);
+            myPass1->getVertexProgramParameters()->setNamedConstant("width", contourWidth);
             myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldViewProj", Ogre::GpuProgramParameters::ACT_WORLDVIEWPROJ_MATRIX);
 
             Ogre::HighLevelGpuProgramPtr fragment_program;

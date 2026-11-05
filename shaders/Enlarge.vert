@@ -6,11 +6,11 @@ layout (location = 0) in vec4 position;
 layout (location = 2)  in vec4 normal;
 
 uniform    mat4 worldViewProj;
-uniform    vec3 center;
+uniform    float width;
 
 void main(void)
 {
-  vec3 pos =  position.xyz  - center;
-  vec3 enlarged = pos*1.1 + center;
+  // Thin contour shell: every vertex moves a small distance along its normal
+  vec3 enlarged = position.xyz + normalize(normal.xyz) * width;
   gl_Position =worldViewProj * vec4(enlarged,1.0);
 }
