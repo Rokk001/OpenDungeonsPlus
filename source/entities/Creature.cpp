@@ -1207,6 +1207,10 @@ void Creature::exportToStream(std::ostream& os) const
     if(mMissedWages > 0)
         os << "\t[Wages] " << mMissedWages << " [/Wages]";
 
+    // Optional stolen gold block, missing in old saves and when nothing stolen is carried
+    if(mGoldStolen > 0.0)
+        os << "\t[Stolen] " << mGoldStolen << " [/Stolen]";
+
     // Optional needs block (urge and creature dirt), last; missing in old saves and when both are 0
     if((mUrge > 0.0) || (mCreatureDirt > 0.0))
         os << "\t" << NEEDS_SAVE_OPEN << " " << mUrge << " " << mCreatureDirt << " " << NEEDS_SAVE_CLOSE;
@@ -1489,6 +1493,16 @@ bool Creature::importFromStream(std::istream& is)
             {
                 OD_LOG_WRN("Invalid mana token=" + appearanceToken);
             }
+            continue;
+        }
+
+        if(appearanceToken == "[Stolen]")
+        {
+            std::string stolenClose;
+            double stolenLoaded = 0.0;
+            if(!(is >> stolenLoaded >> stolenClose) || (stolenClose != "[/Stolen]") || !std::isfinite(stolenLoaded))
+                return false;
+            setGoldStolen(stolenLoaded);
             continue;
         }
 
@@ -2552,6 +2566,8 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
+    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    os << mGoldStolen;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2630,6 +2646,8 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
+    OD_ASSERT_TRUE(is >> mGoldStolen);
+    clampGoldStolen();
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -2860,6 +2878,7 @@ void Creature::dropCarriedEquipment()
         obj->createMesh();
         obj->setPosition(spawnPosition);
         mGoldCarried = 0;
+        mGoldStolen = 0;
     }
 
     if(mSkillTypeDropDeath != SkillType::nullSkillType)
@@ -5592,6 +5611,8 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
+    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    os << mGoldStolen;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -5752,6 +5773,8 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
+    OD_ASSERT_TRUE(is >> mGoldStolen);
+    clampGoldStolen();
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
@@ -8174,7 +8197,7 @@ void Creature::drop(const Ogre::Vector3& v)
             double deposited = position->getCoveringRoom()->depositGold(mGoldCarried, position);
             if(deposited > 0)
             {
-                mGoldCarried -= deposited;
+                addGoldCarried(-deposited);
                 return;
             }
         }
@@ -12100,6 +12123,7 @@ void Creature::dropExcessGold()
 
     TreasuryObject* obj = new TreasuryObject(getGameMap(), mGoldCarried - capacity);
     mGoldCarried = capacity;
+    clampGoldStolen();
     Ogre::Vector3 spawnPosition(static_cast<Ogre::Real>(myTile->getX()),
                                 static_cast<Ogre::Real>(myTile->getY()), 0.0f);
     obj->addToGameMap();
