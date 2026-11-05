@@ -22,8 +22,10 @@
 
 #include <CEGUI/Event.h>
 #include <CEGUI/EventArgs.h>
+#include <CEGUI/UDim.h>
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -65,6 +67,8 @@ public:
     //! \brief Called every frame by the game mode: shows the HUD button for a keeper only and redraws the open window
     //! when what it shows has changed.
     void update();
+    //! rief True while a tablet or a carry entry is being dragged; the keeper hand then shows its grabbing pose.
+    bool isDragging() const { return mDragTablet >= 0 || mDragCarry >= 0; }
 
     //! \brief The close button and Esc.
     bool onCloseClicked(const CEGUI::EventArgs& e);
@@ -133,6 +137,15 @@ public:
     static const char* getCarryName(uint32_t entry);
 
 private:
+    //! Slide of a slot from the place its entry came from; the offset shrinks to zero within SLIDE_SECONDS
+    struct Slide
+    {
+        float mOffsetX = 0.0f;
+        float mOffsetY = 0.0f;
+        std::chrono::steady_clock::time_point mStart;
+        bool mActive = false;
+    };
+
     //! \brief The seat of the local keeper, or nullptr without a keeper seat.
     Seat* getSeat() const;
     //! \brief Sends the complete proposed settings to the server.
@@ -147,6 +160,15 @@ private:
     void setArrowEnabled(CEGUI::Window* arrow, bool up, bool enabled);
     //! \brief Ends a running drag of tablet or carry entry at the pointer position of the GUI context.
     void finishDrag();
+    //! \brief Forgets running slides and the drag feedback: slots at their places, copies hidden, original places opaque.
+    void resetFeedback();
+    //! rief Shows the copy of the grabbed picture at the pointer and the original place as drop target, or hides both.
+    void updateDragFeedback();
+    //! rief Starts the slide of every slot whose entry moved from another place.
+    void startSlides(const char* prefix, const std::vector<uint32_t>& before, const std::vector<uint32_t>& after,
+        std::vector<Slide>& slides);
+    //! rief Moves the sliding slots a step towards their places.
+    void updateSlides(const char* prefix, std::vector<Slide>& slides, const std::vector<CEGUI::UVector2>& bases);
     //! \brief Reads the slot index from the window of an event, -1 if there is none.
     static int32_t getSlotId(const CEGUI::EventArgs& e);
 
@@ -162,6 +184,15 @@ private:
     int32_t mDragTablet = -1;
     //! The carry entry (a WorkerCarryEntry value) a drag started on, -1 if none
     int32_t mDragCarry = -1;
+    //! Positions of the tablets and of the carry entries as the layout gives them
+    std::vector<CEGUI::UVector2> mTabletBases;
+    std::vector<CEGUI::UVector2> mCarryBases;
+    //! Running slides of the tablets and of the carry entries
+    std::vector<Slide> mTabletSlides;
+    std::vector<Slide> mCarrySlides;
+    //! The entries per place as drawn last, empty before the first drawing after opening
+    std::vector<uint32_t> mShownTabletOrder;
+    std::vector<uint32_t> mShownCarryOrder;
     //! What was drawn last, empty if the window has to be drawn
     std::vector<uint32_t> mShownState;
 };

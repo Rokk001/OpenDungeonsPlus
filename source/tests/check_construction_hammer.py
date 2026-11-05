@@ -82,6 +82,7 @@ struct RenderManager {
     Ogre::SceneManager* mSceneManager = nullptr;
     Ogre::SceneNode* mHeldCreatureGrip = nullptr;
     bool mHeldCreatureDisplayEnabled = false;
+    bool mHandGrabbing = false;
     unsigned mHandKeeperHandVisibility = 0;
     Ogre::AnimationState* mHandAnimationState = nullptr;
     Ogre::ManualObject* mHandPickaxe = nullptr;

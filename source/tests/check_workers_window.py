@@ -718,6 +718,66 @@ for screen_w, screen_h, user in ((640, 480, 0.8), (1024, 768, 1.0), (1920, 1200,
                                           (tablet_rects[0][1] + tablet_rects[0][3]) / 2))
     assert start == [CLAIM_WALL, DIG, CARRY, CLEAN, RELOAD, CLAIM_GROUND]
 
+# --- drag feedback (decision 631): the copy follows the pointer, the original place is the drop target, the entries
+# slide into their places, and the keeper hand grabs while dragging
+for ghost_name, slot_name in (('DragGhostTablet', 'Rank0'), ('DragGhostCarry', 'Carry0')):
+    ghost = child(window, ghost_name)
+    ghost_props = props(ghost)
+    slot_props = props(child(window, slot_name))
+    assert ghost_props['Visible'] == 'False', 'the copy is hidden until a drag starts'
+    assert ghost_props['MousePassThroughEnabled'] == 'True', 'the copy never takes the pointer from the pressed entry'
+    assert ghost_props['Area'] == slot_props['Area'], 'the copy has the size of the entry it copies'
+    assert float(ghost_props['Alpha']) < 1.0, 'the copy is drawn slightly transparent'
+    for part in ('Frame', 'Figure'):
+        assert part in {n.get('name') for n in ghost.findall('Window')}
+        assert all(offset == 0 for _s, offset in udims(props(child(ghost, part))['Area'])), 'no fixed pixels in the copy'
+    assert props(child(ghost, 'Frame'))['Area'] == props(child(child(window, slot_name), 'Frame'))['Area']
+assert props(child(child(window, 'DragGhostTablet'), 'Figure'))['Area'] == \
+    props(child(child(window, 'Rank0'), 'Figure'))['Area']
+assert props(child(child(window, 'DragGhostCarry'), 'Figure'))['Area'] == \
+    props(child(child(window, 'Carry0'), 'Picture'))['Area']
+header_h = read('source/render/WorkersWindow.h')
+assert 'bool isDragging() const { return mDragTablet >= 0 || mDragCarry >= 0; }' in header_h
+assert '#include <chrono>' in header_h and 'std::chrono::steady_clock' in code
+feedback = code[code.index('void WorkersWindow::updateDragFeedback()'):code.index('void WorkersWindow::startSlides(')]
+assert 'getMouseCursor().getPosition()' in feedback, 'the copy follows the pointer'
+assert 'drawn.getWidth() * 0.5f' in feedback and 'drawn.getHeight() * 0.5f' in feedback, 'the copy is centred on the pointer'
+assert 'JOB_IMAGES[mDragTablet]' in feedback and 'CARRY_IMAGES[mDragCarry]' in feedback, 'the copy shows the grabbed picture'
+assert 'DROP_TARGET_ALPHA' in feedback and 'settings->priority[i] == static_cast<uint32_t>(mDragTablet)' in feedback
+assert 'settings->carryOrder[i] == static_cast<uint32_t>(mDragCarry)' in feedback, 'the original place is the drop target'
+assert 'ghost->moveToFront();' in feedback and 'setVisible(dragTablet)' in feedback and 'setVisible(dragCarry)' in feedback
+update_src = code[code.index('void WorkersWindow::update()'):code.index('void WorkersWindow::resetFeedback()')]
+assert 'updateDragFeedback();' in update_src
+assert 'updateSlides("Rank", mTabletSlides, mTabletBases);' in update_src
+assert 'updateSlides("Carry", mCarrySlides, mCarryBases);' in update_src
+reset = code[code.index('void WorkersWindow::resetFeedback()'):code.index('void WorkersWindow::updateDragFeedback()')]
+assert 'hide();' in reset and 'setAlpha(1.0f)' in reset and 'setPosition(mTabletBases[i])' in reset
+assert 'resetFeedback();' in code[code.index('void WorkersWindow::show()'):code.index('void WorkersWindow::hide()')]
+assert 'resetFeedback();' in code[code.index('void WorkersWindow::hide()'):code.index('bool WorkersWindow::isVisible')]
+slide_start = code[code.index('void WorkersWindow::startSlides('):code.index('void WorkersWindow::updateSlides(')]
+assert 'std::find(before.begin(), before.end(), after[i])' in slide_start, 'a slot slides from the place of its entry'
+assert 'rects[place].left() - rects[i].left()' in slide_start and 'rects[place].top() - rects[i].top()' in slide_start
+slide_step = code[code.index('void WorkersWindow::updateSlides('):code.index('bool WorkersWindow::onCloseClicked')]
+assert 'time >= 1.0f' in slide_step and 'slot->setPosition(bases[i]);' in slide_step, 'the slide ends on the layout place'
+assert 'bases[i].d_x.d_scale' in slide_step, 'the slide keeps the relative layout position and adds a computed offset'
+refresh_src = code[code.index('void WorkersWindow::refresh()'):]
+assert 'startSlides("Rank", mShownTabletOrder, tabletOrder, mTabletSlides);' in refresh_src
+assert 'startSlides("Carry", mShownCarryOrder, carryOrder, mCarrySlides);' in refresh_src
+assert 'mShownTabletOrder.empty()' in refresh_src and 'mShownCarryOrder.empty()' in refresh_src, 'opening does not slide'
+slide_seconds = float(re.search(r'SLIDE_SECONDS = ([0-9.]+)f;', code).group(1))
+assert 0.05 <= slide_seconds <= 0.4, 'the slide is short'
+# the grabbing hand is the existing Hold pose of a picked up creature; the normal pose comes back after the drag
+game_src = read('source/modes/GameMode.cpp')
+assert 'rrSetHandGrabbing(mWorkersWindow != nullptr && mWorkersWindow->isDragging());' in game_src
+assert game_src.index('rrSetHandGrabbing(mWorkersWindow') < game_src.index('RenderManager::getSingleton().rrSetHandPose(overGui ||')
+render_h = read('source/render/RenderManager.h')
+render_cpp = read('source/render/RenderManager.cpp')
+assert 'void rrSetHandGrabbing(bool grabbing) { mHandGrabbing = grabbing; }' in render_h
+assert 'bool mHandGrabbing = false;' in render_h
+pose_src = render_cpp[render_cpp.index('void RenderManager::rrSetHandPose('):render_cpp.index('void RenderManager::rrPlayBuildAnimation()')]
+assert re.search(r'if\(mHandGrabbing\)\s*pose = "Hold";\s*else if\(digging\)', pose_src), 'grabbing is the first pose choice'
+assert 'else if(pointing)' in pose_src and 'pose = "Point";' in pose_src, 'the pointer pose comes back after the drag'
+
 # --- release note (Global Constraint 15)
 notes = read('RELEASE-NOTES.md')
 unreleased = notes[notes.index('### Unreleased'):]
