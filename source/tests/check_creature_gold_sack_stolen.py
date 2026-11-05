@@ -5,6 +5,9 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 
 
+NL = chr(10)
+
+
 def read(path):
     return (repo / path).read_text(encoding='utf-8')
 
@@ -28,11 +31,14 @@ assert 'mGoldCarried = 0; mGoldStolen = 0;' in header
 assert 'mGoldCarried -= deposited;' not in creature and 'addGoldCarried(-deposited);' in creature
 assert 'mGoldCarried = capacity;\n    clampGoldStolen();' in creature
 
-# Saved and loaded with the creature, and sent in both creature packets right after the carried gold.
+# Saved and loaded with the creature, and sent as the last field of both creature packets.
 assert 'os << "\\t[Stolen] " << mGoldStolen << " [/Stolen]";' in creature
 assert 'if(appearanceToken == "[Stolen]")' in creature and 'setGoldStolen(stolenLoaded);' in creature
-assert creature.count('os << mGoldCarried;\n    os << mGoldStolen;') == 2
-assert creature.count('OD_ASSERT_TRUE(is >> mGoldCarried);\n    OD_ASSERT_TRUE(is >> mGoldStolen);') == 2
+ghost_out = ('mGhostThrowTarget << mGhostThrowTurns;' + NL + '    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)' + NL
+             + '    os << mGoldStolen;' + NL + '}')
+assert creature.count(ghost_out) == 2
+ghost_in = ('mGhostThrowClientTurns=mGhostThrowTurns;' + NL + '    OD_ASSERT_TRUE(is >> mGoldStolen);' + NL + '    clampGoldStolen();')
+assert creature.count(ghost_in) == 2
 
 # The sack follows the stolen gold only, for every creature (not only the ones with a steal rate), and hangs at the belt.
 body = render.split('void RenderManager::rrRefreshCreatureGoldSack')[1].split('void RenderManager::removeTreasuryThiefSack')[0]

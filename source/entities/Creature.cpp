@@ -2549,7 +2549,6 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     // drunkenness, hangover), followed by corpse lie and decay turns
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
-    os << mGoldStolen;
     exportItemsToPacket(os, seat);
     os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     os << mUrge;
@@ -2567,6 +2566,8 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
+    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    os << mGoldStolen;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2635,8 +2636,6 @@ void Creature::importFromPacket(ODPacket& is)
     }
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
-    OD_ASSERT_TRUE(is >> mGoldStolen);
-    clampGoldStolen();
     OD_ASSERT_TRUE(importItemsFromPacket(is));
     OD_ASSERT_TRUE(is >> mInfirmaryMood);
     OD_ASSERT_TRUE(is >> mUrge);
@@ -2647,6 +2646,8 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
+    OD_ASSERT_TRUE(is >> mGoldStolen);
+    clampGoldStolen();
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
 }
@@ -5586,7 +5587,6 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     // them, every other seat gets 0 for all. The final two fields are public corpse phase counters.
     exportSkillBuildToPacket(os);
     os << mGoldCarried;
-    os << mGoldStolen;
     exportItemsToPacket(os, seat);
     os << (seat == getSeat() ? mInfirmaryMood : 0.0);
     if(seat == getSeat())
@@ -5611,6 +5611,8 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
+    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    os << mGoldStolen;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -5761,8 +5763,6 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mMana);
     importSkillBuildFromPacket(is);
     OD_ASSERT_TRUE(is >> mGoldCarried);
-    OD_ASSERT_TRUE(is >> mGoldStolen);
-    clampGoldStolen();
     OD_ASSERT_TRUE(importItemsFromPacket(is));
     OD_ASSERT_TRUE(is >> mInfirmaryMood);
     OD_ASSERT_TRUE(is >> mUrge);
@@ -5773,6 +5773,8 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mCorpseTurns >> mDecayTurns);
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
+    OD_ASSERT_TRUE(is >> mGoldStolen);
+    clampGoldStolen();
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
 
