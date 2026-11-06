@@ -267,7 +267,7 @@ list_rows = sorted(n for n in boxes if re.fullmatch(r'HomePage/ListRows/Row\d', 
 assert len(list_rows) == 7 and 'LIST_ROWS = 7' in social
 for page in ('HomePage', 'FeedPage'):
     rows = sorted(n for n in boxes if re.fullmatch(page + r'/FeedRows/Row\d', n))
-    assert len(rows) == 6 and 'FEED_ROWS = 6' in social, page
+    assert len(rows) == 3 and 'FEED_ROWS = 3' in social, page
     for upper, lower in zip(rows, rows[1:]):
         assert boxes[upper][0][3] <= boxes[lower][0][1] + 1e-9
     assert boxes[page + '/FeedScroll'][1].get('type') == 'OD/VerticalScrollbar'
@@ -339,7 +339,7 @@ step = step[:step.index('\n}\n')]
 assert '% count' in step and 'mListedCreatures' in step, 'previous and next wrap around the shown list'
 assert 'row->getChild("Highlight")->setVisible(entry->name == mSelectedCreature)' in social
 assert 'describeMood(*entry, mood, icon)' in social
-assert 'MAX_FEED_ROWS = 25' in social and 'MAX_OWN_POSTS = 5' in social
+assert 'MAX_FEED_ROWS = 25' in social and 'MAX_OWN_POSTS = 6' in social
 assert 'creature->fillProfilePage(mProfilePage)' in social
 compact = social[social.index('const char* const hidden[]'):]
 compact = compact[:compact.index('};')]
@@ -368,7 +368,7 @@ for row in list_rows:
     require(row + '/Level', 'MedievalSharp-8', texts=('Lv. 30',))
     require(row + '/Mood', 'MedievalSharp-8', texts=('Furious', 'Content', 'Neutral', 'Unhappy', 'Hungry'))
 for page in ('HomePage', 'FeedPage'):
-    for i in range(6):
+    for i in range(3):
         require('%s/FeedRows/Row%d/Head' % (page, i), 'MedievalSharp-8', texts=('Name   Lv. 30 - 59 min ago',))
         require('%s/FeedRows/Row%d/Text' % (page, i), 'MedievalSharp-8', lines=2)
     require(page + '/FeedEmpty', 'MedievalSharp-8', lines=2)
@@ -381,7 +381,7 @@ require('ProfilePage/KeeperText', 'MedievalSharp-8', texts=('Keeper: Player 1',)
 require('ProfilePage/InfoText', 'MedievalSharp-8', lines=4, texts=('Mood: Furious', 'Level 30'))
 require('ProfilePage/PostsTitle', 'MedievalSharp-10', texts=('Posts (200)',))
 require('ProfilePage/SocialHolder', 'MedievalSharp-8', lines=6)
-require('ProfilePage/PostsText', 'MedievalSharp-8', lines=6)
+require('ProfilePage/PostsEmpty', 'MedievalSharp-8', lines=2, texts=('Nothing posted yet.',))
 for name, label in (('Experience', 'Experience:'), ('HitPoints', 'Hit points:'), ('Gold', 'Gold:'),
                     ('SightRadius', 'Sight radius:'), ('Potions', 'Potions:'), ('Inventory', 'Inventory:'),
                     ('DamagePerSecond', 'Damage per second:'), ('SkillPoints', 'Skill points:')):
