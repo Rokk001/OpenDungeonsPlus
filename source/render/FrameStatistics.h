@@ -45,6 +45,8 @@ private:
     static void log(const char* label, const MenuFlightFrameStats& frames);
     //! \brief Closes an active pointer interval and clears its samples.
     static void finishMovement(Movement& movement, const char* label);
+    //! \brief Ends a line after a one-second pause or extends it on any real pointer movement.
+    void extendMovement(Movement& movement, const char* label, double time);
 
     Movement mMenuMovement;
     Movement mWindowMovement;

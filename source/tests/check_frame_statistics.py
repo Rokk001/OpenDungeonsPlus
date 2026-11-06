@@ -70,7 +70,20 @@ pointer = function(stats, "void FrameStatistics::pointerMoved(")
 assert "mHavePosition && x == mX && y == mY" in pointer
 assert "if(area == Outside)" in pointer
 assert "movement.mLastMovement = time;" in pointer
-assert "time - movement.mLastMovement >= 1.0" in pointer
+# S5: movement outside the line's area (e.g. leaving an in-game window) still extends
+# every active line, so it ends only after one second without any movement.
+outside = pointer.index("if(area == Outside)")
+for series, label in (("mMenuMovement", "Menu hand movement"), ("mWindowMovement", "Game window hand movement")):
+    call = f'extendMovement({series}, "{label}", time);'
+    assert pointer.count(call) == 1 and pointer.index(call) < outside, series
+assert pointer.index("const double time = now();") < outside
+assert pointer.index("mHavePosition && x == mX && y == mY") < outside
+extend = function(stats, "void FrameStatistics::extendMovement(")
+assert "if(!movement.mActive)" in extend
+pause = extend.index("time - movement.mLastMovement >= 1.0")
+assert pause < extend.index("mCompleted.push_back(Completed{label, movement.mFrames});") < extend.index("movement.mActive = false;")
+assert extend.rindex("movement.mLastMovement = time;") > extend.index("movement.mActive = false;")
+assert "void extendMovement(Movement& movement, const char* label, double time);" in header
 for series in ("mMenuMovement", "mWindowMovement"):
     assert f"time - {series}.mLastMovement >= 1.0" in sample
     assert sample.index(series + ".mFrames.addFrame(seconds)") < sample.index(f"time - {series}.mLastMovement >= 1.0")

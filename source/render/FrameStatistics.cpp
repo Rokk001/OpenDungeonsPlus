@@ -31,16 +31,30 @@ void FrameStatistics::pointerMoved(int x, int y, PointerArea area)
     mHavePosition = true;
     mX = x;
     mY = y;
+    // Any real movement, also outside a window, extends an active line: it ends
+    // only after one second without movement, not when the hand leaves its area.
+    const double time = now();
+    extendMovement(mMenuMovement, "Menu hand movement", time);
+    extendMovement(mWindowMovement, "Game window hand movement", time);
     if(area == Outside)
         return;
     Movement& movement = area == Menu ? mMenuMovement : mWindowMovement;
-    const double time = now();
-    if(movement.mActive && time - movement.mLastMovement >= 1.0)
-    {
-        mCompleted.push_back(Completed{area == Menu ? "Menu hand movement" : "Game window hand movement", movement.mFrames});
-        movement.mFrames.reset();
-    }
     movement.mActive = true;
+    movement.mLastMovement = time;
+}
+
+//! \brief Queues a line ended by a one-second pause, otherwise moves its pause start to this movement.
+void FrameStatistics::extendMovement(Movement& movement, const char* label, double time)
+{
+    if(!movement.mActive)
+        return;
+    if(time - movement.mLastMovement >= 1.0)
+    {
+        mCompleted.push_back(Completed{label, movement.mFrames});
+        movement.mFrames.reset();
+        movement.mActive = false;
+        return;
+    }
     movement.mLastMovement = time;
 }
 
