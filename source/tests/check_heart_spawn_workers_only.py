@@ -33,7 +33,7 @@ assert re.search(r"getWorkerClassToSpawn\(\)\s*\{\s*return mDefaultWorkerClass;\
 heart_funcs = [f for f in functions(game_map) if "getHeartTile()" in f and "new Creature(" in f]
 assert len(heart_funcs) == 1, f"expected exactly one GameMap function creating creatures at a heart tile, got {len(heart_funcs)}"
 body = heart_funcs[0]
-assert "void GameMap::updateSeatAutoWorkers(" in body, "heart spawn must be the auto worker function"
+assert "void GameMap::updateSeatAutoWorkers(" in body, "heart spawn must be the worker spawn function"
 assert "classToSpawn = seat->getWorkerClassToSpawn();" in body
 creations = re.findall(r"new Creature\(([^)]*)\)", body)
 assert creations == ["this, classToSpawn, seat"], creations
