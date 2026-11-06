@@ -114,11 +114,13 @@ def main():
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     # Ghost press rework after mockup A (owner decision 665): rusty iron, pulsing emblems, open book with turning runes,
     # flowing ectoplasm, vapour, idle stain and draped webs.
-    for texture in ['GhostPressIron.png','GhostPressPages.png','GhostPressRune.png','GhostPressStain.png']+['GhostPressGlow_%d.png'%k for k in range(4)]:
+    # Rework 2 (owner decision 686): heavy chains in their own steel, the book and green light also in Idle (dimmer).
+    for texture in ['GhostPressIron.png','GhostPressPages.png','GhostPressRune.png','GhostPressStain.png','GhostPressChain.png']+['GhostPressGlow_%d.png'%k for k in range(4)]:
         credited('materials/textures/'+texture,credits)
     press_mesh = (repo/'models/GhostPress.mesh').read_bytes()
     for name in ('GhostPressIron','GhostPressEngraving','GhostPressEmblem','GhostPressPages','GhostPressRune','GhostPressFlow',
-            'GhostPressVapour','GhostPressResidue','GhostBookLeather','GhostBrass','GhostEctoplasm','ManaStillWeb','ManaStillWebStrand'):
+            'GhostPressVapour','GhostPressResidue','GhostBookLeather','GhostBrass','GhostEctoplasm','ManaStillWeb','ManaStillWebStrand',
+            'GhostPressChain','GhostPressEmblemDim','GhostPressRuneDim','GhostPressGlow','GhostPressGlowDim','GhostPressPuff'):
         block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
         assert block, name
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
@@ -128,9 +130,14 @@ def main():
         assert name.encode()+b'\n' in press_mesh, ('ghost press uses',name)
     assert re.search(r'anim_texture GhostPressGlow_0\.png( GhostPressGlow_\d\.png){3} [\d.]+',still_material), 'emblem pulse'
     assert re.search(r'material GhostPressFlow\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'ectoplasm flow'
+    # The chains are lit steel with their own texture; the green light, the idle glow and the haze are additive.
+    assert re.search(r'^material GhostPressChain\s*\{(?:(?!^\}).)*texture GhostPressChain\.png',still_material,re.S|re.M), 'press chains'
+    for name in ('GhostPressRuneDim','GhostPressGlow','GhostPressGlowDim','GhostPressPuff'):
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
     press_skeleton = (repo/'models/GhostPress.skeleton').read_bytes()
     for bone in (b'Root',b'Press',b'Handle',b'Glow',b'Drips',b'Dull',b'Webs',b'SpringL',b'Stream',b'RuneL',b'Drip1',b'Drop1',
-            b'Wisp1',b'Mist',b'Residue',b'WebSway'):
+            b'Wisp1',b'Mist',b'Residue',b'WebSway',b'Book',b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdleRuneL',
+            b'IdleRuneR',b'IdleHalo',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in press_skeleton, bone
     # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
     for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):

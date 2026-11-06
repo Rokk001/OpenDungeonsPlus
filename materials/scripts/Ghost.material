@@ -890,6 +890,144 @@ material GhostPressResidue
     }
 }
 
+// Ghost press: heavy chains in worn, lighter steel (a little self-lit so they stand out against the dark press).
+material GhostPressChain
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.95 0.95 0.95
+            diffuse 1.0 1.0 1.0 1
+            emissive 0.07 0.07 0.07
+            specular 0.55 0.52 0.48 1 30
+            texture_unit
+            {
+                texture GhostPressChain.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Ghost press (idle): the emblems glow dim green.
+material GhostPressEmblemDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            texture_unit
+            {
+                texture GhostPressGlow_2.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.55 0.8 0.6
+            }
+        }
+    }
+}
+
+// Ghost press (idle): dimmer rune circles on the pages of the open book (they turn slowly by bone).
+material GhostPressRuneDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture GhostPressRune.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.6 0.6 0.6
+            }
+        }
+    }
+}
+
+// Ghost press (working): green light between book and platen, over the pages, on the columns, bed and floor.
+material GhostPressGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.30 1.0 0.42
+            }
+        }
+    }
+}
+
+// Ghost press (idle): dim green glow over the pages and a thin vapour thread.
+material GhostPressGlowDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.13 0.46 0.18
+            }
+        }
+    }
+}
+
+// Ghost press (working): soft green vapour haze drifting up and out at both sides of the press.
+material GhostPressPuff
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.14 0.50 0.20
+            }
+        }
+    }
+}
+
 // Soul forge (ghost apparatus): green fire in the firebox of the working forge.
 material GhostForgeFire
 {
