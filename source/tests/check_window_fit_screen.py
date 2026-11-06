@@ -234,6 +234,14 @@ for part in dungeonbook.iter('Window'):
         if prop.get('name') == 'Area':
             assert all(offset == 0 for _scale, offset in udims(prop.get('value'))), \
                 part.get('name') + ' of the Dungeonbook uses a fixed pixel area'
+# Decision 732: the values sheet shows exact values without a scrollbar, so its value cells word wrap a pair "a / b"
+# onto a second line instead of cutting it, and no tile holds a text that would have to be shortened
+for part in values_sheet.findall('Window'):
+    name = part.get('name')
+    assert not name.endswith('Value') or name[:-5] + 'Label' in [w.get('name') for w in values_sheet.findall('Window')],         name + ' is a shortened tile text'
+    if name.endswith('Value'):
+        formatting = part.find("Property[@name='HorzFormatting']")
+        assert formatting is not None and formatting.get('value') == 'WordWrapRightAligned', name + ' must word wrap'
 print('Dungeonbook pages fit at every scale (relative areas, no scrollbar on the values sheet)')
 
 # The Workers window (key J) is part of the checked windows, fits every tested screen without being shrunk below its

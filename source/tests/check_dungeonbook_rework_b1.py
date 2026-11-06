@@ -11,7 +11,8 @@ page) in G:/Moreya-Internal/medien/ingame-qs-8/m1/.
    The left column holds only the portrait and the info text.
 3. Inventory: no slot (Left Hand and Armour included) touches the portrait.
 4. Feed: every post row of both feeds has a picture: the painted scene of its post kind (DungeonbookIcons/Post*,
-   decision 710; check_dungeonbook_post_pictures.py checks the scenes), the portrait only for an unknown kind.
+   decision 710; check_dungeonbook_post_pictures.py checks the scenes), the portrait only for an unknown kind. Names,
+   level, age and post texts are set in full and word wrap (decision 732), as do the names of the creature list.
 5. Sizes: pictures, post thumbnails and portraits keep a readable size at 640x480, 1920x1200 and 7680x4320 with the UI
    scale 80 % and 120 % (check_dungeonbook_profile_layout.py measures the texts of all pages at the same sizes).
 """
@@ -150,8 +151,22 @@ for page in ('HomePage', 'FeedPage'):
         assert picture[0][1] >= boxes[base + '/Text'][0][3] - 1e-9, 'the picture sits below the text'
         assert not overlaps(picture[0], boxes[base + '/Portrait'][0]), 'the picture leaves the portrait free'
         assert picture[0][3] <= boxes[base][0][3] + 1e-9, 'the picture stays inside its row'
+        # decision 732: name, level, age and post text in full, word wrapped (no "..."); the head stays above the text
+        for part in ('Head', 'Text'):
+            assert props(boxes[base + '/' + part][1])['HorzFormatting'].startswith('WordWrap'), base + '/' + part
+        assert boxes[base + '/Head'][0][3] <= boxes[base + '/Text'][0][1] + 1e-9, base
 feed = social[social.index('void SocialWindow::rebuildFeed'):social.index('void SocialWindow::refreshPage')]
 assert 'setImage(picture->getChild("Clip/Image"), findPostPicture(post));' in feed
+assert 'escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR' in feed and 'escapeMarkup(text));' in feed
+for shortening in ('elideToWidth', 'fitTextToWindow', '"..."', 'getTextExtent'):
+    assert shortening not in feed, 'the feed shortens its texts: ' + shortening
+# the list rows: the whole name word wrapped on two lines above level and mood
+for row in range(7):
+    base = 'HomePage/ListRows/Row%d/' % row
+    assert props(boxes[base + 'Name'][1])['HorzFormatting'] == 'WordWrapLeftAligned', base
+    for part in ('Level', 'MoodIcon', 'Mood'):
+        assert boxes[base + 'Name'][0][3] <= boxes[base + part][0][1] + 1e-9, (base, part)
+        assert boxes[base + part][0][3] <= boxes['HomePage/ListRows/Row%d' % row][0][3] + 1e-9, (base, part)
 assert 'const CEGUI::Image* findPostPicture(const social::Post& post) const;' in header
 finder = social[social.index('const CEGUI::Image* SocialWindow::findPostPicture'):]
 finder = finder[:finder.index('\n}\n')]
@@ -159,7 +174,7 @@ assert 'return findPortrait(post.mCreature, post.mClassName, post.mIsWorker, fal
     'a post of an unknown kind shows the portrait of the creature'
 assert 'images.isDefined("DungeonbookIcons/" + name)' in finder, 'only shipped pictures are used'
 icons = {i.get('name') for i in ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot().findall('Image')}
-pictures = social[social.index('std::string roomPictureName('):social.index('//! \\brief The text shortened')]
+pictures = social[social.index('std::string roomPictureName('):social.index('//! \\brief Sets the whole plain text')]
 used = set(re.findall(r'return "(\w+)";', pictures)) | set(re.findall(r'\? "(\w+)"', pictures))
 assert used, 'no pictures found'
 for name in used:

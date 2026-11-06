@@ -142,9 +142,10 @@ namespace
                 const std::string::size_type mood = stats.find("\nMood: ", debug);
                 stats.erase(debug, mood == std::string::npos ? std::string::npos : mood - debug);
             }
-            stats += "Attack rating: " + Helper::toString(creature->getAttackRating()) + "\n";
-            stats += "Defense rating: " + Helper::toString(creature->getDefenseRating()) + "\n";
-            stats += "Raw damage per second: " + Helper::toString(creature->getRawDamagePerSecond()) + "\n";
+            // Written exactly; Helper::toString keeps only six digits (owner decision 732)
+            stats += "Attack rating: " + Creature::formatExactNumber(creature->getAttackRating()) + "\n";
+            stats += "Defense rating: " + Creature::formatExactNumber(creature->getDefenseRating()) + "\n";
+            stats += "Raw damage per second: " + Creature::formatExactNumber(creature->getRawDamagePerSecond()) + "\n";
             stats += "Sight radius: " + Helper::toString(creature->getTileSightRadius()) + "\n";
             stats += "Skill points earned / spent: " + Helper::toString(creature->getSkillPointsEarned()) + " / " +
                 Helper::toString(creature->getSkillPointsSpent()) + "\n";

@@ -281,6 +281,10 @@ public:
     std::string getStatsText();
     //! \brief Returns statistics with only hand items visible to a foreign viewing seat.
     std::string getStatsText(const Seat* viewer);
+    //! \brief Writes a value exactly, without rounding: the shortest decimal text that reads back as the same double
+    //! ("14.8", "42600", "41.666666666666664"), in exponent form only below 0.001 and from 1e15 on. Used for the
+    //! values of the statistics text and of the Dungeonbook (owner decision 732).
+    static std::string formatExactNumber(double value);
 
     //! \brief Client side. One line with the strongest friend and the worst enemy of a creature of the
     //! local player or its allies, e.g. "Closest: Name (friend) - Against: Name (nemesis)". Empty if the

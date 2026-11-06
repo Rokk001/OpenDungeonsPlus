@@ -37,6 +37,7 @@ assert 'i < ' + str(len(before_rows)) + ';' in body and 'i < 4;' in body, 'row c
 
 # 2. scrolling machinery
 page = (repo / 'gui/WindowCreatureProfilePage.layout').read_text()
+page_layout_text = page
 assert 'type="OD/VerticalScrollbar" name="ProfileScrollbar"' in page, 'the page needs its scrollbar'
 bar = page[page.index('name="ProfileScrollbar"'):]
 bar = bar[:bar.index('</Window>')]
@@ -169,6 +170,8 @@ for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
 # these pages has a back arrow to the start page and previous / next arrows around the name. No button in mid-page.
 # Every page is measured with the shipped font at 640x480, 1920x1200 and 7680x4320 (and 1024x768), UI scale 80 % and
 # 120 %: the window stays on the screen, no text is higher or wider than its window and nothing leaves its parent.
+# Owner decision 732: names and post texts are never shortened with "..." but word wrap, values are written exactly
+# (no rounding); the longest name, post, nick and value the game can produce are measured here.
 from PIL import ImageFont
 
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
@@ -299,7 +302,8 @@ for i, n in enumerate(slot_names):
 for name in ('Experience', 'HitPoints', 'Gold', 'SightRadius', 'Potions', 'Inventory', 'DamagePerSecond', 'SkillPoints'):
     assert 'ValuesPage/%sLabel' % name in boxes and 'ValuesPage/%sValue' % name in boxes, name
 for name in ('Strength', 'Dexterity', 'Life', 'Mana', 'CombatLabels', 'CombatValues', 'DefenseLabels', 'DefenseValues',
-             'EquipmentValue', 'PathValue', 'SkillsValue', 'Portrait/Image', 'Portrait/Frame'):
+             'EquipmentTile', 'EquipmentTitle', 'PathTile', 'PathTitle', 'SkillsTile', 'SkillsTitle', 'Portrait/Image',
+             'Portrait/Frame'):
     assert 'ValuesPage/' + name in boxes, name
 for name, icon in (('CombatIcon', 'Swords'), ('DefenseIcon', 'Shield'), ('EquipmentIcon', 'Equipment'),
                    ('PathIcon', 'Path'), ('SkillsIcon', 'Skills')):
@@ -319,15 +323,132 @@ assert scheme.find("Imageset[@filename='DungeonbookIcons.imageset'][@name='Dunge
 assert scheme.find("Imageset[@filename='DungeonbookFrame.imageset'][@name='DungeonbookFrame']") is not None
 assert 'gui/DungeonbookIcons.png' in (repo / 'CREDITS').read_text()
 
-# Code: real game data only, every value of today kept, rounded, and the slots filled by the creature code
+# Code: real game data only, every value of today kept, written exactly (owner decision 732: no rounding), and the slots
+# filled by the creature code
 for label in ('"Experience"', '"HP"', '"Gold"', '"Sight radius"', '"Potions"', '"Inventory"', '"Raw damage per second"',
               '"Skill points earned / spent"'):
     assert label in social, label
 assert 'findStatisticsValue(entry.stats, line.label)' in social
 for field in ('critical', 'attackRating', 'defenseRating', 'physicalDefense', 'magicalDefense', 'elementDefense'):
     assert 'formatProfileValue(entry.%s)' % field in social, field
-assert 'formatProfileValue(values[i])' in social and 'std::setprecision(2)' in social
-assert 'entry.equipment, entry.path, entry.skills' in social and 'fitTextToWindow(tile, FEED_TEXT_COLOUR, value)' in social
+assert 'formatProfileValue(values[i])' in social
+
+
+def function_of(text, signature):
+    body = text[text.index(signature):]
+    return body[:body.index('\n}\n')]
+
+
+# The book rounds nothing: its value text is the exact text of the creature code with the thousands grouped
+for rounding in ('setprecision', 'std::fixed', 'std::round', 'lround', 'std::trunc', 'std::ceil'):
+    assert rounding not in social, 'the Dungeonbook must not round a value: ' + rounding
+profile_value = function_of(social, 'std::string formatProfileValue(double value)')
+assert 'return groupThousands(Creature::formatExactNumber(value));' in profile_value, profile_value
+statistics_numbers = function_of(social, 'std::string formatStatisticsNumbers(')
+assert 'groupThousands(parts[i])' in statistics_numbers and 'formatProfileValue' not in statistics_numbers, \
+    'the statistics values keep the digits the server wrote'
+group = function_of(social, 'std::string groupThousands(const std::string& number)')
+assert 'THOUSANDS_GROUP = 3;' in social and 'result.insert(comma - THOUSANDS_GROUP, ",")' in group
+# The exact number text of the creature code: fewest decimals that read back as the same double, 17 digits at most
+creature_header = (repo / 'source/entities/Creature.h').read_text()
+assert 'static std::string formatExactNumber(double value);' in creature_header
+creature_cpp = (repo / 'source/entities/Creature.cpp').read_text()
+exact = function_of(creature_cpp, 'std::string Creature::formatExactNumber(double value)')
+for fragment in ('std::numeric_limits<double>::max_digits10', 'for(int32_t digits = 0; digits <= maxDigits; ++digits)',
+                 'stream << std::fixed;', 'stream << std::scientific;', 'stream << std::setprecision(digits) << value;',
+                 'if(readsBackAs(text, value))', 'std::locale::classic()'):
+    assert fragment in exact, fragment
+reads_back = function_of(creature_cpp, 'static bool readsBackAs(')
+assert '(parsed == value)' in reads_back and 'std::locale::classic()' in reads_back
+assert re.search(r'EXACT_FIXED_MIN = 0\.001;', creature_cpp) and re.search(r'EXACT_FIXED_MAX = 1e15;', creature_cpp)
+stats_text = function_of(creature_cpp, 'std::string Creature::getStatsText(const Seat* viewer)')
+for fragment in ('"Experience: " << formatExactNumber(mExp)',
+                 '"HP: " << formatExactNumber(getHP()) << " / " << formatExactNumber(mMaxHP)',
+                 '"Gold: " << formatExactNumber(mGoldCarried)'):
+    assert fragment in stats_text, fragment
+server_text = (repo / 'source/network/ODServer.cpp').read_text()
+for getter in ('getAttackRating', 'getDefenseRating', 'getRawDamagePerSecond'):
+    assert 'Creature::formatExactNumber(creature->%s())' % getter in server_text, getter
+    assert 'Helper::toString(creature->%s())' % getter not in server_text, getter + ' is rounded to six digits'
+
+
+def exact_number(value):
+    """Python replica of Creature::formatExactNumber: fixed form from 0.001 to 1e15, exponent form outside."""
+    if value == 0:
+        return '0'
+    fixed = 0.001 <= abs(value) < 1e15
+    for digits in range(18):
+        text = ('%.*f' if fixed else '%.*e') % (digits, value)
+        if float(text) == value:
+            return text
+    return '%.17g' % value
+
+
+def group_thousands(number):
+    """Python replica of groupThousands in SocialWindow.cpp."""
+    if any(c in number for c in 'eEin'):
+        return number
+    sign = 1 if number.startswith('-') else 0
+    whole = number.find('.') if '.' in number else len(number)
+    while whole > sign + 3:
+        number = number[:whole - 3] + ',' + number[whole - 3:]
+        whole -= 3
+    return number
+
+
+# Exact means: the text reads back as the same double, and no shorter text of the same form does
+for value, text in ((14.8, '14.8'), (42600.0, '42,600'), (41.666666666666664, '41.666666666666664'), (0.1 + 0.2,
+                    '0.30000000000000004'), (12.0, '12'), (-1234567.25, '-1,234,567.25'), (3e-05, '3e-05')):
+    assert group_thousands(exact_number(value)) == text, (value, group_thousands(exact_number(value)))
+for value in (1.0 / 3, 2.0 / 3 * 100, 1e-7 / 3, 123456789.123, 5e20 / 7, 0.001, 999999999999999.9):
+    shown = exact_number(value)
+    assert float(shown) == value, (value, shown)
+    assert len(shown.replace('-', '').replace('.', '').lstrip('0')) <= 22, shown
+# The widest value text the book can show: 17 significant digits in every magnitude and form, negative
+WORST_NUMBERS = tuple(sorted({group_thousands(exact_number(float('-9.8765432109876543e%d' % e))) for e in range(-320, 308)},
+                       key=lambda n: (text_width('MedievalSharp-8', n), n))[-12:])
+assert all(len(n) >= 20 for n in WORST_NUMBERS), WORST_NUMBERS
+# The Equipment, Path and Skills tiles show symbol and title (book-variant-2); their whole text is in the tooltip and
+# in the path and skills rows of the profile page, which word wrap and scroll (first part of this check)
+assert 'entry.equipment, entry.path, entry.skills' in social and 'fitTextToWindow' not in social
+tiles = function_of(social, 'void SocialWindow::refreshValues(')
+for fragment in ('const std::string tooltip = std::string(tiles[i]) + ": " + value;',
+                 'page->getChild(std::string(tiles[i]) + "Tile")->setTooltipText(tooltip);',
+                 'page->getChild(std::string(tiles[i]) + "Title")->setTooltipText(tooltip);'):
+    assert fragment in tiles, fragment
+for name in ('Equipment', 'Path', 'Skills'):
+    assert 'ValuesPage/%sValue' % name not in boxes, name + ' tile shows a shortened text'
+    tile = boxes['ValuesPage/%sTile' % name][1].find("Property[@name='MousePassThroughEnabled']")
+    assert tile is not None and tile.get('value') == 'False', name + ' tile must show its tooltip'
+shared_page = (repo / 'gui/WindowCreatureProfilePage.layout').read_text()
+assert 'name="PathText"' in shared_page and 'name="SkillsText"' in shared_page
+for row in ('PathText', 'SkillsText'):
+    assert re.search(r'name="%s"\s*>(?:(?!</Window>).)*WordWrapLeftAligned' % row, shared_page, re.S), row + ' word wraps'
+assert re.search(r'textRows(?:Before|After)\[\] = \{[^}]*"SkillsText"', body), 'the skills row flows and scrolls'
+assert 'page->getChild("PathText")->setText("Path: " + getSkillPathText());' in creature_cpp
+assert 'page->getChild("SkillsText")->setText("Skills: " + getSkillListText());' in creature_cpp
+# Out of sight the fallback profile holds equipment, path and skills in full and scrolls when it is longer
+fallback = social[social.index('// Out of sight the profile'):social.index('// The posts of the creature')]
+assert '"\\nEquipment: " + entry.equipment + "\\nPath: " + entry.path + "\\nSkills: " + entry.skills' in fallback
+assert 'fallback->setText(escapeMarkup(text));' in fallback
+social_text = boxes['ProfilePage/SocialText'][1]
+assert social_text.find("Property[@name='VertScrollbar']").get('value') == 'True', 'the fallback profile scrolls'
+assert social_text.find("Property[@name='HorzFormatting']").get('value').startswith('WordWrap')
+# No text of the book ends in "..." (decision 732): no shortening helper, no dots, the whole text is set
+for gone in ('elideToWidth', 'setElidedText', 'fitTextToWindow', 'isTileTextFitting', '"..."', "'...'", '+ "..'):
+    assert gone not in social, gone + ' shortens a text of the Dungeonbook'
+assert 'void setFullText(CEGUI::Window* window, const std::string& text)' in social
+assert 'window->setText(escapeMarkup(text));' in function_of(social, 'void setFullText(')
+for call in ('setFullText(home->getChild("CreaturesLabel"), label.str());',
+             'setFullText(row->getChild("Name"), profile.getFullName());',
+             'setFullText(header->getChild("NameText"), profile.getFullName());',
+             'setFullText(page->getChild("NameText"), profile.getFullName());',
+             'setFullText(page->getChild("KeeperText"), "Keeper: " + entry.keeper);',
+             'head->setText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR',
+             'textWindow->setText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text));'):
+    assert call in social, call
+profile_fill = function_of(creature_cpp, 'float Creature::fillProfilePage(CEGUI::Window* page)')
+assert '"..."' not in profile_fill and 'std::string("nothing to say")' in profile_fill, 'the profile status ends in "..."'
 assert 'Creature::fillItemSlotWindows(creature, slots, true)' in social
 creature_text = (repo / 'source/entities/Creature.cpp').read_text()
 fill = creature_text[creature_text.index('void Creature::fillItemSlotWindows('):]
@@ -363,47 +484,130 @@ TITLE_LINE = line_height('MedievalSharp-20')
 need = {}
 
 
-def require(name, font, lines=1, texts=(), pad_w=6.0, pad_h=0.0):
-    need[name] = (font, lines, texts, pad_w, pad_h)
+def require(name, font, lines=1, texts=(), pad_w=6.0, pad_h=0.0, wrap=False):
+    """A window and the texts it must show in full. A wrapped window word wraps every text with the shipped font at its
+    width (as CEGUI does, at the spaces) and must be high enough for all its lines and wide enough for its widest word;
+    lines is the least number of lines it has room for."""
+    if wrap:
+        formatting = boxes[name][1].find("Property[@name='HorzFormatting']")
+        assert formatting is not None and formatting.get('value').startswith('WordWrap'), name + ' must word wrap'
+    need[name] = (font, lines, texts, pad_w, pad_h, wrap)
 
 
-require('HomePage/CreaturesLabel', 'MedievalSharp-10', texts=('Known creatures (40 of 64)',))
+def wrap_lines(font, text, width):
+    """Lines of the text word wrapped at the spaces to the width (CEGUI word wrap); a word never splits."""
+    lines = []
+    for paragraph in text.split('\n'):
+        current = ''
+        for word in paragraph.split(' '):
+            trial = word if not current else current + ' ' + word
+            if current and text_width(font, trial) > width + 1e-6:
+                lines.append(current)
+                current = word
+            else:
+                current = trial
+        lines.append(current)
+    return lines
+
+
+# The longest texts the book can show (owner decision 732: names and post texts in full, word wrapped). Names: every
+# given name with every surname and epithet of config/social-names.cfg (CreatureProfile::getFullName). Posts: every
+# post template of config/social-texts.cfg with each slot filled by its widest values (names, hometowns, jobs, likes,
+# dislikes, quirks, rooms of CreaturePosts::getRoomName, item names of items.cfg and potions.cfg, level 30).
+name_groups = []
+for line in (repo / 'config/social-names.cfg').read_text().split('\n'):
+    cells = line.split('\t')
+    if cells[0] == '[NameGroup]':
+        name_groups.append({'given': [], 'last': [], 'home': []})
+    elif cells[0] == 'Given':
+        name_groups[-1]['given'] += [c for c in cells[2:] if c]
+    elif cells[0] in ('Surname', 'Title'):
+        name_groups[-1]['last'] += [c for c in cells[1:] if c]
+    elif cells[0] == 'Hometown':
+        name_groups[-1]['home'] += [c for c in cells[1:] if c]
+full_names = [g + ((' ' + s) if s else '') for group in name_groups for g in group['given'] for s in [''] + group['last']]
+assert len(full_names) > 5000 and 'CreatureProfile' in (repo / 'source/social/CreatureProfile.h').read_text()
+
+
+def widest(pool, font='MedievalSharp-8', count=3):
+    return sorted(set(pool), key=lambda t: -text_width(font, t))[:count]
+
+
+WIDEST_NAMES_8 = widest(full_names) + sorted(full_names, key=len)[-1:]
+WIDEST_NAMES_10 = widest(full_names, 'MedievalSharp-10') + sorted(full_names, key=len)[-1:]
+pools = {'job': [], 'like': [], 'dislike': [], 'quirk': []}
+templates = []
+for line in (repo / 'config/social-texts.cfg').read_text().split('\n'):
+    cells = line.split('\t')
+    if cells[0].lower() in pools:
+        pools[cells[0].lower()].append(cells[-1])
+    elif cells[0] == 'Post':
+        templates.append(cells[-1])
+assert len(templates) > 300 and all(pools.values()), 'post templates and slot pools are read'
+items = ['Soul crystal', 'Ectoplasm', 'Mana crystal', 'Research book']
+for cfg in ('items.cfg', 'potions.cfg'):
+    items += re.findall(r'^\s*Display\s+(.+?)\s*$', (repo / 'config' / cfg).read_text(), re.M)
+posts_source = (repo / 'source/social/CreaturePosts.cpp').read_text()
+rooms = re.findall(r'return "([a-z ]+)";', posts_source[posts_source.index('CreaturePosts::getRoomName'):][:3000])
+assert len(items) > 50 and len(rooms) > 15, (len(items), len(rooms))
+slot_values = {'name': WIDEST_NAMES_8, 'friend': WIDEST_NAMES_8, 'hometown': widest([h for g in name_groups for h in g['home']]),
+               'job': widest(pools['job']), 'like': widest(pools['like']), 'dislike': widest(pools['dislike']),
+               'quirk': widest(pools['quirk']), 'level': ['30'], 'room': widest(rooms), 'item': widest(items)}
+import itertools
+WORST_POSTS = []
+for template in templates:
+    slots = sorted(set(re.findall(r'\{(\w+)\}', template)))
+    for choice in itertools.product(*(slot_values.get(s, ['']) for s in slots)):
+        values = dict(zip(slots, choice))
+        WORST_POSTS.append(re.sub(r'\{(\w+)\}', lambda m: values.get(m[1], ''), template))
+# The age of a post (formatAge) and the level or crown (about two letters wide) after the name in the feed head
+AGES = ('just now', '59 sec ago', '59 min ago', '2147483 h ago')
+HEADS = [n + '   ' + level + age for n in WIDEST_NAMES_8 for level in ('', 'Lv. 30 - ', 'WW - ') for age in AGES]
+LINK_LEFT = float(re.search(r'PROFILE_LINK_LEFT = ([0-9.]+)f', gui)[1])
+for link in ('FriendLink0', 'FriendLink1', 'FoeLink'):
+    assert re.search(r'name="%s"\s*>\s*<Property name="Area" value="\{\{0\.0,%d\},' % (link, LINK_LEFT), page_layout_text), link
+NICK = 'W' * 20  # the nick of a keeper has at most 20 characters (MenuModeMultiplayerServer)
+assert 'nickCeguiStr.length() > 20' in (repo / 'source/modes/MenuModeMultiplayerServer.cpp').read_text()
+
+require('HomePage/CreaturesLabel', 'MedievalSharp-10', texts=('Known creatures (999 of 999)',), wrap=True)
 for f, text in zip(filters, ('[ All ]', '[ Workers ]', '[ Fighters ]', '[ Unhappy ]')):
     require(f, 'MedievalSharp-8', texts=(text,), pad_w=14.0, pad_h=6.0)
 require('HomePage/FeedTitle', 'MedievalSharp-10', texts=('All-Creature Feed',))
 for row in list_rows:
-    require(row + '/Name', 'MedievalSharp-8')
+    require(row + '/Name', 'MedievalSharp-8', lines=2, texts=WIDEST_NAMES_8, wrap=True)
     require(row + '/Level', 'MedievalSharp-8', texts=('Lv. 30',))
-    require(row + '/Mood', 'MedievalSharp-8', texts=('Furious', 'Content', 'Neutral', 'Unhappy', 'Hungry'))
+    require(row + '/Mood', 'MedievalSharp-8', texts=('Furious', 'Content', 'Neutral', 'Unhappy', 'Hungry'), wrap=True)
 for page in ('HomePage', 'FeedPage'):
     for i in range(3):
-        require('%s/FeedRows/Row%d/Head' % (page, i), 'MedievalSharp-8', texts=('Name   Lv. 30 - 59 min ago',))
-        require('%s/FeedRows/Row%d/Text' % (page, i), 'MedievalSharp-8', lines=2)
+        require('%s/FeedRows/Row%d/Head' % (page, i), 'MedievalSharp-8', texts=HEADS, wrap=True)
+        require('%s/FeedRows/Row%d/Text' % (page, i), 'MedievalSharp-8', lines=2, texts=WORST_POSTS, wrap=True)
     require(page + '/FeedEmpty', 'MedievalSharp-8', lines=2)
 require('FeedPage/FeedTitle', 'MedievalSharp-10', texts=('Feed',))
-require('Header/NameText', 'MedievalSharp-10', texts=('Grimwald Stonebreaker',))
+require('Header/NameText', 'MedievalSharp-10', texts=WIDEST_NAMES_10, wrap=True)
 for n in nav:
     require(n + '/Label', 'MedievalSharp-10', texts=(boxes[n + '/Label'][1].find("Property[@name='Text']").get('value'),))
-require('ProfilePage/NameText', 'MedievalSharp-10')
-require('ProfilePage/KeeperText', 'MedievalSharp-8', texts=('Keeper: Player 1',))
+require('ProfilePage/NameText', 'MedievalSharp-10', texts=WIDEST_NAMES_10, wrap=True)
+require('ProfilePage/KeeperText', 'MedievalSharp-8', texts=('Keeper: ' + NICK, 'Keeper: Player 1'), wrap=True)
 require('ProfilePage/InfoText', 'MedievalSharp-8', lines=4, texts=('Mood: Furious', 'Level 30'))
 require('ProfilePage/PostsTitle', 'MedievalSharp-10', texts=('Posts (200)',))
 require('ProfilePage/SocialHolder', 'MedievalSharp-8', lines=6)
 require('ProfilePage/PostsEmpty', 'MedievalSharp-8', lines=2, texts=('Nothing posted yet.',))
+# Values: exact numbers (17 significant digits at most, every magnitude); a pair "a / b" wraps after the slash
+pairs = tuple(a + ' / ' + b for a in WORST_NUMBERS[-3:] for b in WORST_NUMBERS[-3:])
 for name, label in (('Experience', 'Experience:'), ('HitPoints', 'Hit points:'), ('Gold', 'Gold:'),
                     ('SightRadius', 'Sight radius:'), ('Potions', 'Potions:'), ('Inventory', 'Inventory:'),
                     ('DamagePerSecond', 'Damage per second:'), ('SkillPoints', 'Skill points:')):
     require('ValuesPage/%sLabel' % name, 'MedievalSharp-8', texts=(label,), pad_w=4.0)
-    require('ValuesPage/%sValue' % name, 'MedievalSharp-8', texts=('1500 / 1500', '12 / 12'), pad_w=4.0)
+    require('ValuesPage/%sValue' % name, 'MedievalSharp-8', lines=2, texts=WORST_NUMBERS + pairs + ('-',), pad_w=4.0,
+            wrap=True)
 for name in ('Strength', 'Dexterity', 'Life', 'Mana'):
-    require('ValuesPage/' + name, 'MedievalSharp-8', lines=2, texts=(name, '999.99'))
+    require('ValuesPage/' + name, 'MedievalSharp-8', lines=2, texts=tuple(name + '\n' + n for n in WORST_NUMBERS))
 require('ValuesPage/CombatLabels', 'MedievalSharp-8', lines=3, texts=('Critical %', 'Attack Rating', 'Defense Rating'))
 require('ValuesPage/DefenseLabels', 'MedievalSharp-8', lines=3, texts=('Physical Defense', 'Magical Defense', 'Element Defense'))
-require('ValuesPage/CombatValues', 'MedievalSharp-8', lines=3, texts=('99.99 %', '999.99'))
-require('ValuesPage/DefenseValues', 'MedievalSharp-8', lines=3, texts=('999.99',))
+require('ValuesPage/CombatValues', 'MedievalSharp-8', lines=3, texts=tuple(n + '%' for n in WORST_NUMBERS) + WORST_NUMBERS)
+require('ValuesPage/DefenseValues', 'MedievalSharp-8', lines=3, texts=WORST_NUMBERS)
 for name in ('Equipment', 'Path', 'Skills'):
     require('ValuesPage/%sTitle' % name, 'MedievalSharp-8', texts=(name,), pad_w=2.0)
-    require('ValuesPage/%sValue' % name, 'MedievalSharp-6', lines=4)
 for i, label in enumerate(labels):
     require('InventoryPage/SlotBox%d/Label' % i, 'MedievalSharp-6', texts=(label,), pad_w=2.0)
 require('InventoryPage/PotionsLabel', 'MedievalSharp-8', texts=('Potions',))
@@ -413,6 +617,8 @@ for name in need:
     assert name in boxes, name
 
 state_lines = []
+wrapped_lines = {}
+narrowest_link = 1e9
 for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for user in (0.8, 1.2):
         scale = min(screen_w / 1024.0, screen_h / 768.0) * user
@@ -424,12 +630,21 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
         client_w = win_w - 2 * frame
         client_h = win_h - (TITLE_LINE + 12.0 / scale) - frame
         tightest = {}
-        for name, (font, lines, texts, pad_w, pad_h) in need.items():
+        for name, (font, lines, texts, pad_w, pad_h, wrap) in need.items():
             box = boxes[name][0]
             width = (box[2] - box[0]) * client_w
             height = (box[3] - box[1]) * client_h
+            if wrap:
+                # every text in full: all its wrapped lines in the height, its widest word in the width
+                wrapped = [wrap_lines(font, t, width - pad_w) for t in texts]
+                lines = max([lines] + [len(w) for w in wrapped])
+                words = [word for t in texts for word in t.replace('\n', ' ').split(' ')]
+                wanted_w = max([text_width(font, word) + pad_w for word in words] + [0.0])
+                assert all(text_width(font, part) + pad_w <= width + 1e-6 for w in wrapped for part in w), name
+                wrapped_lines[name] = max(wrapped_lines.get(name, 0), lines)
+            else:
+                wanted_w = max([text_width(font, part) + pad_w for t in texts for part in t.split('\n')] + [0.0])
             wanted_h = lines * line_height(font) + pad_h
-            wanted_w = max([text_width(font, t) + pad_w for t in texts] + [0.0])
             assert height + 1e-6 >= wanted_h, ('text too high for its window', name, screen_w, screen_h, user,
                                                round(height, 1), round(wanted_h, 1))
             assert width + 1e-6 >= wanted_w, ('text too wide for its window', name, screen_w, screen_h, user,
@@ -438,6 +653,12 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             ratio = max(wanted_h / height, wanted_w / width)
             if ratio > tightest.get(page, (0.0, ''))[0]:
                 tightest[page] = (ratio, name)
+        # The friend and foe names of the shared profile page are one-line buttons from PROFILE_LINK_LEFT to the right
+        # margin of the holder (Gui::layoutCreatureProfilePage): the widest name must fit whole
+        holder = boxes['ProfilePage/SocialHolder'][0]
+        link_width = (holder[2] - holder[0]) * client_w - LINK_LEFT - 32.0
+        assert link_width >= max(text_width('MedievalSharp-8', n) for n in WIDEST_NAMES_8) + 2.0,             ('a friend name is wider than its link', screen_w, screen_h, user, round(link_width, 1))
+        narrowest_link = min(narrowest_link, link_width)
         # the slot pictures stay squares of at least 24 screen pixels, the portraits at least 40
         for i in range(13):
             slot = boxes['InventoryPage/SlotBox%d/Slot%d' % (i, i)][0]
@@ -452,3 +673,10 @@ print('Dungeonbook pages verified: start page, head with back/previous/next arro
       'values sheet and 13-slot inventory fit 640x480 to 8K at 80 to 120 percent')
 for line in state_lines:
     print('  ' + line)
+print('Full texts (decision 732), most wrapped lines at any size: list name %d, feed head %d, post text %d (%d posts), '
+      'head name %d, profile name %d, keeper %d, value %d; widest value %s; narrowest friend link %.0f of %.0f design px' % (
+          wrapped_lines['HomePage/ListRows/Row0/Name'], wrapped_lines['HomePage/FeedRows/Row0/Head'],
+          wrapped_lines['HomePage/FeedRows/Row0/Text'], len(WORST_POSTS), wrapped_lines['Header/NameText'],
+          wrapped_lines['ProfilePage/NameText'], wrapped_lines['ProfilePage/KeeperText'],
+          wrapped_lines['ValuesPage/HitPointsValue'], WORST_NUMBERS[-1], narrowest_link,
+          max(text_width('MedievalSharp-8', n) for n in WIDEST_NAMES_8)))

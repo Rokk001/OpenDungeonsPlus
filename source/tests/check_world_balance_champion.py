@@ -124,10 +124,11 @@ creature = read("source/entities/Creature.cpp")
 assert 'handle += " - " + CHAMPION_CROWN_MARKUP;' in creature
 assert 'tempSS << "Level: " << CHAMPION_CROWN_MARKUP' in creature
 social = read("source/render/SocialWindow.cpp")
-# The Dungeonbook list and feed: the crown stands in the level place, the name is elided and escaped on its own
+# The Dungeonbook list and feed: the crown stands in the level place, the whole name is escaped on its own and word
+# wraps (decision 732: never shortened)
 assert 'row->getChild("Level")->setText(entry->champion ? CHAMPION_CROWN_MARKUP : "Lv. "' in social
-assert 'setElidedText(row->getChild("Name"), profile.getFullName())' in social
-assert "window->setText(escapeMarkup(elideToWidth(window->getFont(), text, window->getPixelSize().d_width)));" in social
+assert 'setFullText(row->getChild("Name"), profile.getFullName())' in social
+assert "window->setText(escapeMarkup(text));" in social and "elideToWidth" not in social
 assert "entry->champion ? std::string(CHAMPION_CROWN_MARKUP)" in social
 assert 'std::string("Champion ") + CHAMPION_CROWN_MARKUP' in social
 

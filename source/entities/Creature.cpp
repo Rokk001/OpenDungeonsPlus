@@ -182,6 +182,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <limits>
+#include <locale>
 #include <sstream>
 #include <utility>
 
@@ -4832,6 +4833,52 @@ static std::string formatDisplayNumber(double value)
     return result;
 }
 
+//! \brief Values from this magnitude on are written in fixed form by Creature::formatExactNumber.
+static const double EXACT_FIXED_MIN = 0.001;
+//! \brief Values from this magnitude on are written in exponent form by Creature::formatExactNumber.
+static const double EXACT_FIXED_MAX = 1e15;
+
+//! \brief True if the text reads back (C locale) as exactly the value.
+static bool readsBackAs(const std::string& text, double value)
+{
+    std::istringstream parser(text);
+    parser.imbue(std::locale::classic());
+    double parsed = 0.0;
+    return static_cast<bool>(parser >> parsed) && (parsed == value);
+}
+
+std::string Creature::formatExactNumber(double value)
+{
+    if(!std::isfinite(value))
+        return std::isnan(value) ? "nan" : (value < 0.0 ? "-inf" : "inf");
+    if(value == 0.0)
+        return "0";
+
+    // The fewest decimals (fixed form) or digits (exponent form) that give back the same double: nothing is rounded
+    // away, and 17 significant digits always give it back
+    const double magnitude = std::fabs(value);
+    const bool fixed = (magnitude >= EXACT_FIXED_MIN) && (magnitude < EXACT_FIXED_MAX);
+    const int32_t maxDigits = std::numeric_limits<double>::max_digits10;
+    std::string text;
+    for(int32_t digits = 0; digits <= maxDigits; ++digits)
+    {
+        std::ostringstream stream;
+        stream.imbue(std::locale::classic());
+        if(fixed)
+            stream << std::fixed;
+        else
+            stream << std::scientific;
+        stream << std::setprecision(digits) << value;
+        text = stream.str();
+        if(readsBackAs(text, value))
+            return text;
+    }
+    std::ostringstream stream;
+    stream.imbue(std::locale::classic());
+    stream << std::setprecision(maxDigits) << value;
+    return stream.str();
+}
+
 //! \brief Returns the template name for the displays ("none" while the creature follows no template).
 std::string Creature::getSkillPathText() const
 {
@@ -6784,7 +6831,7 @@ float Creature::fillProfilePage(CEGUI::Window* page)
     std::string status = "Status";
     if(mMoodValue != CreatureMoodLevel::Unknown)
         status += " (" + getProfileMoodState(0, mMoodValue) + ")";
-    statusText->setText(status + ": " + (moodLine.empty() ? std::string("...") : moodLine));
+    statusText->setText(status + ": " + (moodLine.empty() ? std::string("nothing to say") : moodLine));
 
     std::string latestLine = SocialWindow::describeLatestPost(getName(), getGameMap()->getTurnNumber());
     latestText->setText(latestLine.empty() ? std::string("Latest: nothing posted yet") : latestLine);
@@ -6869,9 +6916,10 @@ std::string Creature::getStatsText(const Seat* viewer)
     tempSS << std::endl;
     tempSS << "Path: " << getSkillPathText() << std::endl;
     tempSS << "Skills: " << getSkillListText() << std::endl;
-    tempSS << "Experience: " << mExp << std::endl;
-    tempSS << "HP: " << getHP() << " / " << mMaxHP << std::endl;
-    tempSS << "Gold: " << mGoldCarried << std::endl;
+    // Written exactly (the stream would keep only six digits), the Dungeonbook shows these values as they are
+    tempSS << "Experience: " << formatExactNumber(mExp) << std::endl;
+    tempSS << "HP: " << formatExactNumber(getHP()) << " / " << formatExactNumber(mMaxHP) << std::endl;
+    tempSS << "Gold: " << formatExactNumber(mGoldCarried) << std::endl;
     for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::infirmary, getSeat()))
     {
         RoomInfirmary* infirmary = static_cast<RoomInfirmary*>(room);
