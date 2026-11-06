@@ -389,7 +389,7 @@ material ManaStillFireGlow
     }
 }
 
-// Mana still (working): green glow of the coil column.
+// Mana still (working): green glow round the column and the copper coil, and inside the funnel.
 material ManaStillColumnGlow
 {
     receive_shadows off
@@ -407,13 +407,13 @@ material ManaStillColumnGlow
                 texture ManaStillGlowRamp.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.12 0.45 0.16
+                colour_op_ex modulate src_texture src_manual 0.18 0.62 0.24
             }
         }
     }
 }
 
-// Mana still (working): green ectoplasm vapour swirling in the column and rising from the funnel.
+// Mana still (working): green ectoplasm vapour swirling in the column and rising from the funnel, light over the funnel.
 material ManaStillVapour
 {
     receive_shadows off
@@ -431,13 +431,127 @@ material ManaStillVapour
                 texture GhostNoise.png
                 tex_address_mode wrap
                 scroll_anim 0.25 0
-                colour_op_ex modulate src_texture src_manual 0.20 0.65 0.24
+                colour_op_ex modulate src_texture src_manual 0.30 0.95 0.38
             }
             texture_unit
             {
                 texture ManaStillGlowRamp.png
                 tex_address_mode clamp
                 colour_op_ex modulate src_texture src_current
+            }
+        }
+    }
+}
+
+// Mana still: hammered copper coil wound round the glass column (copper coloured, a little self-lit so it reads in the dark room).
+material ManaStillCopper
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.95 0.95 0.95
+            diffuse 1.0 1.0 1.0 1
+            emissive 0.16 0.07 0.03
+            specular 0.95 0.62 0.40 1 36
+            texture_unit
+            {
+                texture ManaStillCopper.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Mana still (working): soft green vapour puffs rising from the funnel.
+material ManaStillPuff
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.35 1.0 0.45
+            }
+        }
+    }
+}
+
+// Mana still (idle): a thin, dim vapour thread over the residue in the funnel.
+material ManaStillPuffDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.13 0.42 0.17
+            }
+        }
+    }
+}
+
+// Mana still (working): green light on the floor round the still.
+material ManaStillFloorGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.22 0.75 0.30
+            }
+        }
+    }
+}
+
+// Mana still (idle): dim green ectoplasm residue left in the funnel.
+material ManaStillResidue
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            texture_unit
+            {
+                texture GhostNoise.png
+                tex_address_mode wrap
+                scroll_anim 0.01 0.02
+                colour_op_ex modulate src_texture src_manual 0.20 0.70 0.28
             }
         }
     }
@@ -776,6 +890,144 @@ material GhostPressResidue
     }
 }
 
+// Ghost press: heavy chains in worn, lighter steel (a little self-lit so they stand out against the dark press).
+material GhostPressChain
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.95 0.95 0.95
+            diffuse 1.0 1.0 1.0 1
+            emissive 0.07 0.07 0.07
+            specular 0.55 0.52 0.48 1 30
+            texture_unit
+            {
+                texture GhostPressChain.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Ghost press (idle): the emblems glow dim green.
+material GhostPressEmblemDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            texture_unit
+            {
+                texture GhostPressGlow_2.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.55 0.8 0.6
+            }
+        }
+    }
+}
+
+// Ghost press (idle): dimmer rune circles on the pages of the open book (they turn slowly by bone).
+material GhostPressRuneDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture GhostPressRune.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.6 0.6 0.6
+            }
+        }
+    }
+}
+
+// Ghost press (working): green light between book and platen, over the pages, on the columns, bed and floor.
+material GhostPressGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.30 1.0 0.42
+            }
+        }
+    }
+}
+
+// Ghost press (idle): dim green glow over the pages and a thin vapour thread.
+material GhostPressGlowDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.13 0.46 0.18
+            }
+        }
+    }
+}
+
+// Ghost press (working): soft green vapour haze drifting up and out at both sides of the press.
+material GhostPressPuff
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.14 0.50 0.20
+            }
+        }
+    }
+}
+
 // Soul forge (ghost apparatus): green fire in the firebox of the working forge.
 material GhostForgeFire
 {
@@ -793,7 +1045,7 @@ material GhostForgeFire
     }
 }
 
-// Soul forge: weathered dark stone of the plinth, body, waist and horned anvil top (block seams, cracks, rust stains).
+// Soul forge: weathered grey stone of the plinth, body, neck and horned anvil top (block seams, cracks, a few rust stains).
 material SoulForgeStone
 {
     receive_shadows on
@@ -814,7 +1066,7 @@ material SoulForgeStone
     }
 }
 
-// Soul forge: heavily rusted iron of the bands, brackets, firebox frame, rings, foot shoes and the hammer.
+// Soul forge: dark iron with small rust patches of the bands, brackets, firebox frame, rings, foot shoes and hammer handle.
 material SoulForgeIron
 {
     receive_shadows on
@@ -900,6 +1152,74 @@ material SoulForgeSpark
                 texture SoulForgeSpark.png
                 tex_address_mode clamp
                 filtering trilinear
+            }
+        }
+    }
+}
+
+// Soul forge: worn light steel of the anvil face plate and horns, the grate bars and the hammer head (a little self-lit
+// so the anvil outline, the grate and the hammer stand out against the dark stone and iron from the room camera).
+material SoulForgeSteel
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.95 0.95 0.95
+            diffuse 1.0 1.0 1.0 1
+            emissive 0.08 0.08 0.08
+            specular 0.6 0.6 0.58 1 36
+            texture_unit
+            {
+                texture SoulForgeSteel.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Soul forge (working and idle): green crystal cluster on the anvil, a green glass with its own glow and a shimmer.
+material SoulForgeCrystal
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            scene_blend alpha_blend
+            depth_write off
+            diffuse 0.40 0.95 0.52 0.82
+            ambient 0.40 0.95 0.52
+            emissive 0.24 0.72 0.34
+            specular 0.6 0.8 0.65 1 48
+            texture_unit
+            {
+                texture GhostNoise.png
+                tex_address_mode wrap
+                scroll_anim 0.03 0.08
+                colour_op_ex modulate_x2 src_texture src_current
+            }
+        }
+    }
+}
+
+// Soul forge (idle): dim green cores inside the crystals (they pulse slowly by bone).
+material SoulForgeCoreDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            texture_unit
+            {
+                texture GhostNoise.png
+                tex_address_mode wrap
+                scroll_anim 0.02 0.05
+                colour_op_ex modulate src_texture src_manual 0.36 0.85 0.45
             }
         }
     }

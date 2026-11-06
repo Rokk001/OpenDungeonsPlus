@@ -73,12 +73,15 @@ def main():
     for name in ('ManaCrystal','ManaCrystalDull','ManaStillGlass','GhostEmbers','GhostCoal','GhostGlassDull','GhostCobweb'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     # Mana still rework after mockup A (owner decision 665): rusty iron, flickering embers, flowing coil, vapour, draped webs.
-    textures = ['ManaStillIron.png','ManaStillFlow.png','ManaStillGlowRamp.png','ManaStillWeb.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
+    # Rework 2 (owner decision 686): copper coil and the puff texture of the vapour plume and green glows.
+    textures = ['ManaStillIron.png','ManaStillFlow.png','ManaStillGlowRamp.png','ManaStillWeb.png','ManaStillCopper.png',
+        'ManaStillPuff.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
     for texture in textures:
         credited('materials/textures/'+texture,credits)
     still_mesh = (repo/'models/ManaStill.mesh').read_bytes()
     for name in ('ManaStillIron','ManaStillCoilGlass','ManaStillCoil','ManaStillEmbers','ManaStillBanked','ManaStillFireGlow',
-            'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand'):
+            'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand','ManaStillCopper',
+            'ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillResidue'):
         block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
         assert block, name
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
@@ -89,8 +92,13 @@ def main():
     # Visible motion: the embers flicker by texture, the coil ectoplasm flows, the vapour drifts.
     assert re.search(r'anim_texture ManaStillEmbers_0\.png( ManaStillEmbers_\d\.png){5} [\d.]+',still_material), 'ember flicker'
     assert re.search(r'material ManaStillCoil\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'coil flow'
+    # The coil is lit copper (its own texture), not glass; the vapour plume, its idle thread and the floor glow are additive.
+    assert re.search(r'^material ManaStillCopper\s*\{(?:(?!^\}).)*texture ManaStillCopper\.png',still_material,re.S|re.M), 'copper coil'
+    for name in ('ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow'):
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
     still_skeleton = (repo/'models/ManaStill.skeleton').read_bytes()
-    for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway'):
+    for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway',
+            b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in still_skeleton, bone
     assert b'ManaCrystal\n' in (repo/'models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
     # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.
@@ -106,11 +114,13 @@ def main():
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     # Ghost press rework after mockup A (owner decision 665): rusty iron, pulsing emblems, open book with turning runes,
     # flowing ectoplasm, vapour, idle stain and draped webs.
-    for texture in ['GhostPressIron.png','GhostPressPages.png','GhostPressRune.png','GhostPressStain.png']+['GhostPressGlow_%d.png'%k for k in range(4)]:
+    # Rework 2 (owner decision 686): heavy chains in their own steel, the book and green light also in Idle (dimmer).
+    for texture in ['GhostPressIron.png','GhostPressPages.png','GhostPressRune.png','GhostPressStain.png','GhostPressChain.png']+['GhostPressGlow_%d.png'%k for k in range(4)]:
         credited('materials/textures/'+texture,credits)
     press_mesh = (repo/'models/GhostPress.mesh').read_bytes()
     for name in ('GhostPressIron','GhostPressEngraving','GhostPressEmblem','GhostPressPages','GhostPressRune','GhostPressFlow',
-            'GhostPressVapour','GhostPressResidue','GhostBookLeather','GhostBrass','GhostEctoplasm','ManaStillWeb','ManaStillWebStrand'):
+            'GhostPressVapour','GhostPressResidue','GhostBookLeather','GhostBrass','GhostEctoplasm','ManaStillWeb','ManaStillWebStrand',
+            'GhostPressChain','GhostPressEmblemDim','GhostPressRuneDim','GhostPressGlow','GhostPressGlowDim','GhostPressPuff'):
         block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
         assert block, name
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
@@ -120,9 +130,14 @@ def main():
         assert name.encode()+b'\n' in press_mesh, ('ghost press uses',name)
     assert re.search(r'anim_texture GhostPressGlow_0\.png( GhostPressGlow_\d\.png){3} [\d.]+',still_material), 'emblem pulse'
     assert re.search(r'material GhostPressFlow\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'ectoplasm flow'
+    # The chains are lit steel with their own texture; the green light, the idle glow and the haze are additive.
+    assert re.search(r'^material GhostPressChain\s*\{(?:(?!^\}).)*texture GhostPressChain\.png',still_material,re.S|re.M), 'press chains'
+    for name in ('GhostPressRuneDim','GhostPressGlow','GhostPressGlowDim','GhostPressPuff'):
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
     press_skeleton = (repo/'models/GhostPress.skeleton').read_bytes()
     for bone in (b'Root',b'Press',b'Handle',b'Glow',b'Drips',b'Dull',b'Webs',b'SpringL',b'Stream',b'RuneL',b'Drip1',b'Drop1',
-            b'Wisp1',b'Mist',b'Residue',b'WebSway'):
+            b'Wisp1',b'Mist',b'Residue',b'WebSway',b'Book',b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdleRuneL',
+            b'IdleRuneR',b'IdleHalo',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in press_skeleton, bone
     # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
     for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):
@@ -138,12 +153,15 @@ def main():
     assert re.search(r'^\s*material\s+GhostForgeFire\s*$',still_material,re.M), 'GhostForgeFire'
     # Soul forge rework after mockup A (owner decision 665): weathered stone, rusted iron, flickering green flames,
     # glow, sparks, ectoplasm pool and crystals, vapour, idle embers and stain, draped webs; motion bones of the clips.
-    for texture in ['SoulForgeStone.png','SoulForgeIron.png','SoulForgeSpark.png']+['SoulForgeFire_%d.png'%k for k in range(4)]:
+    # Rework 2 (owner decision 686): light steel anvil face, grate and hammer head, green crystals in Working and Idle,
+    # additive green light in the grate, on the floor and over the crystals, dim idle cores and glow.
+    for texture in ['SoulForgeStone.png','SoulForgeIron.png','SoulForgeSteel.png','SoulForgeSpark.png']+['SoulForgeFire_%d.png'%k for k in range(4)]:
         credited('materials/textures/'+texture,credits)
     forge_mesh = (repo/'models/SoulForge.mesh').read_bytes()
     for name in ('SoulForgeStone','SoulForgeIron','SoulForgeFire','SoulForgeGlow','SoulForgeSpark','GhostCoal','ManaStillEmbers',
-            'ManaStillBanked','GhostEctoplasm','GhostPressFlow','ManaCrystal','GhostCrystalCore','GhostEmbers','GhostPressVapour',
-            'GhostPressResidue','ManaStillWeb','ManaStillWebStrand'):
+            'ManaStillBanked','GhostEctoplasm','GhostPressFlow','GhostCrystalCore','GhostEmbers','GhostPressVapour',
+            'GhostPressResidue','ManaStillWeb','ManaStillWebStrand','SoulForgeSteel','SoulForgeCrystal','SoulForgeCoreDim',
+            'GhostPressGlow','GhostPressGlowDim','GhostPressPuff','ManaStillFloorGlow'):
         block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
         assert block, name
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
@@ -152,8 +170,14 @@ def main():
                     assert (repo/'materials/textures'/file).is_file(), (name,file)
         assert name.encode()+b'\n' in forge_mesh, ('soul forge uses',name)
     assert re.search(r'anim_texture SoulForgeFire_0\.png( SoulForgeFire_\d\.png){3} [\d.]+',still_material), 'forge flame flicker'
+    # The anvil face, grate bars and hammer head are lit steel with their own texture; the green light is additive.
+    assert re.search(r'^material SoulForgeSteel\s*\{(?:(?!^\}).)*texture SoulForgeSteel\.png',still_material,re.S|re.M), 'forge steel'
+    for name in ('GhostPressGlow','GhostPressGlowDim','GhostPressPuff','ManaStillFloorGlow'):
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
     for bone in (b'Root',b'Hammer',b'Sparks',b'Glow',b'Dull',b'Webs',b'Spirit',b'Flame1',b'Embers',b'FireGlow',b'Pool',
-            b'CrystalGlow',b'Shock',b'Spark1',b'Wisp1',b'Wisp5',b'Banked',b'Residue',b'WebSway'):
+            b'CrystalGlow',b'Shock',b'Spark1',b'Wisp1',b'Wisp5',b'Banked',b'Residue',b'WebSway',b'Crystals',b'Halo',
+            b'GrateGlow',b'FloorGlow',b'Puff1',b'Puff4',b'IdleGlow',b'IdleCore',b'IdleHalo',b'IdleGrate',b'IdleFloor',
+            b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in forge_skeleton, bone
     # Ectoplasm item: its own static mesh replaces the cauldron fill placeholder (the cauldron keeps its fill level).
     credited('models/Ectoplasm.mesh',credits)

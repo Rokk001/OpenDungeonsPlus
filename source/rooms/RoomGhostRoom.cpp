@@ -242,7 +242,7 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
         if(!apparatusTile) freeWalls.push_back(wall);
     }
     if(!freeWalls.empty()) walls=freeWalls;
-    // A free-standing room has no adjacent wall: bell, hooks and gauges then stand on racks along the open room edge.
+    // A free-standing room has no adjacent wall: bell and hooks then stand on racks along the open room edge.
     // They stay decoration (no obstacle), so every passage remains free, and the supply is not reduced.
     const bool rackEdge=walls.empty();
     if(rackEdge)
@@ -258,14 +258,17 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
             }
         }
     }
-    // Subdivide the wall faces (or room-edge rack faces) using the native mesh widths; decoration never overwrites a floor-object key.
+    // Only the bell and one hook per backpack go to the wall: no further panels fill the remaining wall faces.
+    // With fewer items than faces they spread evenly over the faces, otherwise the faces are subdivided using
+    // the native mesh widths; decoration never overwrites a floor-object key.
     if(!walls.empty())
     {
-        const size_t slots=std::max(walls.size(),static_cast<size_t>(getBackpackCount())+1);
+        const size_t slots=static_cast<size_t>(getBackpackCount())+1;
+        const bool spread=slots<walls.size();
         for(size_t slot=0;slot<slots;++slot)
         {
-            const size_t wall=slot%walls.size(),part=slot/walls.size();
-            const size_t parts=slots/walls.size()+(wall<slots%walls.size()?1:0);
+            const size_t wall=spread?slot*walls.size()/slots:slot%walls.size(),part=spread?0:slot/walls.size();
+            const size_t parts=spread?1:slots/walls.size()+(wall<slots%walls.size()?1:0);
             Tile* tile=walls[wall].first;ActiveSpotPlace place=walls[wall].second;
             BuildingObject* object=notifyActiveSpotCreated(place,tile);
             const double angle=object->getRotationAngle()*RoomObjectPath::degreesToRadians;
@@ -305,12 +308,11 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
 BuildingObject* RoomGhostRoom::notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile)
 {
     if(place==activeSpotCenter) return nullptr;
-    std::string mesh=mDecorationTiles.empty()?"GhostBell":mHookTiles.size()<getBackpackCount()?"GhostHook":"GhostWallGauges";
-    const bool isGauge=mesh.compare("GhostWallGauges")==0;
+    const std::string mesh=mDecorationTiles.empty()?"GhostBell":"GhostHook";
     if(mesh.compare("GhostHook")==0) mHookTiles.push_back(tile);
     mDecorationTiles.push_back(tile);
     const double rotation=place==activeSpotLeft?90.0:place==activeSpotRight?270.0:place==activeSpotBottom?180.0:0.0;
-    return new BuildingObject(getGameMap(),*this,mesh,*tile,rotation,false,1.0f,isGauge?EntityAnimation::idle_anim:std::string(),true);
+    return new BuildingObject(getGameMap(),*this,mesh,*tile,rotation,false,1.0f,std::string(),true);
 }
 
 void RoomGhostRoom::notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile)
