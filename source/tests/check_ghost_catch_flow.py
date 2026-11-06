@@ -9,10 +9,15 @@ ghost room wall. This check pins the fixed flow in the game source and reads the
 - a thrown or lying box lands on the floor (z 0) under the ghost and a dropped box (D21) stays where it lay;
 - the bell makes alarm lamps blink without any wall panel;
 - no ghost room wall object carries a dark flat panel at its back.
-Each part fails on the code and meshes of build 40 (base 831bcf98d)."""
+Each part fails on the code and meshes of build 40 (base 831bcf98d).
+Owner decision 711 (build 41) saw the held and thrown box as a large black untextured block. The box must be the small
+trap of D17: hand-sized (no larger than the tavern mug, at most a fifth of the smallest hunter), its main surface a bright
+texture with visible grain, opaque green glowing windows on front and back, and the hand and the throw keep that size.
+This part fails on the GhostBox mesh, textures and code of build 41 (base 94b29d74a)."""
 from pathlib import Path
 import re
 import struct
+import zlib
 
 repo = Path(__file__).resolve().parents[2]
 
@@ -205,12 +210,129 @@ def no_flat_panels():
     print("no dark flat panels at the ghost room wall: ok")
 
 
+# Material names of the index buffers of a binary OGRE mesh, in the order mesh() returns them.
+def submesh_materials(name):
+    data = (repo / "models" / (name + ".mesh")).read_bytes()
+    end = data.index(b"\n", 2)
+    _, length = struct.unpack_from("<HI", data, end + 1)
+    names, cursor = [], end + 1 + 7
+    while cursor < end + 1 + length:
+        kind, size = struct.unpack_from("<HI", data, cursor)
+        if kind == 0x4000:
+            names.append(data[cursor + 6:data.index(b"\n", cursor + 6)].decode("ascii"))
+        cursor += size
+    return names
+
+
+# Mean and standard deviation of the luminance (0-255) of an 8-bit grey, RGB or RGBA, non-interlaced PNG.
+def png_luminance(path):
+    data = path.read_bytes()
+    assert data[:8] == b"\x89PNG\r\n\x1a\n", path
+    cursor, idat, header = 8, b"", None
+    while cursor < len(data):
+        length, kind = struct.unpack_from(">I4s", data, cursor)
+        chunk = data[cursor + 8:cursor + 8 + length]
+        if kind == b"IHDR":
+            header = struct.unpack(">IIBBBBB", chunk)
+        elif kind == b"IDAT":
+            idat += chunk
+        cursor += 12 + length
+    width, height, depth, colour, _, _, interlace = header
+    channels = {0: 1, 2: 3, 4: 2, 6: 4}[colour]
+    assert depth == 8 and interlace == 0, (path, depth, interlace)
+    raw, stride = zlib.decompress(idat), width * channels
+    previous, values = bytearray(stride), []
+    for row in range(height):
+        start = row * (stride + 1)
+        kind, line = raw[start], bytearray(raw[start + 1:start + 1 + stride])
+        for i in range(stride):
+            left = line[i - channels] if i >= channels else 0
+            up, corner = previous[i], previous[i - channels] if i >= channels else 0
+            if kind == 1:
+                line[i] = (line[i] + left) & 255
+            elif kind == 2:
+                line[i] = (line[i] + up) & 255
+            elif kind == 3:
+                line[i] = (line[i] + (left + up) // 2) & 255
+            elif kind == 4:
+                guess = left + up - corner
+                pa, pb, pc = abs(guess - left), abs(guess - up), abs(guess - corner)
+                line[i] = (line[i] + (left if pa <= pb and pa <= pc else up if pb <= pc else corner)) & 255
+        previous = line
+        for i in range(0, stride, channels * 4):
+            pixel = line[i:i + channels]
+            values.append(pixel[0] if channels < 3 else 0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2])
+    mean = sum(values) / len(values)
+    return mean, (sum((value - mean) ** 2 for value in values) / len(values)) ** 0.5
+
+
+# Bodies of all material definitions in the shipped material scripts, by material name.
+def material_scripts():
+    found = {}
+    for script in (repo / "materials" / "scripts").glob("*.material"):
+        text = script.read_text(encoding="utf-8")
+        for match in re.finditer(r"^material (\w+)\b[^\n]*\n\{(.*?)^\}", text, re.M | re.S):
+            found[match.group(1)] = match.group(2)
+    return found
+
+
+# Owner decision 711: the held and thrown box is the small, textured trap of D17 that fits the hunter's hand.
+def small_textured_box():
+    positions, submeshes = mesh("GhostBox")
+    materials = submesh_materials("GhostBox")
+    size = [max(p[i] for p in positions) - min(p[i] for p in positions) for i in range(3)]
+    mug_positions, _ = mesh("TavernMug")
+    mug = max(max(p[i] for p in mug_positions) - min(p[i] for p in mug_positions) for i in range(3))
+    dwarf_positions, _ = mesh("RunelordDwarf")
+    hunter = max(p[2] for p in dwarf_positions) - min(p[2] for p in dwarf_positions)
+    # Build 41: 0.25 x 0.25 x 0.20, larger than the mug (0.18) and more than a quarter of the dwarf hunter (0.74).
+    assert max(size) <= mug and max(size) <= 0.2 * hunter, ("box larger than a hand", [round(s, 3) for s in size], mug, hunter)
+    assert min(size) >= 0.06, ("box too small to read", [round(s, 3) for s in size])
+    assert abs(min(p[2] for p in positions)) < 1e-4, "the box origin stays on its floor so it lies on the ground"
+    scripts = material_scripts()
+    areas = {}
+    glow_front = glow_back = 0.0
+    front, back = max(p[1] for p in positions), min(p[1] for p in positions)
+    for material, indices in zip(materials, submeshes):
+        assert material in scripts, ("box material without a definition", material)
+        glow = "scene_blend" not in scripts[material] and re.search(r"emissive\s+[\d.]+\s+(0\.[89]\d*|1(\.0*)?)\s", scripts[material])
+        for first in range(0, len(indices), 3):
+            a, b, c = (positions[index] for index in indices[first:first + 3])
+            u = [b[i] - a[i] for i in range(3)]
+            v = [c[i] - a[i] for i in range(3)]
+            normal = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+            area = sum(value * value for value in normal) ** 0.5 / 2.0
+            areas[material] = areas.get(material, 0.0) + area
+            if glow and min(a[1], b[1], c[1]) > front - 0.2 * size[1]:
+                glow_front += area
+            if glow and max(a[1], b[1], c[1]) < back + 0.2 * size[1]:
+                glow_back += area
+    # Build 41: GhostIron covered the box; its baked texture is a nearly flat dark grey (luminance 52, deviation 3.4).
+    main = max(areas, key=areas.get)
+    texture = re.search(r"^\s*texture\s+(\S+\.png)", scripts[main], re.M)
+    assert texture, ("main box surface without texture", main)
+    mean, deviation = png_luminance(repo / "materials" / "textures" / texture.group(1))
+    assert mean >= 90 and deviation >= 10, ("main box surface is dark or flat", main, round(mean, 1), round(deviation, 1))
+    assert len(set(materials)) >= 3, ("box needs case, fittings and glow", materials)
+    # Build 41: one translucent slit on the front only, no opaque glow on the back.
+    assert glow_front > 0.0 and glow_back > 0.0, ("opaque green glowing windows front and back", glow_front, glow_back)
+    creature = read("source/entities/Creature.cpp")
+    update = body(creature, "void Creature::updateGhostHuntVisuals(double seconds)")
+    has(update, "the held box middle sits in the palm",
+        "mGhostHeldBox->getMesh()->getBounds().getSize().z", "Ogre::Vector3(0.0f,-0.5f*boxHeight,0.0f)")
+    has(update, "a scaled rig bone does not blow the held box up", "palm->setInheritScale(false);")
+    has(update, "the thrown and lying box keeps the hand size", "mGhostBoxNode->setScale(getEntityNode()->getScale());")
+    assert not re.search(r"mGhostHeldBox->getParentNode\(\)->setScale|palm->setScale", update), "the held box must not be rescaled"
+    print("small textured ghost box in the hand: ok")
+
+
 def main():
     box_in_hand()
     visual_states()
     catch_order()
     alarm_lamps()
     no_flat_panels()
+    small_textured_box()
     print("ghost catch flow: ok")
 
 
