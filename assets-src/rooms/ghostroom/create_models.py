@@ -19,7 +19,12 @@ PALETTE = {
     'GhostLeather': ((0.008, 0.003, 0.002), (0.055, 0.020, 0.007), 0.93),
     'GhostStone': ((0.015, 0.018, 0.019), (0.075, 0.080, 0.070), 0.98),
     'GhostGaugeFace': ((0.12, 0.11, 0.075), (0.35, 0.32, 0.21), 0.94),
+    # The hand-held capture box: scratched light gunmetal and worn ochre warning paint, both with a fine visible grain.
+    'GhostBoxCase': ((0.035, 0.040, 0.045), (0.46, 0.46, 0.43), 0.55),
+    'GhostBoxHazard': ((0.16, 0.085, 0.010), (0.80, 0.54, 0.045), 0.70),
 }
+# Fine, high-contrast grain for the small box surfaces so they stay readable at hand size.
+FINE_GRAIN = {'GhostBoxCase', 'GhostBoxHazard'}
 SPECS = {
     'GhostCauldron': (2.00, 2.00, 1.60),
     'GhostCauldronFill': (0.40, 0.05, 0.60),
@@ -30,7 +35,8 @@ SPECS = {
     'GhostWallGauges': (0.90, 0.20, 0.90),
     'GhostRack': (1.00, 0.16, 1.00),
     'GhostBackpack': (0.35, 0.25, 0.50),
-    'GhostBox': (0.25, 0.25, 0.20),
+    # Hand-sized like the tavern mug (D17): it fits the hunter's palm and lies small under a ghost.
+    'GhostBox': (0.13, 0.11, 0.12),
     'SoulCrystal': (0.20, 0.20, 0.35),
 }
 PARTS = []
@@ -49,7 +55,7 @@ def start_scene():
         tree = mat.node_tree
         bsdf = tree.nodes.get('Principled BSDF')
         bsdf.inputs['Roughness'].default_value = rough
-        bsdf.inputs['Metallic'].default_value = 0.65 if name in {'GhostIron', 'GhostBrass'} else 0.0
+        bsdf.inputs['Metallic'].default_value = 0.65 if name in {'GhostIron', 'GhostBrass', 'GhostBoxCase'} else 0.0
         noise = tree.nodes.new('ShaderNodeTexNoise')
         noise.inputs['Scale'].default_value = 9.0
         noise.inputs['Detail'].default_value = 5.0
@@ -63,6 +69,13 @@ def start_scene():
             ramp.color_ramp.elements[1].position=.68
             rust=ramp.color_ramp.elements.new(.79)
             rust.color=(.12,.037,.012,1)
+        if name in FINE_GRAIN:
+            noise.inputs['Scale'].default_value = 34.0
+            noise.inputs['Detail'].default_value = 10.0
+            ramp.color_ramp.elements[0].position = 0.36
+            ramp.color_ramp.elements[1].position = 0.60
+            wear = ramp.color_ramp.elements.new(0.66)
+            wear.color = (.20,.11,.05,1) if name=='GhostBoxCase' else (.05,.04,.03,1)
         tree.links.new(noise.outputs['Fac'], ramp.inputs[0])
         tree.links.new(ramp.outputs['Color'], bsdf.inputs['Base Color'])
         mat.diffuse_color = (*light, 1.0)
@@ -70,6 +83,7 @@ def start_scene():
     glow_material('GhostEctoplasm', (0.25, 0.95, 0.38, 0.9), 1.3)
     glow_material('GhostCrystal', (0.47, 0.88, 0.59, 0.70), 0.35)
     glow_material('GhostCrystalCore', (0.76, 1.0, 0.82, 1.0), 1.8)
+    glow_material('GhostBoxGlow', (0.32, 1.0, 0.45, 1.0), 2.2)
     # The exported lamps share one two-colour animated texture; UV halves select red or green.
     mat = bpy.data.materials.new('GhostLamps')
     mat.use_nodes = True
@@ -443,15 +457,36 @@ def gauges():
 
 # Form the small locking capture box with a real visible hinge, latch and green slit.
 def ghost_box():
-    box('Riveted box case',(0,0,.085),(.24,.23,.17),'GhostIron',.012)
-    box('Hinged iron lid',(0,0,.18),(.25,.25,.035),'GhostIron',.009)
+    # Light gunmetal case and lid; the fit shrinks the whole design to the hand size of SPECS.
+    box('Riveted box case',(0,0,.085),(.24,.20,.17),'GhostBoxCase',.012)
+    box('Hinged lid',(0,0,.182),(.25,.21,.03),'GhostBoxCase',.009)
+    # Glowing green containment windows on front and back show where the ghost goes.
+    for y in (-.101,.101):
+        box('Green containment window',(0,y,.115),(.15,.008,.042),'GhostBoxGlow',.003)
+        for x in (-.083,.083):
+            box('Window frame post',(x,y*1.02,.115),(.014,.008,.054),'GhostBrass',.002)
+    # Ochre and dark warning band around the lower case: the box reads as a trap that must not be opened.
+    for y in (-.101,.101):
+        for i in range(6):
+            box('Warning stripe',(-.10+i*.04,y,.045),(.02,.007,.026),'GhostBoxHazard',.002)
+    for x in (-.121,.121):
+        for i in range(5):
+            box('Side warning stripe',(x,-.08+i*.04,.045),(.007,.02,.026),'GhostBoxHazard',.002)
+    # Brass corner guards, latch and lid rivets.
+    for x in (-.12,.12):
+        for y in (-.10,.10):
+            rod('Brass corner guard',(x,y,.004),(x,y,.172),.012,'GhostBrass',10)
+    box('Locking latch',(0,.108,.165),(.035,.012,.04),'GhostBrass',.003)
     for x in (-.075,.075):
-        rod('Rear hinge pin',(x-.025,-.12,.17),(x+.025,-.12,.17),.013,'GhostBrass',10)
-    box('Green containment slit',(0,.121,.10),(.14,.008,.022),'GhostWindow',.003)
-    box('Locking latch',(0,.129,.155),(.035,.015,.055),'GhostBrass',.003)
-    for x in (-.095,.095):
+        rod('Rear hinge pin',(x-.025,-.108,.17),(x+.025,-.108,.17),.011,'GhostBrass',10)
+    for x in (-.10,.10):
         for y in (-.08,.08):
-            rod('Box lid rivet',(x,y,.192),(x,y,.200),.008,'GhostBrass',8)
+            rod('Box lid rivet',(x,y,.196),(x,y,.203),.008,'GhostBrass',8)
+    # Carrying handle on the lid for the hunter's grip, and a green charge lamp beside it.
+    for x in (-.06,.06):
+        rod('Handle post',(x,0,.196),(x,0,.236),.010,'GhostBrass',10)
+    rod('Handle grip',(-.07,0,.236),(.07,0,.236),.013,'GhostBoxCase',12)
+    rod('Charge lamp',(.09,.065,.196),(.09,.065,.212),.016,'GhostBoxGlow',12)
 
 
 # Shape a jagged pale-green crystal and its luminous inner core.
