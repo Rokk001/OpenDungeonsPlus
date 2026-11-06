@@ -928,7 +928,7 @@ public:
 
     //! \brief Drops a hunter's boxed ghosts and releases its equipment without removing queued actions.
     void interruptGhostHunt();
-    //! rief Decision 658: a creature never stands on a wall. Server only. When the creature is found on a full tile (a
+    //! brief Decision 658: a creature never stands on a wall. Server only. When the creature is found on a full tile (a
     //! wall) it is put on the nearest floor tile it can walk on, its path is dropped and the clients are told.
     //! eturn true when the creature was moved
     bool keepOffWalls();
