@@ -25,8 +25,16 @@ The run passes only when, with the same rules as check_relationship_state_load_h
 The original save is never opened for writing; the check works on a copy. It refuses to run while another
 opendungeons-plus.exe is running, so a game the owner is playing is never touched.
 
+The hello message carries the build version, so --version is required: it must be the version of the executable
+(OD_VERSION = MAJOR.MINOR.PATCH.BUILD_NUMBER, for example 0.7.4.44 for build number 44). It is not guessed or
+hard-coded here; a wrong value is refused by the server (wire check in ODServer.cpp).
+
+Without --exe the check runs only the static part: the protocol enum names and the wire suffix must exist in the
+sources. The normal runner (check_relationship_state_load_headless.py, no arguments) calls static_protocol_check().
+
 Usage:
-  check_relationship_state_seats_runtime.py --exe PATH [--save PATH] [--seconds 30] [--port 31231] [--version 0.7.4.44]
+  check_relationship_state_seats_runtime.py --exe PATH --version X.Y.Z.N [--save PATH] [--seconds 30] [--port 31231]
+  check_relationship_state_seats_runtime.py                       (static part only)
 """
 import argparse
 import glob
@@ -66,6 +74,21 @@ SERVER_TYPES = enum_values("ServerNotification.h", "ServerNotificationType")
 
 def client_type(name):
     return CLIENT_TYPES.index(name)
+
+
+def static_protocol_check():
+    """Returns failures when the messages or the wire suffix used below are not in the sources (no game needed)."""
+    failures = []
+    for name in ("hello", "levelOK", "setNick", "readyForSeatConfiguration", "seatConfigurationSet"):
+        if name not in CLIENT_TYPES:
+            failures.append("client message %s is not in ClientNotification.h" % name)
+    for name in ("loadLevel", "pickNick", "clientAccepted", "clientRejected"):
+        if name not in SERVER_TYPES:
+            failures.append("server message %s is not in ServerNotification.h" % name)
+    protocol = (SRC / "network" / "ODPacket.h").read_text(encoding="utf-8", errors="replace")
+    if 'WIRE_SCHEMA_SUFFIX = "' + WIRE_SUFFIX + '"' not in protocol:
+        failures.append("the wire suffix in ODPacket.h is not '%s'" % WIRE_SUFFIX)
+    return failures
 
 
 def server_type_name(value):
@@ -180,7 +203,8 @@ def runtime_check(exe, save, seconds, names, is_fixture, port, version):
 
     process = subprocess.Popen([str(exe), "--appData", str(appdata), "--port", str(port),
                                 "--serversave", save.name],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               cwd=str(exe.parent))  # the game reads ./config and ./assets from its own folder
     failures = []
     received = []
     sock = connect(port, time.time() + 60, process)
@@ -226,23 +250,41 @@ def runtime_check(exe, save, seconds, names, is_fixture, port, version):
     return failures, received, restored
 
 
+DEFAULT_PORT = 31231
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--exe", required=True, help="the game executable")
+    parser.add_argument("--exe", default=None, help="the game executable; without it only the static part runs")
     parser.add_argument("--save", default=str(load.FIXTURE),
                         help="the save with RelationshipState lines naming existing creatures")
     parser.add_argument("--seconds", type=int, default=30, help="how long the server must stay alive")
-    parser.add_argument("--port", type=int, default=31231,
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT,
                         help="network port for this run (not the default, so an open game is not used)")
-    parser.add_argument("--version", default="0.7.4.44",
-                        help="the build version of the executable (ODApplication::VERSION, CMake OD_VERSION)")
+    parser.add_argument("--version", default=None,
+                        help="the build version of the executable, required with --exe (for example 0.7.4.44)")
     args = parser.parse_args()
 
-    save = Path(args.save)
+    failures = static_protocol_check()
+    for failure in failures:
+        print("FAILED static: " + failure)
+    if failures:
+        return 1
+    if args.exe is None:
+        print("relationship state seats protocol static check: OK; runtime not run (no --exe)")
+        return 0
+    if args.version is None:
+        print("ERROR: --version is required with --exe (the build version, for example 0.7.4.44)")
+        return 2
+    return run_with_exe(args.exe, args.save, args.seconds, args.port, args.version)
+
+
+def run_with_exe(exe_arg, save_arg, seconds, port, version):
+    save = Path(save_arg)
     if not save.is_file():
         print("ERROR: the save does not exist: %s" % save)
         return 2
-    exe = Path(args.exe)
+    exe = Path(exe_arg).resolve()
     if not exe.is_file():
         print("ERROR: the executable does not exist: %s" % exe)
         return 2
@@ -257,7 +299,7 @@ def main():
     if failures:
         return 1
 
-    result = runtime_check(exe, save, args.seconds, names, is_fixture, args.port, args.version)
+    result = runtime_check(exe, save, seconds, names, is_fixture, port, version)
     if result is None:
         return 2
     runtime, received, restored = result
@@ -269,7 +311,7 @@ def main():
     if runtime:
         return 1
     print("relationship state load with configured seats: OK (%d creatures restored, listening, alive for %d s)"
-          % (len(names), args.seconds))
+          % (len(names), seconds))
     return 0
 
 
