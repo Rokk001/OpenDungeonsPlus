@@ -177,7 +177,8 @@ social_layout = (repo / 'gui/WindowSocial.layout').read_text()
 book = ET.fromstring(social_layout).find('Window')
 size = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', social_layout)
 book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])
-assert (book_w, book_h) == (860, 620), (book_w, book_h)
+# 880x644 since the ornate frame and the 20 point title of decision 710 (860x620 before): the pages keep their room
+assert (book_w, book_h) == (880, 644), (book_w, book_h)
 assert not (repo / 'gui/WindowDungeonbookProfile.layout').exists(), 'the old profile page with its buttons is gone'
 for old in ('Attributes', 'Social profile', 'Statistics', 'Back', 'Show: all creatures', 'Posts of: everyone'):
     assert 'name="Text" value="%s"' % old not in social_layout, 'old button ' + old
@@ -187,7 +188,7 @@ for old in ('FilterButton', 'FeedTab', 'ProfileTab', 'FeedModeButton', 'Creature
 assert 'type="OD/Listbox"' not in social_layout
 
 font_files = {}
-for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10'):
+for name in ('MedievalSharp-6', 'MedievalSharp-8', 'MedievalSharp-10', 'MedievalSharp-20'):
     spec = ET.parse(repo / 'gui/fonts' / (name + '.font')).getroot()
     font_files[name] = (ImageFont.truetype(str(repo / 'gui/fonts' / spec.get('filename')), 1024),
                         float(spec.get('size')) * (96.0 / 72.0) * (1024.0 / 800.0) / 1024.0)
@@ -205,7 +206,13 @@ def line_height(font):
 
 
 CLIENT_W, CLIENT_H = 828.0, 560.0
-FRAME = 16.0  # side and bottom edge of the light frame, design pixels (the painted edge is narrower)
+# The book has its own ornate iron frame (DungeonbookIcons/BookFrame*, imageset auto scaled 'min' from 3840x2160):
+# its side and bottom edges are FRAME_PX image pixels, scaled with the display only (not with the UI scale)
+book_images = ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot()
+assert (book_images.get('autoScaled'), book_images.get('nativeHorzRes'), book_images.get('nativeVertRes')) == ('min', '3840', '2160')
+FRAME_PX = max(float(book_images.find("Image[@name='BookFrame%s']" % n).get(d))
+               for n, d in (('Left', 'width'), ('Right', 'width'), ('Bottom', 'height')))
+assert book.find("Property[@name='FrameLeftImage']").get('value') == 'DungeonbookIcons/BookFrameLeft'
 
 
 def collect_boxes(element, box, path, out):
@@ -351,7 +358,8 @@ assert 'compact ? PROFILE_ROW_GAP' in body
 # Sizes. Fonts and layout scale by the same factor from the display and the UI scale (the line heights in design
 # pixels do not depend on the resolution); Gui::getWindowFitFactor shrinks a window larger than the screen together
 # with its children but not the fonts, so the texts are compared with the shrunk boxes.
-TITLE_LINE = line_height('MedievalSharp-10')
+assert book.find("Property[@name='TitlebarFont']").get('value') == 'MedievalSharp-20'
+TITLE_LINE = line_height('MedievalSharp-20')
 need = {}
 
 
@@ -412,8 +420,9 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
         win_w, win_h = book_w * fit, book_h * fit  # design pixels after the fit, fonts unchanged
         assert win_w * scale <= screen_w + 1e-6 and win_h * scale <= screen_h + 1e-6, 'the book is larger than the screen'
         # the title bar is one line of the title font plus 12 screen pixels; the frame takes its edges
-        client_w = win_w - 2 * FRAME * fit
-        client_h = win_h - (TITLE_LINE + 12.0 / scale) - FRAME * fit
+        frame = FRAME_PX * min(screen_w / 3840.0, screen_h / 2160.0) / scale
+        client_w = win_w - 2 * frame
+        client_h = win_h - (TITLE_LINE + 12.0 / scale) - frame
         tightest = {}
         for name, (font, lines, texts, pad_w, pad_h) in need.items():
             box = boxes[name][0]

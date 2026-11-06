@@ -1,10 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
     <Window type="OD/FrameWindow" name="SocialWindow">
-        <Property name="Area" value="{{0.5,-430},{0.5,-310},{0.5,430},{0.5,310}}" />
+        <!-- The ornate iron frame and the large centred title of the concepts (book-variant-2.png,
+             book-switch-variant-1.png); only this window, every other window keeps the shared frame -->
+        <Property name="TitlebarFont" value="MedievalSharp-20" />
+        <Property name="FrameTopLeftImage" value="DungeonbookIcons/BookFrameTopLeft" />
+        <Property name="FrameTopRightImage" value="DungeonbookIcons/BookFrameTopRight" />
+        <Property name="FrameBottomLeftImage" value="DungeonbookIcons/BookFrameBottomLeft" />
+        <Property name="FrameBottomRightImage" value="DungeonbookIcons/BookFrameBottomRight" />
+        <Property name="FrameTopImage" value="DungeonbookIcons/BookFrameTop" />
+        <Property name="FrameLeftImage" value="DungeonbookIcons/BookFrameLeft" />
+        <Property name="FrameRightImage" value="DungeonbookIcons/BookFrameRight" />
+        <Property name="FrameBottomImage" value="DungeonbookIcons/BookFrameBottom" />
+        <Property name="Area" value="{{0.5,-440},{0.5,-322},{0.5,440},{0.5,322}}" />
         <Property name="Text" value="Dungeonbook" />
         <Property name="SizingEnabled" value="False" />
         <Property name="Visible" value="False" />
+        <AutoWindow namePath="__auto_titlebar__">
+            <Property name="TitleTopLeftImage" value="DungeonbookIcons/BookFrameTopLeft" />
+            <Property name="TitleTopRightImage" value="DungeonbookIcons/BookFrameTopRight" />
+            <Property name="TitleTopImage" value="DungeonbookIcons/BookFrameTop" />
+            <Property name="TitleLeftImage" value="DungeonbookIcons/BookFrameLeft" />
+            <Property name="TitleRightImage" value="DungeonbookIcons/BookFrameRight" />
+            <Property name="TitleRuleImage" value="DungeonbookIcons/BookTitleRule" />
+            <Property name="CaptionHorzFormatting" value="CentreAligned" />
+            <Property name="CaptionCentred" value="True" />
+        </AutoWindow>
         <Window type="DefaultWindow" name="HomePage">
             <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9143,0}}" />
             <Window type="OD/StaticText" name="CreaturesLabel">
@@ -624,15 +645,19 @@
                         <Property name="BackgroundEnabled" value="True" />
                         <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                         <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                        <Window type="OD/StaticImage" name="Image">
-                            <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                            <Property name="FrameEnabled" value="False" />
-                            <Property name="BackgroundEnabled" value="False" />
-                            <Property name="AspectMode" value="Shrink" />
-                            <Property name="AspectRatio" value="1" />
-                            <Property name="HorizontalAlignment" value="Centre" />
-                            <Property name="VerticalAlignment" value="Centre" />
+                        <Window type="DefaultWindow" name="Clip">
+                            <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                             <Property name="MousePassThroughEnabled" value="True" />
+                            <Window type="OD/StaticImage" name="Image">
+                                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                                <Property name="FrameEnabled" value="False" />
+                                <Property name="BackgroundEnabled" value="False" />
+                                <Property name="AspectMode" value="Expand" />
+                                <Property name="AspectRatio" value="2" />
+                                <Property name="HorizontalAlignment" value="Centre" />
+                                <Property name="VerticalAlignment" value="Centre" />
+                                <Property name="MousePassThroughEnabled" value="True" />
+                            </Window>
                         </Window>
                     </Window>
                 </Window>
@@ -681,15 +706,19 @@
                         <Property name="BackgroundEnabled" value="True" />
                         <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                         <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                        <Window type="OD/StaticImage" name="Image">
-                            <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                            <Property name="FrameEnabled" value="False" />
-                            <Property name="BackgroundEnabled" value="False" />
-                            <Property name="AspectMode" value="Shrink" />
-                            <Property name="AspectRatio" value="1" />
-                            <Property name="HorizontalAlignment" value="Centre" />
-                            <Property name="VerticalAlignment" value="Centre" />
+                        <Window type="DefaultWindow" name="Clip">
+                            <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                             <Property name="MousePassThroughEnabled" value="True" />
+                            <Window type="OD/StaticImage" name="Image">
+                                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                                <Property name="FrameEnabled" value="False" />
+                                <Property name="BackgroundEnabled" value="False" />
+                                <Property name="AspectMode" value="Expand" />
+                                <Property name="AspectRatio" value="2" />
+                                <Property name="HorizontalAlignment" value="Centre" />
+                                <Property name="VerticalAlignment" value="Centre" />
+                                <Property name="MousePassThroughEnabled" value="True" />
+                            </Window>
                         </Window>
                     </Window>
                 </Window>
@@ -738,15 +767,19 @@
                         <Property name="BackgroundEnabled" value="True" />
                         <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                         <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                        <Window type="OD/StaticImage" name="Image">
-                            <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                            <Property name="FrameEnabled" value="False" />
-                            <Property name="BackgroundEnabled" value="False" />
-                            <Property name="AspectMode" value="Shrink" />
-                            <Property name="AspectRatio" value="1" />
-                            <Property name="HorizontalAlignment" value="Centre" />
-                            <Property name="VerticalAlignment" value="Centre" />
+                        <Window type="DefaultWindow" name="Clip">
+                            <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                             <Property name="MousePassThroughEnabled" value="True" />
+                            <Window type="OD/StaticImage" name="Image">
+                                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                                <Property name="FrameEnabled" value="False" />
+                                <Property name="BackgroundEnabled" value="False" />
+                                <Property name="AspectMode" value="Expand" />
+                                <Property name="AspectRatio" value="2" />
+                                <Property name="HorizontalAlignment" value="Centre" />
+                                <Property name="VerticalAlignment" value="Centre" />
+                                <Property name="MousePassThroughEnabled" value="True" />
+                            </Window>
                         </Window>
                     </Window>
                 </Window>
@@ -831,15 +864,19 @@
                         <Property name="BackgroundEnabled" value="True" />
                         <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                         <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                        <Window type="OD/StaticImage" name="Image">
-                            <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                            <Property name="FrameEnabled" value="False" />
-                            <Property name="BackgroundEnabled" value="False" />
-                            <Property name="AspectMode" value="Shrink" />
-                            <Property name="AspectRatio" value="1" />
-                            <Property name="HorizontalAlignment" value="Centre" />
-                            <Property name="VerticalAlignment" value="Centre" />
+                        <Window type="DefaultWindow" name="Clip">
+                            <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                             <Property name="MousePassThroughEnabled" value="True" />
+                            <Window type="OD/StaticImage" name="Image">
+                                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                                <Property name="FrameEnabled" value="False" />
+                                <Property name="BackgroundEnabled" value="False" />
+                                <Property name="AspectMode" value="Expand" />
+                                <Property name="AspectRatio" value="2" />
+                                <Property name="HorizontalAlignment" value="Centre" />
+                                <Property name="VerticalAlignment" value="Centre" />
+                                <Property name="MousePassThroughEnabled" value="True" />
+                            </Window>
                         </Window>
                     </Window>
                 </Window>
@@ -888,15 +925,19 @@
                         <Property name="BackgroundEnabled" value="True" />
                         <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                         <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                        <Window type="OD/StaticImage" name="Image">
-                            <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                            <Property name="FrameEnabled" value="False" />
-                            <Property name="BackgroundEnabled" value="False" />
-                            <Property name="AspectMode" value="Shrink" />
-                            <Property name="AspectRatio" value="1" />
-                            <Property name="HorizontalAlignment" value="Centre" />
-                            <Property name="VerticalAlignment" value="Centre" />
+                        <Window type="DefaultWindow" name="Clip">
+                            <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                             <Property name="MousePassThroughEnabled" value="True" />
+                            <Window type="OD/StaticImage" name="Image">
+                                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                                <Property name="FrameEnabled" value="False" />
+                                <Property name="BackgroundEnabled" value="False" />
+                                <Property name="AspectMode" value="Expand" />
+                                <Property name="AspectRatio" value="2" />
+                                <Property name="HorizontalAlignment" value="Centre" />
+                                <Property name="VerticalAlignment" value="Centre" />
+                                <Property name="MousePassThroughEnabled" value="True" />
+                            </Window>
                         </Window>
                     </Window>
                 </Window>
@@ -945,15 +986,19 @@
                         <Property name="BackgroundEnabled" value="True" />
                         <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                         <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                        <Window type="OD/StaticImage" name="Image">
-                            <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                            <Property name="FrameEnabled" value="False" />
-                            <Property name="BackgroundEnabled" value="False" />
-                            <Property name="AspectMode" value="Shrink" />
-                            <Property name="AspectRatio" value="1" />
-                            <Property name="HorizontalAlignment" value="Centre" />
-                            <Property name="VerticalAlignment" value="Centre" />
+                        <Window type="DefaultWindow" name="Clip">
+                            <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                             <Property name="MousePassThroughEnabled" value="True" />
+                            <Window type="OD/StaticImage" name="Image">
+                                <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                                <Property name="FrameEnabled" value="False" />
+                                <Property name="BackgroundEnabled" value="False" />
+                                <Property name="AspectMode" value="Expand" />
+                                <Property name="AspectRatio" value="2" />
+                                <Property name="HorizontalAlignment" value="Centre" />
+                                <Property name="VerticalAlignment" value="Centre" />
+                                <Property name="MousePassThroughEnabled" value="True" />
+                            </Window>
                         </Window>
                     </Window>
                 </Window>
@@ -1056,15 +1101,19 @@
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                <Window type="OD/StaticImage" name="Image">
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                    <Property name="FrameEnabled" value="False" />
-                    <Property name="BackgroundEnabled" value="False" />
-                    <Property name="AspectMode" value="Shrink" />
-                    <Property name="AspectRatio" value="1" />
-                    <Property name="HorizontalAlignment" value="Centre" />
-                    <Property name="VerticalAlignment" value="Centre" />
+                <Window type="DefaultWindow" name="Clip">
+                    <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
+                    <Window type="OD/StaticImage" name="Image">
+                        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="AspectMode" value="Expand" />
+                        <Property name="AspectRatio" value="2" />
+                        <Property name="HorizontalAlignment" value="Centre" />
+                        <Property name="VerticalAlignment" value="Centre" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb1">
@@ -1073,15 +1122,19 @@
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                <Window type="OD/StaticImage" name="Image">
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                    <Property name="FrameEnabled" value="False" />
-                    <Property name="BackgroundEnabled" value="False" />
-                    <Property name="AspectMode" value="Shrink" />
-                    <Property name="AspectRatio" value="1" />
-                    <Property name="HorizontalAlignment" value="Centre" />
-                    <Property name="VerticalAlignment" value="Centre" />
+                <Window type="DefaultWindow" name="Clip">
+                    <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
+                    <Window type="OD/StaticImage" name="Image">
+                        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="AspectMode" value="Expand" />
+                        <Property name="AspectRatio" value="2" />
+                        <Property name="HorizontalAlignment" value="Centre" />
+                        <Property name="VerticalAlignment" value="Centre" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb2">
@@ -1090,15 +1143,19 @@
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                <Window type="OD/StaticImage" name="Image">
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                    <Property name="FrameEnabled" value="False" />
-                    <Property name="BackgroundEnabled" value="False" />
-                    <Property name="AspectMode" value="Shrink" />
-                    <Property name="AspectRatio" value="1" />
-                    <Property name="HorizontalAlignment" value="Centre" />
-                    <Property name="VerticalAlignment" value="Centre" />
+                <Window type="DefaultWindow" name="Clip">
+                    <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
+                    <Window type="OD/StaticImage" name="Image">
+                        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="AspectMode" value="Expand" />
+                        <Property name="AspectRatio" value="2" />
+                        <Property name="HorizontalAlignment" value="Centre" />
+                        <Property name="VerticalAlignment" value="Centre" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb3">
@@ -1107,15 +1164,19 @@
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                <Window type="OD/StaticImage" name="Image">
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                    <Property name="FrameEnabled" value="False" />
-                    <Property name="BackgroundEnabled" value="False" />
-                    <Property name="AspectMode" value="Shrink" />
-                    <Property name="AspectRatio" value="1" />
-                    <Property name="HorizontalAlignment" value="Centre" />
-                    <Property name="VerticalAlignment" value="Centre" />
+                <Window type="DefaultWindow" name="Clip">
+                    <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
+                    <Window type="OD/StaticImage" name="Image">
+                        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="AspectMode" value="Expand" />
+                        <Property name="AspectRatio" value="2" />
+                        <Property name="HorizontalAlignment" value="Centre" />
+                        <Property name="VerticalAlignment" value="Centre" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb4">
@@ -1124,15 +1185,19 @@
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                <Window type="OD/StaticImage" name="Image">
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                    <Property name="FrameEnabled" value="False" />
-                    <Property name="BackgroundEnabled" value="False" />
-                    <Property name="AspectMode" value="Shrink" />
-                    <Property name="AspectRatio" value="1" />
-                    <Property name="HorizontalAlignment" value="Centre" />
-                    <Property name="VerticalAlignment" value="Centre" />
+                <Window type="DefaultWindow" name="Clip">
+                    <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
+                    <Window type="OD/StaticImage" name="Image">
+                        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="AspectMode" value="Expand" />
+                        <Property name="AspectRatio" value="2" />
+                        <Property name="HorizontalAlignment" value="Centre" />
+                        <Property name="VerticalAlignment" value="Centre" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb5">
@@ -1141,15 +1206,19 @@
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
-                <Window type="OD/StaticImage" name="Image">
-                    <Property name="Area" value="{{0,0},{0,0},{1,0},{0.9,0}}" />
-                    <Property name="FrameEnabled" value="False" />
-                    <Property name="BackgroundEnabled" value="False" />
-                    <Property name="AspectMode" value="Shrink" />
-                    <Property name="AspectRatio" value="1" />
-                    <Property name="HorizontalAlignment" value="Centre" />
-                    <Property name="VerticalAlignment" value="Centre" />
+                <Window type="DefaultWindow" name="Clip">
+                    <Property name="Area" value="{{0.01,0},{0.03,0},{0.99,0},{0.97,0}}" />
                     <Property name="MousePassThroughEnabled" value="True" />
+                    <Window type="OD/StaticImage" name="Image">
+                        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                        <Property name="FrameEnabled" value="False" />
+                        <Property name="BackgroundEnabled" value="False" />
+                        <Property name="AspectMode" value="Expand" />
+                        <Property name="AspectRatio" value="2" />
+                        <Property name="HorizontalAlignment" value="Centre" />
+                        <Property name="VerticalAlignment" value="Centre" />
+                        <Property name="MousePassThroughEnabled" value="True" />
+                    </Window>
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostsEmpty">

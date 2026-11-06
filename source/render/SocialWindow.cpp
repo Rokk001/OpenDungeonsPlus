@@ -146,106 +146,139 @@ std::string renderPostText(const social::Post& post, const social::CreatureProfi
         post.mCategory >= social::PostCategory::Bought ? post.mOther : "");
 }
 
-//! \brief Name of the HUD picture of a room type in the OpenDungeonsIcons imageset, empty if the room has none.
+//! \brief Name of the painted scene (DungeonbookIcons/Post...) of the room of a post: the place where the creature
+//! worked, trained or wants to go. Empty if the room has no scene of its own.
 std::string roomPictureName(int32_t roomType)
 {
     switch(static_cast<RoomType>(roomType))
     {
-        case RoomType::dungeonTemple: return "TempleButton";
-        case RoomType::dormitory: return "DormitoryButton";
-        case RoomType::treasury: return "TreasuryButton";
-        case RoomType::portal:
-        case RoomType::portalWave: return "PortalButton";
-        case RoomType::workshop: return "WorkshopButton";
-        case RoomType::trainingHall: return "TrainingHallButton";
-        case RoomType::library: return "LibraryButton";
-        case RoomType::hatchery: return "HatcheryButton";
-        case RoomType::crypt: return "CryptButton";
-        case RoomType::prison: return "PrisonButton";
-        case RoomType::bridgeWooden: return "WoodenBridgeButton";
-        case RoomType::bridgeStone: return "StoneBridgeButton";
-        case RoomType::arena: return "ArenaButton";
-        case RoomType::casino: return "CasinoButton";
-        case RoomType::torture: return "TortureButton";
-        case RoomType::guardRoom: return "GuardRoomButton";
-        case RoomType::temple: return "PrayerTempleButton";
-        case RoomType::toilet: return "ToiletButton";
-        case RoomType::merchant: return "MerchantButton";
-        case RoomType::herbGarden: return "HerbGardenButton";
-        case RoomType::alchemyLab: return "AlchemyLabButton";
-        case RoomType::tavern: return "TavernButton";
-        case RoomType::infirmary: return "InfirmaryButton";
-        case RoomType::ghostRoom: return "GhostRoomButton";
-        case RoomType::spa: return "SpaButton";
+        case RoomType::dungeonTemple: return "PostTemple";
+        case RoomType::temple: return "PostTemple";
+        case RoomType::dormitory: return "PostSleep";
+        case RoomType::treasury: return "PostGold";
+        case RoomType::casino: return "PostGold";
+        case RoomType::portal: return "PostPortal";
+        case RoomType::portalWave: return "PostPortal";
+        case RoomType::workshop: return "PostWorkshop";
+        case RoomType::trainingHall: return "PostTrain";
+        case RoomType::library: return "PostLibrary";
+        case RoomType::hatchery: return "PostFood";
+        case RoomType::crypt: return "PostDied";
+        case RoomType::prison: return "PostJail";
+        case RoomType::torture: return "PostJail";
+        case RoomType::bridgeWooden: return "PostDig";
+        case RoomType::bridgeStone: return "PostDig";
+        case RoomType::arena: return "PostFight";
+        case RoomType::guardRoom: return "PostFight";
+        case RoomType::toilet: return "PostToilet";
+        case RoomType::merchant: return "PostMerchant";
+        case RoomType::herbGarden: return "PostPotion";
+        case RoomType::alchemyLab: return "PostPotion";
+        case RoomType::tavern: return "PostTavern";
+        case RoomType::infirmary: return "PostHurt";
+        case RoomType::ghostRoom: return "PostGhost";
+        case RoomType::spa: return "PostSpa";
         default: return "";
     }
 }
 
-//! \brief Name of the game picture (OpenDungeonsIcons) of what the post is about: the room of a work, training or
-//! wish post, the room or the thing of a meal, a night, a payday, a drink, a purchase and so on. Empty when the post
-//! is about the creature itself (level up, hurt, friendship, ...); the book shows the portrait of the creature then.
+//! \brief Name of the painted scene (DungeonbookIcons/Post...) that shows what the post is about, as the pictures
+//! of the posts in book-switch-variant-1: a mine for digging, a treasure chest for gold, a crawler fight for fights,
+//! a golden arrow for a level up, a sack and meat for hunger, and so on. Work, training and wish posts show the
+//! scene of their room. Every category has a scene, so two posts of different kinds never share a picture.
 std::string postPictureName(const social::Post& post)
 {
     using social::PostCategory;
     switch(post.mCategory)
     {
         case PostCategory::Work:
-        case PostCategory::Wish:
-        case PostCategory::ThanksWish:
-            return roomPictureName(post.mArgument);
+        case PostCategory::ThanksWork:
+        {
+            const std::string room = roomPictureName(post.mArgument);
+            return room.empty() ? "PostDig" : room;
+        }
         case PostCategory::Train:
         {
             const std::string room = roomPictureName(post.mArgument);
-            return room.empty() ? "TrainingHallButton" : room;
+            return room.empty() ? "PostTrain" : room;
+        }
+        case PostCategory::Wish:
+        case PostCategory::ThanksWish:
+        {
+            const std::string room = roomPictureName(post.mArgument);
+            return room.empty() ? "PostUnhappy" : room;
         }
         case PostCategory::Eat:
         case PostCategory::ComplainHungry:
         case PostCategory::ThanksHungry:
-            return "HatcheryButton";
+            return "PostFood";
         case PostCategory::Sleep:
         case PostCategory::ComplainBed:
         case PostCategory::ThanksBed:
         case PostCategory::ComplainTired:
         case PostCategory::ThanksTired:
-            return "DormitoryButton";
+            return "PostSleep";
         case PostCategory::Payday:
         case PostCategory::ComplainWage:
         case PostCategory::ThanksWage:
-            return "GoldCoin";
+            return "PostGold";
         case PostCategory::Fight:
         case PostCategory::ComplainFight:
         case PostCategory::ThanksFight:
-            return "FighterButton";
+            return "PostFight";
+        case PostCategory::Hurt:
+        case PostCategory::Ko:
+        case PostCategory::ComplainWounded:
+        case PostCategory::ThanksWounded:
+            return "PostHurt";
+        case PostCategory::LevelUp:
+            return "PostLevelUp";
+        case PostCategory::Unhappy:
+        case PostCategory::ComplainWork:
+            return "PostUnhappy";
+        case PostCategory::Died:
+            return "PostDied";
         case PostCategory::Jail:
-            return "PrisonButton";
+            return "PostJail";
         case PostCategory::PickedUp:
         case PostCategory::ComplainHeld:
         case PostCategory::ThanksHeld:
-            return "WorkerHandActive";
+            return "PostHand";
         case PostCategory::Arrived:
-            return "PortalButton";
+        case PostCategory::Left:
+            return "PostPortal";
+        case PostCategory::Friendship:
+        case PostCategory::Converted:
+        case PostCategory::Couple:
+            return "PostFriends";
+        case PostCategory::Hatred:
+        case PostCategory::Nemesis:
+        case PostCategory::Breakup:
+        case PostCategory::SplitUp:
+            return "PostHatred";
         case PostCategory::Relieved:
-            return "ToiletButton";
+        case PostCategory::Filthy:
+            return "PostToilet";
         case PostCategory::Bought:
         case PostCategory::Bargain:
         case PostCategory::Fleeced:
-            return "MerchantButton";
+            return "PostMerchant";
         case PostCategory::Gift:
-            return "WorkerCarryGift";
+        case PostCategory::EpicFind:
+            return "PostGift";
         case PostCategory::Drank:
         case PostCategory::ComplainThirsty:
         case PostCategory::ThanksThirsty:
-            return "BeerButton";
         case PostCategory::DuelWon:
         case PostCategory::DuelLost:
         case PostCategory::Drunk:
         case PostCategory::Hungover:
-            return "TavernButton";
+            return "PostTavern";
         case PostCategory::GhostScared:
         case PostCategory::GhostHunted:
-            return "GhostRoomButton";
+            return "PostGhost";
         case PostCategory::Relaxed:
-            return "SpaButton";
+            return "PostSpa";
         default:
             return "";
     }
@@ -826,11 +859,12 @@ const CEGUI::Image* SocialWindow::findPortrait(const std::string& creatureName, 
 
 const CEGUI::Image* SocialWindow::findPostPicture(const social::Post& post) const
 {
+    // The painted scene of the post kind (DungeonbookIcons/Post...), never the small HUD icon of a room
     const std::string name = postPictureName(post);
     CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
-    if(!name.empty() && images.isDefined("OpenDungeonsIcons/" + name))
-        return &images.get("OpenDungeonsIcons/" + name);
-    // Every post has a picture: without a room or a thing it is the portrait of the creature
+    if(!name.empty() && images.isDefined("DungeonbookIcons/" + name))
+        return &images.get("DungeonbookIcons/" + name);
+    // Every post has a picture: a post of an unknown kind shows the portrait of the creature
     return findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false);
 }
 
@@ -1046,9 +1080,9 @@ void SocialWindow::rebuildFeed()
         CEGUI::Window* textWindow = row->getChild("Text");
         fitTextToWindow(textWindow, FEED_TEXT_COLOUR, text);
         textWindow->setTooltipText(text);
-        // The game picture of the post below its text
+        // The painted scene of the post kind below its text, filling the frame like the concept
         CEGUI::Window* picture = row->getChild("Picture");
-        setImage(picture->getChild("Image"), findPostPicture(post));
+        setImage(picture->getChild("Clip/Image"), findPostPicture(post));
         picture->setTooltipText(text);
     }
     CEGUI::Window* empty = page->getChild("FeedEmpty");
@@ -1183,7 +1217,7 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
         {
             CEGUI::Window* thumb = page->getChild("PostThumb" + std::to_string(rows));
             thumb->setVisible(true);
-            setImage(thumb->getChild("Image"), findPostPicture(*it));
+            setImage(thumb->getChild("Clip/Image"), findPostPicture(*it));
             thumb->setTooltipText(text + "  (" + formatAge(turnNow - it->mTurn) + ")");
             ++rows;
         }

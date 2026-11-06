@@ -10,8 +10,8 @@ page) in G:/Moreya-Internal/medien/ingame-qs-8/m1/.
    the health and XP bars and the handle. The boxes below are computed WITH the CEGUI alignment rules.
    The left column holds only the portrait and the info text.
 3. Inventory: no slot (Left Hand and Armour included) touches the portrait.
-4. Feed: every post row of both feeds has a picture, filled with a real game picture (room or thing of the post from
-   the shipped OpenDungeonsIcons imageset) or else the portrait of the creature.
+4. Feed: every post row of both feeds has a picture: the painted scene of its post kind (DungeonbookIcons/Post*,
+   decision 710; check_dungeonbook_post_pictures.py checks the scenes), the portrait only for an unknown kind.
 5. Sizes: pictures, post thumbnails and portraits keep a readable size at 640x480, 1920x1200 and 7680x4320 with the UI
    scale 80 % and 120 % (check_dungeonbook_profile_layout.py measures the texts of all pages at the same sizes).
 """
@@ -112,7 +112,7 @@ assert boxes['ProfilePage/InfoText'][0][1] >= portrait[0][3] - 1e-9, 'the info t
 # Posts as pictures in two columns, three rows (book-variant-2)
 thumbs = [boxes['ProfilePage/PostThumb%d' % i][0] for i in range(6)]
 for i, a in enumerate(thumbs):
-    assert framed('ProfilePage/PostThumb%d' % i) and 'ProfilePage/PostThumb%d/Image' % i in boxes
+    assert framed('ProfilePage/PostThumb%d' % i) and 'ProfilePage/PostThumb%d/Clip/Image' % i in boxes
     for b in thumbs[i + 1:]:
         assert not overlaps(a, b), 'post pictures overlap'
 assert abs(thumbs[0][1] - thumbs[1][1]) < 1e-9 and thumbs[0][2] <= thumbs[1][0], 'two pictures per row'
@@ -146,19 +146,19 @@ for page in ('HomePage', 'FeedPage'):
     for row in range(3):
         base = '%s/FeedRows/Row%d' % (page, row)
         picture = boxes[base + '/Picture']
-        assert framed(base + '/Picture') and base + '/Picture/Image' in boxes, base
+        assert framed(base + '/Picture') and base + '/Picture/Clip/Image' in boxes, base
         assert picture[0][1] >= boxes[base + '/Text'][0][3] - 1e-9, 'the picture sits below the text'
         assert not overlaps(picture[0], boxes[base + '/Portrait'][0]), 'the picture leaves the portrait free'
         assert picture[0][3] <= boxes[base][0][3] + 1e-9, 'the picture stays inside its row'
 feed = social[social.index('void SocialWindow::rebuildFeed'):social.index('void SocialWindow::refreshPage')]
-assert 'setImage(picture->getChild("Image"), findPostPicture(post));' in feed
+assert 'setImage(picture->getChild("Clip/Image"), findPostPicture(post));' in feed
 assert 'const CEGUI::Image* findPostPicture(const social::Post& post) const;' in header
 finder = social[social.index('const CEGUI::Image* SocialWindow::findPostPicture'):]
 finder = finder[:finder.index('\n}\n')]
 assert 'return findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false);' in finder, \
-    'a post without a room or thing shows the portrait of the creature'
-assert 'images.isDefined("OpenDungeonsIcons/" + name)' in finder, 'only shipped pictures are used'
-icons = {i.get('name') for i in ET.parse(repo / 'gui/ODIcons.imageset').getroot().findall('Image')}
+    'a post of an unknown kind shows the portrait of the creature'
+assert 'images.isDefined("DungeonbookIcons/" + name)' in finder, 'only shipped pictures are used'
+icons = {i.get('name') for i in ET.parse(repo / 'gui/DungeonbookIcons.imageset').getroot().findall('Image')}
 pictures = social[social.index('std::string roomPictureName('):social.index('//! \\brief The text shortened')]
 used = set(re.findall(r'return "(\w+)";', pictures)) | set(re.findall(r'\? "(\w+)"', pictures))
 assert used, 'no pictures found'
@@ -171,12 +171,14 @@ for category in re.findall(r'PostCategory::(\w+):', pictures):
 rooms = (repo / 'source/rooms/RoomType.h').read_text()
 for room in re.findall(r'RoomType::(\w+):', pictures):
     assert re.search(r'\b%s\b' % room, rooms), room
-print('4. feed: every post row of both feeds has a picture (%d game pictures, portrait otherwise)' % len(used))
+print('4. feed: every post row of both feeds has a picture (%d painted post scenes, portrait otherwise)' % len(used))
 
 # 5. Sizes at 640x480, 1920x1200 and 8K, UI 80 % and 120 % (the window is 860x620 design pixels, fitted to the screen)
 size = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout_text)
 book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])
-CLIENT_W, CLIENT_H = book_w - 32.0, book_h - 52.0
+# Client: the ornate frame (at most 12 design px per edge) and the title band of the 20 point title (45 + 12 px),
+# decision 710; check_dungeonbook_profile_layout.py computes it per screen with the shipped font
+CLIENT_W, CLIENT_H = book_w - 24.0, book_h - 69.0
 for screen_w, screen_h in ((640, 480), (1920, 1200), (7680, 4320)):
     for user in (0.8, 1.2):
         scale = min(screen_w / 1024.0, screen_h / 768.0) * user
