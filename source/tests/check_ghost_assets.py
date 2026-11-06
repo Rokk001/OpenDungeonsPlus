@@ -214,6 +214,17 @@ def main():
             b'GrateGlow',b'FloorGlow',b'Puff1',b'Puff4',b'IdleGlow',b'IdleCore',b'IdleHalo',b'IdleGrate',b'IdleFloor',
             b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in forge_skeleton, bone
+    # Rework 3 (owner decision 697): clearly visible green light in Idle, brighter in Working, as on the press: the
+    # steady set (bone Light: crystals and face, grate, floor) in Working and Idle with GhostApparatusGlowIdle, Working
+    # adds GhostApparatusGlow; brighter crystals and idle cores.
+    for name in ('GhostApparatusGlow','GhostApparatusGlowIdle'):
+        assert name.encode()+b'\n' in forge_mesh, ('soul forge uses',name)
+    crystal_block = re.search(r'^material SoulForgeCrystal\s*\{(.*?)^\}',still_material,re.M|re.S)
+    emissive = [float(value) for value in re.search(r'emissive ([\d.]+) ([\d.]+) ([\d.]+)',crystal_block[1]).groups()]
+    assert emissive[1] >= 0.9, ('forge crystals too dim',emissive)
+    assert manual_tint('SoulForgeCoreDim')[1] >= 0.95, 'idle crystal cores too dim'
+    for bone in (b'Light',b'LightHalo',b'LightGrate',b'LightFloor'):
+        assert bone+b'\n' in forge_skeleton, bone
     # Ectoplasm item: its own static mesh replaces the cauldron fill placeholder (the cauldron keeps its fill level).
     credited('models/Ectoplasm.mesh',credits)
     assert (repo/'models/Ectoplasm.mesh').read_bytes()[2:20] == b'[MeshSerializer_v1', 'ectoplasm mesh'
