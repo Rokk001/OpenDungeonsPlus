@@ -27,6 +27,6 @@ limit = float(nav.split('WALL_MARGIN_LIMIT = ')[1].split('f;')[0])
 assert 0.0 < limit <= 0.5, limit  # tile centre lines (half a tile from every wall) always stay clear
 
 # (e) the green chain between hunter and ghost is the capture beam: only while the hunter has a beam target
-beam = creature.split('void Creature::updateGhostHuntVisuals')[1][:4000]
+beam = creature.split('void Creature::updateGhostHuntVisuals')[1][:12000]
 assert 'target==nullptr || mGhostBeamTarget.empty()' in beam and 'createBillboardChain' in beam
 print('ok')
