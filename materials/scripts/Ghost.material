@@ -100,6 +100,61 @@ material GhostGaugeFace
     }
 }
 
+// The hand-held capture box: light scratched gunmetal, worn ochre warning stripes and an opaque green window glow.
+material GhostBoxCase
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8
+            diffuse 1 1 1 1
+            specular 0.35 0.35 0.32 1 24
+            texture_unit
+            {
+                texture GhostBoxCase.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostBoxHazard
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8
+            diffuse 1 1 1 1
+            specular 0.1 0.1 0.08 1 8
+            texture_unit
+            {
+                texture GhostBoxHazard.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostBoxGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            ambient 0.32 1.0 0.45
+            diffuse 0.32 1.0 0.45 1
+            emissive 0.30 0.95 0.42
+        }
+    }
+}
+
 // The flowing noise and deliberately translucent colour replace the creature's own surfaces.
 material GhostGlow
 {
