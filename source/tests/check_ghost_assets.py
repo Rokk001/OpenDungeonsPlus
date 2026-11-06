@@ -73,12 +73,15 @@ def main():
     for name in ('ManaCrystal','ManaCrystalDull','ManaStillGlass','GhostEmbers','GhostCoal','GhostGlassDull','GhostCobweb'):
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     # Mana still rework after mockup A (owner decision 665): rusty iron, flickering embers, flowing coil, vapour, draped webs.
-    textures = ['ManaStillIron.png','ManaStillFlow.png','ManaStillGlowRamp.png','ManaStillWeb.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
+    # Rework 2 (owner decision 686): copper coil and the puff texture of the vapour plume and green glows.
+    textures = ['ManaStillIron.png','ManaStillFlow.png','ManaStillGlowRamp.png','ManaStillWeb.png','ManaStillCopper.png',
+        'ManaStillPuff.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
     for texture in textures:
         credited('materials/textures/'+texture,credits)
     still_mesh = (repo/'models/ManaStill.mesh').read_bytes()
     for name in ('ManaStillIron','ManaStillCoilGlass','ManaStillCoil','ManaStillEmbers','ManaStillBanked','ManaStillFireGlow',
-            'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand'):
+            'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand','ManaStillCopper',
+            'ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillResidue'):
         block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
         assert block, name
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
@@ -89,8 +92,13 @@ def main():
     # Visible motion: the embers flicker by texture, the coil ectoplasm flows, the vapour drifts.
     assert re.search(r'anim_texture ManaStillEmbers_0\.png( ManaStillEmbers_\d\.png){5} [\d.]+',still_material), 'ember flicker'
     assert re.search(r'material ManaStillCoil\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'coil flow'
+    # The coil is lit copper (its own texture), not glass; the vapour plume, its idle thread and the floor glow are additive.
+    assert re.search(r'^material ManaStillCopper\s*\{(?:(?!^\}).)*texture ManaStillCopper\.png',still_material,re.S|re.M), 'copper coil'
+    for name in ('ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow'):
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
     still_skeleton = (repo/'models/ManaStill.skeleton').read_bytes()
-    for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway'):
+    for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway',
+            b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in still_skeleton, bone
     assert b'ManaCrystal\n' in (repo/'models/ManaCrystal.mesh').read_bytes(), 'mana crystal material'
     # Ghost press (state clips); the research book it makes keeps today's Grimoire mesh.

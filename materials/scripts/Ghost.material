@@ -389,7 +389,7 @@ material ManaStillFireGlow
     }
 }
 
-// Mana still (working): green glow of the coil column.
+// Mana still (working): green glow round the column and the copper coil, and inside the funnel.
 material ManaStillColumnGlow
 {
     receive_shadows off
@@ -407,13 +407,13 @@ material ManaStillColumnGlow
                 texture ManaStillGlowRamp.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.12 0.45 0.16
+                colour_op_ex modulate src_texture src_manual 0.18 0.62 0.24
             }
         }
     }
 }
 
-// Mana still (working): green ectoplasm vapour swirling in the column and rising from the funnel.
+// Mana still (working): green ectoplasm vapour swirling in the column and rising from the funnel, light over the funnel.
 material ManaStillVapour
 {
     receive_shadows off
@@ -431,13 +431,127 @@ material ManaStillVapour
                 texture GhostNoise.png
                 tex_address_mode wrap
                 scroll_anim 0.25 0
-                colour_op_ex modulate src_texture src_manual 0.20 0.65 0.24
+                colour_op_ex modulate src_texture src_manual 0.30 0.95 0.38
             }
             texture_unit
             {
                 texture ManaStillGlowRamp.png
                 tex_address_mode clamp
                 colour_op_ex modulate src_texture src_current
+            }
+        }
+    }
+}
+
+// Mana still: hammered copper coil wound round the glass column (copper coloured, a little self-lit so it reads in the dark room).
+material ManaStillCopper
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.95 0.95 0.95
+            diffuse 1.0 1.0 1.0 1
+            emissive 0.16 0.07 0.03
+            specular 0.95 0.62 0.40 1 36
+            texture_unit
+            {
+                texture ManaStillCopper.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Mana still (working): soft green vapour puffs rising from the funnel.
+material ManaStillPuff
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.35 1.0 0.45
+            }
+        }
+    }
+}
+
+// Mana still (idle): a thin, dim vapour thread over the residue in the funnel.
+material ManaStillPuffDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.13 0.42 0.17
+            }
+        }
+    }
+}
+
+// Mana still (working): green light on the floor round the still.
+material ManaStillFloorGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillPuff.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.22 0.75 0.30
+            }
+        }
+    }
+}
+
+// Mana still (idle): dim green ectoplasm residue left in the funnel.
+material ManaStillResidue
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            texture_unit
+            {
+                texture GhostNoise.png
+                tex_address_mode wrap
+                scroll_anim 0.01 0.02
+                colour_op_ex modulate src_texture src_manual 0.20 0.70 0.28
             }
         }
     }
