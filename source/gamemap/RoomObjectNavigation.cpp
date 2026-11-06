@@ -255,6 +255,35 @@ bool terrainClear(PassableTiles& passable, const Ogre::Vector2& from, const Ogre
     return true;
 }
 
+//! Largest margin a smoothed path keeps from tiles the creature cannot walk on (a wall): the straight legs of a
+//! smoothed path never graze a wall corner with the body (decision 658), a path through the tile centres always keeps it.
+const float WALL_MARGIN_LIMIT = 0.45f;
+
+//! \brief Tells whether the body of a creature at the point, with the given radius, touches only tiles it can walk on.
+bool bodyClearOfWalls(PassableTiles& passable, const Ogre::Vector2& point, float radius)
+{
+    for(int dy = -1; dy <= 1; ++dy)
+        for(int dx = -1; dx <= 1; ++dx)
+            if(!passable.isPassable(Helper::round(point.x + dx * radius), Helper::round(point.y + dy * radius)))
+                return false;
+    return true;
+}
+
+//! \brief Like terrainClear, and the body of the creature (radius) keeps clear of every tile it cannot walk on along the
+//! line, except at the start point (the creature may already stand close to a wall).
+bool terrainClearForBody(PassableTiles& passable, const Ogre::Vector2& from, const Ogre::Vector2& to, float radius)
+{
+    if(!terrainClear(passable, from, to))
+        return false;
+    const int steps = std::max(1, int(std::ceil(from.distance(to) * TERRAIN_SAMPLES_PER_TILE)));
+    for(int i = 1; i <= steps; ++i)
+    {
+        if(!bodyClearOfWalls(passable, from + (to - from) * (float(i) / steps), radius))
+            return false;
+    }
+    return true;
+}
+
 //! Squared step length below which two consecutive path points count as the same point
 const float SAME_POINT_SQUARED_DISTANCE = 0.000001f;
 //! Tolerance for treating a step as axis-aligned and two directions as parallel
@@ -293,9 +322,10 @@ bool smoothCorridor(Creature& creature, PassableTiles& passable, const std::vect
     }
     if(turns < MIN_CORRIDOR_TURNS)
         return false;
+    const float bodyRadius = std::min(RoomObjectNavigation::clearance(creature), WALL_MARGIN_LIMIT);
     const std::function<bool(const Ogre::Vector2&, const Ogre::Vector2&)> clear = [&](const Ogre::Vector2& from, const Ogre::Vector2& to)
     {
-        return terrainClear(passable, from, to) &&
+        return terrainClearForBody(passable, from, to, bodyRadius) &&
             RoomObjectPath::clearSegment(obstacles, from, to, from == start);
     };
     std::vector<Ogre::Vector2> result;

@@ -499,8 +499,9 @@ bool CreatureActionCarryEntity::handleDragCreature()
             return false;
         if(myTile != mTileDest)
         {
-            // Normal walking keeps the speed used by carried prisoners and bodies.
-            if(!mCreature.setDestination(mTileDest))
+            // The worker pulls the body to the grave or the cell with the Drag clip (backwards, visible), like the
+            // wounded pulled to their bed; a plain Walk clip showed it striding away from the body (X1 rework 2).
+            if(!mCreature.setDragDestination(mTileDest))
                 return stopDragging(true);
             return false;
         }

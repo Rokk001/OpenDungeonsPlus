@@ -3,7 +3,8 @@ entries, the CREDITS rows, the nine tavern clips in every creature skeleton and 
 
 What is checked
   models      TavernCounter, Innkeeper, TavernKeg, TavernTable, TavernMug, Vomit: mesh, one Blender source each, a
-              material in a material script, the innkeeper's skeleton with the clips Idle, Pour and Cheer
+              material in a material script, the innkeeper's skeleton with the clips Idle, Pour and Cheer; the counter
+              uses TavernCounterWood, TavernRail (self-lit) and TavernSign and never the striped TavernWood
   materials   TavernWood, TavernBrass, TavernStone (and the other object materials) with a 128 x 128 texture each, the
               floor and wall materials with their textures and normal maps, the bird effect material
   icons       the painted 256 x 256 sources of TavernButton and BeerButton (the atlas entries are pinned by
@@ -92,12 +93,23 @@ for name, source in MODELS.items():
     mesh = root / 'models' / (name + '.mesh')
     assert mesh.is_file() and mesh.stat().st_size > 0, 'models/' + name + '.mesh missing'
     assert (root / source).is_file(), source + ' missing'
-mesh_material_names = {'TavernCounter': ('TavernWood', 'TavernBrass', 'TavernSign'), 'TavernKeg': ('TavernWood', 'TavernIron', 'TavernBrass'),
+mesh_material_names = {'TavernCounter': ('TavernCounterWood', 'TavernRail', 'TavernSign'), 'TavernKeg': ('TavernWood', 'TavernIron', 'TavernBrass'),
                        'TavernTable': ('TavernStone', 'TavernWood'), 'TavernMug': ('TavernWood', 'TavernFoam'),
                        'Innkeeper': ('TavernCloth', 'TavernHood', 'TavernSkin'), 'Vomit': ('TavernVomit',)}
 for name, used in mesh_material_names.items():
     data = (root / 'models' / (name + '.mesh')).read_bytes()
     assert any(m.encode('ascii') in data for m in used), 'models/' + name + '.mesh uses none of ' + ', '.join(used)
+# Owner check 664 (build 0.7.3.37): the counter is built from its own plank atlas (not the wave-striped shared
+# TavernWood); its foot rail, sign rim and bell use the polished, slightly self-lit TavernRail; the plate uses TavernSign
+counter = (root / 'models' / 'TavernCounter.mesh').read_bytes()
+for used in ('TavernCounterWood', 'TavernRail', 'TavernSign'):
+    assert re.search(rb'(?<![A-Za-z])' + used.encode('ascii') + rb'(?![A-Za-z])', counter), 'models/TavernCounter.mesh needs the material ' + used
+assert not re.search(rb'(?<![A-Za-z])TavernWood(?![A-Za-z])', counter), 'models/TavernCounter.mesh must not use the striped TavernWood'
+rail = re.search(r'^material TavernRail\b.*?^}', materials, re.M | re.S)
+assert rail and re.search(r'^\s*emissive\s+0*\.0*[1-9]', rail.group(0), re.M), 'TavernRail needs its self-light so the rail reads from the room camera'
+innkeeper = (root / 'models' / 'Innkeeper.mesh').read_bytes()
+for used in ('TavernHood', 'TavernSkin', 'TavernCloth'):
+    assert used.encode('ascii') in innkeeper, 'models/Innkeeper.mesh needs the material ' + used
 assert b'Innkeeper.skeleton' in (root / 'models' / 'Innkeeper.mesh').read_bytes(), 'the innkeeper mesh needs its skeleton'
 innkeeper_skeleton = (root / 'models' / 'Innkeeper.skeleton').read_bytes()
 for clip in INNKEEPER_CLIPS:
@@ -105,7 +117,7 @@ for clip in INNKEEPER_CLIPS:
 
 # 2. Materials and textures
 for name in ('TavernWood', 'TavernBrass', 'TavernStone', 'TavernIron', 'TavernCloth', 'TavernHood', 'TavernSkin', 'TavernFoam',
-             'TavernSign', 'TavernVomit'):
+             'TavernSign', 'TavernVomit', 'TavernCounterWood', 'TavernRail'):
     assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
     assert png_size('materials/textures/tavern/' + name + '.png') == (OBJECT_TEXTURE_SIZE, OBJECT_TEXTURE_SIZE), name + ' texture size'
 for name in ('TavernFloor', 'TavernWall'):
@@ -201,7 +213,8 @@ files += ['materials/scripts/TavernObjects.material', 'materials/scripts/TavernF
           'materials/textures/tavern/TavernFloor.png', 'materials/textures/tavern/TavernFloorNormal.png',
           'materials/textures/tavern/TavernWall.png', 'materials/textures/tavern/TavernWallNormal.png']
 files += ['materials/textures/tavern/' + name + '.png' for name in ('TavernWood', 'TavernBrass', 'TavernStone', 'TavernIron', 'TavernCloth',
-                                                                      'TavernHood', 'TavernSkin', 'TavernFoam', 'TavernSign', 'TavernVomit')]
+                                                                      'TavernHood', 'TavernSkin', 'TavernFoam', 'TavernSign', 'TavernVomit',
+                                                                      'TavernCounterWood', 'TavernRail')]
 files += ['sounds/Rooms/Tavern/Pour.ogg', 'sounds/Rooms/Tavern/Murmur.ogg', 'sounds/Rooms/Tavern/Clink.ogg',
           'sounds/Creatures/Default/Slap.ogg', 'sounds/Creatures/Default/Cheer.ogg',
           'sounds/Spatial/Rooms/Tavern/Murmur/Murmur.ogg', 'sounds/Spatial/Rooms/Tavern/Clink/Clink.ogg']

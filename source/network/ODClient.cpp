@@ -712,9 +712,14 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 case ServerMode::ModeGameMultiPlayer:
                 case ServerMode::ModeGameLoaded:
                     frameListener->getModeManager()->requestMode(AbstractModeManager::GAME);
+                    // The loading screen stays until the mode manager has switched (it ends it, see
+                    // ModeManager::checkModeChange): the mode changes only in the next frame, and ending it here showed the
+                    // "Please configure map" dialog again for about 2 s while the game mode was built
+                    loading.continueLoading();
                     break;
                 case ServerMode::ModeEditor:
                     frameListener->getModeManager()->requestMode(AbstractModeManager::EDITOR);
+                    loading.continueLoading();
                     break;
                 default:
                     OD_LOG_ERR("Unknown server mode=" + Helper::toString(static_cast<int32_t>(serverMode)));
