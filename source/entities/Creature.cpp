@@ -12727,9 +12727,14 @@ void Creature::updateGhostHuntVisuals(double seconds)
         const std::string bone=ghostBoxHandBone(body->hasSkeleton()?body->getSkeleton():nullptr,getWeaponL()==nullptr);
         if(!bone.empty())
         {
-            // Same grip as the tavern mug: the box stands upright in the palm of the hand bone.
+            // Same grip as the tavern mug: the box stands upright in the palm of the hand bone. Its up axis runs
+            // along the bone, so the half box height along the bone puts the box middle into the palm.
             Ogre::Quaternion grip;grip.FromAngleAxis(Ogre::Degree(-90.0),Ogre::Vector3::UNIT_X);
-            body->attachObjectToBone(bone,mGhostHeldBox,grip,Ogre::Vector3::ZERO);
+            const Ogre::Real boxHeight=mGhostHeldBox->getMesh()->getBounds().getSize().z;
+            Ogre::TagPoint* palm=body->attachObjectToBone(bone,mGhostHeldBox,grip,Ogre::Vector3(0.0f,-0.5f*boxHeight,0.0f));
+            // The hand-sized mesh keeps its size: a scaled rig bone must not blow it up, only the creature's own
+            // level growth applies, the same as for its body.
+            palm->setInheritScale(false);
         }
         else
         {
@@ -12749,6 +12754,8 @@ void Creature::updateGhostHuntVisuals(double seconds)
         box->setQueryFlags(0);box->setCastShadows(true);
         mGhostBoxNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_ThrownGhostBoxNode");mGhostBoxNode->attachObject(box);
     }
+    // The thrown and lying box keeps the size it had in the hand (mesh size times the hunter's level growth).
+    if(mGhostBoxNode!=nullptr) mGhostBoxNode->setScale(getEntityNode()->getScale());
     if(mGhostBoxNode!=nullptr)
     {
         mGhostBoxNode->setVisible(mGhostBoxMode==1 || mGhostBoxMode==3);
