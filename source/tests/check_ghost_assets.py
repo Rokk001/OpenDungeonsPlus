@@ -148,6 +148,32 @@ def main():
             b'Wisp1',b'Mist',b'Residue',b'WebSway',b'Book',b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdleRuneL',
             b'IdleRuneR',b'IdleHalo',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in press_skeleton, bone
+    # Rework 3 (owner decision 697): a clearly visible green light in Idle and a brighter one in Working. Rework 2 lit
+    # Idle with a small soft dot texture (mean 41) times 0.13 0.46 0.18, which added almost nothing in the game. Now a
+    # broad glow texture, a steady light set (bone Light: opening under the platen, pages, columns, emblem halos, floor)
+    # shown in Working and Idle, and on top of it in Working the bright cards.
+    credited('materials/textures/GhostApparatusGlow.png',credits)
+    with Image.open(repo/'materials/textures/GhostApparatusGlow.png') as glow:
+        glow_values = list(glow.convert('L').tobytes())
+    assert sum(glow_values)/len(glow_values) > 70, 'apparatus glow texture is too small a spot'
+    def manual_tint(name):
+        block = re.search(r'^material '+name+r'\s*\{(.*?)^\}',still_material,re.M|re.S)
+        assert block, name
+        tint = re.search(r'colour_op_ex modulate src_texture src_manual ([\d.]+) ([\d.]+) ([\d.]+)',block[1])
+        assert tint, (name,'tint')
+        return [float(value) for value in tint.groups()]
+    for name in ('GhostApparatusGlow','GhostApparatusGlowIdle'):
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*texture GhostApparatusGlow\.png',still_material,re.S|re.M), (name,'texture')
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
+        assert name.encode()+b'\n' in press_mesh, ('ghost press uses',name)
+    idle_tint, working_tint = manual_tint('GhostApparatusGlowIdle'), manual_tint('GhostApparatusGlow')
+    assert idle_tint[1] >= 0.6, ('idle glow too dim',idle_tint)
+    assert all(w >= i for w,i in zip(working_tint,idle_tint)) and working_tint[1] > idle_tint[1], ('working not brighter',working_tint)
+    assert manual_tint('GhostPressGlowDim')[1] >= 0.6, 'idle page glow too dim'
+    assert min(manual_tint('GhostPressRuneDim')) >= 0.85, 'idle runes too dim'
+    assert manual_tint('GhostPressEmblemDim')[1] >= 0.95, 'idle emblems too dim'
+    for bone in (b'Light',b'LightHalo',b'LightFloor'):
+        assert bone+b'\n' in press_skeleton, bone
     # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
     for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):
         credited(path,credits)

@@ -961,7 +961,7 @@ material GhostPressChain
     }
 }
 
-// Ghost press (idle): the emblems glow dim green.
+// Ghost press (idle): the emblems glow green, dimmer than the pulsing working glow (rework 3: brighter, 697).
 material GhostPressEmblemDim
 {
     receive_shadows off
@@ -975,13 +975,13 @@ material GhostPressEmblemDim
                 texture GhostPressGlow_2.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.55 0.8 0.6
+                colour_op_ex modulate src_texture src_manual 0.75 1.0 0.8
             }
         }
     }
 }
 
-// Ghost press (idle): dimmer rune circles on the pages of the open book (they turn slowly by bone).
+// Ghost press (idle): rune circles on the pages of the open book, a little dimmer than working (they turn slowly by bone).
 material GhostPressRuneDim
 {
     receive_shadows off
@@ -999,7 +999,7 @@ material GhostPressRuneDim
                 texture GhostPressRune.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.6 0.6 0.6
+                colour_op_ex modulate src_texture src_manual 0.9 0.9 0.9
             }
         }
     }
@@ -1047,7 +1047,7 @@ material GhostPressGlowDim
                 texture ManaStillPuff.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.13 0.46 0.18
+                colour_op_ex modulate src_texture src_manual 0.18 0.62 0.25
             }
         }
     }
@@ -1072,6 +1072,56 @@ material GhostPressPuff
                 tex_address_mode clamp
                 filtering trilinear
                 colour_op_ex modulate src_texture src_manual 0.14 0.50 0.20
+            }
+        }
+    }
+}
+
+// Ghost press and soul forge (working): broad green light cards (opening under the platen, pages, columns, floor;
+// crystals, grate and floor of the forge). Wide soft texture, so the light fills the card (rework 3, decision 697).
+material GhostApparatusGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture GhostApparatusGlow.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.30 1.0 0.42
+            }
+        }
+    }
+}
+
+// Ghost press and soul forge (working and idle): steady green light, clearly visible in idle; working adds
+// GhostApparatusGlow on top, so working is brighter (rework 3, decision 697).
+material GhostApparatusGlowIdle
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture GhostApparatusGlow.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.20 0.72 0.30
             }
         }
     }
