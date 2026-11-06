@@ -111,11 +111,15 @@ int main(){
  Seat seat;for(int side:{4,7,10,13,16}){GameMap map;RoomGhostRoom room;room.map=&map;room.type=RoomType::ghostRoom;room.seat=&seat;
  for(int y=-1;y<=side;++y)for(int x=-1;x<=side;++x){Tile& tile=map.tiles[{x,y}];tile.x=x;tile.y=y;tile.full=x==-1||y==-1||x==side||y==side;if(!tile.full){tile.room=&room;room.mCoveredTiles.push_back(&tile);}}
  room.layoutCauldrons();room.createWalls(&map);check(room.mHookTiles.size()==room.getBackpackCount()&&room.mHookObjects.size()==room.getBackpackCount(),"three actual wall hooks per cauldron");int bells=0;std::set<BuildingObject*> objects;
- for(BuildingObject* object:room.mWallObjects){check(objects.insert(object).second,"distinct auxiliary wall object identities");if(object->mesh=="GhostBell")++bells;check(object->scale.x>0&&object->scale.x<=1&&object->scale.y==1,"native wall subdivision scale");}
- check(bells==1,"one original wall bell");check(room.mWallObjects.size()>=room.getBackpackCount()+1,"no overwritten hook map keys");}
+ size_t wallFaces=0;for(Tile* tile:room.mCoveredTiles){bool apparatus=false;for(const RoomGhostRoom::Apparatus& a:room.mApparatuses)apparatus|=a.tile==tile;if(apparatus)continue;const int dx[]={0,-1,1,0},dy[]={1,0,0,-1};for(int i=0;i<4;++i){Tile* next=map.getTile(tile->x+dx[i],tile->y+dy[i]);if(next!=nullptr&&next->full)++wallFaces;}}
+ std::set<std::pair<Tile*,double>> faces;for(size_t i=0;i<room.mWallObjects.size();++i)faces.insert(std::make_pair(room.mDecorationTiles[i],room.mWallObjects[i]->angle));
+ for(BuildingObject* object:room.mWallObjects){check(objects.insert(object).second,"distinct auxiliary wall object identities");if(object->mesh=="GhostBell")++bells;check(object->mesh=="GhostBell"||object->mesh=="GhostHook","only the bell and the hooks stand at the wall, no gauge panels");check(object->scale.x>0&&object->scale.x<=1&&object->scale.y==1,"native wall subdivision scale");}
+ check(bells==1,"one original wall bell");check(room.mWallObjects.size()==room.getBackpackCount()+1,"exactly one bell and one hook per backpack, no overwritten hook map keys");
+ check(faces.size()==std::min(wallFaces,room.mWallObjects.size()),"bell and hooks spread over distinct wall faces and subdivide only a full wall");}
  GameMap map;RoomGhostRoom noWall;noWall.map=&map;noWall.seat=&seat;for(int y=-1;y<=4;++y)for(int x=-1;x<=4;++x){Tile& tile=map.tiles[{x,y}];tile.x=x;tile.y=y;if(x>=0&&x<4&&y>=0&&y<4){tile.room=&noWall;noWall.mCoveredTiles.push_back(&tile);}}noWall.layoutCauldrons();noWall.createWalls(&map);
  int rackBells=0,racks=0,items=0;for(BuildingObject* object:noWall.mWallObjects){if(object->mesh=="GhostBell")++rackBells;if(object->mesh=="GhostRack")++racks;else ++items;}
- check(racks>0&&racks==items,"free-standing room stands every bell, hook and gauge item on its own room-edge rack");
+ check(racks>0&&racks==items,"free-standing room stands every bell and hook item on its own room-edge rack");
+ check(items==int(noWall.getBackpackCount())+1,"free-standing room carries only the bell and the hooks, no gauge panels");
  check(noWall.mHookObjects.size()==3&&noWall.mHookTiles.size()==3&&noWall.getBackpackCount()==3,"free-standing room keeps all three hooks on room-edge racks");check(rackBells==1,"free-standing room keeps its bell on a room-edge rack");
  for(Tile* tile:noWall.mHookTiles)check(tile->x==0||tile->y==0||tile->x==3||tile->y==3,"rack hooks stand on the room edge ring, not on the cauldron tiles");
  std::cout<<"actual wall hook placement and free-standing room-edge racks: ok\n";
