@@ -6389,6 +6389,9 @@ void RenderManager::updateCreatureStep(Creature* creature)
             RoomObjectPath::Obstacle obstacle{{bounds.minX * scale.x, bounds.minY * scale.y},
                 {bounds.maxX * scale.x, bounds.maxY * scale.y},
                 {candidate->getPosition().x, candidate->getPosition().y}, std::cos(angle), std::sin(angle)};
+            // Only beds, coffins and cots are stepped onto, never the ghost room apparatuses or other furniture
+            if(!RoomObjectPath::isSteppableMesh(bounds.name))
+                continue;
             obstacle.maximumHeight = candidate->getPosition().z + bounds.maxZ;
             const float rise = RoomObjectPath::prepareLowStep(obstacle, creature->getMeshName(),
                 static_cast<float>(creature->getLevelScale()), position.z,
@@ -7317,7 +7320,8 @@ bool RenderManager::rrIsCreatureDown(const Creature* creature) const
         return false;
 
     const Ogre::AnimationState* state = creature->getAnimationState();
-    if((state != nullptr) && (state->getAnimationName() == EntityAnimation::die_anim))
+    if((state != nullptr) && ((state->getAnimationName() == EntityAnimation::die_anim) ||
+       (state->getAnimationName() == "CorpseDecay")))
         return true;
 
     for(const CreatureGroundPose& pose : mCreatureGroundPoses)
@@ -7764,8 +7768,9 @@ std::string RenderManager::colourizeMaterial(const std::string& materialName, co
 }
 
 
-//! Thickness of the creature contour as a factor of the largest size of the creature mesh.
-static const float OutlinerContourWidthFactor = 0.012f;
+//! Thickness of the creature contour in screen pixels (constant on screen, independent of the creature size,
+//! its distance to the camera and the thickness of its parts).
+static const float OutlinerContourPixels = 1.5f;
 
 void RenderManager::rrAddOutliner(Creature* creature)
 {
@@ -7831,11 +7836,10 @@ void RenderManager::rrAddOutliner(Creature* creature)
 
             myPass1->setVertexProgram("Enlarge","Graphics");
 
-            const Ogre::Vector3 meshSize = mSceneManager->getEntity(entityName)->getMesh()->getBounds().getSize();
-            const float contourWidth = std::max(meshSize.x, std::max(meshSize.y, meshSize.z)) * OutlinerContourWidthFactor;
-         
-            myPass1->getVertexProgramParameters()->setNamedConstant("width", contourWidth);
+            myPass1->getVertexProgramParameters()->setNamedConstant("pixelWidth", OutlinerContourPixels);
             myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldViewProj", Ogre::GpuProgramParameters::ACT_WORLDVIEWPROJ_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldView", Ogre::GpuProgramParameters::ACT_WORLDVIEW_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewportSize", Ogre::GpuProgramParameters::ACT_VIEWPORT_SIZE);
 
             Ogre::HighLevelGpuProgramPtr fragment_program;
             if(!mgr.resourceExists("Custom_color","Graphics"))

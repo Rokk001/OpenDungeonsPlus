@@ -417,7 +417,9 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
             result.push_back({{bounds.minX * scale.x - clearance, bounds.minY * scale.y - clearance},
                 {bounds.maxX * scale.x + clearance, bounds.maxY * scale.y + clearance},
                 {object->getPosition().x, object->getPosition().y}, std::cos(angle), std::sin(angle)});
-            result.back().maximumHeight = object->getPosition().z + bounds.maxZ;
+            // Only beds, coffins and cots can be stepped onto; the infinite height keeps every other object solid
+            if(RoomObjectPath::isSteppableMesh(bounds.name))
+                result.back().maximumHeight = object->getPosition().z + bounds.maxZ;
             break;
         }
     };
