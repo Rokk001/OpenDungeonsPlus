@@ -86,6 +86,8 @@ private:
     double mGhostFill = -1.0;
     double mGhostAlarm = 0.0;
     Ogre::SceneNode* mGhostFillNode = nullptr;
+    //! \brief Client only: the red and green alarm lamps beside a ghost room bell.
+    Ogre::SceneNode* mGhostLampNode = nullptr;
     Ogre::Vector2 mFurnitureScale = Ogre::Vector2::ZERO;
     //! \brief Negative means ordinary furniture; otherwise this is a decorative bag quality.
     int32_t mItemBagQuality = -1;

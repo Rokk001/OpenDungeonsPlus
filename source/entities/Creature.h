@@ -85,6 +85,7 @@ namespace Ogre
 {
 class ParticleSystem;
 class BillboardChain;
+class Entity;
 }
 
 namespace RoomObjectNavigation
@@ -2240,6 +2241,11 @@ private:
     double mGhostThrowTurns = 0.0;
     double mGhostThrowClientTurns = 0.0;
     Ogre::SceneNode* mGhostBoxNode = nullptr;
+    //! \brief The box held in the hunter's hand, attached to a hand bone (or to mGhostHandNode without hand bones).
+    Ogre::Entity* mGhostHeldBox = nullptr;
+    Ogre::SceneNode* mGhostHandNode = nullptr;
+    //! \brief Client-smoothed share of the ghost already pulled into the lying box.
+    double mGhostCaptureShown = 0.0;
     double mGhostBeamSample = 0.0;
     uint32_t mGhostBeamSound = 0;
     Ogre::SceneNode* mGhostBackpackNode = nullptr;
