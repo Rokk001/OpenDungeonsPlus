@@ -6389,6 +6389,9 @@ void RenderManager::updateCreatureStep(Creature* creature)
             RoomObjectPath::Obstacle obstacle{{bounds.minX * scale.x, bounds.minY * scale.y},
                 {bounds.maxX * scale.x, bounds.maxY * scale.y},
                 {candidate->getPosition().x, candidate->getPosition().y}, std::cos(angle), std::sin(angle)};
+            // Only beds, coffins and cots are stepped onto, never the ghost room apparatuses or other furniture
+            if(!RoomObjectPath::isSteppableMesh(bounds.name))
+                continue;
             obstacle.maximumHeight = candidate->getPosition().z + bounds.maxZ;
             const float rise = RoomObjectPath::prepareLowStep(obstacle, creature->getMeshName(),
                 static_cast<float>(creature->getLevelScale()), position.z,
