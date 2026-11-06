@@ -10,6 +10,8 @@ class Tile;
 class RoomGhostRoom;
 class GhostEntity;
 //! \brief Performs one persistent equipment, capture, revival and emptying trip.
+//! States: 0 to the hook, 1 to the target, 2 box throw, 3 beam pull, 4 next target, 5 revival, 6 emptying,
+//! 7 back to the hook, 8 lying box pick up, 9 walk to the closed box under the caught ghost and take it in hand.
 class CreatureActionHuntGhost : public CreatureAction
 {
 public:
@@ -43,10 +45,14 @@ public:
     static void playSound(GameMap& map, Tile& tile, const std::string& family);
     //! \brief Returns whether this hunt currently wears its backpack.
     bool hasBackpack() const { return mEquipped && !mInterrupted; }
-    //! \brief Returns the visual box phase: absent, thrown or carried.
-    uint32_t getBoxVisualState() const { return mState==3?1u:mGhosts.empty()?0u:2u; }
-    //! \brief Returns the ghost under a box being thrown.
-    std::string getThrowGhostName() const { return mState==3?mTarget:std::string(); }
+    //! \brief Returns the visual box phase: 0 absent, 1 flying from the hand under the ghost, 2 held in the hunter's
+    //! hand (from the hook until it is hung back, also while still empty), 3 lying on the floor under the ghost while
+    //! the beam pulls the ghost in and until the hunter picks the closed box up again.
+    uint32_t getBoxVisualState() const { return !hasBackpack()?0u:mState==2?1u:mState==3 || mState==9?3u:2u; }
+    //! \brief Returns the ghost under a box being thrown, pulled in or waiting to be picked up.
+    std::string getThrowGhostName() const { return mState==2 || mState==3 || mState==9?mTarget:std::string(); }
+    //! \brief Returns the beam pull duration in turns while the beam pulls the ghost into the box, else 0.
+    double getCaptureTurns() const;
     //! \brief Returns the current exact fractional phase clock.
     double getStepTurns() const { return mTurns; }
     //! \brief Returns the active beam target name for the client presentation.
