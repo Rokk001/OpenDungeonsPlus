@@ -118,7 +118,7 @@ protected:
     void exportToStream(std::ostream& os) const override;
     //! \brief Reads the floor and the apparatus state; old saves without it start with idle apparatuses.
     bool importFromStream(std::istream& is) override;
-    //! \brief Creates the ordered bell, backpack hooks and wall gauges.
+    //! \brief Creates the ordered bell and backpack hooks.
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     //! \brief Removes a wall decoration and its reservation.
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
