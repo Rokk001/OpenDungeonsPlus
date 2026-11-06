@@ -14,7 +14,8 @@ vert = read('shaders/Enlarge.vert')
 body = render.split('void RenderManager::rrAddOutliner')[1].split('void RenderManager::rrRemoveOutliner')[0]
 # The extra pass draws only the back faces of a shell behind the model, so the model hides all of it but the rim.
 assert 'setCullingMode(Ogre::CULL_ANTICLOCKWISE)' in body
-assert 'setDepthBias(-4, -32)' not in body and 'setDepthBias(1.0f, 1.0f)' in body
+# X1 rework (E9): the bias must push the shell away from the camera (negative), a positive bias filled the creature red
+assert 'setDepthBias(-4.0f, -32.0f)' in body and 'setDepthBias(1.0f, 1.0f)' not in body
 # The shell is pushed out along the normals by a small width, no longer scaled up as a whole.
 assert 'setNamedConstant("width"' in body and 'OutlinerContourWidthFactor' in body
 width = float(render.split('OutlinerContourWidthFactor = ')[1].split('f;')[0])

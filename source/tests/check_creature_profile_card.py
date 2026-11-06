@@ -153,7 +153,7 @@ hidden = social[social.index('const char* const hidden[]'):]
 hidden = hidden[:hidden.index('};')]
 for name in ('Portrait', 'NameText', 'AttributesText', 'EquipmentText', 'EquipmentRow', 'OwnPostsText'):
     assert '"%s"' % name in hidden, name
-assert 'page->getChild("PostsText")->setText(' in social and '(rows < MAX_OWN_POSTS)' in social
+assert 'page->getChild("PostThumb" + std::to_string(rows))' in social and '(rows < MAX_OWN_POSTS)' in social
 assert social.index('const char* const hidden[]') < social.index('creature->fillProfilePage(mProfilePage)')
 assert 'const bool compact = !page->getChild("Portrait")->isVisible();' in profile_layout
 assert 'float y = compact ? PROFILE_ROW_GAP : std::max(PROFILE_FLOW_TOP, 34.0f + equipmentHeight + PROFILE_ROW_GAP);' in profile_layout

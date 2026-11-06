@@ -285,6 +285,12 @@ void MovableGameEntity::setAnimationState(const std::string& state, bool loop, c
 
 void MovableGameEntity::startAnimationClip()
 {
+    // A creature that already lies in its death pose (knocked out, or dead and moved) dies where it lies: the death
+    // clip does not start again, so the body does not stand up and fall once more, and the death touches do not repeat
+    if((mPrevAnimationState == EntityAnimation::die_anim) && (getObjectType() == GameEntityType::creature) &&
+       RenderManager::getSingleton().rrIsCreatureDown(static_cast<Creature*>(this)))
+        return;
+
     RenderManager::getSingleton().rrSetObjectAnimationState(this, mPrevAnimationState, mPrevAnimationStateLoop);
 
     // The reactions of the creatures (cheering winners) look at what the creatures do
@@ -376,7 +382,15 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
             addedTime *= DIE_ANIMATION_SPEED_FACTOR;
     }
     mAnimationTime += addedTime;
-    if (!getIsOnServerMap() && getAnimationState() != nullptr &&
+    // A dead creature lies still: only its death clip and its slow decay clip run, no other clip moves a body
+    bool deadBodyHolds = false;
+    if(!getIsOnServerMap() && (getAnimationState() != nullptr) && (getObjectType() == GameEntityType::creature) &&
+       !static_cast<Creature*>(this)->isAlive())
+    {
+        const std::string& shownClip = getAnimationState()->getAnimationName();
+        deadBodyHolds = (shownClip != EntityAnimation::die_anim) && (shownClip != "CorpseDecay");
+    }
+    if (!deadBodyHolds && !getIsOnServerMap() && getAnimationState() != nullptr &&
         mPrevAnimationState != EntityAnimation::getup_anim &&
         mPrevAnimationState != EntityAnimation::eat_chicken_anim &&
         !((getObjectType() == GameEntityType::creature) &&

@@ -2938,6 +2938,10 @@ void Creature::doUpkeep()
     if(isPossessed() && (!isAlive() || isKo() || !getIsOnMap()))
         endPossession();
 
+    // Decision 658: no creature stands on a wall tile, whatever put it there (path, drop, push, a wall built under it)
+    if(keepOffWalls())
+        return;
+
     // If the creature is in jail, we check if it is still standing on it (if not picked up). If
     // not, it is free
     if((mSeatPrison != nullptr) &&
@@ -8406,6 +8410,60 @@ bool Creature::setDestination(Tile* tile)
             return false;
     }
     pushAction(Utils::make_unique<CreatureActionWalkToTile>(*this));
+    return true;
+}
+
+bool Creature::keepOffWalls()
+{
+    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsInHand || mIsCarried || mIsBeingDragged ||
+       (mJumpTurnsLeft > 0) || getGameMap()->isInEditorMode())
+        return false;
+
+    Tile* wallTile = getPositionTile();
+    // A tile that holds a building (a door, a cell) is the building's business
+    if((wallTile == nullptr) || !wallTile->isFullTile() || (wallTile->getCoveringBuilding() != nullptr))
+        return false;
+
+    const Ogre::Vector3 position = getPosition();
+    Tile* best = nullptr;
+    double bestDistance = 0.0;
+    const int range = 8;
+    for(int dy = -range; dy <= range; ++dy)
+    {
+        for(int dx = -range; dx <= range; ++dx)
+        {
+            Tile* tile = getGameMap()->getTile(wallTile->getX() + dx, wallTile->getY() + dy);
+            if((tile == nullptr) || tile->isFullTile() || !canGoThroughTile(tile))
+                continue;
+
+            const double distance = (static_cast<double>(tile->getX()) - position.x) * (static_cast<double>(tile->getX()) - position.x) +
+                (static_cast<double>(tile->getY()) - position.y) * (static_cast<double>(tile->getY()) - position.y);
+            if((best == nullptr) || (distance < bestDistance))
+            {
+                best = tile;
+                bestDistance = distance;
+            }
+        }
+    }
+    if(best == nullptr)
+        return false;
+
+    OD_LOG_INF("creature=" + getName() + " stood on the wall " + Tile::displayAsString(wallTile) + ", moved to "
+        + Tile::displayAsString(best));
+    clearActionQueue();
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    const Ogre::Vector3 destination(static_cast<Ogre::Real>(best->getX()), static_cast<Ogre::Real>(best->getY()), position.z);
+    setPosition(destination);
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::entityTeleported, seat->getPlayer());
+        serverNotification->mPacket << getName() << destination;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
     return true;
 }
 

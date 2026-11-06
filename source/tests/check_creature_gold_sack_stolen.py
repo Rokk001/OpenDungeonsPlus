@@ -45,4 +45,9 @@ body = render.split('void RenderManager::rrRefreshCreatureGoldSack')[1].split('v
 assert 'getGoldStolen()' in body and 'getGoldCarried()' not in body and 'getStealGold()' not in body
 height = float(render.split('TreasuryThiefSackHeightFactor = ')[1].split('f;')[0])
 assert height <= 0.55, height
+# X1 rework (E8): the sack hangs at the hip inside the body box, not at the arm tip (the box includes arms and weapons).
+side = float(render.split('TreasuryThiefSackSideFactor = ')[1].split('f;')[0])
+assert 0.0 < side <= 0.35, side
+assert 'TreasuryThiefSackSideMaxHeightFactor' in body and 'creatureBox.getMaximum().x * TreasuryThiefSackSideFactor' not in body
+assert 'creatureBox.getMinimum().z + boxHeight * TreasuryThiefSackHeightFactor' in body
 print('ok')
