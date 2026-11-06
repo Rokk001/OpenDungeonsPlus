@@ -389,7 +389,8 @@ material ManaStillFireGlow
     }
 }
 
-// Mana still (working): green glow round the column and the copper coil, and inside the funnel.
+// Mana still (working): green glow round the column and the copper coil, and inside the funnel (brighter since
+// rework 3, so it shines out between the copper windings).
 material ManaStillColumnGlow
 {
     receive_shadows off
@@ -407,7 +408,31 @@ material ManaStillColumnGlow
                 texture ManaStillGlowRamp.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.18 0.62 0.24
+                colour_op_ex modulate src_texture src_manual 0.30 0.95 0.40
+            }
+        }
+    }
+}
+
+// Mana still (idle): dim green glow in the column behind the copper windings, so a waiting still keeps a green light.
+material ManaStillColumnGlowDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillGlowRamp.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.10 0.34 0.14
             }
         }
     }
@@ -443,7 +468,31 @@ material ManaStillVapour
     }
 }
 
-// Mana still: hammered copper coil wound round the glass column (copper coloured, a little self-lit so it reads in the dark room).
+// Mana still: bevelled copper band of the coil wound round the glass column. Its texture is laid out once round the band
+// profile (u along the winding), so every face carries its own baked tone: bright top bevel, dark seams, hammer dents,
+// oxidation and verdigris in the crevices. The emissive keeps those tones readable in the dark room.
+material ManaStillCoilCopper
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.85 0.85 0.85
+            diffuse 1.0 1.0 1.0 1
+            emissive 0.22 0.17 0.13
+            specular 0.95 0.66 0.42 1 40
+            texture_unit
+            {
+                texture ManaStillCoilCopper.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Mana still: hammered copper of the coil collars and leads' fittings (copper coloured, a little self-lit so it reads in the dark room).
 material ManaStillCopper
 {
     receive_shadows on

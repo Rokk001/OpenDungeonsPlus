@@ -74,14 +74,16 @@ def main():
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     # Mana still rework after mockup A (owner decision 665): rusty iron, flickering embers, flowing coil, vapour, draped webs.
     # Rework 2 (owner decision 686): copper coil and the puff texture of the vapour plume and green glows.
+    # Rework 3 (owner decision 697): the coil is a bevelled copper band with its own band texture; dim column glow in Idle.
     textures = ['ManaStillIron.png','ManaStillFlow.png','ManaStillGlowRamp.png','ManaStillWeb.png','ManaStillCopper.png',
-        'ManaStillPuff.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
+        'ManaStillPuff.png','ManaStillCoilCopper.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
     for texture in textures:
         credited('materials/textures/'+texture,credits)
     still_mesh = (repo/'models/ManaStill.mesh').read_bytes()
     for name in ('ManaStillIron','ManaStillCoilGlass','ManaStillCoil','ManaStillEmbers','ManaStillBanked','ManaStillFireGlow',
             'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand','ManaStillCopper',
-            'ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillResidue'):
+            'ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillResidue','ManaStillCoilCopper',
+            'ManaStillColumnGlowDim'):
         block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
         assert block, name
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
@@ -94,8 +96,15 @@ def main():
     assert re.search(r'material ManaStillCoil\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'coil flow'
     # The coil is lit copper (its own texture), not glass; the vapour plume, its idle thread and the floor glow are additive.
     assert re.search(r'^material ManaStillCopper\s*\{(?:(?!^\}).)*texture ManaStillCopper\.png',still_material,re.S|re.M), 'copper coil'
-    for name in ('ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow'):
+    for name in ('ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillColumnGlowDim'):
         assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
+    # The coil band is lit with its own copper texture, which is not one flat colour (luminance spread 37.8 when painted,
+    # the flat rework 2 copper had 9.7).
+    assert re.search(r'^material ManaStillCoilCopper\s*\{(?:(?!^\}).)*texture ManaStillCoilCopper\.png',still_material,re.S|re.M), 'coil band'
+    with Image.open(repo/'materials/textures/ManaStillCoilCopper.png') as band:
+        luminance = list(band.convert('L').tobytes())
+    mean = sum(luminance)/len(luminance)
+    assert (sum((value-mean)**2 for value in luminance)/len(luminance))**0.5 > 30, 'coil copper texture is flat'
     still_skeleton = (repo/'models/ManaStill.skeleton').read_bytes()
     for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway',
             b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdlePuff1',b'IdlePuff2'):
