@@ -203,7 +203,8 @@ def runtime_check(exe, save, seconds, names, is_fixture, port, version):
 
     process = subprocess.Popen([str(exe), "--appData", str(appdata), "--port", str(port),
                                 "--serversave", save.name],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               cwd=str(exe.parent))  # the game reads ./config and ./assets from its own folder
     failures = []
     received = []
     sock = connect(port, time.time() + 60, process)
@@ -283,7 +284,7 @@ def run_with_exe(exe_arg, save_arg, seconds, port, version):
     if not save.is_file():
         print("ERROR: the save does not exist: %s" % save)
         return 2
-    exe = Path(exe_arg)
+    exe = Path(exe_arg).resolve()
     if not exe.is_file():
         print("ERROR: the executable does not exist: %s" % exe)
         return 2
