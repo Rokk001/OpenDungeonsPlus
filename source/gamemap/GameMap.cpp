@@ -375,6 +375,9 @@ bool GameMap::isInEditorMode() const
 //! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations.
 bool GameMap::loadLevel(const std::string& levelFilepath)
 {
+    // Relationship states of an earlier load that were never applied are dropped
+    mPendingRelationshipStates.clear();
+
     // We reset the creature definitions
     clearClasses();
     for(std::pair<const std::string, CreatureDefinition*> it : ConfigManager::getSingleton().getCreatureDefinitions())
@@ -1264,6 +1267,34 @@ const CreatureDefinition* GameMap::getClassDescription(int index)
         return def.first;
 }
 
+void GameMap::setPendingRelationshipStates(const std::vector<RelationshipCreatureState>& states)
+{
+    mPendingRelationshipStates = states;
+}
+
+void GameMap::applyPendingRelationshipStates()
+{
+    // Taken out of the member first, so that the states are applied once even if createAllEntities runs again
+    std::vector<RelationshipCreatureState> states;
+    states.swap(mPendingRelationshipStates);
+    for(size_t i = 0; i < states.size(); ++i)
+    {
+        Creature* creature = getCreature(states[i].mName);
+        if(creature == nullptr)
+        {
+            OD_LOG_WRN("Saved relationship state of unknown creature " + states[i].mName);
+            continue;
+        }
+
+        creature->setRelationshipState(states[i]);
+        // Read back what the creature holds now, so that the restored state can be verified in the log
+        RelationshipCreatureState restored;
+        creature->getRelationshipState(restored);
+        OD_LOG_INF("Restored relationship state of " + states[i].mName + ", rageTurns="
+            + std::to_string(restored.mRageTurnsLeft) + ", captors=" + std::to_string(restored.mCaptors.size()));
+    }
+}
+
 //! \brief Creates loaded entities and restores closed boxes before room-owned action continuation.
 void GameMap::createAllEntities()
 {
@@ -1302,9 +1333,15 @@ void GameMap::createAllEntities()
             //Doesn't do anything currently.
             //creature->restoreInitialEntityState();
         }
+
+        // The definitions are set up now, so the saved relationship states of the creatures can be restored
+        applyPendingRelationshipStates();
     }
-    else 
+    else
     {
+        // Saved relationship states are only applied on the server
+        mPendingRelationshipStates.clear();
+
         // On client we create meshes
         // Create OGRE entities for map tiles
         for (int jj = 0; jj < getMapSizeY(); ++jj)

@@ -6967,6 +6967,10 @@ bool Creature::canHaveRelationships() const
     if(!optionOnServerMap)
         return false;
 
+    // The definition is set up after the level is read (GameMap::createAllEntities); until then there is no worker check
+    if(getDefinition() == nullptr)
+        return false;
+
     Seat* seat = getSeat();
     bool hasSeat = (seat != nullptr);
     return relationshipsAllowed(optionOnServerMap, hasSeat, hasSeat && seat->isRogueSeat(),
