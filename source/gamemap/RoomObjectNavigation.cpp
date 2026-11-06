@@ -259,7 +259,7 @@ bool terrainClear(PassableTiles& passable, const Ogre::Vector2& from, const Ogre
 //! smoothed path never graze a wall corner with the body (decision 658), a path through the tile centres always keeps it.
 const float WALL_MARGIN_LIMIT = 0.45f;
 
-//! rief Tells whether the body of a creature at the point, with the given radius, touches only tiles it can walk on.
+//! \brief Tells whether the body of a creature at the point, with the given radius, touches only tiles it can walk on.
 bool bodyClearOfWalls(PassableTiles& passable, const Ogre::Vector2& point, float radius)
 {
     for(int dy = -1; dy <= 1; ++dy)
@@ -269,7 +269,7 @@ bool bodyClearOfWalls(PassableTiles& passable, const Ogre::Vector2& point, float
     return true;
 }
 
-//! rief Like terrainClear, and the body of the creature (radius) keeps clear of every tile it cannot walk on along the
+//! \brief Like terrainClear, and the body of the creature (radius) keeps clear of every tile it cannot walk on along the
 //! line, except at the start point (the creature may already stand close to a wall).
 bool terrainClearForBody(PassableTiles& passable, const Ogre::Vector2& from, const Ogre::Vector2& to, float radius)
 {
