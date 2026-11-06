@@ -12604,8 +12604,9 @@ void Creature::refreshGhostHuntVisuals()
             }
             break;
         }
+    // The throw (1) and the snap (4) send their own step clock, the beam (3) the pulled-in share.
     if(backpack!=mGhostBackpack || target!=mGhostBeamTarget || boxMode!=mGhostBoxMode || thrown!=mGhostThrowTarget ||
-       ((boxMode==1 || boxMode==3) && turns!=mGhostThrowTurns))
+       ((boxMode==1 || boxMode==3 || boxMode==4) && turns!=mGhostThrowTurns))
     {
         mGhostBackpack=backpack;mGhostBeamTarget=target;mGhostBoxMode=boxMode;
         mGhostThrowTarget=thrown;mGhostThrowTurns=turns;mNeedFireRefresh=true;
@@ -12748,7 +12749,8 @@ void Creature::updateGhostHuntVisuals(double seconds)
     mGhostHeldBox->setVisible(mGhostBoxMode==2);
     // The thrown box leaves from the hand it was held in.
     const Ogre::Vector3 hand=mGhostHeldBox->getWorldBoundingBox(true).getCenter();
-    if((mGhostBoxMode==1 || mGhostBoxMode==3) && mGhostBoxNode==nullptr)
+    const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4;
+    if(lyingBox && mGhostBoxNode==nullptr)
     {
         Ogre::Entity* box=scene->createEntity(getName()+"_ThrownGhostBox","GhostBox.mesh");
         box->setQueryFlags(0);box->setCastShadows(true);
@@ -12758,9 +12760,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
     if(mGhostBoxNode!=nullptr) mGhostBoxNode->setScale(getEntityNode()->getScale());
     if(mGhostBoxNode!=nullptr)
     {
-        mGhostBoxNode->setVisible(mGhostBoxMode==1 || mGhostBoxMode==3);
+        mGhostBoxNode->setVisible(lyingBox);
         GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostThrowTarget));
-        if(ghost!=nullptr && (mGhostBoxMode==1 || mGhostBoxMode==3))
+        if(ghost!=nullptr && lyingBox)
         {
             // The box lands on the floor under the ghost, never in the air.
             const Ogre::Vector3 floor(ghost->getPosition().x,ghost->getPosition().y,0.0f);
@@ -12774,11 +12776,29 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 position.z+=4.0f*progress*(1.0f-progress)*0.5f;
                 mGhostCaptureShown=0.0;
             }
+            else if(mGhostBoxMode==4)
+            {
+                // The box snaps shut over the fully pulled-in ghost for GhostBoxSnapSeconds: a hard jolt with the bang,
+                // then it rocks and settles until the catch is complete.
+                mGhostThrowClientTurns+=seconds*ODApplication::turnsPerSecond*getGameMap()->getGameSpeedFactor();
+                const double duration=ConfigManager::getSingleton().getRoomConfigDouble("GhostBoxSnapSeconds")*ODApplication::turnsPerSecond;
+                const float progress=static_cast<float>(std::min(1.0,mGhostThrowClientTurns/duration));
+                const float settle=(1.0f-progress)*(1.0f-progress);
+                const float rock=settle*std::sin(progress*6.0f*Ogre::Math::PI);
+                position.z+=0.08f*settle*std::fabs(std::sin(progress*4.0f*Ogre::Math::PI));
+                Ogre::Vector3 squash=getEntityNode()->getScale();
+                squash.z*=1.0f-0.3f*settle*std::fabs(rock);
+                mGhostBoxNode->setScale(squash);
+                mGhostBoxNode->setOrientation(Ogre::Quaternion(Ogre::Radian(0.25f*rock),Ogre::Vector3::UNIT_Y));
+                mGhostCaptureShown=1.0;
+            }
             else
             {
                 // The beam pulls the ghost down into the lying box: it shrinks smoothly towards the pulled-in share.
                 mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
             }
+            // Only the snap rocks the box; thrown and lying boxes stand upright.
+            if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(Ogre::Quaternion::IDENTITY);
             mGhostBoxNode->setPosition(position);
             ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
         }
