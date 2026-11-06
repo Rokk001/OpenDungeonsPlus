@@ -28,7 +28,7 @@
             <Property name="TooltipText" value="Close message" />
         </Window>
         <Window type="OD/StaticText" name="DismissLabel">
-            <Property name="Area" value="{{0.15,0},{0.6,0},{0.3,0},{0.8,0}}" />
+            <Property name="Area" value="{{0.12,0},{0.6,0},{0.33,0},{0.8,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="HorzFormatting" value="CentreAligned" />

@@ -36,7 +36,7 @@
             <Property name="Disabled" value="True" />
         </Window>
         <Window type="OD/StaticText" name="Explanation">
-            <Property name="Area" value="{{0.02,0},{0.81,0},{0.98,0},{0.9,0}}" />
+            <Property name="Area" value="{{0.02,0},{0.795,0},{0.98,0},{0.915,0}}" />
             <Property name="Text" value="Priorities apply to the next item; current work is kept. Stock and reachability may skip an order." />
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
             <Property name="FrameEnabled" value="False" />
