@@ -99,7 +99,7 @@ public:
 
     //! \brief True during logical sleep and its visible transition back to standing.
     bool rrIsCreatureSleeping(const Creature* creature) const;
-    //! brief True when the creature already lies in its death pose (a knocked-out creature, a corpse): a death
+    //! rief True when the creature already lies in its death pose (a knocked-out creature, a corpse): a death
     //! that follows must not play the death clip again (the body would stand up and fall once more).
     bool rrIsCreatureDown(const Creature* creature) const;
 
