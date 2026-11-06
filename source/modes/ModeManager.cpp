@@ -34,6 +34,7 @@
 #include "modes/EditorMode.h"
 #include "utils/MakeUnique.h"
 #include "render/Gui.h"
+#include "render/LoadingScreen.h"
 #include "render/ODFrameListener.h"
 
 #include <CEGUI/Window.h>
@@ -174,7 +175,12 @@ void ModeManager::checkModeChange()
     if(mCurrentApplicationMode != nullptr)
     {
         if (mCurrentApplicationMode->getModeType() == mRequestedMode)
+        {
+            // The map load kept its loading screen for this mode change: it ends here, nothing else would end it
+            if(mRequestedMode == GAME || mRequestedMode == EDITOR)
+                LoadingScreen::finish();
             return;
+        }
 
         // Keep the previous mode in mind.
         previousMode = mCurrentApplicationMode->getModeType();
@@ -242,6 +248,11 @@ void ModeManager::checkModeChange()
     default:
         break;
     }
+
+    // The loading screen of a map load ends here, after the old menu is gone and just before the game or editor mode
+    // opens and before any frame is drawn: no frame shows the previous menu (the "Please configure map" dialog)
+    if(mRequestedMode == GAME || mRequestedMode == EDITOR)
+        LoadingScreen::finish();
 
     const bool campaignArrival = mRequestedMode == MENU_CAMPAIGN &&
         (previousMode == GAME || previousMode == EDITOR);

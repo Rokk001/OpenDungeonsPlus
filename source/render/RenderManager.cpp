@@ -5598,8 +5598,9 @@ void RenderManager::setCreatureDropGroundAnimation(Creature* creature)
     if(!objectEntity->getSkeleton()->hasAnimation(animation))
         animation = EntityAnimation::idle_anim;
 
+    // A body that lies on the ground never loops a clip (a looping idle clip made corpses move for ever, decision 687)
     Ogre::AnimationState* animationState = setEntityAnimation(objectEntity,
-        animation, animation == EntityAnimation::idle_anim);
+        animation, false);
     creature->setAnimationState(animationState);
 }
 
@@ -6444,8 +6445,13 @@ static const float TreasuryDentTileCentre = 0.5f;
 static const float TreasuryThiefSackScale = 0.7f;
 //! Height of the carried gold sack (at the belt) as a factor of the creature's bounding box height.
 static const float TreasuryThiefSackHeightFactor = 0.45f;
-//! Sideways offset of the carried gold sack as a factor of the creature's bounding box half width.
-static const float TreasuryThiefSackSideFactor = 0.6f;
+//! Sideways offset of the carried gold sack as a factor of the creature's bounding box half width. The box includes
+//! the arms, weapons and wings, so the sack must sit well inside it, at the hip, not at the arm (owner check 0.7.3.37).
+static const float TreasuryThiefSackSideFactor = 0.3f;
+//! The sideways offset of the sack never exceeds this factor of the bounding box height (wide wings, long arms).
+static const float TreasuryThiefSackSideMaxHeightFactor = 0.12f;
+//! The sack sits slightly in front of the body (creatures face the negative y axis of the mesh), as a factor of the box depth.
+static const float TreasuryThiefSackFrontFactor = 0.15f;
 
 void RenderManager::refreshCreaturesOnTile(Tile* tile)
 {
@@ -7305,6 +7311,28 @@ float RenderManager::getBuriedLift(RenderedMovableEntity* entity, bool settleAtO
     return it->second.mCurrent;
 }
 
+bool RenderManager::rrIsCreatureDown(const Creature* creature) const
+{
+    if(creature == nullptr)
+        return false;
+
+    const Ogre::AnimationState* state = creature->getAnimationState();
+    if((state != nullptr) && (state->getAnimationName() == EntityAnimation::die_anim))
+        return true;
+
+    for(const CreatureGroundPose& pose : mCreatureGroundPoses)
+    {
+        if(pose.mCreature == creature)
+            return true;
+    }
+    for(const CreatureDropAnimation& dropAnimation : mCreatureDropAnimations)
+    {
+        if((dropAnimation.mCreature == creature) && dropAnimation.mLieOnGround)
+            return true;
+    }
+    return false;
+}
+
 void RenderManager::rrRefreshCreatureGoldSack(Creature* creature)
 {
     // Only a creature that carries stolen gold shows a sack
@@ -7347,8 +7375,11 @@ void RenderManager::rrRefreshCreatureGoldSack(Creature* creature)
     sackNode->setInheritScale(false);
     sackNode->setScale(TreasuryThiefSackScale, TreasuryThiefSackScale, TreasuryThiefSackScale);
     const Ogre::AxisAlignedBox& creatureBox = creatureEntity->getBoundingBox();
-    sackNode->setPosition(Ogre::Vector3(creatureBox.getMaximum().x * TreasuryThiefSackSideFactor, 0.0f,
-        creatureBox.getMaximum().z * TreasuryThiefSackHeightFactor));
+    const float boxHeight = creatureBox.getSize().z;
+    const float halfWidth = creatureBox.getSize().x * 0.5f;
+    const float side = std::min(halfWidth * TreasuryThiefSackSideFactor, boxHeight * TreasuryThiefSackSideMaxHeightFactor);
+    sackNode->setPosition(Ogre::Vector3(side, creatureBox.getMinimum().y * TreasuryThiefSackFrontFactor,
+        creatureBox.getMinimum().z + boxHeight * TreasuryThiefSackHeightFactor));
     Ogre::Entity* sack = mSceneManager->createEntity(sackName, sackMesh + ".mesh");
     sackNode->attachObject(sack);
 
@@ -7781,7 +7812,8 @@ void RenderManager::rrAddOutliner(Creature* creature)
             // shows and the creature keeps its own colours.
             myPass1->setCullingMode(Ogre::CULL_ANTICLOCKWISE);
             myPass1->setLightingEnabled(false);
-            myPass1->setDepthBias(1.0f, 1.0f);
+            // Ogre depth bias: negative values push AWAY from the camera (positive pulled the shell in front of the model = red fill)
+            myPass1->setDepthBias(-4.0f, -32.0f);
         
             Ogre::HighLevelGpuProgramManager& mgr =  Ogre::HighLevelGpuProgramManager::getSingleton();
             Ogre::HighLevelGpuProgramPtr vertex_program;

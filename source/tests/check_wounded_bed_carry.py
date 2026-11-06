@@ -113,7 +113,7 @@ for needle in ('isHostileNear(', 'DormitoryWoundedCarryEnemyRadius', 'DormitoryW
                'getNbTurnsActive()'):
     assert needle in drag, needle
 assert 'getKoTurnCounter() < 0' not in drag, 'a creature knocked out to death is pulled on, not let go'
-assert 'popAction' not in drag and 'setDestination(mTileDest)' in drag, 'only stopDragging may pop the action'
+assert 'popAction' not in drag and 'setDragDestination(' in drag and 'setDestination(' not in drag, 'only stopDragging may pop the action'
 stop = function_body(carry, 'bool CreatureActionCarryEntity::stopDragging(')
 assert stop.rstrip().endswith('mCreature.popAction();\n    return false;'), 'nothing of the action is used after popAction'
 assert 'clearDestinations(EntityAnimation::idle_anim' in stop

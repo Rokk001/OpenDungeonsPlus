@@ -352,6 +352,109 @@ material MerchantHair
     }
 }
 
+// A2 rework (decision 664 finding 6): merchant room materials. The SalesTable and MerchantShelf used flat
+// untextured colours (ItemWood, ItemWoodLight, MerchantClothTrim) that turned bright orange under the warm room light.
+material MerchantHood
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.04 0.04 0.04 1 10
+            texture_unit
+            {
+                texture MerchantHood.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantBrass
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.55 0.45 0.25 1 30
+            emissive 0.16 0.12 0.05
+            texture_unit
+            {
+                texture MerchantBrass.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantTableWood
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.05 0.05 0.05 1 12
+            texture_unit
+            {
+                texture MerchantTableWood.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantTableCloth
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.03 0.03 0.03 1 8
+            texture_unit
+            {
+                texture MerchantTableCloth.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material MerchantWares
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.10 0.10 0.10 1 16
+            texture_unit
+            {
+                texture MerchantWares.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
 material Bloodroot
 {
     technique

@@ -31,6 +31,7 @@
 #include "render/CreatureAppearancePicture.h"
 #include "render/CreaturePortrait.h"
 #include "render/ODFrameListener.h"
+#include "rooms/RoomType.h"
 #include "social/CreaturePosts.h"
 #include "social/PostLog.h"
 #include "social/SocialGenerator.h"
@@ -39,6 +40,7 @@
 
 #include <CEGUI/Font.h>
 #include <CEGUI/Image.h>
+#include <CEGUI/ImageManager.h>
 #include <CEGUI/InputEvent.h>
 #include <CEGUI/PropertyHelper.h>
 #include <CEGUI/widgets/PushButton.h>
@@ -56,11 +58,12 @@ namespace
 {
 //! Number of posts shown in the feed at most
 const std::size_t MAX_FEED_ROWS = 25;
-//! Number of posts shown in the posts column of the profile at most
-const std::size_t MAX_OWN_POSTS = 5;
-//! Rows of the creature list and of the two feeds in gui/WindowSocial.layout (ListRows/Row0.., FeedRows/Row0..)
+//! Number of posts shown as pictures in the posts column of the profile at most (ProfilePage/PostThumb0..5)
+const std::size_t MAX_OWN_POSTS = 6;
+//! Rows of the creature list and of the two feeds in gui/WindowSocial.layout (ListRows/Row0.., FeedRows/Row0..).
+//! A post row holds the portrait, the name line, two lines of text and the picture of the post below them.
 const std::size_t LIST_ROWS = 7;
-const std::size_t FEED_ROWS = 6;
+const std::size_t FEED_ROWS = 3;
 //! Number of item slots of the inventory page (6 equipment, 3 potions, 4 inventory)
 const std::size_t ITEM_SLOTS = 13;
 //! The window checks for changes at most this often (real seconds), so at most 4 redraws per second
@@ -143,17 +146,109 @@ std::string renderPostText(const social::Post& post, const social::CreatureProfi
         post.mCategory >= social::PostCategory::Bought ? post.mOther : "");
 }
 
-//! One line of the recent posts of a creature: the text and its age
-std::string renderOwnPostLine(const social::Post& post, int64_t turnNow)
+//! \brief Name of the HUD picture of a room type in the OpenDungeonsIcons imageset, empty if the room has none.
+std::string roomPictureName(int32_t roomType)
 {
-    social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
-    const social::CreatureProfile& profile = cache.getProfile(post.mCreature, post.mClassName, post.mIsWorker);
-    std::string text = renderPostText(post, profile);
-    if(text.empty())
-        return text;
+    switch(static_cast<RoomType>(roomType))
+    {
+        case RoomType::dungeonTemple: return "TempleButton";
+        case RoomType::dormitory: return "DormitoryButton";
+        case RoomType::treasury: return "TreasuryButton";
+        case RoomType::portal:
+        case RoomType::portalWave: return "PortalButton";
+        case RoomType::workshop: return "WorkshopButton";
+        case RoomType::trainingHall: return "TrainingHallButton";
+        case RoomType::library: return "LibraryButton";
+        case RoomType::hatchery: return "HatcheryButton";
+        case RoomType::crypt: return "CryptButton";
+        case RoomType::prison: return "PrisonButton";
+        case RoomType::bridgeWooden: return "WoodenBridgeButton";
+        case RoomType::bridgeStone: return "StoneBridgeButton";
+        case RoomType::arena: return "ArenaButton";
+        case RoomType::casino: return "CasinoButton";
+        case RoomType::torture: return "TortureButton";
+        case RoomType::guardRoom: return "GuardRoomButton";
+        case RoomType::temple: return "PrayerTempleButton";
+        case RoomType::toilet: return "ToiletButton";
+        case RoomType::merchant: return "MerchantButton";
+        case RoomType::herbGarden: return "HerbGardenButton";
+        case RoomType::alchemyLab: return "AlchemyLabButton";
+        case RoomType::tavern: return "TavernButton";
+        case RoomType::infirmary: return "InfirmaryButton";
+        case RoomType::ghostRoom: return "GhostRoomButton";
+        case RoomType::spa: return "SpaButton";
+        default: return "";
+    }
+}
 
-    return std::string(FEED_TEXT_COLOUR) + escapeMarkup(text) + FEED_TIME_COLOUR + "  (" +
-        formatAge(turnNow - post.mTurn) + ")\n\n";
+//! \brief Name of the game picture (OpenDungeonsIcons) of what the post is about: the room of a work, training or
+//! wish post, the room or the thing of a meal, a night, a payday, a drink, a purchase and so on. Empty when the post
+//! is about the creature itself (level up, hurt, friendship, ...); the book shows the portrait of the creature then.
+std::string postPictureName(const social::Post& post)
+{
+    using social::PostCategory;
+    switch(post.mCategory)
+    {
+        case PostCategory::Work:
+        case PostCategory::Wish:
+        case PostCategory::ThanksWish:
+            return roomPictureName(post.mArgument);
+        case PostCategory::Train:
+        {
+            const std::string room = roomPictureName(post.mArgument);
+            return room.empty() ? "TrainingHallButton" : room;
+        }
+        case PostCategory::Eat:
+        case PostCategory::ComplainHungry:
+        case PostCategory::ThanksHungry:
+            return "HatcheryButton";
+        case PostCategory::Sleep:
+        case PostCategory::ComplainBed:
+        case PostCategory::ThanksBed:
+        case PostCategory::ComplainTired:
+        case PostCategory::ThanksTired:
+            return "DormitoryButton";
+        case PostCategory::Payday:
+        case PostCategory::ComplainWage:
+        case PostCategory::ThanksWage:
+            return "GoldCoin";
+        case PostCategory::Fight:
+        case PostCategory::ComplainFight:
+        case PostCategory::ThanksFight:
+            return "FighterButton";
+        case PostCategory::Jail:
+            return "PrisonButton";
+        case PostCategory::PickedUp:
+        case PostCategory::ComplainHeld:
+        case PostCategory::ThanksHeld:
+            return "WorkerHandActive";
+        case PostCategory::Arrived:
+            return "PortalButton";
+        case PostCategory::Relieved:
+            return "ToiletButton";
+        case PostCategory::Bought:
+        case PostCategory::Bargain:
+        case PostCategory::Fleeced:
+            return "MerchantButton";
+        case PostCategory::Gift:
+            return "WorkerCarryGift";
+        case PostCategory::Drank:
+        case PostCategory::ComplainThirsty:
+        case PostCategory::ThanksThirsty:
+            return "BeerButton";
+        case PostCategory::DuelWon:
+        case PostCategory::DuelLost:
+        case PostCategory::Drunk:
+        case PostCategory::Hungover:
+            return "TavernButton";
+        case PostCategory::GhostScared:
+        case PostCategory::GhostHunted:
+            return "GhostRoomButton";
+        case PostCategory::Relaxed:
+            return "SpaButton";
+        default:
+            return "";
+    }
 }
 
 //! \brief The text shortened with "..." so it is not wider than the given pixel width
@@ -729,6 +824,16 @@ const CEGUI::Image* SocialWindow::findPortrait(const std::string& creatureName, 
     return &getCircularCreatureProfilePortraitImage(creatureName, definition->getMeshName(), profile.mGender);
 }
 
+const CEGUI::Image* SocialWindow::findPostPicture(const social::Post& post) const
+{
+    const std::string name = postPictureName(post);
+    CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
+    if(!name.empty() && images.isDefined("OpenDungeonsIcons/" + name))
+        return &images.get("OpenDungeonsIcons/" + name);
+    // Every post has a picture: without a room or a thing it is the portrait of the creature
+    return findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false);
+}
+
 void SocialWindow::describeMood(const social::DungeonbookEntry& entry, std::string& text, std::string& icon) const
 {
     // The own creatures carry their mood level on this side; for the others only the unhappy mark of the roster is known
@@ -941,6 +1046,10 @@ void SocialWindow::rebuildFeed()
         CEGUI::Window* textWindow = row->getChild("Text");
         fitTextToWindow(textWindow, FEED_TEXT_COLOUR, text);
         textWindow->setTooltipText(text);
+        // The game picture of the post below its text
+        CEGUI::Window* picture = row->getChild("Picture");
+        setImage(picture->getChild("Image"), findPostPicture(post));
+        picture->setTooltipText(text);
     }
     CEGUI::Window* empty = page->getChild("FeedEmpty");
     empty->setVisible(posts.empty());
@@ -984,7 +1093,7 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
     CEGUI::Window* page = mWindow->getChild("ProfilePage");
     social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
     const social::CreatureProfile& profile = cache.getProfile(entry.name, entry.className, entry.worker);
-    setImage(page->getChild("Portrait"), findPortrait(entry.name, entry.className, entry.worker, false));
+    setImage(page->getChild("Portrait/Clip/Image"), findPortrait(entry.name, entry.className, entry.worker, false));
     setElidedText(page->getChild("NameText"), profile.getFullName());
     setElidedText(page->getChild("KeeperText"), "Keeper: " + entry.keeper);
     std::string mood;
@@ -1054,31 +1163,37 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
         fallback->setText(escapeMarkup(text));
     }
 
-    // The posts of the creature: their number and the newest ones
+    // The posts of the creature: their number and the pictures of the newest ones, the text in the tooltip
     social::PostLog& log = social::PostLog::getSingleton();
     const int64_t turnNow = mGameMap.getTurnNumber();
     std::size_t count = 0;
     std::size_t rows = 0;
-    std::string posts;
     const std::deque<social::Post>& allPosts = log.getPosts();
     for(std::deque<social::Post>::const_reverse_iterator it = allPosts.rbegin(); it != allPosts.rend(); ++it)
     {
         if(it->mCreature != mSelectedCreature)
             continue;
 
-        std::string line = renderOwnPostLine(*it, turnNow);
-        if(line.empty())
+        const std::string text = renderPostText(*it, cache.getProfile(it->mCreature, it->mClassName, it->mIsWorker));
+        if(text.empty())
             continue;
 
         ++count;
         if(rows < MAX_OWN_POSTS)
         {
-            posts += line;
+            CEGUI::Window* thumb = page->getChild("PostThumb" + std::to_string(rows));
+            thumb->setVisible(true);
+            setImage(thumb->getChild("Image"), findPostPicture(*it));
+            thumb->setTooltipText(text + "  (" + formatAge(turnNow - it->mTurn) + ")");
             ++rows;
         }
     }
+    for(std::size_t i = rows; i < MAX_OWN_POSTS; ++i)
+        page->getChild("PostThumb" + std::to_string(i))->setVisible(false);
     page->getChild("PostsTitle")->setText("Posts (" + std::to_string(count) + ")");
-    page->getChild("PostsText")->setText(posts.empty() ? std::string(FEED_TEXT_COLOUR) + "Nothing posted yet." : posts);
+    CEGUI::Window* empty = page->getChild("PostsEmpty");
+    empty->setVisible(rows == 0);
+    empty->setText(std::string(FEED_TEXT_COLOUR) + "Nothing posted yet.");
 }
 
 //! \brief Fills the values sheet: the statistics column, the portrait ring, the attributes, the combat and defense
@@ -1149,7 +1264,7 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
 void SocialWindow::refreshInventory(const social::DungeonbookEntry& entry)
 {
     CEGUI::Window* page = mWindow->getChild("InventoryPage");
-    setImage(page->getChild("Portrait"), findPortrait(entry.name, entry.className, entry.worker, false));
+    setImage(page->getChild("Portrait/Clip/Image"), findPortrait(entry.name, entry.className, entry.worker, false));
     std::vector<CEGUI::Window*> slots;
     for(std::size_t slot = 0; slot < ITEM_SLOTS; ++slot)
         slots.push_back(page->getChild("SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)));

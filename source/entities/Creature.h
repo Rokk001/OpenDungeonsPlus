@@ -929,6 +929,10 @@ public:
 
     //! \brief Drops a hunter's boxed ghosts and releases its equipment without removing queued actions.
     void interruptGhostHunt();
+    //! \brief Decision 658: a creature never stands on a wall. Server only. When the creature is found on a full tile (a
+    //! wall) it is put on the nearest floor tile it can walk on, its path is dropped and the clients are told.
+    //! eturn true when the creature was moved
+    bool keepOffWalls();
     //! \brief Rebinds a hunt when its equipment or occupied cauldron moves to another room.
     void transferGhostHuntRoom(const std::string& previous, const std::string& current, bool hook, bool empty);
     //! \brief Returns whether the current hunt wears its equipment.
