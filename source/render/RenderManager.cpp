@@ -7320,7 +7320,8 @@ bool RenderManager::rrIsCreatureDown(const Creature* creature) const
         return false;
 
     const Ogre::AnimationState* state = creature->getAnimationState();
-    if((state != nullptr) && (state->getAnimationName() == EntityAnimation::die_anim))
+    if((state != nullptr) && ((state->getAnimationName() == EntityAnimation::die_anim) ||
+       (state->getAnimationName() == "CorpseDecay")))
         return true;
 
     for(const CreatureGroundPose& pose : mCreatureGroundPoses)
