@@ -291,6 +291,13 @@ void MovableGameEntity::startAnimationClip()
        RenderManager::getSingleton().rrIsCreatureDown(static_cast<Creature*>(this)))
         return;
 
+    // A dead body that a worker pulls keeps the lying pose it already has (the last frame of its death clip, the lying
+    // fallback pose, the decay clip). The Dragged clip is made for a living, hurt creature that is pulled by the legs: on a
+    // body it stood up half way and floated along above the ground (decision 710)
+    if((mPrevAnimationState == EntityAnimation::dragged_anim) && (getObjectType() == GameEntityType::creature) &&
+       !static_cast<Creature*>(this)->isAlive() && RenderManager::getSingleton().rrIsCreatureDown(static_cast<Creature*>(this)))
+        return;
+
     RenderManager::getSingleton().rrSetObjectAnimationState(this, mPrevAnimationState, mPrevAnimationStateLoop);
 
     // The reactions of the creatures (cheering winners) look at what the creatures do

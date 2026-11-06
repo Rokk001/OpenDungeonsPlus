@@ -4,7 +4,8 @@ entries, the CREDITS rows, the nine tavern clips in every creature skeleton and 
 What is checked
   models      TavernCounter, Innkeeper, TavernKeg, TavernTable, TavernMug, Vomit: mesh, one Blender source each, a
               material in a material script, the innkeeper's skeleton with the clips Idle, Pour and Cheer; the counter
-              uses TavernCounterWood, TavernRail (self-lit) and TavernSign and never the striped TavernWood
+              uses TavernCounterWood, TavernRail (self-lit) and TavernSign and never the striped TavernWood; planks,
+              robe, hide and apron bright enough for the tavern light, the rail aged brass with a faint glow (710)
   materials   TavernWood, TavernBrass, TavernStone (and the other object materials) with a 128 x 128 texture each, the
               floor and wall materials with their textures and normal maps, the bird effect material
   icons       the painted 256 x 256 sources of TavernButton and BeerButton (the atlas entries are pinned by
@@ -27,6 +28,7 @@ import re
 import struct
 import subprocess
 import sys
+import zlib
 
 root = Path(__file__).resolve().parents[2]
 
@@ -56,6 +58,50 @@ def png_size(path):
     data = (root / path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     return struct.unpack('>II', data[16:24])
+
+
+# Returns the mean luminance (0..255) of an 8-bit grey, RGB or RGBA PNG without interlacing.
+def png_mean_luminance(path):
+    data = (root / path).read_bytes()
+    assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
+    at, idat, head = 8, b'', None
+    while at < len(data):
+        size, kind = struct.unpack('>I4s', data[at:at + 8])
+        body = data[at + 8:at + 8 + size]
+        if kind == b'IHDR':
+            head = struct.unpack('>IIBBBBB', body)
+        elif kind == b'IDAT':
+            idat += body
+        at += 12 + size
+    width, height, depth, colour, _, _, interlace = head
+    channels = {0: 1, 2: 3, 4: 2, 6: 4}[colour]
+    assert depth == 8 and interlace == 0, path + ' must be an 8-bit PNG without interlacing'
+    raw = zlib.decompress(idat)
+    stride = width * channels
+    prev = bytearray(stride)
+    total = 0.0
+    for y in range(height):
+        kind = raw[y * (stride + 1)]
+        line = bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+        for i in range(stride):
+            a = line[i - channels] if i >= channels else 0
+            b = prev[i]
+            c = prev[i - channels] if i >= channels else 0
+            if kind == 1:
+                line[i] = (line[i] + a) & 255
+            elif kind == 2:
+                line[i] = (line[i] + b) & 255
+            elif kind == 3:
+                line[i] = (line[i] + (a + b) // 2) & 255
+            elif kind == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[i] = (line[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        for x in range(width):
+            px = line[x * channels:x * channels + channels]
+            total += px[0] if channels < 3 else 0.299 * px[0] + 0.587 * px[1] + 0.114 * px[2]
+        prev = line
+    return total / (width * height)
 
 
 # Returns (channels, rate) of an Ogg Vorbis file from its identification header.
@@ -114,6 +160,17 @@ assert b'Innkeeper.skeleton' in (root / 'models' / 'Innkeeper.mesh').read_bytes(
 innkeeper_skeleton = (root / 'models' / 'Innkeeper.skeleton').read_bytes()
 for clip in INNKEEPER_CLIPS:
     assert (clip + '\n').encode('ascii') in innkeeper_skeleton, 'Innkeeper.skeleton has no clip ' + clip
+# Owner check 710 (build 0.7.3.41): the counter read as a black box with a yellow edge and the innkeeper as a dark
+# faceless figure. A vertical face shows at about 0.7 x its texture value in the tavern light, so the planks, the robe,
+# the hide and the apron need a minimum brightness (build 41: 37, 28, 62, 107), and the rail must not glare yellow
+# (build 41: texture 169, emissive 0.22 0.16 0.06).
+for name, low in (('TavernCounterWood', 55), ('TavernHood', 45), ('TavernSkin', 85), ('TavernCloth', 130)):
+    value = png_mean_luminance('materials/textures/tavern/' + name + '.png')
+    assert value >= low, '%s.png is too dark for the tavern light (mean %.0f, needs %d)' % (name, value, low)
+value = png_mean_luminance('materials/textures/tavern/TavernRail.png')
+assert value <= 145, 'TavernRail.png glares yellow (mean %.0f, at most 145): aged brass, not a bright yellow edge' % value
+emissive = re.search(r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', rail.group(0), re.M)
+assert emissive and max(float(x) for x in emissive.groups()) <= 0.12, 'TavernRail self-light at most 0.12 (a stronger glow reads as a yellow edge)'
 
 # 2. Materials and textures
 for name in ('TavernWood', 'TavernBrass', 'TavernStone', 'TavernIron', 'TavernCloth', 'TavernHood', 'TavernSkin', 'TavernFoam',

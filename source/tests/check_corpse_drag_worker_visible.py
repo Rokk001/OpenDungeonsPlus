@@ -28,4 +28,25 @@ clip = movable.split('void MovableGameEntity::startAnimationClip()')[1].split('r
 assert 'mPrevAnimationState == EntityAnimation::die_anim' in clip
 # nothing hides a carrier worker: a pulled body is never attached to the worker node
 assert 'mIsDrag' in action and 'if(mIsDrag)' in action.split('CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building& buildingDest')[1][:1800]
+
+# X1 rework 3 (decision 710): the worker was still invisible and the corpse floated.
+# (a) The corpse got the Dragged clip, a pose for a living, hurt creature pulled by the legs (the standing-ish pose of
+#     the skeleton and the Troll hangs up to 0.9 above the ground). A dead body that already lies keeps its lying pose.
+start = movable.split('void MovableGameEntity::startAnimationClip()')[1].split('void MovableGameEntity::')[0]
+assert 'mPrevAnimationState == EntityAnimation::dragged_anim' in start and '!static_cast<Creature*>(this)->isAlive()' in start
+assert start.index('dragged_anim') < start.index('rrSetObjectAnimationState')
+down = render.split('bool RenderManager::rrIsCreatureDown')[1].split('void RenderManager::rrRefreshCreatureGoldSack')[0]
+assert '"CorpseDecay"' in down
+# (b) The corpse was pulled at the configured gap of 0.9 tiles, less than the half length of a lying Troll or Dragon
+#     plus the worker: the body lay over the small worker (Kobold, 0.3 high) and hid it. The gap now covers both bodies.
+assert 'double dragGap(Creature& worker, Creature& dragged)' in action
+assert 'RoomObjectNavigation::clearance(worker) + RoomObjectNavigation::clearance(dragged)' in action
+assert action.count('dragGap(mCreature, *dragged)') == 2 and 'getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap"' in action.split('double dragGap')[1].split('}')[0]
+# the lying body of the biggest creatures needs more than the old gap of 0.9
+import re
+bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text(encoding='utf-8')
+radii = dict(re.findall(r'\{"(\w+)\.mesh", (\.\d+)f, -', bounds.split('walkingRadii[]')[1]))
+kobold = float(radii['Kobold'])
+for big in ('Troll', 'Dragon', 'PitDemon', 'LavaSpawn', 'Kreatur'):
+    assert float(radii[big]) + kobold + 0.1 > 0.9, big
 print('ok')

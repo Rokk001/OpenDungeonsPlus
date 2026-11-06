@@ -25,6 +25,7 @@
 #include "entities/ItemBagEntity.h"
 #include "entities/Tile.h"
 #include "gamemap/GameMap.h"
+#include "gamemap/RoomObjectNavigation.h"
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomDormitory.h"
 #include "rooms/RoomCrypt.h"
@@ -49,6 +50,16 @@ namespace
 static const double DRAG_TRAIL_MIN_STEP = 0.01;
 //! Smallest gain in length of the trail that is sent to the pulled creature as a new walk path
 static const double DRAG_FOLLOW_MIN_ARC_GAIN = 0.001;
+
+//! Distance in tiles the pulled creature lies behind the worker: the configured gap, but never less than the two
+//! bodies need (walking radii), so a big body (Troll, Dragon) does not lie over the small worker and hide it
+double dragGap(Creature& worker, Creature& dragged)
+{
+    const double configured = std::max(0.0, ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap",
+        Creature::WOUNDED_DRAG_GAP_DEFAULT));
+    const double bodies = static_cast<double>(RoomObjectNavigation::clearance(worker) + RoomObjectNavigation::clearance(dragged)) + 0.1;
+    return std::max(configured, bodies);
+}
 
 //! \brief Appends the part of the trail between the two lengths to the path: the points of the trail that lie
 //! strictly between them and then the point at the length 'to' itself
@@ -493,7 +504,7 @@ bool CreatureActionCarryEntity::handleDragCreature()
             mDragTrail.push_back(point);
             mDragTrailArc.push_back(mDragTrailArc.back() + step);
         }
-        const double gap = std::max(0.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap", Creature::WOUNDED_DRAG_GAP_DEFAULT));
+        const double gap = dragGap(mCreature, *dragged);
         followTrail(*dragged, std::max(0.0, mDragTrailArc.back() - gap));
         if(mCreature.isMoving())
             return false;
@@ -572,7 +583,7 @@ bool CreatureActionCarryEntity::handleDragCreature()
         mDragTrail.push_back(workerPoint);
         mDragTrailArc.push_back(mDragTrailArc.back() + step);
     }
-    double gap = std::max(0.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap", Creature::WOUNDED_DRAG_GAP_DEFAULT));
+    double gap = dragGap(mCreature, *dragged);
     followTrail(*dragged, std::max(0.0, mDragTrailArc.back() - gap));
 
     // The worker walks backwards to the bed. The way is walked in one go, so it keeps its turn and this check
