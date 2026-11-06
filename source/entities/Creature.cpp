@@ -2938,6 +2938,10 @@ void Creature::doUpkeep()
     if(isPossessed() && (!isAlive() || isKo() || !getIsOnMap()))
         endPossession();
 
+    // Decision 658: no creature stands on a wall tile, whatever put it there (path, drop, push, a wall built under it)
+    if(keepOffWalls())
+        return;
+
     // If the creature is in jail, we check if it is still standing on it (if not picked up). If
     // not, it is free
     if((mSeatPrison != nullptr) &&
@@ -8409,6 +8413,60 @@ bool Creature::setDestination(Tile* tile)
     return true;
 }
 
+bool Creature::keepOffWalls()
+{
+    if(!getIsOnServerMap() || !getIsOnMap() || !isAlive() || mIsInHand || mIsCarried || mIsBeingDragged ||
+       (mJumpTurnsLeft > 0) || getGameMap()->isInEditorMode())
+        return false;
+
+    Tile* wallTile = getPositionTile();
+    // A tile that holds a building (a door, a cell) is the building's business
+    if((wallTile == nullptr) || !wallTile->isFullTile() || (wallTile->getCoveringBuilding() != nullptr))
+        return false;
+
+    const Ogre::Vector3 position = getPosition();
+    Tile* best = nullptr;
+    double bestDistance = 0.0;
+    const int range = 8;
+    for(int dy = -range; dy <= range; ++dy)
+    {
+        for(int dx = -range; dx <= range; ++dx)
+        {
+            Tile* tile = getGameMap()->getTile(wallTile->getX() + dx, wallTile->getY() + dy);
+            if((tile == nullptr) || tile->isFullTile() || !canGoThroughTile(tile))
+                continue;
+
+            const double distance = (static_cast<double>(tile->getX()) - position.x) * (static_cast<double>(tile->getX()) - position.x) +
+                (static_cast<double>(tile->getY()) - position.y) * (static_cast<double>(tile->getY()) - position.y);
+            if((best == nullptr) || (distance < bestDistance))
+            {
+                best = tile;
+                bestDistance = distance;
+            }
+        }
+    }
+    if(best == nullptr)
+        return false;
+
+    OD_LOG_INF("creature=" + getName() + " stood on the wall " + Tile::displayAsString(wallTile) + ", moved to "
+        + Tile::displayAsString(best));
+    clearActionQueue();
+    clearDestinations(EntityAnimation::idle_anim, true, true);
+    const Ogre::Vector3 destination(static_cast<Ogre::Real>(best->getX()), static_cast<Ogre::Real>(best->getY()), position.z);
+    setPosition(destination);
+    for(Seat* seat : mSeatsWithVisionNotified)
+    {
+        if((seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
+            continue;
+
+        ServerNotification* serverNotification = new ServerNotification(
+            ServerNotificationType::entityTeleported, seat->getPlayer());
+        serverNotification->mPacket << getName() << destination;
+        ODServer::getSingleton().queueServerNotification(serverNotification);
+    }
+    return true;
+}
+
 void Creature::checkWalkPathIsStillValid()
 {
     if(mWalkQueue.empty())
@@ -12537,10 +12595,17 @@ void Creature::refreshGhostHuntVisuals()
         {
             CreatureActionHuntGhost* hunt=static_cast<CreatureActionHuntGhost*>(action.get());
             backpack=hunt->hasBackpack();target=hunt->getBeamTarget();boxMode=hunt->getBoxVisualState();
-            thrown=hunt->getThrowGhostName();turns=hunt->getStepTurns();break;
+            thrown=hunt->getThrowGhostName();turns=hunt->getStepTurns();
+            // While the box lies under the ghost the clock is the share of the ghost already pulled in (1 once shut).
+            if(boxMode==3)
+            {
+                const double capture=hunt->getCaptureTurns();
+                turns=capture>0.0?std::min(1.0,turns/capture):1.0;
+            }
+            break;
         }
     if(backpack!=mGhostBackpack || target!=mGhostBeamTarget || boxMode!=mGhostBoxMode || thrown!=mGhostThrowTarget ||
-       (boxMode==1 && turns!=mGhostThrowTurns))
+       ((boxMode==1 || boxMode==3) && turns!=mGhostThrowTurns))
     {
         mGhostBackpack=backpack;mGhostBeamTarget=target;mGhostBoxMode=boxMode;
         mGhostThrowTarget=thrown;mGhostThrowTurns=turns;mNeedFireRefresh=true;
@@ -12567,6 +12632,17 @@ void Creature::restoreGhostHunt()
     mGhostHuntLoaded=false;
 }
 
+//! \brief Returns the hand bone that carries the ghost box: the free weapon hand first, then common hand bone names.
+static std::string ghostBoxHandBone(const Ogre::Skeleton* skeleton, bool leftFree)
+{
+    if(skeleton==nullptr) return std::string();
+    const char* names[]={leftFree?"Weapon_L":"Weapon_R",leftFree?"Weapon_R":"Weapon_L","LeftHand","RightHand","Hand_L","Hand_R",
+        "hand.L","hand.R","Hand.L","Hand.R","L_Hand","R_Hand","hand_l","hand_r"};
+    for(const char* name : names)
+        if(skeleton->hasBone(name)) return name;
+    return std::string();
+}
+
 void Creature::clearGhostHuntVisuals()
 {
     if(getIsOnServerMap()) return;
@@ -12586,6 +12662,18 @@ void Creature::clearGhostHuntVisuals()
         }
         scene->destroySceneNode(mGhostBoxNode);mGhostBoxNode=nullptr;
     }
+    if(mGhostHeldBox!=nullptr)
+    {
+        // The box in the hand hangs on a bone of the creature entity, or on the fallback hand node.
+        const std::string body=getOgreNamePrefix()+getName();
+        if(mGhostHeldBox->isAttached() && mGhostHandNode==nullptr && scene->hasEntity(body))
+            scene->getEntity(body)->detachObjectFromBone(mGhostHeldBox);
+        else if(mGhostHandNode!=nullptr && mGhostHeldBox->isAttached())
+            mGhostHandNode->detachObject(mGhostHeldBox);
+        scene->destroyEntity(mGhostHeldBox);mGhostHeldBox=nullptr;
+    }
+    if(mGhostHandNode!=nullptr) { scene->destroySceneNode(mGhostHandNode);mGhostHandNode=nullptr; }
+    mGhostCaptureShown=0.0;
     if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
     if(mGhostBeamSparks!=nullptr) { scene->destroyParticleSystem(mGhostBeamSparks);mGhostBeamSparks=nullptr; }
     if(mGhostSparkNode!=nullptr) { scene->destroySceneNode(mGhostSparkNode);mGhostSparkNode=nullptr; }
@@ -12626,31 +12714,67 @@ void Creature::updateGhostHuntVisuals(double seconds)
         if(previous!=nullptr) previous->setCaptureProgress(0.0);
         mGhostShrinkTarget.clear();
     }
-    if(mGhostBoxMode!=0 && mGhostBoxNode==nullptr)
+    // The carried box sits in the hunter's hand: it hangs on the free hand bone and follows every arm movement.
+    if(!scene->hasEntity(getOgreNamePrefix()+getName())) return;
+    Ogre::Entity* body=scene->getEntity(getOgreNamePrefix()+getName());
+    if(mGhostHeldBox==nullptr)
     {
-        Ogre::Entity* box=scene->createEntity(getName()+"_HeldGhostBox","GhostBox.mesh");
-        box->setQueryFlags(0);
-        mGhostBoxNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_HeldGhostBoxNode");mGhostBoxNode->attachObject(box);
+        mGhostHeldBox=scene->createEntity(getName()+"_HeldGhostBox","GhostBox.mesh");
+        mGhostHeldBox->setQueryFlags(0);mGhostHeldBox->setCastShadows(true);
+    }
+    if(!mGhostHeldBox->isAttached())
+    {
+        const std::string bone=ghostBoxHandBone(body->hasSkeleton()?body->getSkeleton():nullptr,getWeaponL()==nullptr);
+        if(!bone.empty())
+        {
+            // Same grip as the tavern mug: the box stands upright in the palm of the hand bone.
+            Ogre::Quaternion grip;grip.FromAngleAxis(Ogre::Degree(-90.0),Ogre::Vector3::UNIT_X);
+            body->attachObjectToBone(bone,mGhostHeldBox,grip,Ogre::Vector3::ZERO);
+        }
+        else
+        {
+            // A creature without hand bones holds the box in front of its body at hand height, still moving with it.
+            const Ogre::Real height=body->getBoundingBox().getSize().z;
+            if(mGhostHandNode==nullptr)
+                mGhostHandNode=getEntityNode()->createChildSceneNode(getName()+"_GhostHandNode",Ogre::Vector3(0.22f,0.28f,0.42f*height));
+            mGhostHandNode->attachObject(mGhostHeldBox);
+        }
+    }
+    mGhostHeldBox->setVisible(mGhostBoxMode==2);
+    // The thrown box leaves from the hand it was held in.
+    const Ogre::Vector3 hand=mGhostHeldBox->getWorldBoundingBox(true).getCenter();
+    if((mGhostBoxMode==1 || mGhostBoxMode==3) && mGhostBoxNode==nullptr)
+    {
+        Ogre::Entity* box=scene->createEntity(getName()+"_ThrownGhostBox","GhostBox.mesh");
+        box->setQueryFlags(0);box->setCastShadows(true);
+        mGhostBoxNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_ThrownGhostBoxNode");mGhostBoxNode->attachObject(box);
     }
     if(mGhostBoxNode!=nullptr)
     {
-        mGhostBoxNode->setVisible(mGhostBoxMode!=0);
-        const Ogre::Vector3 start=getPosition()+getWalkDirection()*0.35f+Ogre::Vector3(0.0f,0.0f,0.65f);
-        Ogre::Vector3 position=start;
-        if(mGhostBoxMode==1)
+        mGhostBoxNode->setVisible(mGhostBoxMode==1 || mGhostBoxMode==3);
+        GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostThrowTarget));
+        if(ghost!=nullptr && (mGhostBoxMode==1 || mGhostBoxMode==3))
         {
-            GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostThrowTarget));
-            if(ghost!=nullptr)
+            // The box lands on the floor under the ghost, never in the air.
+            const Ogre::Vector3 floor(ghost->getPosition().x,ghost->getPosition().y,0.0f);
+            Ogre::Vector3 position=floor;
+            if(mGhostBoxMode==1)
             {
                 mGhostThrowClientTurns+=seconds*ODApplication::turnsPerSecond*getGameMap()->getGameSpeedFactor();
                 const double duration=ConfigManager::getSingleton().getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond;
                 const float progress=static_cast<float>(std::min(1.0,mGhostThrowClientTurns/duration));
-                position=start+(ghost->getPosition()-start)*progress;
+                position=hand+(floor-hand)*progress;
                 position.z+=4.0f*progress*(1.0f-progress)*0.5f;
-                ghost->setCaptureProgress(progress);mGhostShrinkTarget=mGhostThrowTarget;
+                mGhostCaptureShown=0.0;
             }
+            else
+            {
+                // The beam pulls the ghost down into the lying box: it shrinks smoothly towards the pulled-in share.
+                mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
+            }
+            mGhostBoxNode->setPosition(position);
+            ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
         }
-        mGhostBoxNode->setPosition(position);
     }
     GameEntity* target=getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostBeamTarget);
     if(target==nullptr || mGhostBeamTarget.empty())

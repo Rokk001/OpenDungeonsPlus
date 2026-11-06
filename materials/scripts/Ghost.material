@@ -389,7 +389,8 @@ material ManaStillFireGlow
     }
 }
 
-// Mana still (working): green glow round the column and the copper coil, and inside the funnel.
+// Mana still (working): green glow round the column and the copper coil, and inside the funnel (brighter since
+// rework 3, so it shines out between the copper windings).
 material ManaStillColumnGlow
 {
     receive_shadows off
@@ -407,7 +408,31 @@ material ManaStillColumnGlow
                 texture ManaStillGlowRamp.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.18 0.62 0.24
+                colour_op_ex modulate src_texture src_manual 0.30 0.95 0.40
+            }
+        }
+    }
+}
+
+// Mana still (idle): dim green glow in the column behind the copper windings, so a waiting still keeps a green light.
+material ManaStillColumnGlowDim
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture ManaStillGlowRamp.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.10 0.34 0.14
             }
         }
     }
@@ -443,7 +468,31 @@ material ManaStillVapour
     }
 }
 
-// Mana still: hammered copper coil wound round the glass column (copper coloured, a little self-lit so it reads in the dark room).
+// Mana still: bevelled copper band of the coil wound round the glass column. Its texture is laid out once round the band
+// profile (u along the winding), so every face carries its own baked tone: bright top bevel, dark seams, hammer dents,
+// oxidation and verdigris in the crevices. The emissive keeps those tones readable in the dark room.
+material ManaStillCoilCopper
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.85 0.85 0.85
+            diffuse 1.0 1.0 1.0 1
+            emissive 0.22 0.17 0.13
+            specular 0.95 0.66 0.42 1 40
+            texture_unit
+            {
+                texture ManaStillCoilCopper.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Mana still: hammered copper of the coil collars and leads' fittings (copper coloured, a little self-lit so it reads in the dark room).
 material ManaStillCopper
 {
     receive_shadows on
@@ -912,7 +961,7 @@ material GhostPressChain
     }
 }
 
-// Ghost press (idle): the emblems glow dim green.
+// Ghost press (idle): the emblems glow green, dimmer than the pulsing working glow (rework 3: brighter, 697).
 material GhostPressEmblemDim
 {
     receive_shadows off
@@ -926,13 +975,13 @@ material GhostPressEmblemDim
                 texture GhostPressGlow_2.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.55 0.8 0.6
+                colour_op_ex modulate src_texture src_manual 0.75 1.0 0.8
             }
         }
     }
 }
 
-// Ghost press (idle): dimmer rune circles on the pages of the open book (they turn slowly by bone).
+// Ghost press (idle): rune circles on the pages of the open book, a little dimmer than working (they turn slowly by bone).
 material GhostPressRuneDim
 {
     receive_shadows off
@@ -950,7 +999,7 @@ material GhostPressRuneDim
                 texture GhostPressRune.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.6 0.6 0.6
+                colour_op_ex modulate src_texture src_manual 0.9 0.9 0.9
             }
         }
     }
@@ -998,7 +1047,7 @@ material GhostPressGlowDim
                 texture ManaStillPuff.png
                 tex_address_mode clamp
                 filtering trilinear
-                colour_op_ex modulate src_texture src_manual 0.13 0.46 0.18
+                colour_op_ex modulate src_texture src_manual 0.18 0.62 0.25
             }
         }
     }
@@ -1023,6 +1072,56 @@ material GhostPressPuff
                 tex_address_mode clamp
                 filtering trilinear
                 colour_op_ex modulate src_texture src_manual 0.14 0.50 0.20
+            }
+        }
+    }
+}
+
+// Ghost press and soul forge (working): broad green light cards (opening under the platen, pages, columns, floor;
+// crystals, grate and floor of the forge). Wide soft texture, so the light fills the card (rework 3, decision 697).
+material GhostApparatusGlow
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture GhostApparatusGlow.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.30 1.0 0.42
+            }
+        }
+    }
+}
+
+// Ghost press and soul forge (working and idle): steady green light, clearly visible in idle; working adds
+// GhostApparatusGlow on top, so working is brighter (rework 3, decision 697).
+material GhostApparatusGlowIdle
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend add
+            depth_write off
+            cull_hardware none
+            cull_software none
+            texture_unit
+            {
+                texture GhostApparatusGlow.png
+                tex_address_mode clamp
+                filtering trilinear
+                colour_op_ex modulate src_texture src_manual 0.20 0.72 0.30
             }
         }
     }
@@ -1180,7 +1279,8 @@ material SoulForgeSteel
     }
 }
 
-// Soul forge (working and idle): green crystal cluster on the anvil, a green glass with its own glow and a shimmer.
+// Soul forge (working and idle): green crystal cluster on the anvil, a green glass with its own glow and a shimmer
+// (rework 3, decision 697: brighter glow).
 material SoulForgeCrystal
 {
     receive_shadows off
@@ -1192,7 +1292,7 @@ material SoulForgeCrystal
             depth_write off
             diffuse 0.40 0.95 0.52 0.82
             ambient 0.40 0.95 0.52
-            emissive 0.24 0.72 0.34
+            emissive 0.34 0.92 0.46
             specular 0.6 0.8 0.65 1 48
             texture_unit
             {
@@ -1205,7 +1305,7 @@ material SoulForgeCrystal
     }
 }
 
-// Soul forge (idle): dim green cores inside the crystals (they pulse slowly by bone).
+// Soul forge (idle): green cores inside the crystals, dimmer than working (they pulse slowly by bone; rework 3: brighter).
 material SoulForgeCoreDim
 {
     receive_shadows off
@@ -1219,7 +1319,7 @@ material SoulForgeCoreDim
                 texture GhostNoise.png
                 tex_address_mode wrap
                 scroll_anim 0.02 0.05
-                colour_op_ex modulate src_texture src_manual 0.36 0.85 0.45
+                colour_op_ex modulate src_texture src_manual 0.55 1.0 0.62
             }
         }
     }

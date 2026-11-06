@@ -134,6 +134,8 @@ private:
     //! \brief The composed picture of the creature (round or square), else its round tinted portrait; null if neither exists.
     const CEGUI::Image* findPortrait(const std::string& creatureName, const std::string& className, bool worker,
         bool circular) const;
+    //! \brief The game picture of a post (room or thing it is about), else the portrait of its creature.
+    const CEGUI::Image* findPostPicture(const social::Post& post) const;
     //! \brief Mood word and symbol of the creature for the list and the profile.
     void describeMood(const social::DungeonbookEntry& entry, std::string& text, std::string& icon) const;
 

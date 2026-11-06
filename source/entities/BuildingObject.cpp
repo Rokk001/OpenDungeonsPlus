@@ -219,16 +219,20 @@ void BuildingObject::update(Ogre::Real seconds)
     if(getIsOnServerMap()) return;
     if(mGhostFillNode!=nullptr) mGhostFillNode->setScale(1.0f,1.0f,static_cast<float>(std::max(0.0,std::min(1.0,mGhostFill))));
     mGhostAlarm=std::max(0.0,mGhostAlarm-seconds*ODApplication::turnsPerSecond*getGameMap()->getGameSpeedFactor());
-    if(getMeshName()!="GhostWallGauges" || getEntityNode()==nullptr) return;
+    if(getMeshName()!="GhostBell" || getEntityNode()==nullptr) return;
+    // While the bell rings (GhostBellSeconds) a red and a green alarm lamp beside it blink; no wall panel carries them.
     const bool flash=mGhostAlarm>0.0 && std::fmod(mGhostAlarm/ODApplication::turnsPerSecond,0.5)<0.25;
-    for(unsigned short index=0;index<getEntityNode()->numAttachedObjects();++index)
+    if(mGhostLampNode==nullptr)
     {
-        Ogre::MovableObject* object=getEntityNode()->getAttachedObject(index);
-        if(object->getMovableType()!="Entity") continue;
-        Ogre::Entity* entity=static_cast<Ogre::Entity*>(object);
-        for(unsigned int sub=0;sub<entity->getNumSubEntities();++sub)
-            if(entity->getSubEntity(sub)->getMaterialName()=="GhostLamps") entity->getSubEntity(sub)->setVisible(flash);
+        Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+        Ogre::BillboardSet* lamps=scene->createBillboardSet(getOgreNamePrefix()+getName()+"_AlarmLamps",2);
+        lamps->setMaterialName("ReactionParticleGlow");lamps->setDefaultDimensions(0.16f,0.16f);
+        lamps->setCastShadows(false);lamps->setQueryFlags(0);
+        lamps->createBillboard(Ogre::Vector3(-0.24f,0.06f,0.80f),Ogre::ColourValue(1.0f,0.12f,0.08f));
+        lamps->createBillboard(Ogre::Vector3(0.24f,0.06f,0.80f),Ogre::ColourValue(0.2f,1.0f,0.3f));
+        mGhostLampNode=getEntityNode()->createChildSceneNode();mGhostLampNode->attachObject(lamps);
     }
+    mGhostLampNode->setVisible(flash);
 }
 void BuildingObject::destroyMeshLocal(NodeType type)
 {
@@ -241,6 +245,16 @@ void BuildingObject::destroyMeshLocal(NodeType type)
             mGhostFillNode->detachObject(object);scene->destroyMovableObject(object);
         }
         scene->destroySceneNode(mGhostFillNode);mGhostFillNode=nullptr;
+    }
+    if(mGhostLampNode!=nullptr)
+    {
+        Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+        while(mGhostLampNode->numAttachedObjects()>0)
+        {
+            Ogre::MovableObject* object=mGhostLampNode->getAttachedObject(static_cast<unsigned short>(0));
+            mGhostLampNode->detachObject(object);scene->destroyMovableObject(object);
+        }
+        scene->destroySceneNode(mGhostLampNode);mGhostLampNode=nullptr;
     }
     RenderedMovableEntity::destroyMeshLocal(type);
 }

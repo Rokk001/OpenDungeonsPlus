@@ -392,6 +392,8 @@ def bell():
 
 # Build a rough wall rack with a forged hook and an optional leather pack.
 def hook(with_pack):
+    # The backing only fixes the fitted width; tools/room-objects/strip_ghost_hook_backing.py removes it from the
+    # exported mesh (owner decision 697: no dark flat panels at the ghost room wall). Run it after every export.
     box('Worn hook backing',(0,-.02,.40),(.34,.05,.80),'GhostIron',.02)
     for z in (.12,.65):
         rod('Hook wall bolt',(0,-.055,z),(0,.025,z),.027,'GhostBrass',8)

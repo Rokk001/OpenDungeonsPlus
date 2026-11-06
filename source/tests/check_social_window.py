@@ -31,7 +31,7 @@ width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
 check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
 check('name="Visible" value="False"' in layout, 'hidden by default')
 for name in ('HomePage', 'CreaturesLabel', 'FilterAll', 'FilterWorkers', 'FilterFighters', 'FilterUnhappy', 'ListRows',
-             'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'SocialHolder', 'PostsText', 'ValuesPage',
+             'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'SocialHolder', 'PostThumb0', 'ValuesPage',
              'InventoryPage', 'Header', 'BackButton', 'PrevButton', 'NextButton', 'NavBar', 'NavFeed', 'NavProfile',
              'NavValues', 'NavInventory'):
     check('name="%s"' % name in layout, name)
@@ -162,7 +162,8 @@ check('SocialWindow::onLinkClicked' in window and '&SocialWindow::onLinkClicked'
 page = read('gui/WindowCreatureProfilePage.layout')
 check('name="OwnPostsText"' in page and '"OwnPostsText"' in window,
       'the recent posts of the shared page give way to the posts column of the book')
-check('MAX_OWN_POSTS = 5' in window and '(rows < MAX_OWN_POSTS)' in window, 'the five recent posts remain available')
+check('MAX_OWN_POSTS = 6' in window and '(rows < MAX_OWN_POSTS)' in window,
+      'the six recent posts remain available as pictures (book-variant-2)')
 for name in ('FriendLink0', 'FriendLink1', 'FoeLink'):
     check('type="OD/InvisibleButton" name="%s"' % name in page, name + ' is a borderless button')
 check('LinkButton' not in layout + window + gamemode, 'the friend and foe buttons below the profile are gone')

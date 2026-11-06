@@ -103,6 +103,13 @@ RoomGhostRoom* CreatureActionHuntGhost::hookRoom() const
     return room!=nullptr && room->getSeat()==mCreature.getSeat()?room:nullptr;
 }
 
+double CreatureActionHuntGhost::getCaptureTurns() const
+{
+    if(mState!=3 || mCreature.getDefinition()==nullptr) return 0.0;
+    const double efficiency=mCreature.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency();
+    return efficiency>0.0?researched("GhostBeamTurns","CatchTime")/efficiency:0.0;
+}
+
 double CreatureActionHuntGhost::researched(const std::string& key,const std::string& effect) const
 { return SkillManager::getResearchValue(mCreature.getSeat(),SkillType::roomGhostRoom,ConfigManager::getSingleton().getRoomConfigDouble(key),effect); }
 
@@ -125,12 +132,16 @@ void CreatureActionHuntGhost::interrupt()
     if(mInterrupted) return;
     mInterrupted=true;
     if(!mCreature.getIsOnServerMap() || !mRegistered) return;
-    releaseTarget();
     if(mCreature.getIsOnMap()) mLastPosition=mCreature.getPosition();
+    // A thrown box lies under its ghost (states 2, 3 and 9): it stays there instead of falling at the hunter's feet.
+    Ogre::Vector3 dropPosition=mLastPosition;
+    GhostEntity* lying=mState==2 || mState==3 || mState==9?ghostNamed(*mCreature.getGameMap(),mTarget):nullptr;
+    if(lying!=nullptr && lying->getPositionTile()!=nullptr) dropPosition=lying->getPosition();
+    releaseTarget();
     if(!mGhosts.empty())
     {
         GhostBoxEntity* box=new GhostBoxEntity(mCreature.getGameMap(),mGhosts);
-        box->setSeat(mCreature.getSeat());box->setPosition(mLastPosition);box->addToGameMap();box->createMesh();
+        box->setSeat(mCreature.getSeat());box->setPosition(dropPosition);box->addToGameMap();box->createMesh();
         mGhosts.clear();
     }
     for(Room* room : mCreature.getGameMap()->getRoomsByType(RoomType::ghostRoom))
@@ -278,9 +289,10 @@ bool CreatureActionHuntGhost::handleHunt()
         if(box!=nullptr && own==there && !mCreature.isMoving()) { mState=8;mTurns=0.0;return false; }
         if(ghost!=nullptr && own!=nullptr && std::max(std::abs(own->getX()-there->getX()),std::abs(own->getY()-there->getY()))<=range)
         {
-            mCreature.clearDestinations(EntityAnimation::beam_anim,true,false);
-            mCreature.setAnimationState(EntityAnimation::beam_anim,true,ghost->getPosition()-mCreature.getPosition(),false);
-            ghost->setState(GhostState::beamed);mState=2;mBeamTarget=mTarget;
+            // Within beam range the hunter first throws the box from his hand under the ghost (D17); the ghost is held.
+            mCreature.clearDestinations(EntityAnimation::throw_anim,false,false);
+            mCreature.setAnimationState(EntityAnimation::throw_anim,false,ghost->getPosition()-mCreature.getPosition(),true);
+            ghost->setState(GhostState::beamed);mState=2;mBeamTarget.clear();
             mCreature.refreshGhostHuntVisuals();return true;
         }
         if(!mCreature.isMoving() || mRepathTurns>=config.getRoomConfigDouble("GhostRepathTurns"))
@@ -308,15 +320,18 @@ bool CreatureActionHuntGhost::handleHunt()
         const double efficiency=mCreature.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency();
         if(mState==2)
         {
-            const double duration=researched("GhostBeamTurns","CatchTime")/efficiency;
+            // State 2: the box flies from the hand and lands on the floor under the held ghost (GhostBoxThrowSeconds).
+            const double duration=config.getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond;
             if(mTurns<duration) return false;
-            mTurns-=duration;mState=3;mBeamTarget.clear();
-            mCreature.setAnimationState(EntityAnimation::throw_anim,false,ghost->getPosition()-mCreature.getPosition(),true);
+            mTurns-=duration;mState=3;mBeamTarget=mTarget;
+            mCreature.setAnimationState(EntityAnimation::beam_anim,true,ghost->getPosition()-mCreature.getPosition(),false);
             mCreature.refreshGhostHuntVisuals();
         }
-        const double duration=config.getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond;
+        // State 3: the flickering beam with its lightning bolts pulls the ghost down into the lying box (D19, D20).
+        const double duration=researched("GhostBeamTurns","CatchTime")/efficiency;
         if(mTurns<duration) return false;
-        mTurns-=duration;ghost->setState(GhostState::boxed);ghost->setAssignedHunter("");mGhosts.push_back(ghost->getName());
+        mTurns-=duration;mBeamTarget.clear();
+        ghost->setState(GhostState::boxed);ghost->setAssignedHunter("");mGhosts.push_back(ghost->getName());
         if(ghost->getSeat()==mCreature.getSeat() && mCreature.getSeat()->getGhostRevive() &&
            mCreature.getSeat()->getMana()>=researched("GhostReviveMana","RevivePrice"))
         {
@@ -328,9 +343,21 @@ bool CreatureActionHuntGhost::handleHunt()
                    static_cast<RoomCrypt*>(crypt)->getCorpseSpot(*corpse)!=nullptr) mReviveGhosts.push_back(ghost->getName());
             }
         }
+        // The box snaps shut with a bang; it still lies under the caught ghost until the hunter picks it up (state 9).
         playSound(map,*ghost->getPositionTile(),"Rooms/GhostRoom/BoxSnap");
         social::PostLog::getSingleton().addPost(map.getTurnNumber(),mCreature.getName(),mCreature.getDefinition()->getClassName(),false,social::PostCategory::GhostHunted,0);
-        mTarget.clear();mState=4;return true;
+        mState=9;mDestination=nullptr;mCreature.refreshGhostHuntVisuals();return true;
+    }
+    if(mState==9)
+    {
+        // The hunter walks to the closed box and takes it into his hand; from there it is carried (D17).
+        GhostEntity* boxed=ghostNamed(map,mTarget);
+        Tile* there=boxed==nullptr?nullptr:boxed->getPositionTile();
+        if(there!=nullptr && mCreature.getPositionTile()!=there && moveTo(there)) return false;
+        if(mCreature.isMoving()) return false;
+        mTarget.clear();mDestination=nullptr;mState=4;
+        mCreature.setAnimationState(EntityAnimation::idle_anim,true,Ogre::Vector3::ZERO,false);
+        mCreature.refreshGhostHuntVisuals();return true;
     }
     if(mState==8)
     {
@@ -502,7 +529,7 @@ void CreatureActionHuntGhost::exportToStream(std::ostream& stream) const
 bool CreatureActionHuntGhost::importFromStream(std::istream& stream)
 {
     size_t count=0;std::string close;
-    if(!(stream>>mState>>mTarget>>mHookRoom>>mHookX>>mHookY>>mTurns>>count) || mState>8 || !std::isfinite(mTurns) || mTurns<0.0) return false;
+    if(!(stream>>mState>>mTarget>>mHookRoom>>mHookX>>mHookY>>mTurns>>count) || mState>9 || !std::isfinite(mTurns) || mTurns<0.0) return false;
     while(count-->0) { std::string ghost;if(!(stream>>ghost)) return false;mGhosts.push_back(ghost); }
     if(!(stream>>close) || close!="[/GhostHunt]") return false;
     if(mTarget=="none") mTarget.clear();if(mHookRoom=="none") mHookRoom.clear();
@@ -540,10 +567,11 @@ void CreatureActionHuntGhost::restore()
         mCreature.setWalkPath(EntityAnimation::walk_anim,EntityAnimation::idle_anim,true,true,mLoadedPath,false,true);
     if(mState==2 || mState==3)
     {
+        // State 2 throws the box under the ghost, state 3 pulls the ghost into it with the beam.
         GhostEntity* ghost=ghostNamed(*mCreature.getGameMap(),mTarget);
-        mCreature.setAnimationState(mState==2?EntityAnimation::beam_anim:EntityAnimation::throw_anim,mState==2,
-            ghost==nullptr?Ogre::Vector3::ZERO:ghost->getPosition()-mCreature.getPosition(),mState!=2);
-        if(mState==2) mBeamTarget=mTarget;
+        mCreature.setAnimationState(mState==3?EntityAnimation::beam_anim:EntityAnimation::throw_anim,mState==3,
+            ghost==nullptr?Ogre::Vector3::ZERO:ghost->getPosition()-mCreature.getPosition(),mState!=3);
+        if(mState==3) mBeamTarget=mTarget;
     }
     if(mState==6) mCreature.setAnimationState(EntityAnimation::empty_anim,true,Ogre::Vector3::ZERO,false);
     mCreature.refreshGhostHuntVisuals();

@@ -180,6 +180,51 @@ material TavernSign
     }
 }
 
+// The counter's own plank atlas: four dark worn plank variants side by side, each counter plank is mapped onto one of
+// them (no wave stripes from the shared TavernWood tiling).
+material TavernCounterWood
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.08 0.07 0.06 1 16
+            texture_unit
+            {
+                texture TavernCounterWood.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+// Polished brass of the counter's foot rail, sign rim and hand bell; a little self-light keeps it readable from the
+// room camera in the dark tavern.
+material TavernRail
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.9 0.9 0.9 1
+            diffuse 1 1 1 1
+            specular 0.9 0.75 0.45 1 40
+            emissive 0.22 0.16 0.06 1
+            texture_unit
+            {
+                texture TavernRail.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
 material TavernVomit
 {
     receive_shadows on

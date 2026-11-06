@@ -85,6 +85,7 @@ namespace Ogre
 {
 class ParticleSystem;
 class BillboardChain;
+class Entity;
 }
 
 namespace RoomObjectNavigation
@@ -928,6 +929,10 @@ public:
 
     //! \brief Drops a hunter's boxed ghosts and releases its equipment without removing queued actions.
     void interruptGhostHunt();
+    //! \brief Decision 658: a creature never stands on a wall. Server only. When the creature is found on a full tile (a
+    //! wall) it is put on the nearest floor tile it can walk on, its path is dropped and the clients are told.
+    //! eturn true when the creature was moved
+    bool keepOffWalls();
     //! \brief Rebinds a hunt when its equipment or occupied cauldron moves to another room.
     void transferGhostHuntRoom(const std::string& previous, const std::string& current, bool hook, bool empty);
     //! \brief Returns whether the current hunt wears its equipment.
@@ -2236,6 +2241,11 @@ private:
     double mGhostThrowTurns = 0.0;
     double mGhostThrowClientTurns = 0.0;
     Ogre::SceneNode* mGhostBoxNode = nullptr;
+    //! \brief The box held in the hunter's hand, attached to a hand bone (or to mGhostHandNode without hand bones).
+    Ogre::Entity* mGhostHeldBox = nullptr;
+    Ogre::SceneNode* mGhostHandNode = nullptr;
+    //! \brief Client-smoothed share of the ghost already pulled into the lying box.
+    double mGhostCaptureShown = 0.0;
     double mGhostBeamSample = 0.0;
     uint32_t mGhostBeamSound = 0;
     Ogre::SceneNode* mGhostBackpackNode = nullptr;

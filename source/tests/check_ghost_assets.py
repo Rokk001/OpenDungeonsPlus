@@ -74,14 +74,16 @@ def main():
         assert re.search(r'^\s*material\s+'+name+r'\s*$',still_material,re.M), name
     # Mana still rework after mockup A (owner decision 665): rusty iron, flickering embers, flowing coil, vapour, draped webs.
     # Rework 2 (owner decision 686): copper coil and the puff texture of the vapour plume and green glows.
+    # Rework 3 (owner decision 697): the coil is a bevelled copper band with its own band texture; dim column glow in Idle.
     textures = ['ManaStillIron.png','ManaStillFlow.png','ManaStillGlowRamp.png','ManaStillWeb.png','ManaStillCopper.png',
-        'ManaStillPuff.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
+        'ManaStillPuff.png','ManaStillCoilCopper.png']+['ManaStillEmbers_%d.png'%k for k in range(6)]
     for texture in textures:
         credited('materials/textures/'+texture,credits)
     still_mesh = (repo/'models/ManaStill.mesh').read_bytes()
     for name in ('ManaStillIron','ManaStillCoilGlass','ManaStillCoil','ManaStillEmbers','ManaStillBanked','ManaStillFireGlow',
             'ManaStillColumnGlow','ManaStillVapour','ManaStillDust','ManaStillWeb','ManaStillWebStrand','ManaStillCopper',
-            'ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillResidue'):
+            'ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillResidue','ManaStillCoilCopper',
+            'ManaStillColumnGlowDim'):
         block = re.search(r'^\s*material\s+'+name+r'\s*\n\s*\{(.*?)^\}',still_material,re.M|re.S)
         assert block, name
         for texture in re.findall(r'(?:texture|anim_texture)\s+([^\n]+)',block[1]):
@@ -94,8 +96,15 @@ def main():
     assert re.search(r'material ManaStillCoil\s*\{.*?scroll_anim -?[\d.]+ ',still_material,re.S), 'coil flow'
     # The coil is lit copper (its own texture), not glass; the vapour plume, its idle thread and the floor glow are additive.
     assert re.search(r'^material ManaStillCopper\s*\{(?:(?!^\}).)*texture ManaStillCopper\.png',still_material,re.S|re.M), 'copper coil'
-    for name in ('ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow'):
+    for name in ('ManaStillPuff','ManaStillPuffDim','ManaStillFloorGlow','ManaStillColumnGlowDim'):
         assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
+    # The coil band is lit with its own copper texture, which is not one flat colour (luminance spread 37.8 when painted,
+    # the flat rework 2 copper had 9.7).
+    assert re.search(r'^material ManaStillCoilCopper\s*\{(?:(?!^\}).)*texture ManaStillCoilCopper\.png',still_material,re.S|re.M), 'coil band'
+    with Image.open(repo/'materials/textures/ManaStillCoilCopper.png') as band:
+        luminance = list(band.convert('L').tobytes())
+    mean = sum(luminance)/len(luminance)
+    assert (sum((value-mean)**2 for value in luminance)/len(luminance))**0.5 > 30, 'coil copper texture is flat'
     still_skeleton = (repo/'models/ManaStill.skeleton').read_bytes()
     for bone in (b'Root',b'Glow',b'Coil',b'Dull',b'Webs',b'Embers',b'FireGlow',b'Bubble1',b'Wisp1',b'Pool',b'Banked',b'WebSway',
             b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdlePuff1',b'IdlePuff2'):
@@ -139,6 +148,32 @@ def main():
             b'Wisp1',b'Mist',b'Residue',b'WebSway',b'Book',b'Halo',b'FloorGlow',b'Puff1',b'Puff6',b'IdleGlow',b'IdleRuneL',
             b'IdleRuneR',b'IdleHalo',b'IdlePuff1',b'IdlePuff2'):
         assert bone+b'\n' in press_skeleton, bone
+    # Rework 3 (owner decision 697): a clearly visible green light in Idle and a brighter one in Working. Rework 2 lit
+    # Idle with a small soft dot texture (mean 41) times 0.13 0.46 0.18, which added almost nothing in the game. Now a
+    # broad glow texture, a steady light set (bone Light: opening under the platen, pages, columns, emblem halos, floor)
+    # shown in Working and Idle, and on top of it in Working the bright cards.
+    credited('materials/textures/GhostApparatusGlow.png',credits)
+    with Image.open(repo/'materials/textures/GhostApparatusGlow.png') as glow:
+        glow_values = list(glow.convert('L').tobytes())
+    assert sum(glow_values)/len(glow_values) > 70, 'apparatus glow texture is too small a spot'
+    def manual_tint(name):
+        block = re.search(r'^material '+name+r'\s*\{(.*?)^\}',still_material,re.M|re.S)
+        assert block, name
+        tint = re.search(r'colour_op_ex modulate src_texture src_manual ([\d.]+) ([\d.]+) ([\d.]+)',block[1])
+        assert tint, (name,'tint')
+        return [float(value) for value in tint.groups()]
+    for name in ('GhostApparatusGlow','GhostApparatusGlowIdle'):
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*texture GhostApparatusGlow\.png',still_material,re.S|re.M), (name,'texture')
+        assert re.search(r'^material '+name+r'\s*\{(?:(?!^\}).)*scene_blend add',still_material,re.S|re.M), (name,'additive')
+        assert name.encode()+b'\n' in press_mesh, ('ghost press uses',name)
+    idle_tint, working_tint = manual_tint('GhostApparatusGlowIdle'), manual_tint('GhostApparatusGlow')
+    assert idle_tint[1] >= 0.6, ('idle glow too dim',idle_tint)
+    assert all(w >= i for w,i in zip(working_tint,idle_tint)) and working_tint[1] > idle_tint[1], ('working not brighter',working_tint)
+    assert manual_tint('GhostPressGlowDim')[1] >= 0.6, 'idle page glow too dim'
+    assert min(manual_tint('GhostPressRuneDim')) >= 0.85, 'idle runes too dim'
+    assert manual_tint('GhostPressEmblemDim')[1] >= 0.95, 'idle emblems too dim'
+    for bone in (b'Light',b'LightHalo',b'LightFloor'):
+        assert bone+b'\n' in press_skeleton, bone
     # Soul forge (state clips, self-striking hammer); the level crystal it makes keeps today's SoulCrystal mesh.
     for path in ('models/SoulForge.mesh','models/SoulForge.skeleton'):
         credited(path,credits)
@@ -178,6 +213,17 @@ def main():
             b'CrystalGlow',b'Shock',b'Spark1',b'Wisp1',b'Wisp5',b'Banked',b'Residue',b'WebSway',b'Crystals',b'Halo',
             b'GrateGlow',b'FloorGlow',b'Puff1',b'Puff4',b'IdleGlow',b'IdleCore',b'IdleHalo',b'IdleGrate',b'IdleFloor',
             b'IdlePuff1',b'IdlePuff2'):
+        assert bone+b'\n' in forge_skeleton, bone
+    # Rework 3 (owner decision 697): clearly visible green light in Idle, brighter in Working, as on the press: the
+    # steady set (bone Light: crystals and face, grate, floor) in Working and Idle with GhostApparatusGlowIdle, Working
+    # adds GhostApparatusGlow; brighter crystals and idle cores.
+    for name in ('GhostApparatusGlow','GhostApparatusGlowIdle'):
+        assert name.encode()+b'\n' in forge_mesh, ('soul forge uses',name)
+    crystal_block = re.search(r'^material SoulForgeCrystal\s*\{(.*?)^\}',still_material,re.M|re.S)
+    emissive = [float(value) for value in re.search(r'emissive ([\d.]+) ([\d.]+) ([\d.]+)',crystal_block[1]).groups()]
+    assert emissive[1] >= 0.9, ('forge crystals too dim',emissive)
+    assert manual_tint('SoulForgeCoreDim')[1] >= 0.95, 'idle crystal cores too dim'
+    for bone in (b'Light',b'LightHalo',b'LightGrate',b'LightFloor'):
         assert bone+b'\n' in forge_skeleton, bone
     # Ectoplasm item: its own static mesh replaces the cauldron fill placeholder (the cauldron keeps its fill level).
     credited('models/Ectoplasm.mesh',credits)

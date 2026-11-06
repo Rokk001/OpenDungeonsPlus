@@ -224,20 +224,40 @@ int main(){
   GameMap corridor(20,20);for(Tile& tile:corridor.tiles)tile.walkable=false;
   std::vector<Ogre::Vector2> coarse;Ogre::Vector2 p(4,4);coarse.push_back(rotateCorridorPoint(p,rotation));
   for(int i=0;i<6;++i){p.x+=1;coarse.push_back(rotateCorridorPoint(p,rotation));p.y+=1;coarse.push_back(rotateCorridorPoint(p,rotation));}
-  for(const Ogre::Vector2& point:coarse)corridor.getTile(Helper::round(point.x),Helper::round(point.y))->walkable=true;
+  //! The corridor is three tiles wide along the diagonal: the smoothed path keeps the body radius clear of the walls (decision 658),
+  //! so the diagonal is only legal where the tiles beside it are excavated too.
+  for(int tx=3;tx<=11;++tx)for(int ty=3;ty<=11;++ty)if(std::abs(tx-ty)<=1){Ogre::Vector2 t=rotateCorridorPoint({float(tx),float(ty)},rotation);corridor.getTile(Helper::round(t.x),Helper::round(t.y))->walkable=true;}
   if(reverse)std::reverse(coarse.begin(),coarse.end());
   Creature walker{&corridor};walker.pos={coarse.front().x,coarse.front().y,0};
   const Ogre::Vector2 destination=coarse.back();coarse.erase(coarse.begin());
   walker.setWalkPath("Walk","Idle",true,true,coarse,true);
   check(!walker.distortion,"stair corridor disables random client offsets");
   check(!walker.walk.empty()&&walker.walk.back()==destination,"stair corridor preserves destination");
-  check(walker.walk.size()<=4,"stair corridor follows a diagonal rather than every tile centre");
+  check(walker.walk.size()<=4,"wide stair corridor follows a diagonal rather than every tile centre");
   Ogre::Vector2 from(walker.pos.x,walker.pos.y);float length=0;bool diagonal=false;
   for(const Ogre::Vector2& point:walker.walk){check(terrainClear(walker,from,point),"smoothed corridor never traverses wall or blocked corner");
    Ogre::Vector2 delta=point-from;length+=delta.length();if(std::abs(delta.x)>.1f&&std::abs(delta.y)>.1f)diagonal=true;
    for(int i=0;i<=100;++i){Ogre::Vector2 sample=from+delta*(i/100.f);Tile* tile=corridor.getTile(Helper::round(sample.x),Helper::round(sample.y));
     check(tile&&tile->walkable,"dense samples stay on excavated terrain");}from=point;}
-  check(diagonal&&length<10,"stair corridor contains a shorter diagonal leg");
+  check(diagonal&&length<10,"wide stair corridor contains a shorter diagonal leg");
+ }
+ for(int rotation=0;rotation<4;++rotation)for(bool reverse:{false,true}){
+  // A corridor one tile wide has no room for the body beside a diagonal: the path keeps to the tile centres (no long
+  // diagonal through the wall corners, no path near the straight diagonal of 6*sqrt(2) = 8.5 tiles).
+  GameMap narrow(20,20);for(Tile& tile:narrow.tiles)tile.walkable=false;
+  std::vector<Ogre::Vector2> coarse;Ogre::Vector2 p(4,4);coarse.push_back(rotateCorridorPoint(p,rotation));
+  for(int i=0;i<6;++i){p.x+=1;coarse.push_back(rotateCorridorPoint(p,rotation));p.y+=1;coarse.push_back(rotateCorridorPoint(p,rotation));}
+  for(const Ogre::Vector2& point:coarse)narrow.getTile(Helper::round(point.x),Helper::round(point.y))->walkable=true;
+  if(reverse)std::reverse(coarse.begin(),coarse.end());
+  Creature walker{&narrow};walker.pos={coarse.front().x,coarse.front().y,0};
+  const Ogre::Vector2 destination=coarse.back();coarse.erase(coarse.begin());
+  walker.setWalkPath("Walk","Idle",true,true,coarse,true);
+  check(!walker.walk.empty()&&walker.walk.back()==destination,"narrow corridor preserves destination");
+  Ogre::Vector2 from(walker.pos.x,walker.pos.y);float length=0;
+  for(const Ogre::Vector2& point:walker.walk){check(terrainClear(walker,from,point),"narrow corridor path never traverses wall or blocked corner");
+   Ogre::Vector2 delta=point-from;length+=delta.length();
+   check(!(std::abs(delta.x)>.1f&&std::abs(delta.y)>.1f&&delta.length()>1.2f),"narrow corridor has no long diagonal leg");from=point;}
+  check(length>9.5f,"narrow corridor keeps the tile-centre path");
  }
  GameMap map;Room room;map.rooms.push_back(&room);for(auto& tile:map.tiles)tile.room=&room;
  BuildingObject object;room.objects[map.getTile(5,5)]=&object;Creature creature{&map};
