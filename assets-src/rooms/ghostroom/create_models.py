@@ -22,7 +22,17 @@ PALETTE = {
     # The hand-held capture box: scratched light gunmetal and worn ochre warning paint, both with a fine visible grain.
     'GhostBoxCase': ((0.035, 0.040, 0.045), (0.46, 0.46, 0.43), 0.55),
     'GhostBoxHazard': ((0.16, 0.085, 0.010), (0.80, 0.54, 0.045), 0.70),
+    # Worn hunter gear (owner decision 791): olive canvas, light brushed steel and ribbed rubber. Their textures are
+    # painted by paint_hunter_gear.py and never baked over (the palette only colours the Blender preview).
+    'GhostPackCanvas': ((0.20, 0.19, 0.10), (0.48, 0.46, 0.27), 0.92),
+    'GhostPackSteel': ((0.40, 0.42, 0.43), (0.66, 0.68, 0.69), 0.45),
+    'GhostPackRubber': ((0.05, 0.05, 0.04), (0.20, 0.19, 0.16), 0.85),
 }
+# Materials whose PNG comes from paint_hunter_gear.py; bake_textures loads them and never overwrites them.
+PAINTED = {'GhostPackCanvas', 'GhostPackSteel', 'GhostPackRubber'}
+# Editable Blender sources of the reworked hunter gear live outside Git (project rule), on the media share.
+MEDIA_MODELS = Path(r'G:\Moreya-Internal\medien\ghost-apparatus\models')
+OUTSIDE_GIT = {'GhostBackpack', 'GhostCaptureGun'}
 # Fine, high-contrast grain for the small box surfaces so they stay readable at hand size.
 FINE_GRAIN = {'GhostBoxCase', 'GhostBoxHazard'}
 SPECS = {
@@ -34,7 +44,10 @@ SPECS = {
     'GhostHookEmpty': (0.40, 0.20, 0.80),
     'GhostWallGauges': (0.90, 0.20, 0.90),
     'GhostRack': (1.00, 0.16, 1.00),
-    'GhostBackpack': (0.35, 0.25, 0.50),
+    # Proportions only: the game scales the worn pack to 36 % of each hunter's height (owner decision 791).
+    'GhostBackpack': (0.40, 0.22, 0.46),
+    # The capture cannon, authored like the game's weapons: grip at the origin, barrel along +z, emitter tip on top.
+    'GhostCaptureGun': (0.08, 0.08, 0.34),
     # Hand-sized like the tavern mug (D17): it fits the hunter's palm and lies small under a ghost.
     'GhostBox': (0.13, 0.11, 0.12),
     'SoulCrystal': (0.20, 0.20, 0.35),
@@ -114,7 +127,7 @@ def bake_textures(force=False):
     scene.cycles.samples=1
     for name in PALETTE:
         target=directory/(name+'.png')
-        if target.is_file() and not force:
+        if target.is_file() and (not force or name in PAINTED):
             mat=bpy.data.materials[name]
             tex=mat.node_tree.nodes.new('ShaderNodeTexImage')
             tex.image=bpy.data.images.load(str(target),check_existing=True)
@@ -321,6 +334,52 @@ def backpack(scale=1.0, centre=(0,0,0), group='Root'):
     ring('Canister collar', pos(-0.145,0.02,0.37), 0.067*scale,0.012*scale,'GhostIron',group=group)
     pipe('Flexible hose', [pos(-.145,.02,.43),pos(-.04,.02,.46),pos(.17,-.05,.35),pos(.16,.06,.17)], .012*scale)
     cone('Capture nozzle', pos(.16,.06,.17), pos(.16,.10,.24), .025*scale,.014*scale,'GhostBrass',12,group)
+
+
+# The worn ghost-hunter backpack (owner decision 791): an olive canvas pack on a steel frame with padded straps on its +y
+# side (turned to the hunter's back in the game), and on its outer face a steel generator plate with two green power
+# cells, an ochre warning band, a brass pressure gauge and the ribbed hose to the cannon holster on its left side.
+def worn_backpack():
+    box('Canvas pack body',(0,0,.21),(.28,.15,.36),'GhostPackCanvas',.02)
+    box('Canvas top flap',(0,-.004,.385),(.29,.16,.05),'GhostPackCanvas',.015)
+    for x in (-.155,.155):
+        box('Canvas side pocket',(x,-.01,.15),(.04,.11,.16),'GhostPackCanvas',.01)
+        box('Pocket flap',(x,-.01,.235),(.044,.115,.02),'GhostPackCanvas',.005)
+    # Hunter side: steel frame rails, padded shoulder straps with brass buckles, waist belt.
+    for x in (-.10,.10):
+        box('Steel frame rail',(x,.082,.21),(.022,.014,.42),'GhostPackSteel',.004)
+        box('Padded shoulder strap',(x,.094,.27),(.045,.012,.24),'GhostPackRubber',.004)
+        box('Strap buckle',(x,.101,.19),(.05,.006,.03),'GhostBrass',.002)
+    box('Waist belt',(0,.09,.06),(.30,.012,.04),'GhostPackRubber',.003)
+    # Outer face: generator plate, power cells, warning band and gauge.
+    box('Steel generator plate',(0,-.081,.23),(.22,.012,.24),'GhostPackSteel',.006)
+    for x in (-.055,.055):
+        rod('Green power cell',(x,-.095,.15),(x,-.095,.30),.022,'GhostBoxGlow',14)
+        ring('Power cell cap',(x,-.095,.305),.024,.007,'GhostBrass')
+        ring('Power cell base',(x,-.095,.145),.024,.007,'GhostBrass')
+    box('Warning band',(0,-.08,.075),(.24,.006,.05),'GhostPackSteel',.002)
+    for i in range(6):
+        box('Warning stripe',(-.09+i*.036,-.085,.075),(.018,.006,.044),'GhostBoxHazard',.002)
+    rod('Brass gauge',(0,-.088,.345),(0,-.105,.345),.028,'GhostBrass',18)
+    rod('Gauge face',(0,-.105,.345),(0,-.108,.345),.022,'GhostGaugeFace',18)
+    pipe('Ribbed cannon hose',[(-.10,-.07,.40),(-.17,-.05,.44),(-.20,-.02,.32),(-.19,0,.17)],.014,'GhostPackRubber')
+    box('Cannon holster clip',(-.172,0,.12),(.02,.05,.05),'GhostPackSteel',.003)
+
+
+# The capture cannon of the backpack (GHOSTS-PLAN D20, section 5 GhostBeam, owner decision 791): a ribbed rubber grip at
+# the origin, a light steel body with green coil rings and ochre warning stripes, a brass emitter flare and the glowing
+# emitter tip at the top, where the beam starts.
+def capture_gun():
+    rod('Ribbed grip',(0,0,0),(0,0,.09),.016,'GhostPackRubber',14)
+    ring('Grip end ring',(0,0,.004),.018,.006,'GhostBrass')
+    box('Trigger guard',(0,-.025,.075),(.008,.03,.04),'GhostBrass',.002)
+    rod('Steel cannon body',(0,0,.09),(0,0,.24),.027,'GhostPackSteel',18)
+    for z in (.125,.165,.205):
+        ring('Green coil ring',(0,0,z),.029,.006,'GhostBoxGlow')
+    for z in (.105,.145,.185,.225):
+        ring('Warning ring',(0,0,z),.0285,.004,'GhostBoxHazard')
+    cone('Brass emitter flare',(0,0,.24),(0,0,.30),.022,.034,'GhostBrass',18)
+    rod('Glowing emitter tip',(0,0,.295),(0,0,.31),.03,'GhostBoxGlow',18)
 
 
 # Author the press cauldron with four clawed feet, screw, rivets, pipes and green window.
@@ -592,7 +651,7 @@ def main():
     out.mkdir(parents=True,exist_ok=True)
     start_scene()
     bake_textures('--rebake' in args)
-    builders={'GhostCauldron':cauldron,'GhostCauldronFill':fill_level,'CrystalBowl':crystal_bowl,'GhostBell':bell,'GhostHook':lambda:hook(True),'GhostHookEmpty':lambda:hook(False),'GhostWallGauges':gauges,'GhostRack':rack,'GhostBackpack':backpack,'GhostBox':ghost_box,'SoulCrystal':crystal}
+    builders={'GhostCauldron':cauldron,'GhostCauldronFill':fill_level,'CrystalBowl':crystal_bowl,'GhostBell':bell,'GhostHook':lambda:hook(True),'GhostHookEmpty':lambda:hook(False),'GhostWallGauges':gauges,'GhostRack':rack,'GhostBackpack':worn_backpack,'GhostCaptureGun':capture_gun,'GhostBox':ghost_box,'SoulCrystal':crystal}
     builders[name]()
     obj,factors,centre=join_and_fit(name)
     arm=gauge_rig(obj,factors,centre) if name=='GhostWallGauges' else None
@@ -603,10 +662,11 @@ def main():
     report['bounds']=bounds
     report['dimensions']=list(SPECS[name])
     (out/(name+'.json')).write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
-    source=REPO/'assets-src/rooms/ghostroom'/(name+'.blend')
+    source=(MEDIA_MODELS if name in OUTSIDE_GIT else REPO/'assets-src/rooms/ghostroom')/(name+'.blend')
     bpy.ops.file.pack_all()
     bpy.ops.wm.save_as_mainfile(filepath=str(source))
-    shutil.copyfile(source,private/source.name)
+    if source.parent!=private:
+        shutil.copyfile(source,private/source.name)
     preview(name,private)
     print('GHOST_MODEL_DONE '+name+' '+json.dumps(report),flush=True)
 

@@ -2244,6 +2244,13 @@ private:
     //! \brief The box held in the hunter's hand, attached to a hand bone (or to mGhostHandNode without hand bones).
     Ogre::Entity* mGhostHeldBox = nullptr;
     Ogre::SceneNode* mGhostHandNode = nullptr;
+    //! \brief The capture cannon of the backpack (owner decision 791): mGhostCaptureGun is held in the hunter's hand while
+    //! the beam is on (on a hand bone, or on mGhostGunHandNode without hand bones), mGhostPackGun hangs in its holster
+    //! on the pack otherwise. mGhostOwnWeaponsHidden is true while the cannon hides the hunter's own weapons.
+    Ogre::Entity* mGhostCaptureGun = nullptr;
+    Ogre::SceneNode* mGhostGunHandNode = nullptr;
+    Ogre::Entity* mGhostPackGun = nullptr;
+    bool mGhostOwnWeaponsHidden = false;
     //! \brief Client-smoothed share of the ghost already pulled into the lying box.
     double mGhostCaptureShown = 0.0;
     double mGhostBeamSample = 0.0;
