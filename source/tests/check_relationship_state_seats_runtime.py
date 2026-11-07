@@ -320,6 +320,11 @@ def main():
     return run_with_exe(args.exe, args.save, args.seconds, args.port, args.version)
 
 
+def exe_embeds_version(exe, version):
+    """True when the executable stores the version as a NUL-terminated string (the OD_VERSION literal)."""
+    return (version + "\0").encode("ascii") in exe.read_bytes()
+
+
 def run_with_exe(exe_arg, save_arg, seconds, port, version):
     save = Path(save_arg)
     if not save.is_file():
@@ -331,6 +336,12 @@ def run_with_exe(exe_arg, save_arg, seconds, port, version):
         return 2
     if os.name != "nt":
         print("ERROR: the runtime part runs the Windows game and the tasklist check; it does not run on this system")
+        return 2
+    if not exe_embeds_version(exe, version):
+        # The server refuses a hello whose version differs from the executable and closes the socket, which the
+        # check would otherwise report only as "the server closed the connection".
+        print("ERROR: --version %s is not the version of %s (the executable has no NUL-terminated %s string); "
+              "use the OD_VERSION of this build, for example 0.7.4.44 for build number 44" % (version, exe, version))
         return 2
 
     is_fixture = save.resolve() == load.FIXTURE.resolve()
