@@ -368,7 +368,7 @@ void MenuModeConfigureSeats::initSettingCombos()
 
 namespace
 {
-//! rief Collects the windows below parent whose name starts with one of the prefixes created by initSettingPages
+//! \brief Collects the windows below parent whose name starts with one of the prefixes created by initSettingPages
 void collectSettingPageWindows(CEGUI::Window* parent, std::vector<CEGUI::Window*>& found)
 {
     for(size_t i = 0; i < parent->getChildCount(); ++i)
@@ -386,7 +386,7 @@ void collectSettingPageWindows(CEGUI::Window* parent, std::vector<CEGUI::Window*
 }
 }
 
-//! rief Destroys the windows initSettingPages created. The windows belong to the gui sheet, which outlives this mode,
+//! \brief Destroys the windows initSettingPages created. The windows belong to the gui sheet, which outlives this mode,
 //! so they must be removed when the mode goes away and before they are created again (second skirmish in one session).
 void MenuModeConfigureSeats::destroySettingPages()
 {
