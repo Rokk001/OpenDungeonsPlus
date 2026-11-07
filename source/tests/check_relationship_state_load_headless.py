@@ -111,17 +111,23 @@ def parse_block(block):
     return failures, entries
 
 
+def int32(value):
+    """Two's complement wrap to 32 bits: the loader stores a rage seat id in an int32_t (static_cast)."""
+    return ((value + (1 << 31)) % (1 << 32)) - (1 << 31)
+
+
 def restored_values(entry, existing):
     """The values the loader restores (Creature::setRelationshipState), read back as the log line prints them."""
     name = entry["name"]
     # The loader keeps the first MAX_CAPTORS non-empty captor fields; setRelationshipState then keeps the ones that exist
     named = [captor for captor in entry["captors"] if captor][:MAX_CAPTORS]
     captors = [captor for captor in named if captor in existing][:MAX_CAPTORS]
-    rage_kept = max(0, entry["rage"]) > 0 and entry["seat"] >= 0
+    seat = int32(entry["seat"])  # the seat test is made on the stored int32 value
+    rage_kept = max(0, entry["rage"]) > 0 and seat >= 0
     opponent = entry["brawl"] if (entry["brawl"] and max(0, entry["brawlTurns"]) > 0 and entry["brawl"] != name) else ""
     return {
         "rageTurns": max(0, entry["rage"]) if rage_kept else 0,
-        "rageSeat": entry["seat"] if rage_kept else -1,
+        "rageSeat": seat if rage_kept else -1,
         "brawlOpponent": opponent,
         # The restored brawl turns are capped by the level settings (mBrawlMaxTurns), which are not read here: the
         # log must show a positive value no larger than the saved one.
