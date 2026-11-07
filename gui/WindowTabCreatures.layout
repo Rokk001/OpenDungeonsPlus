@@ -19,6 +19,7 @@
                     <Property name="Area" value="{{0,2},{1,-17},{1,-2},{1,-1}}" />
                     <Property name="Text" value="0" />
                     <Property name="HorzFormatting" value="CentreAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
                     <Property name="MousePassThroughEnabled" value="True" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="BackgroundEnabled" value="False" />
@@ -33,6 +34,7 @@
                     <Property name="Area" value="{{0,2},{1,-17},{1,-2},{1,-1}}" />
                     <Property name="Text" value="0" />
                     <Property name="HorzFormatting" value="CentreAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
                     <Property name="MousePassThroughEnabled" value="True" />
                     <Property name="FrameEnabled" value="False" />
                     <Property name="BackgroundEnabled" value="False" />

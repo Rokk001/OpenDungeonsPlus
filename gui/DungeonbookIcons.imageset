@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Imageset name="DungeonbookIcons" imagefile="DungeonbookIcons.png" nativeHorzRes="1024" nativeVertRes="768" autoScaled="false" version="2">
+<Imageset name="DungeonbookIcons" imagefile="DungeonbookIcons.png" nativeHorzRes="3840" nativeVertRes="2160" autoScaled="min" version="2">
     <Image name="NavFeed" xPos="0" yPos="0" width="128" height="128" />
     <Image name="NavProfile" xPos="128" yPos="0" width="128" height="128" />
     <Image name="NavValues" xPos="256" yPos="0" width="128" height="128" />
@@ -16,4 +16,38 @@
     <Image name="Equipment" xPos="128" yPos="384" width="128" height="128" />
     <Image name="Path" xPos="256" yPos="384" width="128" height="128" />
     <Image name="Skills" xPos="384" yPos="384" width="128" height="128" />
+    <Image name="BookFrameLeft" xPos="520" yPos="0" width="36" height="256" />
+    <Image name="BookFrameRight" xPos="568" yPos="0" width="36" height="256" />
+    <Image name="BookFrameTop" xPos="616" yPos="0" width="256" height="36" />
+    <Image name="BookFrameBottom" xPos="616" yPos="48" width="256" height="36" />
+    <Image name="BookTitleRule" xPos="616" yPos="96" width="256" height="10" />
+    <Image name="BookFrameTopLeft" xPos="884" yPos="0" width="56" height="56" />
+    <Image name="BookFrameTopRight" xPos="948" yPos="0" width="56" height="56" />
+    <Image name="BookFrameBottomLeft" xPos="884" yPos="64" width="56" height="56" />
+    <Image name="BookFrameBottomRight" xPos="948" yPos="64" width="56" height="56" />
+    <Image name="PostDig" xPos="512" yPos="256" width="512" height="256" />
+    <Image name="PostGold" xPos="1024" yPos="256" width="512" height="256" />
+    <Image name="PostFight" xPos="1536" yPos="256" width="512" height="256" />
+    <Image name="PostLevelUp" xPos="0" yPos="512" width="512" height="256" />
+    <Image name="PostFood" xPos="512" yPos="512" width="512" height="256" />
+    <Image name="PostSleep" xPos="1024" yPos="512" width="512" height="256" />
+    <Image name="PostTrain" xPos="1536" yPos="512" width="512" height="256" />
+    <Image name="PostHurt" xPos="0" yPos="768" width="512" height="256" />
+    <Image name="PostDied" xPos="512" yPos="768" width="512" height="256" />
+    <Image name="PostJail" xPos="1024" yPos="768" width="512" height="256" />
+    <Image name="PostHand" xPos="1536" yPos="768" width="512" height="256" />
+    <Image name="PostPortal" xPos="0" yPos="1024" width="512" height="256" />
+    <Image name="PostFriends" xPos="512" yPos="1024" width="512" height="256" />
+    <Image name="PostHatred" xPos="1024" yPos="1024" width="512" height="256" />
+    <Image name="PostToilet" xPos="1536" yPos="1024" width="512" height="256" />
+    <Image name="PostMerchant" xPos="0" yPos="1280" width="512" height="256" />
+    <Image name="PostGift" xPos="512" yPos="1280" width="512" height="256" />
+    <Image name="PostTavern" xPos="1024" yPos="1280" width="512" height="256" />
+    <Image name="PostGhost" xPos="1536" yPos="1280" width="512" height="256" />
+    <Image name="PostSpa" xPos="0" yPos="1536" width="512" height="256" />
+    <Image name="PostUnhappy" xPos="512" yPos="1536" width="512" height="256" />
+    <Image name="PostWorkshop" xPos="1024" yPos="1536" width="512" height="256" />
+    <Image name="PostLibrary" xPos="1536" yPos="1536" width="512" height="256" />
+    <Image name="PostTemple" xPos="0" yPos="1792" width="512" height="256" />
+    <Image name="PostPotion" xPos="512" yPos="1792" width="512" height="256" />
 </Imageset>

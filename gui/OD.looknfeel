@@ -1294,16 +1294,26 @@
     <WidgetLook name="OD/FrameWindow">
         <PropertyLinkDefinition initialValue="FFD8CCB8" name="CaptionColour" targetProperty="CaptionColour" widget="__auto_titlebar__" />
         <PropertyLinkDefinition initialValue="MedievalSharp-10" name="TitlebarFont" targetProperty="Font" widget="__auto_titlebar__" />
+        <!-- The frame images are properties so one window (the Dungeonbook) can have its own frame; the defaults are
+             the shared frame of every other window -->
+        <PropertyDefinition name="FrameTopLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTopLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameTopRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTopRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameBottomLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameBottomLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameBottomRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameBottomRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameTopImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTop" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="FrameBottomImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameBottom" redrawOnWrite="true" layoutOnWrite="true" />
         <Property name="NSSizingCursorImage" value="OpenDungeonsSkin/MouseNoSoCursor" />
         <Property name="EWSizingCursorImage" value="OpenDungeonsSkin/MouseEsWeCursor" />
         <Property name="NWSESizingCursorImage" value="OpenDungeonsSkin/MouseNwSeCursor" />
         <Property name="NESWSizingCursorImage" value="OpenDungeonsSkin/MouseNeSwCursor" />
         <NamedArea name="ClientWithTitleWithFrame">
             <Area>
-                <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameLeft" /></Dim>
+                <Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameLeftImage" /></Dim>
                 <Dim type="TopEdge"><WidgetDim dimension="BottomEdge" widget="__auto_titlebar__" /></Dim>
-                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameRight" /></OperatorDim></Dim>
-                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImageDim dimension="Height" name="OpenDungeonsGameWindow/FrameBottom" /></OperatorDim></Dim>
+                <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImagePropertyDim dimension="Width" name="FrameRightImage" /></OperatorDim></Dim>
+                <Dim type="BottomEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImagePropertyDim dimension="Height" name="FrameBottomImage" /></OperatorDim></Dim>
             </Area>
 
         </NamedArea>
@@ -1316,18 +1326,18 @@
         </NamedArea>
         <NamedArea name="ClientNoTitleWithFrame">
             <Area>
-                <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameTopLeft" /></Dim>
-                <Dim type="TopEdge"><ImageDim dimension="Height" name="OpenDungeonsGameWindow/FrameTop" /></Dim>
+                <Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="FrameTopLeftImage" /></Dim>
+                <Dim type="TopEdge"><ImagePropertyDim dimension="Height" name="FrameTopImage" /></Dim>
                 <Dim type="RightEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="RightEdge" />
-                        <ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameTopRight" />
+                        <ImagePropertyDim dimension="Width" name="FrameTopRightImage" />
                     </OperatorDim>
                 </Dim>
                 <Dim type="BottomEdge">
                     <OperatorDim op="Subtract">
                         <UnifiedDim scale="1" type="BottomEdge" />
-                        <ImageDim dimension="Height" name="OpenDungeonsGameWindow/FrameBottom" />
+                        <ImagePropertyDim dimension="Height" name="FrameBottomImage" />
                     </OperatorDim>
                 </Dim>
             </Area>
@@ -1346,7 +1356,7 @@
                 <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
                 <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                 <Dim type="Height">
-                    <FontDim font="MedievalSharp-10" padding="12" type="LineSpacing" />
+                    <FontDim widget="__auto_titlebar__" padding="12" type="LineSpacing" />
                 </Dim>
             </Area>
             <Property name="AlwaysOnTop" value="False" />
@@ -1374,11 +1384,11 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
-                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
-                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
-                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
-                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
-                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <ImageProperty component="BottomLeftCorner" name="FrameBottomLeftImage" />
+                <ImageProperty component="BottomRightCorner" name="FrameBottomRightImage" />
+                <ImageProperty component="LeftEdge" name="FrameLeftImage" />
+                <ImageProperty component="RightEdge" name="FrameRightImage" />
+                <ImageProperty component="BottomEdge" name="FrameBottomImage" />
                 <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
@@ -1392,13 +1402,13 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-                <Image component="TopLeftCorner" name="OpenDungeonsGameWindow/FrameTopLeft" />
-                <Image component="TopRightCorner" name="OpenDungeonsGameWindow/FrameTopRight" />
-                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
-                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
-                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
-                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
-                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <ImageProperty component="TopLeftCorner" name="FrameTopLeftImage" />
+                <ImageProperty component="TopRightCorner" name="FrameTopRightImage" />
+                <ImageProperty component="BottomLeftCorner" name="FrameBottomLeftImage" />
+                <ImageProperty component="BottomRightCorner" name="FrameBottomRightImage" />
+                <ImageProperty component="LeftEdge" name="FrameLeftImage" />
+                <ImageProperty component="RightEdge" name="FrameRightImage" />
+                <ImageProperty component="BottomEdge" name="FrameBottomImage" />
                 <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
@@ -1509,11 +1519,11 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="BottomEdge"><UnifiedDim scale="1" type="BottomEdge" /></Dim>
                 </Area>
-                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
-                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
-                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
-                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
-                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <ImageProperty component="BottomLeftCorner" name="FrameBottomLeftImage" />
+                <ImageProperty component="BottomRightCorner" name="FrameBottomRightImage" />
+                <ImageProperty component="LeftEdge" name="FrameLeftImage" />
+                <ImageProperty component="RightEdge" name="FrameRightImage" />
+                <ImageProperty component="BottomEdge" name="FrameBottomImage" />
                 <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
@@ -1543,13 +1553,13 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-                <Image component="TopLeftCorner" name="OpenDungeonsGameWindow/FrameTopLeft" />
-                <Image component="TopRightCorner" name="OpenDungeonsGameWindow/FrameTopRight" />
-                <Image component="BottomLeftCorner" name="OpenDungeonsGameWindow/FrameBottomLeft" />
-                <Image component="BottomRightCorner" name="OpenDungeonsGameWindow/FrameBottomRight" />
-                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
-                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
-                <Image component="BottomEdge" name="OpenDungeonsGameWindow/FrameBottom" />
+                <ImageProperty component="TopLeftCorner" name="FrameTopLeftImage" />
+                <ImageProperty component="TopRightCorner" name="FrameTopRightImage" />
+                <ImageProperty component="BottomLeftCorner" name="FrameBottomLeftImage" />
+                <ImageProperty component="BottomRightCorner" name="FrameBottomRightImage" />
+                <ImageProperty component="LeftEdge" name="FrameLeftImage" />
+                <ImageProperty component="RightEdge" name="FrameRightImage" />
+                <ImageProperty component="BottomEdge" name="FrameBottomImage" />
                 <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
@@ -1572,6 +1582,17 @@
 
     <WidgetLook name="OD/GameTitlebar">
         <PropertyDefinition initialValue="FFD8CCB8" name="CaptionColour" redrawOnWrite="true" />
+        <!-- Images and caption formatting are properties so one window (the Dungeonbook) can have its own title band;
+             the defaults are the shared title band of every other window -->
+        <PropertyDefinition name="TitleTopLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTopLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleTopRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTopRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleTopImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameTop" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleLeftImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameLeft" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleRightImage" type="Image" initialValue="OpenDungeonsGameWindow/FrameRight" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="TitleRuleImage" type="Image" initialValue="OpenDungeonsGameWindow/TitleRule" redrawOnWrite="true" layoutOnWrite="true" />
+        <PropertyDefinition name="CaptionHorzFormatting" type="HorizontalTextFormatting" initialValue="LeftAligned" redrawOnWrite="true" />
+        <!-- True: the caption area is symmetric (same inset left and right), so a centred caption sits in the middle -->
+        <PropertyDefinition name="CaptionCentred" type="bool" initialValue="false" redrawOnWrite="true" />
         <ImagerySection name="main">
             <FrameComponent>
                 <Area>
@@ -1580,23 +1601,23 @@
                     <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
-                <Image component="TopLeftCorner" name="OpenDungeonsGameWindow/FrameTopLeft" />
-                <Image component="TopRightCorner" name="OpenDungeonsGameWindow/FrameTopRight" />
-                <Image component="TopEdge" name="OpenDungeonsGameWindow/FrameTop" />
-                <Image component="LeftEdge" name="OpenDungeonsGameWindow/FrameLeft" />
-                <Image component="RightEdge" name="OpenDungeonsGameWindow/FrameRight" />
+                <ImageProperty component="TopLeftCorner" name="TitleTopLeftImage" />
+                <ImageProperty component="TopRightCorner" name="TitleTopRightImage" />
+                <ImageProperty component="TopEdge" name="TitleTopImage" />
+                <ImageProperty component="LeftEdge" name="TitleLeftImage" />
+                <ImageProperty component="RightEdge" name="TitleRightImage" />
                 <Image component="Background" name="OpenDungeonsGameWindow/ClientBrush" />
                 <VertFormat type="Tiled" />
                 <HorzFormat type="Tiled" />
             </FrameComponent>
             <ImageryComponent>
                 <Area>
-                    <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameLeft" /></Dim>
-                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImageDim dimension="Height" name="OpenDungeonsGameWindow/TitleRule" /></OperatorDim></Dim>
-                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameRight" /></OperatorDim></Dim>
-                    <Dim type="Height"><ImageDim dimension="Height" name="OpenDungeonsGameWindow/TitleRule" /></Dim>
+                    <Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="TitleLeftImage" /></Dim>
+                    <Dim type="TopEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="BottomEdge" /><ImagePropertyDim dimension="Height" name="TitleRuleImage" /></OperatorDim></Dim>
+                    <Dim type="RightEdge"><OperatorDim op="Subtract"><UnifiedDim scale="1" type="RightEdge" /><ImagePropertyDim dimension="Width" name="TitleRightImage" /></OperatorDim></Dim>
+                    <Dim type="Height"><ImagePropertyDim dimension="Height" name="TitleRuleImage" /></Dim>
                 </Area>
-                <Image name="OpenDungeonsGameWindow/TitleRule" />
+                <ImageProperty name="TitleRuleImage" />
                 <VertFormat type="Stretched" />
                 <HorzFormat type="Tiled" />
             </ImageryComponent>
@@ -1604,13 +1625,29 @@
         <ImagerySection name="caption">
             <TextComponent>
                 <Area>
-                    <Dim type="LeftEdge"><ImageDim dimension="Width" name="OpenDungeonsGameWindow/FrameTopLeft" /></Dim>
+                    <Dim type="LeftEdge"><ImagePropertyDim dimension="Width" name="TitleTopLeftImage" /></Dim>
                     <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
-                    <Dim type="Width"><UnifiedDim offset="-75" scale="1" type="Width" /></Dim>
+                    <!-- Width minus 75 (room for the close button); with CaptionCentred minus the left inset on both sides -->
+                    <Dim type="Width">
+                        <OperatorDim op="Add">
+                            <UnifiedDim offset="-75" scale="1" type="Width" />
+                            <OperatorDim op="Multiply">
+                                <PropertyDim name="CaptionCentred" />
+                                <OperatorDim op="Subtract">
+                                    <AbsoluteDim value="75" />
+                                    <OperatorDim op="Multiply">
+                                        <AbsoluteDim value="2" />
+                                        <ImagePropertyDim dimension="Width" name="TitleTopLeftImage" />
+                                    </OperatorDim>
+                                </OperatorDim>
+                            </OperatorDim>
+                        </OperatorDim>
+                    </Dim>
                     <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
                 </Area>
                 <ColourProperty name="CaptionColour" />
                 <VertFormat type="CentreAligned" />
+                <HorzFormatProperty name="CaptionHorzFormatting" />
             </TextComponent>
         </ImagerySection>
         <StateImagery name="Active">

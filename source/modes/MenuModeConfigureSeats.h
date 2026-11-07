@@ -97,6 +97,7 @@ private:
 
     //! \brief Fills the pages of the Game settings window with one line per creature, room, spell, trap and door
     void initSettingPages();
+    void destroySettingPages();
 };
 
 #endif // MENUMODECONFIGURESEATS_H

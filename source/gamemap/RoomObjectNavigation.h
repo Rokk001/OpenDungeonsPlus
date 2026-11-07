@@ -72,6 +72,9 @@ bool refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& ca
 // Tells whether the path crosses furniture. With includeWalkDistortion, the client jitter
 // of the walk is taken into account as well.
 bool blocked(Creature& creature, const std::vector<Ogre::Vector2>& path, bool includeWalkDistortion = false);
+//! \brief Tells whether the client jitter of the walk (each coordinate +/-0.3) could carry the body of the creature into
+//! a tile it cannot walk on (a wall) next to the path. The server then sends the path without jitter (decision 727).
+bool walkDistortionReachesWall(Creature& creature, const std::vector<Ogre::Vector2>& path);
 }
 
 #endif

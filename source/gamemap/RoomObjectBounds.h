@@ -187,6 +187,16 @@ inline FurnitureScale furnitureScale(const MeshBounds& bounds)
     return {scale, scale};
 }
 
+// Only beds and cots are low enough to be stepped onto (decision 710: a wide creature, the Troll, climbed onto the ghost
+// room apparatuses and stood at wall height; decision 727: the coffins of the crypt are graves, nobody sleeps in them,
+// and a creature that climbed onto one walked over the grave). Every other object, measured or not, is a solid obstacle.
+inline bool isSteppableMesh(const std::string& name)
+{
+    return name == "Bed" ||
+        (name.size() >= 3 && name.compare(name.size() - 3, 3, "Bed") == 0) ||
+        (name.compare(0, 12, "InfirmaryCot") == 0);
+}
+
 // A bed covers this fraction of its tile width and depth; the rest is the lane
 // between two neighbouring beds. A creature wider than that lane cannot use it.
 constexpr float bedTileFill = 0.70f;

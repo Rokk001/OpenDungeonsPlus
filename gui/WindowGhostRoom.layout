@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
     <Window type="OD/FrameWindow" name="GhostRoomWindow">
-        <Property name="Area" value="{{0.5,-170},{0.5,-90},{0.5,170},{0.5,90}}" />
+        <Property name="Area" value="{{0.5,-170},{0.5,-100},{0.5,170},{0.5,100}}" />
         <Property name="Text" value="Ghost room" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />

@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
     <Window type="OD/FrameWindow" name="SandboxWindow" >
-        <Property name="Area" value="{{0,20},{0,60},{0,280},{0,595}}" />
+        <Property name="Area" value="{{0,20},{0,60},{0,280},{0,630}}" />
         <Property name="Text" value="Sandbox" />
         <Property name="SizingEnabled" value="False" />
         <Window type="OD/StaticText" name="ScoreText" >

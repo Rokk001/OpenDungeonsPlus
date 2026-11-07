@@ -36,6 +36,7 @@
 #include "utils/Helper.h"
 #include "utils/RunLevelTest.h"
 
+#include <algorithm>
 #include <CEGUI/CEGUI.h>
 
 #include <boost/filesystem.hpp>
@@ -263,6 +264,8 @@ MenuModeConfigureSeats::MenuModeConfigureSeats(ModeManager* modeManager):
 
 MenuModeConfigureSeats::~MenuModeConfigureSeats()
 {
+    destroySettingPages();
+
     CEGUI::Window* tmpWin = getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats)->getChild("ListPlayers");
     for(int seatId : mSeatIds)
     {
@@ -363,8 +366,57 @@ void MenuModeConfigureSeats::initSettingCombos()
     }
 }
 
+namespace
+{
+//! \brief Collects the windows below parent whose name starts with one of the prefixes created by initSettingPages
+void collectSettingPageWindows(CEGUI::Window* parent, std::vector<CEGUI::Window*>& found)
+{
+    for(size_t i = 0; i < parent->getChildCount(); ++i)
+    {
+        CEGUI::Window* child = parent->getChildAtIdx(i);
+        const std::string name = child->getName().c_str();
+        if(name.compare(0, 5, "Label") == 0 || name.compare(0, 5, "Limit") == 0 ||
+           name.compare(0, 9, "ItemLabel") == 0 || name.compare(0, 10, "ItemButton") == 0)
+        {
+            found.push_back(child);
+            continue;
+        }
+        collectSettingPageWindows(child, found);
+    }
+}
+}
+
+//! \brief Destroys the windows initSettingPages created. The windows belong to the gui sheet, which outlives this mode,
+//! so they must be removed when the mode goes away and before they are created again (second skirmish in one session).
+void MenuModeConfigureSeats::destroySettingPages()
+{
+    CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
+    CEGUI::Window* settingsWin = getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
+    if(settingsWin != nullptr)
+    {
+        std::vector<CEGUI::Window*> found;
+        collectSettingPageWindows(settingsWin, found);
+        for(CEGUI::Window* win : found)
+        {
+            if(win->getParent() != nullptr)
+                win->getParent()->removeChild(win);
+            winMgr.destroyWindow(win);
+        }
+    }
+    // No dangling pointers to the destroyed windows
+    for(const std::pair<const std::string, CEGUI::Spinner*>& entry : mLimitSpinners)
+        mHostSettingWindows.erase(std::remove(mHostSettingWindows.begin(), mHostSettingWindows.end(), entry.second), mHostSettingWindows.end());
+    for(const std::pair<const uint32_t, CEGUI::Window*>& entry : mItemButtons)
+        mHostSettingWindows.erase(std::remove(mHostSettingWindows.begin(), mHostSettingWindows.end(), entry.second), mHostSettingWindows.end());
+    mLimitSpinners.clear();
+    mItemButtons.clear();
+}
+
 void MenuModeConfigureSeats::initSettingPages()
 {
+    // Buildable any number of times: remove what an earlier call (or an earlier mode object) left on the sheet
+    destroySettingPages();
+
     CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
     CEGUI::Window* settingsWin = getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
 
