@@ -59,6 +59,10 @@ const float TERRAIN_SAMPLES_PER_TILE = 16.0f;
 // Each client jitter coordinate is +/-0.3, so a rotated object needs the full diagonal
 // displacement (0.3 * sqrt(2), rounded up) as well as the creature's walking radius.
 const float WALK_DISTORTION_REACH = 0.425f;
+// Largest client jitter of one coordinate of a walk point.
+const float WALK_DISTORTION_JITTER = 0.3f;
+// Distance from a tile centre to the border of the tile.
+const float HALF_TILE = 0.5f;
 // Free standing points are searched on a grid of STANDING_GRID_SIZE x STANDING_GRID_SIZE
 // points per tile; the points are STANDING_POINT_SPACING apart and start at STANDING_GRID_START
 // from the tile centre.
@@ -1050,6 +1054,28 @@ bool RoomObjectNavigation::workApproach(Creature& creature, const BuildingObject
             }
             path.clear();
         }
+    }
+    return false;
+}
+
+bool RoomObjectNavigation::walkDistortionReachesWall(Creature& creature, const std::vector<Ogre::Vector2>& path)
+{
+    // A body that stays inside its tile after the jitter cannot touch a neighbour tile
+    if(clearance(creature) + WALK_DISTORTION_JITTER <= HALF_TILE)
+        return false;
+    GameMap& map = *creature.getGameMap();
+    for(const Ogre::Vector2& point : path)
+    {
+        const int pointX = Helper::round(point.x), pointY = Helper::round(point.y);
+        for(int dy = -1; dy <= 1; ++dy)
+            for(int dx = -1; dx <= 1; ++dx)
+            {
+                if(dx == 0 && dy == 0)
+                    continue;
+                Tile* neighbour = map.getTile(pointX + dx, pointY + dy);
+                if(neighbour != nullptr && !creature.canGoThroughTile(neighbour))
+                    return true;
+            }
     }
     return false;
 }

@@ -6371,9 +6371,12 @@ void RenderManager::updateCreatureStep(Creature* creature)
     const Ogre::Vector2 point(position.x, position.y);
     const Ogre::Vector2 direction(creature->getWalkDirection().x, creature->getWalkDirection().y);
     float lift = 0.0f;
+    // A dead body lies on the floor: it is never lifted onto furniture (decision 727, bodies floated at the lid of the
+    // graves). Only the gold of a treasury, which hides the floor, still lifts it.
+    const bool canStep = creature->isAlive();
     for(RenderedMovableEntity* candidate : creature->getGameMap()->getRenderedMovableEntities())
     {
-        if(candidate->getObjectType() != GameEntityType::buildingObject || candidate->getEntityNode() == nullptr)
+        if(!canStep || candidate->getObjectType() != GameEntityType::buildingObject || candidate->getEntityNode() == nullptr)
             continue;
         // A classic stack drawn as a gold pile is not stepped over, the pile lifts the creature instead
         if(TreasuryGoldMesh::replacesClassicStack(candidate->getPosition().x, candidate->getPosition().y))
@@ -6389,7 +6392,7 @@ void RenderManager::updateCreatureStep(Creature* creature)
             RoomObjectPath::Obstacle obstacle{{bounds.minX * scale.x, bounds.minY * scale.y},
                 {bounds.maxX * scale.x, bounds.maxY * scale.y},
                 {candidate->getPosition().x, candidate->getPosition().y}, std::cos(angle), std::sin(angle)};
-            // Only beds, coffins and cots are stepped onto, never the ghost room apparatuses or other furniture
+            // Only beds and cots are stepped onto, never graves, the ghost room apparatuses or other furniture
             if(!RoomObjectPath::isSteppableMesh(bounds.name))
                 continue;
             obstacle.maximumHeight = candidate->getPosition().z + bounds.maxZ;

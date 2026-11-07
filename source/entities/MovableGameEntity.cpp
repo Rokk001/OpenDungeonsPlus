@@ -116,6 +116,11 @@ void MovableGameEntity::setWalkPath(const std::string& walkAnim, const std::stri
         RoomObjectNavigation::separate(static_cast<Creature&>(*this), walkPath);
         walkDistortion = false;
     }
+    // The jitter of the client moves each coordinate of a walk point by up to 0.3, which carries the body of a wide
+    // creature into the walls next to its path; such a path is walked as it is (decision 727)
+    if(walkDistortion && getIsOnServerMap() && getObjectType() == GameEntityType::creature &&
+        RoomObjectNavigation::walkDistortionReachesWall(static_cast<Creature&>(*this), walkPath))
+        walkDistortion = false;
     mWalkQueue.clear();
     // We set the animation after clearing mWalkQueue and before filling it to be
     // sure it is empty when we set it
