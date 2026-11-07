@@ -1516,10 +1516,13 @@ void RoomAmbience::scanEntityEvents(Ogre::Camera* camera, const Ogre::Vector3& c
             change.mEvent = "CreatureArrived";
             change.mPosition = snapshot.mPosition;
             change.mCreature = creature->getName();
-            // A creature that appears on a tile of a crypt of its own keeper was raised there
+            // A creature of the class the crypt raises (CryptSpawnClass, the lich) that appears on a tile of a crypt of
+            // its own keeper was raised there. A skeleton (Raise Dead, Skeleton Army, the prison) is not raised by a grave.
             Tile* arrivalTile = creature->getPositionTile();
             if((arrivalTile != nullptr) && (arrivalTile->getTileVisual() == TileVisual::cryptRoom) &&
-               (arrivalTile->getSeat() == creature->getSeat()))
+               (arrivalTile->getSeat() == creature->getSeat()) &&
+               (creature->getDefinition()->getClassName() ==
+                ConfigManager::getSingleton().getRoomConfigStringOrDefault("CryptSpawnClass", "Lich")))
             {
                 change.mEvent = "CryptRaised";
             }
