@@ -160,8 +160,8 @@ luma = band @ np.array([0.299, 0.587, 0.114])
 rusty = (band[..., 0] > band[..., 1] + 25) & (band[..., 0] > 80)
 assert luma.mean() < 80, 'dark iron'
 assert rusty[:3].mean() > 0.5 and rusty.mean() > 0.08, 'rusty edges'
-bright = luma > 110
-assert bright.any(), 'rivets and bevel catch the light'
+bright = luma > luma.mean() + 30   # decision 830 e: matte black iron, no shiny highlights, rivets stay visible
+assert bright.any() and luma.max() < 110, 'rivets and bevel stay visible but matte'
 print('4. ornate iron frame (%d px edges at 2160, riveted, rusty) and centred 20 pt title on the book only' % T)
 
 # 5. Every other window keeps its frame and title
