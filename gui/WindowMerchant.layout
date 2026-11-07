@@ -1,34 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
     <Window type="OD/FrameWindow" name="MerchantWindow">
+        <!-- Game look (decision 845): the shared game window frame and title of every room window (only the
+             Dungeonbook has its own), MedievalSharp texts in game colours on dark framed panels. Sizes are 1024x768 design pixels; Gui scales them with the resolution and the UI scale and
+             shrinks the window to the screen. -->
         <Property name="Area" value="{{0.5,-390},{0.5,-260},{0.5,390},{0.5,260}}" />
         <Property name="Text" value="Merchant" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />
         <Property name="Visible" value="False" />
-        <Window type="OD/MenuMultiColumnList" name="StockList">
-            <Property name="Area" value="{{0,20},{0,40},{1,-20},{0,300}}" />
+        <Window type="OD/MultiColumnList" name="StockList">
+            <Property name="Area" value="{{0,16},{0,10},{1,-16},{0,270}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+        </Window>
+        <!-- Shown over the empty stock list: why it is empty and what to do (decision 845) -->
+        <Window type="OD/StaticText" name="EmptyText">
+            <Property name="Area" value="{{0,60},{0,70},{1,-60},{0,260}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="TextColours" value="FFF2C860" />
+            <Property name="Text" value="The tables are empty: no goods for sale yet. Goods come from your dungeon: creatures sell items they carry but do not need, and workers bring item bags lying in your dungeon to the merchant tables. As soon as goods lie here, select one and buy it for your hand." />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/StaticText" name="MarginLabel">
             <Property name="TooltipText" value="Creatures pay the keeper's margin on every merchant purchase and sale." />
-            <Property name="Area" value="{{0,20},{0,310},{0,180},{0,340}}" />
+            <Property name="Area" value="{{0,16},{0,282},{0,190},{0,314}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="TextColours" value="FFF2C860" />
             <Property name="Text" value="Margin: 10 %" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
+            <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/SettingsSlider" name="MarginSlider">
             <Property name="TooltipText" value="Creatures pay the keeper's margin on every merchant purchase and sale." />
-            <Property name="Area" value="{{0,190},{0,315},{0,480},{0,340}}" />
+            <Property name="Area" value="{{0,200},{0,290},{0,470},{0,306}}" />
             <Property name="MaxValue" value="50" />
             <Property name="ClickStepSize" value="5" />
         </Window>
-        <Window type="OD/GameTabButton" name="ModeButton">
-            <Property name="Area" value="{{0,510},{0,310},{1,-20},{0,345}}" />
+        <Window type="OD/Button" name="ModeButton">
+            <Property name="Area" value="{{0,500},{0,280},{1,-16},{0,316}}" />
+            <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="Fair" />
             <Property name="TooltipText" value="Fair: the creature that needs the item most buys it. Profit: the strongest creature buys it." />
         </Window>
+        <Window type="OD/StaticText" name="HistoryPanel">
+            <Property name="Area" value="{{0,16},{0,326},{1,-16},{1,-62}}" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
+            <Property name="BackgroundColours" value="tl:70000000 tr:70000000 bl:70000000 br:70000000" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
         <Window type="OD/StaticText" name="HistoryText">
-            <Property name="Area" value="{{0,20},{0,355},{1,-20},{1,-65}}" />
+            <Property name="Area" value="{{0,24},{0,330},{1,-24},{1,-66}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="TextColours" value="FFD8CCB8" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="VertFormatting" value="TopAligned" />
@@ -36,12 +66,14 @@
             <Property name="VertScrollbar" value="True" />
         </Window>
         <Window type="OD/Button" name="BuyButton">
-            <Property name="Area" value="{{0,20},{1,-55},{0,250},{1,-20}}" />
+            <Property name="Area" value="{{0,16},{1,-52},{0,250},{1,-14}}" />
+            <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="Buy" />
             <Property name="Disabled" value="True" />
         </Window>
         <Window type="OD/Button" name="CloseButton">
-            <Property name="Area" value="{{1,-160},{1,-55},{1,-20},{1,-20}}" />
+            <Property name="Area" value="{{1,-156},{1,-52},{1,-16},{1,-14}}" />
+            <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="Close" />
         </Window>
     </Window>
