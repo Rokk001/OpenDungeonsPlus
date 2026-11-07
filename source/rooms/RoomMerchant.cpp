@@ -239,7 +239,12 @@ BuildingObject* RoomMerchant::notifyActiveSpotCreated(ActiveSpotPlace place, Til
     RoomMerchantTileData* data = static_cast<RoomMerchantTileData*>(mTileData.at(tile));
     if(centre) data->mTable = true;
     mGoodsChanged = true;
-    return new BuildingObject(getGameMap(), *this, centre ? "SalesTable" : "MerchantShelf", *tile, 0.0f, false);
+    // Wall shelves stand with the back to the wall and the open side into the room (same convention as the other rooms)
+    float angle = 0.0f;
+    if(place == activeSpotLeft) angle = 90.0f;
+    else if(place == activeSpotRight) angle = 270.0f;
+    else if(place == activeSpotBottom) angle = 180.0f;
+    return new BuildingObject(getGameMap(), *this, centre ? "SalesTable" : "MerchantShelf", *tile, centre ? 0.0f : angle, false);
 }
 
 //! \brief Leaves stock sealed on the floor when its table disappears.
