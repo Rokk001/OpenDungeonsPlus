@@ -54,6 +54,7 @@ PRELUDE = r'''
 #include <vector>
 #define OD_LOG_INF(x) ((void)0)
 #define OD_LOG_ERR(x) ((void)0)
+#define OD_LOG_WRN(x) ((void)0)
 #define OD_ASSERT_TRUE(x) check(bool(x),"packet read")
 const unsigned int MAX_LEVEL=30;
 //! \brief Rejects a failed independent expected result and names it before the probe aborts.

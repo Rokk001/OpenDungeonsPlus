@@ -12644,6 +12644,31 @@ static std::string ghostBoxHandBone(const Ogre::Skeleton* skeleton, bool leftFre
     return std::string();
 }
 
+//! \brief Returns where the capture beam leaves the hunter's weapon (decision 733): the point of the attached weapon
+//! mesh nearest the aim, else the weapon bone of a weapon that is part of the model, else the given backpack nozzle.
+static Ogre::Vector3 ghostBeamOrigin(Ogre::SceneManager* scene, const Creature& hunter, Ogre::Entity* body,
+    const Ogre::Vector3& aim, const Ogre::Vector3& nozzle)
+{
+    const Weapon* weapons[2]={hunter.getWeaponR(),hunter.getWeaponL()};
+    const char* hands[2]={"R","L"};
+    for(int i=0;i<2;++i)
+    {
+        if(weapons[i]==nullptr) continue;
+        // The name RenderManager::rrCreateWeapon gives the weapon mesh in this hand
+        const std::string name=weapons[i]->getOgreNamePrefix()+hands[i]+"_"+hunter.getName();
+        if(scene->hasEntity(name) && scene->getEntity(name)->isAttached())
+        {
+            const Ogre::AxisAlignedBox bounds=scene->getEntity(name)->getWorldBoundingBox(true);
+            Ogre::Vector3 tip=aim;tip.makeCeil(bounds.getMinimum());tip.makeFloor(bounds.getMaximum());
+            return tip;
+        }
+        const std::string bone=std::string("Weapon_")+hands[i];
+        if(body!=nullptr && body->hasSkeleton() && body->getSkeleton()->hasBone(bone) && body->getParentSceneNode()!=nullptr)
+            return body->getParentSceneNode()->convertLocalToWorldPosition(body->getSkeleton()->getBone(bone)->_getDerivedPosition());
+    }
+    return nozzle;
+}
+
 void Creature::clearGhostHuntVisuals()
 {
     if(getIsOnServerMap()) return;
@@ -12691,7 +12716,8 @@ void Creature::clearGhostHuntVisuals()
     }
 }
 
-//! \brief Keeps hunter equipment creature-scaled and starts capture effects at its authored nozzle.
+//! \brief Keeps hunter equipment creature-scaled, the backpack on the back and the box in the hand, and starts capture
+//! effects at the hunter's weapon (at the authored backpack nozzle only for a creature without any weapon).
 void Creature::updateGhostHuntVisuals(double seconds)
 {
     if(getIsOnServerMap() || getEntityNode()==nullptr) return;
@@ -12703,10 +12729,14 @@ void Creature::updateGhostHuntVisuals(double seconds)
         pack->setQueryFlags(0);pack->setCastShadows(true);
         Ogre::Entity* creatureEntity=scene->getEntity(getOgreNamePrefix()+getName());
         const Ogre::Real creatureHeight=creatureEntity->getBoundingBox().getSize().z;
-        mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",Ogre::Vector3(0.0f,-0.3f,0.5f*creatureHeight));
+        // Worn on the back (decision 733): creatures face the negative y axis of their node, so the back is +y. The
+        // pack's straps sit on its +y side and turn half round to lie against the hunter's back.
+        mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",Ogre::Vector3(0.0f,0.3f,0.5f*creatureHeight),
+            Ogre::Quaternion(Ogre::Degree(180.0f),Ogre::Vector3::UNIT_Z));
         mGhostBackpackNode->attachObject(pack);
     }
-    // The fitted Capture nozzle cap from the authored GhostBackpack mesh, in pack-local coordinates.
+    // The fitted Capture nozzle cap from the authored GhostBackpack mesh, in pack-local coordinates: the beam origin of a
+    // hunter without any weapon.
     const Ogre::Vector3 nozzlePosition=mGhostBackpackNode->convertLocalToWorldPosition(
         Ogre::Vector3(0.153606342f, 0.103960392f, 0.239335642f));
     if(!mGhostShrinkTarget.empty() && mGhostShrinkTarget!=mGhostThrowTarget)
@@ -12826,12 +12856,13 @@ void Creature::updateGhostHuntVisuals(double seconds)
         mGhostBeamSound=SoundEffectsManager::getSingleton().startSpatialLoop("Rooms/GhostRoom/Beam",getPosition().x,getPosition().y);
     }
     SoundEffectsManager::getSingleton().setSpatialLoopPosition(mGhostBeamSound,getPosition().x,getPosition().y);
-    if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(nozzlePosition);
+    // The beam and its sparks leave the hunter's weapon, not the backpack (decision 733).
+    const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
+    const Ogre::Vector3 start=ghostBeamOrigin(scene,*this,body,end,nozzlePosition);
+    if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(start);
     mGhostBeamSample+=seconds;
     if(mGhostBeamSample<0.1) return;
     mGhostBeamSample=std::fmod(mGhostBeamSample,0.1);
-    const Ogre::Vector3 start=nozzlePosition;
-    const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
     for(size_t chain=0;chain<3;++chain)
     {
         mGhostBeamChain->clearChain(chain);
