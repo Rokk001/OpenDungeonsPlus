@@ -1301,7 +1301,8 @@ void GameMap::applyPendingRelationshipStates()
         OD_LOG_INF("Restored relationship state of " + states[i].mName + ", rageTurns="
             + std::to_string(restored.mRageTurnsLeft) + ", captors=" + std::to_string(restored.mCaptors.size())
             + ", rageSeat=" + std::to_string(restored.mRageSeatId) + ", brawlOpponent=" + restored.mBrawlOpponent
-            + ", brawlTurns=" + std::to_string(restored.mBrawlTurnsLeft) + ", captorNames=" + captorNames);
+            + ", brawlTurns=" + std::to_string(restored.mBrawlTurnsLeft) + ", captorNames=" + captorNames
+            + ", grief=" + std::to_string(restored.mGriefMood));
     }
 }
 

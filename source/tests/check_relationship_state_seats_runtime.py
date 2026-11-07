@@ -24,7 +24,7 @@ The run passes only when, with the same rules as check_relationship_state_load_h
     rage turns, rage seat, brawl opponent, brawl turns and captor names equal the values derived from the save by the
     loader's rules (load.restored_values); creatures that are not in the level are logged as unknown, and
   - for the committed fixture, the logged values also match the fixed expectations (load.FIXTURE_EXPECTED).
-  Grief is not compared: the loader parses it but does not apply it (see load.RESTORED_LINE).
+  Grief is compared as a record: the logged grief equals the loader's value (restored without applying the mood again).
 The original save is never opened for writing; the check works on a copy. It refuses to run while another
 opendungeons-plus.exe is running, so a game the owner is playing is never touched.
 
@@ -202,6 +202,7 @@ def logged_restore(log, name):
             continue
         captors = match.group("captors")
         return {
+            "grief": int(match.group("grief")),
             "rageTurns": int(match.group("rage")),
             "rageSeat": int(match.group("seat")),
             "brawlOpponent": match.group("opponent"),
@@ -269,7 +270,8 @@ def runtime_check(exe, save, seconds, entries, existing, is_fixture, port, versi
             continue
         expected = load.restored_values(entry, existing)
         failures += ["%s: restored %s is %r, expected %r" % (name, key, logged[key], expected[key])
-                     for key in ("rageTurns", "rageSeat", "brawlOpponent", "captors") if logged[key] != expected[key]]
+                     for key in ("grief", "rageTurns", "rageSeat", "brawlOpponent", "captors")
+                     if logged[key] != expected[key]]
         if logged["captorCount"] != len(expected["captors"]):
             failures.append("%s: restored captor count is %d, expected %d"
                             % (name, logged["captorCount"], len(expected["captors"])))

@@ -7056,6 +7056,10 @@ void Creature::reportDeathToFriends(GameEntity* killer)
         double penalty = relationships->isLovers(getName(), mourner->getName()) ?
             settings.mPartnerGriefMoodPenalty : settings.mGriefMoodPenalty;
         mourner->addRelationshipMood(-penalty);
+        // The grief record is saved with the state; the mood above is saved with the creature, so it is not applied again on load
+        static const int32_t GRIEF_RECORD_LIMIT = 100000; // same limit as the loader (CreatureRelationships.cpp)
+        int64_t grief = static_cast<int64_t>(mourner->mGriefMood) - std::llround(penalty);
+        mourner->mGriefMood = static_cast<int32_t>(std::max<int64_t>(-GRIEF_RECORD_LIMIT, grief));
         if((killer != nullptr) && (killer->getSeat() != nullptr) && (killer->getSeat() != getSeat()))
         {
             mourner->mRageUntilTurn = turn + settings.mGriefRageTurns;
@@ -7351,11 +7355,11 @@ bool Creature::getRelationshipState(RelationshipCreatureState& state) const
     state.mName = getName();
     // The captors belong to creatures that are held prisoner, which cannot have relationships
     state.mCaptors = mCaptors;
+    // Saved whether or not the creature can have relationships at the moment (a prisoner keeps its grief record)
+    state.mGriefMood = mGriefMood;
     if(!canHaveRelationships())
         return !state.isEmpty();
 
-    // The grief is a one-time loss now, there is no fading grief mood to save
-    state.mGriefMood = 0;
     if(mRageUntilTurn > turn)
     {
         state.mRageTurnsLeft = mRageUntilTurn - turn;
@@ -7391,6 +7395,9 @@ void Creature::setRelationshipState(const RelationshipCreatureState& state)
         if(gameMap->getCreature(state.mCaptors[i]) != nullptr)
             mCaptors.push_back(state.mCaptors[i]);
     }
+
+    // The grief record is restored only as a record: the mood it came from is already in the saved mood, so no mood is applied here
+    mGriefMood = state.mGriefMood;
 
     if(!canHaveRelationships())
         return;

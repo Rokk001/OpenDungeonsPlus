@@ -195,7 +195,7 @@ struct RelationshipTierChange
 };
 
 //! \brief Relationship state of one creature that is not part of the pair table and has to be
-//! saved with a game: fading grief mood, rage against a seat, a running nemesis brawl. Durations
+//! saved with a game: grief record, rage against a seat, a running nemesis brawl. Durations
 //! are stored as the number of turns that are left, because the turn counter starts at 0 again
 //! when a game is loaded.
 struct RelationshipCreatureState
@@ -215,7 +215,8 @@ struct RelationshipCreatureState
     { return (mGriefMood == 0) && (mRageTurnsLeft <= 0) && mBrawlOpponent.empty() && mCaptors.empty(); }
 
     std::string mName;
-    //! Temporary mood points (negative for grief), fading each turn
+    //! Grief record: mood points (negative) lost from friends' deaths. Only a record: the mood is saved with the creature,
+    //! so restoring it does not apply the mood again.
     int32_t mGriefMood;
     //! Turns the rage after the death of a friend lasts, and the id of the seat it is against
     int64_t mRageTurnsLeft;

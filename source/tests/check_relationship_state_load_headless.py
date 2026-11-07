@@ -43,13 +43,12 @@ INT64_MIN = -(1 << 63)
 INT64_MAX = (1 << 63) - 1
 
 # The fields of the restored log line, after the name (GameMap::applyPendingRelationshipStates, read back from the
-# creature). Grief is not listed: the loader parses it, but Creature::setRelationshipState never applies it and
-# Creature::getRelationshipState always writes 0 (Creature.cpp, "The grief is a one-time loss now"), so it is not a
-# restored field and is checked only for the loader's accept or refuse rule.
+# creature). Grief is restored as a record (Creature::setRelationshipState keeps it, without applying the mood again).
+# Captor names contain no comma, so the captor group stops before the grief field that follows it.
 RESTORED_LINE = re.compile(
     r"Restored relationship state of (?P<name>.+?), rageTurns=(?P<rage>-?\d+), captors=(?P<count>\d+), "
     r"rageSeat=(?P<seat>-?\d+), brawlOpponent=(?P<opponent>[^,]*), brawlTurns=(?P<brawl>-?\d+), "
-    r"captorNames=(?P<captors>[^\r\n]*)")
+    r"captorNames=(?P<captors>[^,\r\n]*), grief=(?P<grief>-?\d+)")
 
 # Expected restored values of the committed fixture, written by hand from its block (not derived from the game).
 # Each creature must be in a seat that allows relationships (a seat that exists, not rogue, not Hero, not a worker, not
@@ -58,9 +57,11 @@ RESTORED_LINE = re.compile(
 # game). The runtime comparison with the game log is run only by the --exe part, and was not run in this change (no
 # build).
 FIXTURE_EXPECTED = {
-    "Knight1": {"rageTurns": 5, "rageSeat": 0, "brawlOpponent": "", "captors": []},
-    "Knight3": {"rageTurns": 0, "rageSeat": -1, "brawlOpponent": "", "captors": ["Knight4"]},
+    "Knight1": {"grief": 0, "rageTurns": 5, "rageSeat": 0, "brawlOpponent": "", "captors": []},
+    "Knight3": {"grief": 0, "rageTurns": 0, "rageSeat": -1, "brawlOpponent": "", "captors": ["Knight4"]},
 }
+# The loader keeps the grief within this many points in both directions (CreatureRelationships.cpp, STATE_GRIEF_LIMIT)
+GRIEF_LIMIT = 100000
 
 
 def sha256(path):
@@ -126,6 +127,7 @@ def restored_values(entry, existing):
     rage_kept = max(0, entry["rage"]) > 0 and seat >= 0
     opponent = entry["brawl"] if (entry["brawl"] and max(0, entry["brawlTurns"]) > 0 and entry["brawl"] != name) else ""
     return {
+        "grief": max(-GRIEF_LIMIT, min(GRIEF_LIMIT, entry["grief"])),
         "rageTurns": max(0, entry["rage"]) if rage_kept else 0,
         "rageSeat": seat if rage_kept else -1,
         "brawlOpponent": opponent,
@@ -166,7 +168,7 @@ def static_check(save_path, expect_fixture):
             if expected is None:
                 continue
             derived = restored_values(entry, existing)
-            for key in ("rageTurns", "rageSeat", "brawlOpponent", "captors"):
+            for key in ("grief", "rageTurns", "rageSeat", "brawlOpponent", "captors"):
                 if derived[key] != expected[key]:
                     failures.append("fixture %s: derived %s is %r, expected %r"
                                     % (entry["name"], key, derived[key], expected[key]))
