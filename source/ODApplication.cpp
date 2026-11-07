@@ -338,7 +338,10 @@ void ODApplication::startClient()
         while (const std::optional<sf::Event> event = sfmlWindow.pollEvent()) {
             if (event->is<sf::Event::Closed>())
             {
+                // The X button: stop at once. The render window may already be destroyed by its own close handling
+                // while the events are polled, so no further frame is rendered (decision 841).
                 frameListener.requestExit();
+                running = false;
                 break;
             }
             else
@@ -356,6 +359,10 @@ void ODApplication::startClient()
             frameListener.requestExit();
         if(menuTestElapsed(menuTestStart, menuTestSeconds))
             frameListener.requestExit();
+        // The window close handler of the frame listener also requests the exit and drops the mode manager: a frame
+        // rendered after that would use it, so the loop ends here and the shutdown below runs
+        if(!running || frameListener.isExitRequested())
+            break;
         // If renderOneFrame returns false, it indicates that an exit has been requested
         running = ogreRoot.renderOneFrame();
         ++menuTestFrames;

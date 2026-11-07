@@ -50,4 +50,13 @@ side = float(render.split('TreasuryThiefSackSideFactor = ')[1].split('f;')[0])
 assert 0.0 < side <= 0.35, side
 assert 'TreasuryThiefSackSideMaxHeightFactor' in body and 'creatureBox.getMaximum().x * TreasuryThiefSackSideFactor' not in body
 assert 'creatureBox.getMinimum().z + boxHeight * TreasuryThiefSackHeightFactor' in body
+
+# X1 decision 831: a thief never steals gold lying in its own dungeon; the sack is small and not held in front.
+steal = read('source/creatureaction/CreatureActionStealFreeGold.cpp')
+assert 'tile->isClaimedForSeat(creature.getSeat())' in steal and 'tileRoom->getSeat() == creature.getSeat()' in steal
+assert steal.index('isClaimedForSeat') < steal.index('fillWithEntities')
+scale = float(render.split('TreasuryThiefSackScale = ')[1].split('f;')[0])
+assert 0.0 < scale <= 0.4, scale
+front = float(render.split('TreasuryThiefSackFrontFactor = ')[1].split('f;')[0])
+assert front == 0.0, front
 print('ok')
