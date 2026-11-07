@@ -73,11 +73,14 @@ struct Seat {
 };
 struct Creature {
  Seat* seat;bool alive=true;bool onMap=true;Tile* tile;
+ int koCounter=0;bool contained=false;
  const CreatureDefinition* definition;
  Creature(Seat* s,const CreatureDefinition* d,Tile* t):seat(s),definition(d),tile(t){}
  Seat* getSeat()const{return seat;}
  bool isAlive()const{return alive;}
  bool getIsOnMap()const{return onMap;}
+ bool isKoDeath()const{return koCounter<0;}
+ bool isInContainment()const{return contained;}
  Tile* getPositionTile()const{return tile;}
  const CreatureDefinition* getDefinition()const{return definition;}
 };
@@ -151,6 +154,29 @@ int main(){
  check(!owner.mHeartDefenceActive,"a dead enemy does not trigger the defence");
  enemy.alive=true;
 
+ // Owner decision 791: an enemy knocked out to death in range kept every worker at the heart until it died
+ enemy.koCounter=-30;
+ map.updateSeatHeartDefense(&owner);
+ check(!owner.mHeartDefenceActive,"an enemy knocked out to death in range does not start the defence");
+ enemy.koCounter=0;
+ map.updateSeatHeartDefense(&owner);
+ check(owner.mHeartDefenceActive,"the standing enemy in range starts the defence");
+ enemy.koCounter=-30;
+ map.updateSeatHeartDefense(&owner);
+ check(!owner.mHeartDefenceActive,"the defence ends when the enemy in range is knocked out to death");
+ enemy.koCounter=0;
+ enemy.contained=true;
+ map.updateSeatHeartDefense(&owner);
+ check(!owner.mHeartDefenceActive,"a prisoner in range does not hold the defence");
+ enemy.contained=false;
+ map.updateSeatHeartDefense(&owner);
+ enemy.koCounter=5;
+ map.updateSeatHeartDefense(&owner);
+ check(owner.mHeartDefenceActive,"a briefly stunned enemy in range that gets up again keeps the defence");
+ enemy.koCounter=0;
+ owner.mHeartDefenceActive=false;
+ map.alarms=0;
+
  // An allied creature does not trigger the defence
  map.mCreatures.clear();
  Creature ally(&owner,&fighter,&at6);
@@ -219,6 +245,11 @@ assert "WeAreUnderAttack" in defence, "the defence start sounds the alarm call"
 assert "playerIsFighting" not in defence and "playerFighting" not in defence, \
     "the defence does not start the combat music"
 assert "heartDefenceRangeSquared()" in defence, "the heart defence reach is read from the room config"
+# Owner decision 791: knocked-out-to-death and imprisoned enemies are skipped before their distance counts.
+assert "if (creature->isKoDeath() || creature->isInContainment())\n            continue;" in defence, \
+    "a knocked-out or imprisoned enemy does not hold the heart defence"
+assert defence.index("creature->isKoDeath()") < defence.index("squaredDistanceTile(*heartTile, *creatureTile)"), \
+    "the knocked-out enemy is skipped before it can become the nearest enemy"
 assert "getHeartDefenceTargetTile" in target, "the runner target comes from the game map"
 assert "isHeartDefenceRunner()" in target, "the runners are not rallied as fighters"
 
