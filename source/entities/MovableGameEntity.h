@@ -168,6 +168,10 @@ public:
     virtual double getAnimationSpeedFactor() const
     { return 1.0; }
 
+    //! \brief Game seconds the whole clip takes on screen (the plans give clip lengths in seconds), 0 for the normal
+    //! rate of one clip unit per game turn. The default reads the room configuration key ClipSeconds<clip>.
+    virtual double getClipSeconds(const std::string& clip) const;
+
     //! \brief True once the current strike reaches the contact fraction, or its animation was interrupted.
     //! A strike queued behind movement or waiting for its facing turn has not reached contact yet.
     //! \param share Fraction of the displayed strike clip at which contact occurs.
@@ -251,6 +255,11 @@ private:
     Ogre::Vector3 mDestinationAnimationDirection;
     Ogre::Vector3 mWalkDirection;
     double mAnimationTime;
+    //! The clip name for which mClipSeconds was looked up in the room configuration.
+    std::string mClipSecondsFor;
+    //! Playing time in seconds that the room configuration (ClipSeconds<Clip>) gives the clip
+    //! mClipSecondsFor, 0 when the clip plays at the normal rate of one clip unit per game turn.
+    double mClipSeconds;
     //! Client: seconds the strike clip still waits for the turn to the target (0 = nothing waits). Not saved.
     double mBlowStartDelay;
     //! Local-only request identity for pending impacts; never serialized or sent to the server.

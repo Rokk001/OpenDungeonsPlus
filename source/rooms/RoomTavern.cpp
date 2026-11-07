@@ -115,8 +115,12 @@ const std::string SOUND_POUR = "Rooms/Tavern/Pour";
 const std::string SOUND_SLAP = "Creatures/Default/Slap";
 //! \brief Sound family of the cheer when a game ends.
 const std::string SOUND_CHEER = "Creatures/Default/Cheer";
-//! \brief Turns the loser of a slap duel needs to get up from the floor (plan: 2 turns).
-const int32_t GET_UP_TURNS = 2;
+//! \brief Turns the loser of a slap duel needs to get up from the floor: CreatureGetUpSeconds (at least 2 s) rounded up.
+int32_t getUpTurns()
+{
+    return static_cast<int32_t>(std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
+        * ODApplication::turnsPerSecond));
+}
 //! \brief Turns a guest stays done after its last drink while a game partner may be found.
 const int32_t DONE_WAIT_TURNS = 1;
 //! \brief Scale of the percent values of the [Tavern] block.
@@ -1356,7 +1360,7 @@ void RoomTavern::upkeepSpots()
                 --spot.mTurnsLeft;
                 if(spot.mTurnsLeft <= 0)
                 {
-                    setSpotState(spot, TavernGuestState::getUp, GET_UP_TURNS);
+                    setSpotState(spot, TavernGuestState::getUp, getUpTurns());
                     showSpotState(it->first.mTable, spot);
                 }
                 break;

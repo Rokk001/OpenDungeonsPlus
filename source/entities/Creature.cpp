@@ -3087,10 +3087,21 @@ void Creature::doUpkeep()
         mKoTurnCounter = std::max(0.0, mKoTurnCounter - 1.0);
         if(mKoTurnCounter == 0.0)
             mKoDroppedThisFight = false;
+        // The loser of an arena fight lies for ArenaKnockOutSeconds, the last CreatureGetUpSeconds of it are the get-up
+        if(mArenaKnockOut && (mKoTurnCounter > 0.0))
+        {
+            const double getUpTurns = std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
+                * ODApplication::turnsPerSecond);
+            if((mKoTurnCounter <= getUpTurns) && (mKoTurnCounter + 1.0 > getUpTurns) && !getGameMap()->isInEditorMode())
+                setAnimationState(EntityAnimation::getup_anim, false, Ogre::Vector3::ZERO, false);
+            return;
+        }
+
         if(mKoTurnCounter > 0)
             return;
 
         // The loser of an arena fight gets up with ArenaGetUpHpShare of its max HP and looks after itself in its bed
+        const bool wasArenaKnockOut = mArenaKnockOut;
         if(mArenaKnockOut)
         {
             mArenaKnockOut = false;
@@ -3098,7 +3109,8 @@ void Creature::doUpkeep()
             sleep();
         }
 
-        if(!getGameMap()->isInEditorMode())
+        // The arena loser got up before (see above)
+        if(!wasArenaKnockOut && !getGameMap()->isInEditorMode())
             setAnimationState(EntityAnimation::getup_anim, false,
                 Ogre::Vector3::ZERO, false);
         computeCreatureOverlayMoodValue();

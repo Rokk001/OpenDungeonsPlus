@@ -34,6 +34,7 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 #include "ODApplication.h"
+#include "utils/ConfigManager.h"
 
 #include <OgreAnimationState.h>
 #include <algorithm>
@@ -54,6 +55,7 @@ MovableGameEntity::MovableGameEntity(GameMap* gameMap) :
     mDestinationAnimationDirection(Ogre::Vector3::ZERO),
     mWalkDirection(Ogre::Vector3::ZERO),
     mAnimationTime(0.0),
+    mClipSeconds(0.0),
     mBlowStartDelay(0.0),
     mAnimationSequence(0)
 {
@@ -357,6 +359,14 @@ void recordScriptWalk(MovableGameEntity& entity, const Ogre::Vector2& from, cons
 }
 }
 
+//! \brief Looks up the playing time that the room configuration key ClipSeconds<Clip> gives a clip.
+double MovableGameEntity::getClipSeconds(const std::string& clip) const
+{
+    const std::string clipKey = "ClipSeconds" + clip;
+    return ConfigManager::getSingleton().hasRoomConfig(clipKey) ?
+        ConfigManager::getSingleton().getRoomConfigDouble(clipKey) : 0.0;
+}
+
 //! \brief Advances movement, clips and deferred strikes using the same game-time scale.
 //! Observes actual crossing steps without changing movement.
 void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
@@ -392,6 +402,29 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
             addedTime = static_cast<double>(timeSinceLastFrame) * gameSpeedFactor;
         else
             addedTime *= DIE_ANIMATION_SPEED_FACTOR;
+    }
+    // Clips that the plans give in seconds play for exactly that time: the whole clip takes ClipSeconds<Clip> game
+    // seconds, whatever the creature speed and the turn length. The clip files are authored with the plan length, the
+    // server (which has no clip) counts with that and a client takes the length of the clip it really shows.
+    if(mClipSecondsFor != mPrevAnimationState)
+    {
+        mClipSecondsFor = mPrevAnimationState;
+        mClipSeconds = getClipSeconds(mPrevAnimationState);
+    }
+    if(mClipSeconds > 0.0)
+    {
+        double clipLength = mClipSeconds;
+        bool timed = true;
+        if(!getIsOnServerMap() && (getAnimationState() != nullptr))
+        {
+            // A fallback clip that stands in for a missing one keeps the normal rate
+            timed = (getAnimationState()->getAnimationName() == mPrevAnimationState) &&
+                (getAnimationState()->getLength() > 0.0);
+            if(timed)
+                clipLength = static_cast<double>(getAnimationState()->getLength());
+        }
+        if(timed)
+            addedTime = clipLength / mClipSeconds * static_cast<double>(timeSinceLastFrame) * gameSpeedFactor;
     }
     mAnimationTime += addedTime;
     // A dead creature lies still: only its death clip and its slow decay clip run, no other clip moves a body

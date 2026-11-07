@@ -42,10 +42,11 @@ namespace
 const std::string ATTENDANT_FALLBACK_NAME = "PoolAttendant";
 //! \brief Sound family of the whistle.
 const std::string SOUND_WHISTLE = "Rooms/Spa/Whistle";
-//! \brief Length in seconds of each clip of the attendant (all of them are authored with this length).
+//! \brief Length in seconds of the jump clip of the attendant, as authored; the other clips take PoolAttendantClipSeconds.
 const double CLIP_SECONDS = 2.0;
-//! \brief Height of the top of the seat plate of the chair mesh (SpaChair) above the floor, in tiles.
-const double CHAIR_SEAT_HEIGHT = 1.13;
+//! \brief Height of the top of the seat plate of the chair mesh (SpaChair) above the floor (1.13) plus 0.04, the depth to which the Sit clip lets the seat of the
+//! figure hang below its origin, so that he sits on the plate and not in it, in tiles.
+const double CHAIR_SEAT_HEIGHT = 1.13 + 0.04;
 //! \brief Distance in tiles from the middle of the chair tile to the foot of the ladder, which is in front of the chair
 //! on the side of the pool (the chair is 0.6 tiles wide).
 const double LADDER_FOOT_OFFSET = 0.4;
@@ -67,7 +68,7 @@ const uint32_t ACT_DOZE = 1;
 //! \brief Turns a clip of the attendant lasts.
 double getClipTurns()
 {
-    return CLIP_SECONDS * ODApplication::turnsPerSecond;
+    return ConfigManager::getSingleton().getRoomConfigDouble("PoolAttendantClipSeconds") * ODApplication::turnsPerSecond;
 }
 
 //! \brief Turns that a number of seconds of the configuration last.
@@ -183,6 +184,14 @@ Ogre::Vector3 PoolAttendantEntity::getLadderFootPosition() const
 
     return Ogre::Vector3(static_cast<Ogre::Real>(mChairTile->getX()),
         static_cast<Ogre::Real>(mChairTile->getY()) + static_cast<Ogre::Real>(LADDER_FOOT_OFFSET), 0.0f);
+}
+
+double PoolAttendantEntity::getClipSeconds(const std::string& clip) const
+{
+    if((clip == PoolAttendantPose::whistle) || (clip == PoolAttendantPose::towelWave) ||
+       (clip == PoolAttendantPose::doze) || (clip == PoolAttendantPose::climb))
+        return ConfigManager::getSingleton().getRoomConfigDouble("PoolAttendantClipSeconds");
+    return 0.0;
 }
 
 double PoolAttendantEntity::rollActTurns() const
@@ -577,19 +586,19 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::whistle, false, Ogre::Vector3::ZERO, false);
             // The saved clip time is used; an old save without it gets the time worked out from the turns left
-            setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);
+            setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
             break;
         case PoolAttendantState::towelWaving:
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::towelWave, false, Ogre::Vector3::ZERO, false);
-            setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);
+            setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
             break;
         case PoolAttendantState::dozing:
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::doze, false, Ogre::Vector3::ZERO, false);
-            setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);
+            setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
             break;
         case PoolAttendantState::climbingDown:
         case PoolAttendantState::climbingUp:
@@ -605,7 +614,7 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::climb, true, AWAY_FROM_POOL, false);
             // The clip goes on at the time that was reached, it does not start again
-            setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);
+            setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
             const double done = 1.0 - mTurnsLeft / getClipTurns();
             placeOnLadder(down ? done : 1.0 - done);
             break;

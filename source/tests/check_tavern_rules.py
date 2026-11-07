@@ -308,7 +308,7 @@ assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 
 tavern = block_values(global_cfg, 'Tavern')
 rooms = block_values(rooms_cfg, 'Rooms')
 config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax',
-    'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving')]
+    'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving', 'CreatureGetUpSeconds')]
 config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
 effect_line = re.search(r'^\s*tavernBeer\s+PortalCooldown\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
 assert effect_line is not None, 'the portal cooldown effect line is missing'
@@ -358,6 +358,7 @@ static double Double(double a, double b) { return (doublePos < doubles.size()) ?
 static uint32_t Uint(uint32_t a, uint32_t b) { lastUintMax = b; return (uintPos < uints.size()) ? uints[uintPos++] : a; }
 }
 
+struct ODApplication { static constexpr double turnsPerSecond = 1.4; };
 // ---- Configuration: the real values of the config files, an unknown key is a failure
 struct ConfigManager
 {
@@ -1021,7 +1022,7 @@ static void checkKnockOutAndAbort()
       f.room.knockOut(f.room.findSpotOf(b)->second);
       for(int i = 0; i < 41; ++i) f.room.upkeepSpots();
       expect(f.stateOf(b) == TavernGuestState::ko, "still lying after 41 turns");
-      f.room.upkeepSpots(); expect(f.stateOf(b) == TavernGuestState::getUp && f.room.findSpotOf(b)->second.mTurnsLeft == 2, "after 42 turns the loser gets up for 2 turns");
+      f.room.upkeepSpots(); expect(f.stateOf(b) == TavernGuestState::getUp && f.room.findSpotOf(b)->second.mTurnsLeft == 3, "after 42 turns the loser gets up for CreatureGetUpSeconds (2 s, 3 turns)");
       f.room.upkeepSpots(); f.room.upkeepSpots(); expect(f.stateOf(b) == TavernGuestState::done, "then it is done"); }
     // A fight, a flight, a knock-out or a pick-up ends a game without effects
     for(int reason = 0; reason < 4; ++reason)
@@ -1104,10 +1105,10 @@ types_start = tavern_h.index('//! \\brief Who pays for the beer a tavern serves.
 types_end = tavern_h.index('//! \\brief A room where creatures quench their thirst.')
 room_types = tavern_h[types_start:types_end]
 constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) ' + name + r' = [^;]+;$') for name in (
-    'GET_UP_TURNS', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
+    'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
 constants += '\n' + find_line(room_cpp, r'^const float TAVERN_SEAT_SPACING = [^;]+;$')
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
-helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'Ogre::Vector3 directionTo('])
+helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'int32_t getUpTurns(', 'Ogre::Vector3 directionTo('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
     'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
     'void RoomTavern::setSpotState(', 'void RoomTavern::setSpotDone(', 'bool RoomTavern::isGuestDisturbed(', 'void RoomTavern::upkeepSpots(',
