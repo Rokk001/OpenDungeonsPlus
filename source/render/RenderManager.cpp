@@ -6513,6 +6513,7 @@ static const float TreasuryThiefSackSideFactor = 0.3f;
 //! The sideways offset of the sack never exceeds this factor of the bounding box height (wide wings, long arms).
 static const float TreasuryThiefSackSideMaxHeightFactor = 0.12f;
 //! The sack hangs at the side of the belt, not in front of the body (0 = no offset along the facing axis).
+//! (The sack sits at the side because creatures face the negative y axis of the mesh.)
 static const float TreasuryThiefSackFrontFactor = 0.0f;
 
 void RenderManager::refreshCreaturesOnTile(Tile* tile)
