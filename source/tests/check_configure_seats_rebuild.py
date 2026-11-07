@@ -9,9 +9,11 @@ header = (repo / 'source/modes/MenuModeConfigureSeats.h').read_text(encoding='ut
 assert 'void destroySettingPages();' in header
 
 destroy = text.split('void MenuModeConfigureSeats::destroySettingPages()')[1].split('void MenuModeConfigureSeats::initSettingPages()')[0]
-for name in ('"Label" +', '"Limit" +', '"ItemLabel" +', '"ItemButton" +'):
-    assert name in destroy, name
-assert 'isWindowPresent' in destroy and 'destroyWindow' in destroy
+collect = text.split('void collectSettingPageWindows(')[1].split('void MenuModeConfigureSeats::destroySettingPages()')[0]
+for name in ('"Label"', '"Limit"', '"ItemLabel"', '"ItemButton"'):
+    assert name in collect, name
+assert 'collectSettingPageWindows(settingsWin' in destroy and 'destroyWindow(win)' in destroy
+assert 'isWindowPresent' not in text
 
 init = text.split('void MenuModeConfigureSeats::initSettingPages()')[1].split('bool MenuModeConfigureSeats::openGameSettings')[0]
 assert init.index('destroySettingPages();') < init.index('createWindow'), 'destroy must come before creating'

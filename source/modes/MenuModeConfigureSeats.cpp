@@ -366,24 +366,42 @@ void MenuModeConfigureSeats::initSettingCombos()
     }
 }
 
+namespace
+{
+//! rief Collects the windows below parent whose name starts with one of the prefixes created by initSettingPages
+void collectSettingPageWindows(CEGUI::Window* parent, std::vector<CEGUI::Window*>& found)
+{
+    for(size_t i = 0; i < parent->getChildCount(); ++i)
+    {
+        CEGUI::Window* child = parent->getChildAtIdx(i);
+        const std::string name = child->getName().c_str();
+        if(name.compare(0, 5, "Label") == 0 || name.compare(0, 5, "Limit") == 0 ||
+           name.compare(0, 9, "ItemLabel") == 0 || name.compare(0, 10, "ItemButton") == 0)
+        {
+            found.push_back(child);
+            continue;
+        }
+        collectSettingPageWindows(child, found);
+    }
+}
+}
+
 //! rief Destroys the windows initSettingPages created. The windows belong to the gui sheet, which outlives this mode,
 //! so they must be removed when the mode goes away and before they are created again (second skirmish in one session).
 void MenuModeConfigureSeats::destroySettingPages()
 {
     CEGUI::WindowManager& winMgr = CEGUI::WindowManager::getSingleton();
-    for(const std::pair<const std::string, CreatureDefinition*>& def : ConfigManager::getSingleton().getCreatureDefinitions())
+    CEGUI::Window* settingsWin = getSettingsWindow(getModeManager().getGui().getGuiSheet(Gui::guiSheet::configureSeats));
+    if(settingsWin != nullptr)
     {
-        if(winMgr.isWindowPresent("Label" + def.first))
-            winMgr.destroyWindow("Label" + def.first);
-        if(winMgr.isWindowPresent("Limit" + def.first))
-            winMgr.destroyWindow("Limit" + def.first);
-    }
-    for(uint32_t i = 1; i < static_cast<uint32_t>(SkillType::countSkill); ++i)
-    {
-        if(winMgr.isWindowPresent("ItemLabel" + Helper::toString(i)))
-            winMgr.destroyWindow("ItemLabel" + Helper::toString(i));
-        if(winMgr.isWindowPresent("ItemButton" + Helper::toString(i)))
-            winMgr.destroyWindow("ItemButton" + Helper::toString(i));
+        std::vector<CEGUI::Window*> found;
+        collectSettingPageWindows(settingsWin, found);
+        for(CEGUI::Window* win : found)
+        {
+            if(win->getParent() != nullptr)
+                win->getParent()->removeChild(win);
+            winMgr.destroyWindow(win);
+        }
     }
     // No dangling pointers to the destroyed windows
     for(const std::pair<const std::string, CEGUI::Spinner*>& entry : mLimitSpinners)
