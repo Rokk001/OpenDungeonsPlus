@@ -63,9 +63,9 @@ public:
     void absorbRoom(Room *r) override;
     //! \brief Earns research points using room research and the wearer's Scholar effect.
     bool useRoom(Creature& creature, bool forced) override;
-    //! \brief Takes every research book from the ghost press; it stays on a shelf until a researcher opens it.
+    //! \brief Takes a research book only if the library has a bookshelf; it stays on the shelf until a researcher opens it.
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
-    //! \brief Directs the worker to a bookshelf of the library.
+    //! \brief Directs the worker to a bookshelf of the library, never to a plain tile.
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
     //! \brief Puts a delivered research book onto the shelf.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
@@ -85,6 +85,8 @@ protected:
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
 private:
+    //! \brief Returns the first tile carrying a bookshelf, or nullptr if the library has none.
+    Tile* bookshelfTile();
     void getCreatureWantedPos(Creature* creature, Tile* tileSpot,
         Ogre::Real& wantedX, Ogre::Real& wantedY);
     std::vector<Tile*> mUnusedSpots;
