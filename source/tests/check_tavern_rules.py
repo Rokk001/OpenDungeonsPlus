@@ -534,6 +534,7 @@ public:
     void sendTavernEvent(Creature& creature, int32_t kind, const Creature* opponent) { ++events; lastKind = kind; kinds.push_back(kind); }
     void playSoundAt(Tile* tile, const std::string& family) {}
     void showSpotState(Tile* tile, RoomTavernSpot& spot) {}
+    Ogre::Vector3 getFacingDirection(const Creature& creature, const Creature& partner) { return directionTo(creature, partner.getPosition()); }
     bool fallNextToBench(RoomTavernSpot& spot) { return false; }
     std::vector<Tile*> getTableTiles() const { return mTestTables; }
     std::map<RoomTavernSeat, RoomTavernSpot>::iterator findSpotOf(const Creature* creature);

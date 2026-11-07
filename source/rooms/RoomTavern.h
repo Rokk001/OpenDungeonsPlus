@@ -449,6 +449,12 @@ private:
     //! \param places The number of places the guest takes.
     bool isOnSeat(const Creature& creature, const RoomTavernSeat& seat, uint32_t places) const;
 
+    //! \brief The direction a guest looks in while it plays a game with another guest or slaps it: across its table
+    //! while it is on its seat (the seated clips are made for that direction), otherwise towards the partner.
+    //! \param creature The guest.
+    //! \param partner The other guest of the game or the duel.
+    Ogre::Vector3 getFacingDirection(const Creature& creature, const Creature& partner);
+
     //! \brief Finds free points next to the seat from where a creature gets onto the bench.
     //! \param creature The guest.
     //! \param seat The seat.
