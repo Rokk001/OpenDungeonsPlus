@@ -234,8 +234,8 @@ for part in dungeonbook.iter('Window'):
         if prop.get('name') == 'Area':
             assert all(offset == 0 for _scale, offset in udims(prop.get('value'))), \
                 part.get('name') + ' of the Dungeonbook uses a fixed pixel area'
-# Decision 732: the values sheet shows exact values without a scrollbar, so its value cells word wrap a pair "a / b"
-# onto a second line instead of cutting it, and no tile holds a text that would have to be shortened
+# Decisions 732 and 830: the values sheet shows rounded values without a scrollbar, so its value cells word wrap a
+# pair "a / b" onto a second line instead of cutting it, and no tile holds a text that would have to be shortened
 for part in values_sheet.findall('Window'):
     name = part.get('name')
     assert not name.endswith('Value') or name[:-5] + 'Label' in [w.get('name') for w in values_sheet.findall('Window')],         name + ' is a shortened tile text'
@@ -243,7 +243,7 @@ for part in values_sheet.findall('Window'):
         formatting = part.find("Property[@name='HorzFormatting']")
         assert formatting is not None and formatting.get('value') == 'WordWrapRightAligned', name + ' must word wrap'
 # Owner decision 816: the four attributes sit in ONE row (book-variant-2) inside the values sheet, equally wide, side
-# by side without overlap; the text of each cell (label and exact value lines) is measured per screen and UI scale in
+# by side without overlap; the text of each cell (label and rounded value lines) is measured per screen and UI scale in
 # check_dungeonbook_profile_layout.py
 attribute_cells = []
 for name in ('Strength', 'Dexterity', 'Life', 'Mana'):
