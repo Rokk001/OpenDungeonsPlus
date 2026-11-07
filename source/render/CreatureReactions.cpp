@@ -220,6 +220,25 @@ static bool sitsAtTable(const Creature* creature)
     return (animState != nullptr) && EntityAnimation::isSeatClip(animState->getAnimationName());
 }
 
+//! \brief True when the creature stands on a tile of a tavern. The tables and benches stand close together there, so a
+//! creature that sat down or lay down on the floor of the room (an articulated AmbientSit or AmbientLie clip, a sit or
+//! lie motion of the whole body) would lie in and through the furniture (decision 833: a grey creature lay deformed
+//! through a tavern table).
+static bool standsInTavern(const Creature* creature)
+{
+    const Tile* tile = creature->getPositionTile();
+    const Room* room = (tile != nullptr) ? tile->getCoveringRoom() : nullptr;
+    return (room != nullptr) && (room->getType() == RoomType::tavern);
+}
+
+//! \brief True when the reaction lowers the whole body to the floor: a sit or lie motion, or the rest clips it plays.
+static bool lowersBody(const ReactionVariant& variant)
+{
+    return (variant.mMotion.mType == ReactionMotion::Type::sit) || (variant.mMotion.mType == ReactionMotion::Type::lie) ||
+        (variant.mClip == "AmbientSit") || (variant.mClip == "AmbientLie") ||
+        (variant.mFallbackClip == "AmbientSit") || (variant.mFallbackClip == "AmbientLie");
+}
+
 //! \brief How far (radians) the up axis of the node leans from the vertical.
 static double nodeTilt(const Ogre::SceneNode* node)
 {
@@ -961,8 +980,9 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
 
     if(mMode == Mode::full)
     {
-        // A guest on a tavern bench neither poses nor moves its body nor holds a prop: it would reach into the table
-        const bool seated = sitsAtTable(creature);
+        // A guest on a tavern bench neither poses nor moves its body nor holds a prop: it would reach into the table.
+        // No creature in a tavern sits or lies down on the floor: it would lie in the furniture
+        const bool seated = sitsAtTable(creature) || (lowersBody(variant) && standsInTavern(creature));
 
         // Tier C / B: a clip, only while the creature stands still (it must not slide while posing).
         // An event that decorates the work animation plays a clip only when its variant names one: the clip is laid

@@ -83,7 +83,13 @@ def check_reactions():
     helper = extract(cpp, 'static bool sitsAtTable(')
     assert 'EntityAnimation::isSeatClip(animState->getAnimationName())' in helper
     start = extract(cpp, 'bool CreatureReactions::startReaction(')
-    assert 'const bool seated = sitsAtTable(creature);' in start
+    # Decision 833: the same guard holds for a sit or lie reaction of any creature that stands on a tavern tile
+    assert 'const bool seated = sitsAtTable(creature) || (lowersBody(variant) && standsInTavern(creature));' in start
+    tavern = extract(cpp, 'static bool standsInTavern(')
+    assert 'tile->getCoveringRoom()' in tavern and 'room->getType() == RoomType::tavern' in tavern
+    lowers = extract(cpp, 'static bool lowersBody(')
+    for token in ('ReactionMotion::Type::sit', 'ReactionMotion::Type::lie', '"AmbientSit"', '"AmbientLie"', 'mFallbackClip'):
+        assert token in lowers, token
     assert '(!event.mWhileWorking || !variant.mClip.empty()) && !seated;' in start, 'a reaction clip plays on a seated guest'
     assert '!playsHurtWalk && !seated)' in start, 'a motion moves a seated guest'
     assert '!creature->isMoving() && !seated &&' in start, 'a prop is shown on a seated guest'
