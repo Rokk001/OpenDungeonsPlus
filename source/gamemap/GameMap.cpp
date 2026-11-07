@@ -2349,6 +2349,10 @@ void GameMap::updateSeatHeartDefense(Seat* seat)
             continue;
         if (!creature->isAlive() || !creature->getIsOnMap())
             continue;
+        // An enemy knocked out to death (it only lies there until it dies or is carried off) or held in a prison is no
+        // threat: counting it kept every worker of the seat at the heart until it died (owner decision 791).
+        if (creature->isKoDeath() || creature->isInContainment())
+            continue;
         Tile* creatureTile = creature->getPositionTile();
         if (creatureTile == nullptr)
             continue;

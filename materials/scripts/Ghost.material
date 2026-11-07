@@ -100,6 +100,68 @@ material GhostGaugeFace
     }
 }
 
+// The worn ghost-hunter backpack and its capture cannon (owner decision 791): olive canvas with a visible weave,
+// light brushed steel for frame, plates and cannon body, and ribbed rubber for straps, hose and grip.
+material GhostPackCanvas
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8
+            diffuse 1 1 1 1
+            specular 0.04 0.04 0.04 1 6
+            texture_unit
+            {
+                texture GhostPackCanvas.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostPackSteel
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8
+            diffuse 1 1 1 1
+            specular 0.45 0.45 0.45 1 32
+            texture_unit
+            {
+                texture GhostPackSteel.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
+material GhostPackRubber
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8
+            diffuse 1 1 1 1
+            specular 0.08 0.08 0.08 1 10
+            texture_unit
+            {
+                texture GhostPackRubber.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
 // The hand-held capture box: light scratched gunmetal, worn ochre warning stripes and an opaque green window glow.
 material GhostBoxCase
 {
