@@ -6504,7 +6504,7 @@ static const float TreasuryCoinEffectHeightOffset = 0.02f;
 //! Centre of the tile in dent texture space, subtracted from a dent position to get the offset on the tile.
 static const float TreasuryDentTileCentre = 0.5f;
 //! Scale of the gold sack a treasure thief carries.
-static const float TreasuryThiefSackScale = 0.7f;
+static const float TreasuryThiefSackScale = 0.35f;
 //! Height of the carried gold sack (at the belt) as a factor of the creature's bounding box height.
 static const float TreasuryThiefSackHeightFactor = 0.45f;
 //! Sideways offset of the carried gold sack as a factor of the creature's bounding box half width. The box includes
@@ -6512,8 +6512,8 @@ static const float TreasuryThiefSackHeightFactor = 0.45f;
 static const float TreasuryThiefSackSideFactor = 0.3f;
 //! The sideways offset of the sack never exceeds this factor of the bounding box height (wide wings, long arms).
 static const float TreasuryThiefSackSideMaxHeightFactor = 0.12f;
-//! The sack sits slightly in front of the body (creatures face the negative y axis of the mesh), as a factor of the box depth.
-static const float TreasuryThiefSackFrontFactor = 0.15f;
+//! The sack hangs at the side of the belt, not in front of the body (0 = no offset along the facing axis).
+static const float TreasuryThiefSackFrontFactor = 0.0f;
 
 void RenderManager::refreshCreaturesOnTile(Tile* tile)
 {

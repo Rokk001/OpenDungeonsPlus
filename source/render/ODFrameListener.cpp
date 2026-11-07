@@ -421,7 +421,7 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     CEGUI::Vector2<float> mousePos = mouseCursor.getDisplayIndependantPosition();
     RenderManager::getSingleton().moveCursor(mousePos.d_x, mousePos.d_y);
 
-    if (mWindow->isClosed())
+    if (mWindow->isClosed() || !mModeManager)
         return false;
 
     // Sleep to limit the framerate to the max value
@@ -490,6 +490,8 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
 
 bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
 {
+    if(!mModeManager)
+        return true;
 
     AbstractApplicationMode* currentMode = mModeManager->getCurrentMode();
     if(currentMode)
@@ -504,6 +506,9 @@ bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
 //! \brief Samples real frame intervals once, independently of pause and repeated mode updates.
 bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
 {
+    // The mode manager is gone once the window has been closed (windowClosed)
+    if(!mModeManager)
+        return true;
     // The first mode is created by ModeManager::update() in frameRenderingQueued, after the
     // first frameStarted, so the current mode is null here on the first rendered frame.
     const AbstractApplicationMode* sampledMode = mModeManager->getCurrentMode();
