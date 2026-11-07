@@ -20,8 +20,11 @@ The enum values are read from source/network/ClientNotification.h and ServerNoti
 The run passes only when, with the same rules as check_relationship_state_load_headless.py:
   - the game is alive after --seconds, the log has no invalid RelationshipState section, the server reached
     "Server connected and listening", the test client got loadLevel and pickNick and was not rejected,
-  - every creature named in the save's [RelationshipState] block is logged as restored, with no unknown creature, and
-  - for the committed fixture, the restored values match the fixed expectations.
+  - every creature of the save's [RelationshipState] block that is in the level is logged as restored, and the logged
+    rage turns, rage seat, brawl opponent, brawl turns and captor names equal the values derived from the save by the
+    loader's rules (load.restored_values); creatures that are not in the level are logged as unknown, and
+  - for the committed fixture, the logged values also match the fixed expectations (load.FIXTURE_EXPECTED).
+  Grief is not compared: the loader parses it but does not apply it (see load.RESTORED_LINE).
 The original save is never opened for writing; the check works on a copy. It refuses to run while another
 opendungeons-plus.exe is running, so a game the owner is playing is never touched.
 
@@ -191,7 +194,25 @@ def drive_seats(sock, version, nick, seconds, received):
     return failures, deadline
 
 
-def runtime_check(exe, save, seconds, names, is_fixture, port, version):
+def logged_restore(log, name):
+    """The values of the first 'Restored relationship state' log line of the creature, or None when there is none."""
+    for line in log.splitlines():
+        match = load.RESTORED_LINE.search(line)
+        if match is None or match.group("name") != name:
+            continue
+        captors = match.group("captors")
+        return {
+            "rageTurns": int(match.group("rage")),
+            "rageSeat": int(match.group("seat")),
+            "brawlOpponent": match.group("opponent"),
+            "brawlTurns": int(match.group("brawl")),
+            "captors": captors.split("|") if captors else [],
+            "captorCount": int(match.group("count")),
+        }
+    return None
+
+
+def runtime_check(exe, save, seconds, entries, existing, is_fixture, port, version):
     """Starts the game with a test client on a copy of the save. Returns (failures, received) or None when skipped."""
     if load.game_running():
         print("SKIPPED: an opendungeons-plus.exe process is running; this check does not touch it")
@@ -234,15 +255,33 @@ def runtime_check(exe, save, seconds, names, is_fixture, port, version):
         failures.append("the log reports an invalid RelationshipState section")
     if load.LISTENING not in log:
         failures.append("the server did not reach '%s'" % load.LISTENING)
-    for name in names:
-        if (load.RESTORED % name) not in log:
-            failures.append("no restore line for %s in the log" % name)
+    for entry in entries:
+        name = entry["name"]
+        if name not in existing:
+            if (load.UNKNOWN % name) not in log:
+                failures.append("the log does not report %s as an unknown creature" % name)
+            continue
         if (load.UNKNOWN % name) in log:
             failures.append("the log reports %s as an unknown creature" % name)
-    if is_fixture:
-        for name, expected in load.FIXTURE_EXPECTED.items():
-            if ((load.RESTORED % name) + expected) not in log:
-                failures.append("restored values of %s differ from '%s'" % (name, expected))
+        logged = logged_restore(log, name)
+        if logged is None:
+            failures.append("no restore line for %s in the log" % name)
+            continue
+        expected = load.restored_values(entry, existing)
+        failures += ["%s: restored %s is %r, expected %r" % (name, key, logged[key], expected[key])
+                     for key in ("rageTurns", "rageSeat", "brawlOpponent", "captors") if logged[key] != expected[key]]
+        if logged["captorCount"] != len(expected["captors"]):
+            failures.append("%s: restored captor count is %d, expected %d"
+                            % (name, logged["captorCount"], len(expected["captors"])))
+        if expected["brawlOpponent"] and not (1 <= logged["brawlTurns"] <= expected["brawlTurnsAtMost"]):
+            failures.append("%s: restored brawlTurns is %d, expected 1..%d"
+                            % (name, logged["brawlTurns"], expected["brawlTurnsAtMost"]))
+        if not expected["brawlOpponent"] and logged["brawlTurns"] != 0:
+            failures.append("%s: restored brawlTurns is %d, expected 0" % (name, logged["brawlTurns"]))
+        if is_fixture:
+            fixed = load.FIXTURE_EXPECTED[name]
+            failures += ["%s: restored %s is %r, the fixed expectation is %r" % (name, key, logged[key], fixed[key])
+                         for key in fixed if logged[key] != fixed[key]]
     if load.sha256(save) != before:
         failures.append("the original save changed")
     restored = [line.strip() for line in log.splitlines() if "Restored relationship state" in line]
@@ -293,13 +332,13 @@ def run_with_exe(exe_arg, save_arg, seconds, port, version):
         return 2
 
     is_fixture = save.resolve() == load.FIXTURE.resolve()
-    failures, names = load.static_check(save, is_fixture)
+    failures, entries, existing = load.static_check(save, is_fixture)
     for failure in failures:
         print("FAILED static: " + failure)
     if failures:
         return 1
 
-    result = runtime_check(exe, save, seconds, names, is_fixture, port, version)
+    result = runtime_check(exe, save, seconds, entries, existing, is_fixture, port, version)
     if result is None:
         return 2
     runtime, received, restored = result
@@ -311,7 +350,7 @@ def run_with_exe(exe_arg, save_arg, seconds, port, version):
     if runtime:
         return 1
     print("relationship state load with configured seats: OK (%d creatures restored, listening, alive for %d s)"
-          % (len(names), seconds))
+          % (len(entries), seconds))
     return 0
 
 

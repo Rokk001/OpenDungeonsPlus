@@ -1290,8 +1290,18 @@ void GameMap::applyPendingRelationshipStates()
         // Read back what the creature holds now, so that the restored state can be verified in the log
         RelationshipCreatureState restored;
         creature->getRelationshipState(restored);
+        // The fields after captors are appended, so the earlier "rageTurns=N, captors=M" text stays the same
+        std::string captorNames;
+        for(size_t j = 0; j < restored.mCaptors.size(); ++j)
+        {
+            if(j > 0)
+                captorNames += "|";
+            captorNames += restored.mCaptors[j];
+        }
         OD_LOG_INF("Restored relationship state of " + states[i].mName + ", rageTurns="
-            + std::to_string(restored.mRageTurnsLeft) + ", captors=" + std::to_string(restored.mCaptors.size()));
+            + std::to_string(restored.mRageTurnsLeft) + ", captors=" + std::to_string(restored.mCaptors.size())
+            + ", rageSeat=" + std::to_string(restored.mRageSeatId) + ", brawlOpponent=" + restored.mBrawlOpponent
+            + ", brawlTurns=" + std::to_string(restored.mBrawlTurnsLeft) + ", captorNames=" + captorNames);
     }
 }
 

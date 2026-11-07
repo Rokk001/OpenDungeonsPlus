@@ -1,8 +1,9 @@
 """Load check: a save with [RelationshipState] lines naming existing creatures keeps those relationships.
 
-Without arguments the check runs the static part only, which needs no game and no build: the committed fixture
-source/tests/fixtures/relationship_state/RelationshipStateSmall.level must contain a [RelationshipState] block whose
-creatures exist in the fixture's [Creatures] section, and the block must match the fixed expected values below.
+Without arguments the check runs the static part only, which needs no game and no build: the [RelationshipState] block
+of the committed fixture source/tests/fixtures/relationship_state/RelationshipStateSmall.level must be accepted by the
+same rules as readRelationshipCreatureStates (source/game/CreatureRelationships.cpp), and the restored values derived
+from it by the rules of Creature::setRelationshipState must match the fixed expected values below.
 
 The no-argument run also checks the seat-configured client protocol (check_relationship_state_seats_runtime.py,
 static_protocol_check): the message names and the wire suffix must exist in the sources.
@@ -12,8 +13,9 @@ relationship state only after the seats are configured, so a bare server start (
 client drives the normal loaded-save handshake instead. --version (the build version, for example 0.7.4.44) is
 required with --exe and is not guessed. The run passes only when the game stays alive on a copy of the save in a new,
 empty app-data folder (the original save is never opened for writing), the server reaches "Server connected and
-listening", every creature of the [RelationshipState] block is logged as restored, and, for the committed fixture,
-the restored values match the fixed expectations below.
+listening", and for every creature of the block the "Restored relationship state" log line matches the restored values
+derived from the save (rage turns, rage seat, brawl opponent, brawl turns, captor names). Creatures that are not in the
+level are logged as unknown, as the loader does, and are not failures for a save other than the committed fixture.
 
 Usage:
   check_relationship_state_load_headless.py                                  (static part, the normal runner)
@@ -25,6 +27,7 @@ that a game the owner is playing is never touched.
 import argparse
 import hashlib
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -35,15 +38,28 @@ LISTENING = "Server connected and listening"
 BAD_SECTION = "Invalid RelationshipState section"
 RESTORED = "Restored relationship state of %s, "
 UNKNOWN = "Saved relationship state of unknown creature %s"
+MAX_CAPTORS = 8  # RelationshipCreatureState::MAX_CAPTORS
+INT64_MIN = -(1 << 63)
+INT64_MAX = (1 << 63) - 1
 
-# Fixed expected values of the committed fixture: restored rage turns and number of captors per creature.
-# They are written by hand from the fixture block and are not derived from the game. Each creature must be in a seat
-# that allows relationships (a seat that exists, not rogue, not Hero, not a worker, not in prison), because
-# Creature::setRelationshipState keeps the rage only then; the fixture has only seat 1 (Keeper), so all of them are in it.
-# Not verified by a run: the runtime part was not executed in this change (no build).
+# The fields of the restored log line, after the name (GameMap::applyPendingRelationshipStates, read back from the
+# creature). Grief is not listed: the loader parses it, but Creature::setRelationshipState never applies it and
+# Creature::getRelationshipState always writes 0 (Creature.cpp, "The grief is a one-time loss now"), so it is not a
+# restored field and is checked only for the loader's accept or refuse rule.
+RESTORED_LINE = re.compile(
+    r"Restored relationship state of (?P<name>.+?), rageTurns=(?P<rage>-?\d+), captors=(?P<count>\d+), "
+    r"rageSeat=(?P<seat>-?\d+), brawlOpponent=(?P<opponent>[^,]*), brawlTurns=(?P<brawl>-?\d+), "
+    r"captorNames=(?P<captors>[^\r\n]*)")
+
+# Expected restored values of the committed fixture, written by hand from its block (not derived from the game).
+# Each creature must be in a seat that allows relationships (a seat that exists, not rogue, not Hero, not a worker, not
+# in prison), because Creature::setRelationshipState keeps the rage and the brawl only then; the fixture has only
+# seat 1 (Keeper), so all of them are in it. The expectations are compared with the rules derived from the block (no
+# game). The runtime comparison with the game log is run only by the --exe part, and was not run in this change (no
+# build).
 FIXTURE_EXPECTED = {
-    "Knight1": "rageTurns=5, captors=0",
-    "Knight3": "rageTurns=0, captors=1",
+    "Knight1": {"rageTurns": 5, "rageSeat": 0, "brawlOpponent": "", "captors": []},
+    "Knight3": {"rageTurns": 0, "rageSeat": -1, "brawlOpponent": "", "captors": ["Knight4"]},
 }
 
 
@@ -73,30 +89,82 @@ def creatures_in(text):
     return {line.split("\t")[1] for line in lines[start:end] if line and not line.startswith("#") and "\t" in line}
 
 
+def loader_int(text):
+    """Mirror of the loader's parseInt: one integer (sign allowed), surrounding white space allowed, int64 range only."""
+    match = re.fullmatch(r"[ \t\n\v\f\r]*([+-]?[0-9]+)[ \t\n\v\f\r]*", text)
+    return match is not None and INT64_MIN <= int(match.group(1)) <= INT64_MAX
+
+
+def parse_block(block):
+    """Applies the loader's accept or refuse rule to each line. Returns (failures, entries)."""
+    failures = []
+    entries = []
+    for line in block:
+        fields = line.split("\t")
+        if len(fields) < 6 or not fields[0] or not all(loader_int(fields[i]) for i in (1, 2, 3, 5)):
+            failures.append("the loader refuses the whole section on this line: %r" % line)
+            continue
+        entries.append({
+            "name": fields[0], "grief": int(fields[1]), "rage": int(fields[2]), "seat": int(fields[3]),
+            "brawl": fields[4], "brawlTurns": int(fields[5]), "captors": fields[6:],
+        })
+    return failures, entries
+
+
+def restored_values(entry, existing):
+    """The values the loader restores (Creature::setRelationshipState), read back as the log line prints them."""
+    name = entry["name"]
+    # The loader keeps the first MAX_CAPTORS non-empty captor fields; setRelationshipState then keeps the ones that exist
+    named = [captor for captor in entry["captors"] if captor][:MAX_CAPTORS]
+    captors = [captor for captor in named if captor in existing][:MAX_CAPTORS]
+    rage_kept = max(0, entry["rage"]) > 0 and entry["seat"] >= 0
+    opponent = entry["brawl"] if (entry["brawl"] and max(0, entry["brawlTurns"]) > 0 and entry["brawl"] != name) else ""
+    return {
+        "rageTurns": max(0, entry["rage"]) if rage_kept else 0,
+        "rageSeat": entry["seat"] if rage_kept else -1,
+        "brawlOpponent": opponent,
+        # The restored brawl turns are capped by the level settings (mBrawlMaxTurns), which are not read here: the
+        # log must show a positive value no larger than the saved one.
+        "brawlTurnsAtMost": max(0, entry["brawlTurns"]) if opponent else 0,
+        "captors": captors,
+    }
+
+
 def static_check(save_path, expect_fixture):
-    """Checks the block of the save without the game. Returns (failures, names of the creatures in the block)."""
+    """Checks the block of the save without the game.
+
+    Returns (failures, entries, existing): the failures, the parsed entries of the block, and the names of the creatures
+    of the level. Unknown creatures and captors are a failure only for the committed fixture; the loader accepts them
+    (it warns, and drops the unknown captors).
+    """
     text = save_path.read_text(encoding="utf-8", errors="replace")
     block = read_block(text)
     if block is None:
-        return ["no closed [RelationshipState] block in %s" % save_path], []
-    names = [line.split("\t")[0] for line in block]
+        return ["no closed [RelationshipState] block in %s" % save_path], [], set()
     existing = creatures_in(text)
     if existing is None:
-        return ["no closed [Creatures] section in %s" % save_path], []
-    failures = []
-    for line in block:
-        fields = line.split("\t")
-        if len(fields) < 6:
-            failures.append("short RelationshipState line: %r" % line)
-            continue
-        if fields[0] not in existing:
-            failures.append("%s is not a creature of the level" % fields[0])
-        for captor in fields[6:]:
-            if captor not in existing:
-                failures.append("captor %s of %s is not a creature of the level" % (captor, fields[0]))
-    if expect_fixture and sorted(names) != sorted(FIXTURE_EXPECTED):
-        failures.append("fixture block names %s, expected %s" % (sorted(names), sorted(FIXTURE_EXPECTED)))
-    return failures, names
+        return ["no closed [Creatures] section in %s" % save_path], [], set()
+    failures, entries = parse_block(block)
+    if expect_fixture:
+        for entry in entries:
+            if entry["name"] not in existing:
+                failures.append("%s is not a creature of the level" % entry["name"])
+            for captor in entry["captors"]:
+                if captor and captor not in existing:
+                    failures.append("captor %s of %s is not a creature of the level" % (captor, entry["name"]))
+        names = sorted(entry["name"] for entry in entries)
+        if names != sorted(FIXTURE_EXPECTED):
+            failures.append("fixture block names %s, expected %s" % (names, sorted(FIXTURE_EXPECTED)))
+        for entry in entries:
+            expected = FIXTURE_EXPECTED.get(entry["name"])
+            if expected is None:
+                continue
+            derived = restored_values(entry, existing)
+            for key in ("rageTurns", "rageSeat", "brawlOpponent", "captors"):
+                if derived[key] != expected[key]:
+                    failures.append("fixture %s: derived %s is %r, expected %r"
+                                    % (entry["name"], key, derived[key], expected[key]))
+    return failures, entries, existing
 
 
 def game_running():
@@ -120,7 +188,7 @@ def main():
         print("ERROR: the save does not exist: %s" % save)
         return 2
     is_fixture = save.resolve() == FIXTURE.resolve()
-    failures, names = static_check(save, is_fixture)
+    failures, entries, _ = static_check(save, is_fixture)
     for failure in failures:
         print("FAILED static: " + failure)
     if failures:
@@ -136,7 +204,7 @@ def main():
         return 1
     if args.exe is None:
         print("relationship state static check: OK (%d creatures in the block); runtime load not run (no --exe)"
-              % len(names))
+              % len(entries))
         return 0
     if args.version is None:
         print("ERROR: --version is required with --exe (the build version, for example 0.7.4.44)")
