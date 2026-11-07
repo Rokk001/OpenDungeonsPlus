@@ -16,6 +16,7 @@
  */
 
 #include "rooms/RoomTavern.h"
+#include "ODApplication.h"
 
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionUseRoom.h"
