@@ -73,7 +73,7 @@ skills_cfg = read('config/skills.cfg')
 # 1. Every key of the [Tavern] block with the value of the design (sections 4 and 5 of the design)
 TAVERN = {
     'ThirstSeek': '80', 'UrgeFromBeer': '15', 'UrgeFromWater': '5', 'BeerPrice': '5', 'BeerMood': '25',
-    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'NextDrinkPercent': '50',
+    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'BeerDrinkTurns': '42', 'NextDrinkPercent': '50',
     'MaxDrinksPerVisit': '5', 'DrunkPerBeer': '25', 'DrunkDecayPerTurn': '0.5', 'StaggerAt': '50',
     'StaggerSpeedFactor': '0.5', 'VomitAt': '75', 'HangoverAt': '50', 'HangoverTurns': '252',
     'HangoverWorkFactor': '0.5', 'HangoverMood': '-16.67', 'GameChancePercent': '50', 'GameTurns': '8',
@@ -93,7 +93,8 @@ assert not extra, '[Tavern] keys without a design value: ' + ', '.join(sorted(ex
 for gone in ('BeerMoodTurns', 'NoCoinMoodTurns'):
     assert gone not in tavern and gone not in global_cfg, gone + ' must be removed with its documentation'
 # The turn values are the seconds of the design times the 1.4 turns per second
-for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30)):
+# Decision 835: one beer lasts 30 seconds; the water keeps DrinkTurns (not decided)
+for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30), ('BeerDrinkTurns', 30)):
     assert round(seconds * 1.4) == float(tavern[key]), key + ' must be ' + str(seconds) + ' s x 1.4 turns per second'
 
 # 2. Values derived from other keys

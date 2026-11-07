@@ -217,7 +217,12 @@ for path in ('source/creatureaction/CreatureActionSearchJob.cpp', 'source/creatu
 fall = extract(room_cpp, 'bool RoomTavern::fallNextToBench(')
 assert 'hasFurnitureOn(tile)' in fall and 'tile->getCoveringRoom() != this' in fall
 assert 'getGameMap()->getTile(seatX + dx, seatY + dy)' in fall, 'the loser falls next to its own place of the long bench'
-assert 'standingPosition(solid, middle, point)' in fall and 'clearSegment(onTheWay, position, point)' in fall
+# Decision 833: the loser stands on a free point, turns back to its seat and goes down with its whole lying body clear of
+# the furniture; a large guest slumps on its seat (the floor the body covers is measured in check_tavern_drink_834.py)
+assert 'standingPosition(solid, middle, point)' in fall and 'clearSegment(onTheWay, position, turn)' in fall
+assert 'clearSegment(lying, feet, head)' in fall and 'RoomObjectNavigation::collect(*getGameMap(), body->mHalfWidth * scale)' in fall
+assert 'route.push_back(bestTurn);' in fall and 'route.push_back(bestPoint);' in fall and fall.index('route.push_back(bestTurn);') < fall.index('route.push_back(bestPoint);')
+assert re.search(r'if\(isLargeGuest\(\*creature\)\)\s*return false;', fall), 'a large loser lies down between the tables'
 assert 'if(!fallNextToBench(spot))' in extract(room_cpp, 'void RoomTavern::knockOut(')
 assert 'EntityAnimation::sit_slumped_anim' in extract(room_cpp, 'void RoomTavern::showSpotState(')
 
@@ -281,9 +286,15 @@ assert 'creature.popAction();' in extract(room_cpp, 'bool RoomTavern::useRoom(')
 assert re.search(r'const int32_t DONE_WAIT_TURNS = 1;', room_cpp), 'completed visits wait at most one turn'
 finish_drink = extract(room_cpp, 'void RoomTavern::finishDrink(')
 assert 'setSpotDone(spot, DONE_WAIT_TURNS);' in finish_drink and 'spot.mTurnsLeft =' not in finish_drink, 'a game request must not extend the completed visit'
+# Decision 834 (D5): the only longer wait is the one of a guest that wants a game while a table mate of its keeper still drinks
+mate = extract(room_cpp, 'bool RoomTavern::hasDrinkingTableMate(')
+assert '(entry.first.mTable != seat.mTable) || (entry.first == seat)' in mate and 'TavernGuestState::drinking' in mate
+assert 'mCreature->getSeat() == own->second.mCreature->getSeat()' in mate, 'only a guest of the same keeper is a partner'
 # The room consumes the one-turn wait and the done action then ends; conscious game players have no extra wait.
 upkeep = extract(room_cpp, 'void RoomTavern::doUpkeep(')
-assert re.search(r'if\(\(it->second.mState == TavernGuestState::done\) && \(it->second.mTurnsLeft > 0\)\)\s*--it->second.mTurnsLeft;', upkeep), 'each upkeep must consume the completed visit wait'
+assert re.search(r'if\(\(it->second.mState == TavernGuestState::done\) && \(it->second.mTurnsLeft > 0\) &&\s*'
+                 r'!\(it->second.mWantsGame && hasDrinkingTableMate\(it->first\)\)\)\s*--it->second.mTurnsLeft;', upkeep), \
+    'each upkeep must consume the completed visit wait, except while a game partner still drinks at the table'
 use_room = extract(room_cpp, 'bool RoomTavern::useRoom(')
 done_action = use_room[use_room.index('case TavernGuestState::done:'):use_room.index('default:')]
 assert re.search(r'if\(spot.mTurnsLeft > 0\)\s*return false;', done_action), 'only a positive completed visit wait may delay exit'
@@ -419,8 +430,9 @@ struct Player
 // The seat: rogue flag, id, level of the Beer research and the player
 struct Seat
 {
-    bool rogue; int id; uint32_t beerLevel; Player* player;
-    Seat() : rogue(false), id(1), beerLevel(0), player(nullptr) {}
+    bool rogue; int id; uint32_t beerLevel; Player* player; double gold;
+    Seat() : rogue(false), id(1), beerLevel(0), player(nullptr), gold(0.0) {}
+    double getGold() const { return gold; }
     bool isRogueSeat() const { return rogue; }
     int getId() const { return id; }
     uint32_t getSkillLevel(SkillType type) const { return (type == SkillType::tavernBeer) ? beerLevel : 0; }
@@ -534,6 +546,7 @@ public:
     void sendTavernEvent(Creature& creature, int32_t kind, const Creature* opponent) { ++events; lastKind = kind; kinds.push_back(kind); }
     void playSoundAt(Tile* tile, const std::string& family) {}
     void showSpotState(Tile* tile, RoomTavernSpot& spot) {}
+    Ogre::Vector3 getFacingDirection(const Creature& creature, const Creature& partner) { return directionTo(creature, partner.getPosition()); }
     bool fallNextToBench(RoomTavernSpot& spot) { return false; }
     std::vector<Tile*> getTableTiles() const { return mTestTables; }
     std::map<RoomTavernSeat, RoomTavernSpot>::iterator findSpotOf(const Creature* creature);
@@ -543,6 +556,8 @@ public:
     void abortDisturbedGuests();
     void finishDrink(Tile* tile, RoomTavernSpot& spot);
     bool payForBeer(Creature& creature, bool& noCoin);
+    int32_t nextDrinkTurns(const Creature& creature) const;
+    bool hasDrinkingTableMate(const RoomTavernSeat& seat) const;
     bool isFreeSeat(const RoomTavernSeat& seat, uint32_t places) const;
     bool isBenchBlocked(const Tile* table, uint32_t bench) const
     { for(unsigned i = 0; i < mBlockedBenches.size(); ++i) if(mBlockedBenches[i].first == table && mBlockedBenches[i].second == bench) return true; return false; }
@@ -780,6 +795,25 @@ static void checkDrinks()
       Random::script({ 10.0 }, {});
       f.room.finishDrink(c->mTile, spot);
       expect(spot.mState == TavernGuestState::drinking, "a creature without thirst still drinks when the roll says so"); }
+    // Decision 835: a beer lasts BeerDrinkTurns (42 turns, 30 s at 1.4 turns per second), a water DrinkTurns (4 turns)
+    { Fixture f; f.seat.beerLevel = 1; f.seat.gold = 100; f.map.treasury = 100; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0);
+      RoomTavernSpot& spot = f.room.findSpotOf(c)->second;
+      Random::script({ 1.0 }, {}); f.room.finishDrink(c->mTile, spot);
+      expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 42, "the keeper pays: the next beer lasts 42 turns (30 s)"); }
+    { Fixture f; f.seat.beerLevel = 1; f.room.mPayer = TavernPayer::creature; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); c->mGold = 12;
+      RoomTavernSpot& spot = f.room.findSpotOf(c)->second;
+      Random::script({ 1.0 }, {}); f.room.finishDrink(c->mTile, spot);
+      expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 42, "the guest pays: the next beer lasts 42 turns"); }
+    { Fixture f; f.seat.beerLevel = 1; f.room.mPayer = TavernPayer::creature; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); c->mGold = 6;
+      RoomTavernSpot& spot = f.room.findSpotOf(c)->second;
+      Random::script({ 1.0 }, {}); f.room.finishDrink(c->mTile, spot);
+      expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 4, "a purse without the price of the next beer gets water for 4 turns"); }
+    { Fixture f; f.seat.beerLevel = 0; f.seat.gold = 100; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0);
+      expect(f.room.nextDrinkTurns(*c) == 4, "without Beer the water keeps DrinkTurns (4 turns)");
+      f.seat.beerLevel = 1; f.seat.gold = 4;
+      expect(f.room.nextDrinkTurns(*c) == 4, "an empty treasury serves water for 4 turns");
+      f.seat.gold = 5;
+      expect(f.room.nextDrinkTurns(*c) == 42, "a treasury with the price serves a beer for 42 turns"); }
 }
 
 // ---- Games
@@ -812,6 +846,16 @@ static void checkGameStart()
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); Creature* b = f.guest("B", 3, 1, TavernGuestState::done, 0); (void)b;
       f.room.findSpotOf(a)->second.mWantsGame = true; Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(f.seatOf(a));
       expect(f.room.mGames.empty(), "a guest whose waiting turns ran out is gone"); }
+    // Decision 834 (D5): a guest that wants a game waits while a guest of its keeper drinks at its table
+    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 1); f.guest("B", 3, 1, TavernGuestState::drinking, 30);
+      f.room.findSpotOf(a)->second.mWantsGame = true;
+      expect(f.room.hasDrinkingTableMate(f.seatOf(a)), "a drinking guest of the same table and keeper keeps the waiting guest"); }
+    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 1); f.guest("B", 6, 1, TavernGuestState::drinking, 30);
+      expect(!f.room.hasDrinkingTableMate(f.seatOf(a)), "a drinking guest at another table does not keep it"); }
+    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 1); Creature* b = f.guest("B", 3, 1, TavernGuestState::drinking, 30); Seat other; b->mSeat = &other;
+      expect(!f.room.hasDrinkingTableMate(f.seatOf(a)), "a drinking guest of another keeper does not keep it"); }
+    { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 1); f.guest("B", 3, 1, TavernGuestState::done, 1);
+      expect(!f.room.hasDrinkingTableMate(f.seatOf(a)), "a guest that is done does not keep it"); }
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); Creature* b = f.guest("B", 3, 1, TavernGuestState::done, 2); Seat other; b->mSeat = &other;
       f.room.findSpotOf(a)->second.mWantsGame = true; Random::script({ 1.0 }, { 0 }); f.room.tryStartGame(f.seatOf(a));
       expect(f.room.mGames.empty(), "a guest of another seat is no partner"); }
@@ -1111,7 +1155,7 @@ helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'Og
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
     'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
     'void RoomTavern::setSpotState(', 'void RoomTavern::setSpotDone(', 'bool RoomTavern::isGuestDisturbed(', 'void RoomTavern::upkeepSpots(',
-    'void RoomTavern::abortDisturbedGuests(', 'bool RoomTavern::payForBeer(', 'void RoomTavern::finishDrink(', 'void RoomTavern::tryStartGame(',
+    'void RoomTavern::abortDisturbedGuests(', 'bool RoomTavern::payForBeer(', 'int32_t RoomTavern::nextDrinkTurns(', 'bool RoomTavern::hasDrinkingTableMate(', 'void RoomTavern::finishDrink(', 'void RoomTavern::tryStartGame(',
     'void RoomTavern::startGame(', 'void RoomTavern::playContestTurn(', 'void RoomTavern::playDuelTurn(', 'void RoomTavern::cheerSpectators(',
     'void RoomTavern::concludeGame(', 'void RoomTavern::abortGame(', 'void RoomTavern::knockOut('])
 portal_function = extract(portal_cpp, 'static double getResearchedCooldown(')

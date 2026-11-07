@@ -119,6 +119,52 @@ const std::string SOUND_CHEER = "Creatures/Default/Cheer";
 const int32_t GET_UP_TURNS = 2;
 //! \brief Turns a guest stays done after its last drink while a game partner may be found.
 const int32_t DONE_WAIT_TURNS = 1;
+//! \brief The floor a knocked-out guest covers in its KnockedOut clip, in tiles at level scale 1, in the frame of the
+//! creature (it looks along -y): from mBehindMin to mBehindMax along +y (behind it) and mHalfWidth to either side. Measured
+//! on all 33 frames of the clip of every model that visits the tavern and is not large (decision 833: the lying body
+//! must never reach into a table or a bench); checked by check_tavern_drink_834.py.
+struct TavernLyingBody
+{
+    const char* mMesh;
+    float mBehindMin;
+    float mBehindMax;
+    float mHalfWidth;
+};
+
+const TavernLyingBody TAVERN_LYING_BODIES[] =
+{
+    { "Adventurer.mesh", -0.02f, 0.94f, 0.25f },
+    { "CaveHornet.mesh", -0.22f, 0.30f, 0.18f },
+    { "Cultist.mesh", -0.03f, 1.08f, 0.30f },
+    { "DarkElf.mesh", -0.07f, 0.88f, 0.25f },
+    { "Defender.mesh", -0.12f, 0.98f, 0.68f },
+    { "Dwarf1.mesh", -0.02f, 0.73f, 0.25f },
+    { "Dwarf2.mesh", -0.02f, 0.73f, 0.25f },
+    { "Elf.mesh", -0.07f, 0.88f, 0.25f },
+    { "Gnome.mesh", -0.03f, 0.64f, 0.17f },
+    { "Goblin.mesh", -0.04f, 0.75f, 0.32f },
+    { "Knight.mesh", -0.03f, 0.99f, 0.26f },
+    { "LavaSpawn.mesh", -0.05f, 1.00f, 0.64f },
+    { "Lizardman.mesh", -0.02f, 0.90f, 0.31f },
+    { "Monk.mesh", -0.04f, 0.90f, 0.23f },
+    { "NatureMonster.mesh", -0.06f, 1.21f, 0.52f },
+    { "Orc.mesh", -0.03f, 0.93f, 0.37f },
+    { "Rat.mesh", -0.49f, 0.60f, 0.14f },
+    { "Roach.mesh", -0.43f, 0.46f, 0.30f },
+    { "RunelordDwarf.mesh", -0.02f, 0.78f, 0.29f },
+    { "Slime.mesh", -0.25f, 0.21f, 0.15f },
+    { "Spider.mesh", -0.45f, 0.43f, 0.42f },
+    { "TentacleAlbine.mesh", -0.26f, 0.26f, 0.24f },
+    { "TentacleGreen.mesh", -0.26f, 0.26f, 0.24f },
+    { "Wizard.mesh", -0.03f, 1.05f, 0.26f },
+    { "Wyvern.mesh", -0.02f, 0.83f, 0.49f },
+    { "lich.mesh", -0.04f, 1.54f, 0.52f }
+};
+//! \brief The lying body of a model that is not in TAVERN_LYING_BODIES: the largest values of the table.
+const TavernLyingBody TAVERN_LYING_BODY_DEFAULT = { "", -0.49f, 1.54f, 0.68f };
+//! \brief The loser walks this far (tiles) past the place it falls on and turns back to it, so that it looks towards its
+//! table when it goes down and its body falls away from the table.
+const float KO_TURN_STEP = 0.15f;
 //! \brief Scale of the percent values of the [Tavern] block.
 const double PERCENT_SCALE = 100.0;
 //! \brief A squared direction shorter than this has no usable direction.
@@ -785,6 +831,20 @@ bool RoomTavern::isOnSeat(const Creature& creature, const RoomTavernSeat& seat, 
     return current.squaredDistance(position) < SEAT_REACHED_SQUARED;
 }
 
+//! \brief The direction a guest looks in while it plays a game with another guest or slaps it. A seated guest looks
+//! straight across its table like in every other seated clip: the clips are made for that direction only, and a body
+//! turned on the bench towards a partner further along the table (up to 50 degrees) or on its own bench (90 degrees)
+//! pushes its legs and arms through the bench, the pedestal and the table top. A guest that is not on its seat turns
+//! to the partner.
+Ogre::Vector3 RoomTavern::getFacingDirection(const Creature& creature, const Creature& partner)
+{
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator own = findSpotOf(&creature);
+    if((own != mSpots.end()) && isOnSeat(creature, own->first, own->second.mPlaces))
+        return getAcrossTableDirection(own->first);
+
+    return directionTo(creature, partner.getPosition());
+}
+
 //! \brief Finds free points next to the seat from where a creature gets onto the bench.
 void RoomTavern::findSeatStagingPoints(Creature& creature, const RoomTavernSeat& seat, uint32_t places,
     std::vector<Ogre::Vector2>& stagingPoints) const
@@ -1085,6 +1145,35 @@ bool RoomTavern::shouldNotUseIfBadMood(Creature& creature, bool forced)
     return shouldStopUseIfHungrySleepy(creature, forced);
 }
 
+bool RoomTavern::keepGuestUntilItLeft(Creature& creature)
+{
+    // Only a guest on its bench is held: one that stands on the floor may go at once
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = findSpotOf(&creature);
+    if((it == mSpots.end()) || it->second.mLeftSeat || !creature.getIsOnMap() ||
+       !isOnSeat(creature, it->first, it->second.mPlaces))
+        return false;
+
+    // The loser of a slap duel that slumps on its seat gets up first, then it is done and gets off the bench
+    if((it->second.mState == TavernGuestState::ko) || (it->second.mState == TavernGuestState::getUp))
+        return true;
+
+    // A game of the guest ends without effects; both players are done then
+    for(std::map<RoomTavernSeat, RoomTavernGame>::iterator game = mGames.begin(); game != mGames.end(); ++game)
+    {
+        if((game->second.mCreatureA == &creature) || (game->second.mCreatureB == &creature))
+        {
+            abortGame(game);
+            break;
+        }
+    }
+
+    // The visit is over: no further drink, no wait for a game; useRoom steps the guest off its bench and lets it go
+    RoomTavernSpot& spot = it->second;
+    if((spot.mState != TavernGuestState::done) || (spot.mTurnsLeft > 0) || spot.mWantsGame)
+        setSpotDone(spot, 0);
+    return true;
+}
+
 bool RoomTavern::useRoom(Creature& creature, bool forced)
 {
     std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = findSpotOf(&creature);
@@ -1124,7 +1213,7 @@ bool RoomTavern::useRoom(Creature& creature, bool forced)
             }
 
             // On the seat the first drink starts
-            setSpotState(spot, TavernGuestState::drinking, static_cast<int32_t>(getTavernValue("DrinkTurns")));
+            setSpotState(spot, TavernGuestState::drinking, nextDrinkTurns(creature));
             showSpotState(seat.mTable, spot);
             return false;
         }
@@ -1190,7 +1279,11 @@ void RoomTavern::showSpotState(Tile* tile, RoomTavernSpot& spot)
     switch(spot.mState)
     {
         case TavernGuestState::drinking:
-            creature->setAnimationState(EntityAnimation::sit_drink_anim, true, towardsTable, false);
+            // The seated drink clip is made for the bench: a guest that is not on its seat drinks standing
+            if(seated)
+                creature->setAnimationState(EntityAnimation::sit_drink_anim, true, towardsTable, false);
+            else
+                creature->setAnimationState(EntityAnimation::drink_anim, true);
             break;
         case TavernGuestState::ko:
             // Without a free floor tile the loser stays on its seat
@@ -1224,7 +1317,7 @@ void RoomTavern::showSpotState(Tile* tile, RoomTavernSpot& spot)
                     clip = EntityAnimation::sit_armwrestle_anim;
                 else if(game.mKind == TavernGameKind::dice)
                     clip = EntityAnimation::sit_dice_anim;
-                creature->setAnimationState(clip, true, directionTo(*creature, opponent->getPosition()), false);
+                creature->setAnimationState(clip, true, getFacingDirection(*creature, *opponent), false);
                 break;
             }
             break;
@@ -1285,10 +1378,12 @@ void RoomTavern::doUpkeep()
             tryStartGame(it->first);
     }
 
-    // A guest that is done is looked for by a partner during these turns only
+    // A guest that is done is looked for by a partner during these turns only. A guest that wants a game keeps waiting
+    // while another guest of its keeper drinks at its table (D5: a game when a second creature is in the tavern)
     for(std::map<RoomTavernSeat, RoomTavernSpot>::iterator it = mSpots.begin(); it != mSpots.end(); ++it)
     {
-        if((it->second.mState == TavernGuestState::done) && (it->second.mTurnsLeft > 0))
+        if((it->second.mState == TavernGuestState::done) && (it->second.mTurnsLeft > 0) &&
+           !(it->second.mWantsGame && hasDrinkingTableMate(it->first)))
             --it->second.mTurnsLeft;
     }
 }
@@ -1392,6 +1487,41 @@ bool RoomTavern::payForBeer(Creature& creature, bool& noCoin)
     return false;
 }
 
+//! \brief The turns the next drink of the guest lasts: a beer BeerDrinkTurns (30 seconds), water DrinkTurns. A beer is
+//! expected when the tavern serves beer and whoever pays has the price at hand; the drink is paid when it is finished.
+int32_t RoomTavern::nextDrinkTurns(const Creature& creature) const
+{
+    const double price = std::floor(getTavernValue("BeerPrice") + 0.5);
+    bool beer = servesBeer();
+    if(beer && (mPayer == TavernPayer::keeper))
+        beer = (getSeat() != nullptr) && (getSeat()->getGold() >= price);
+    else if(beer)
+        beer = creature.getGoldCarried() >= price;
+
+    const int32_t turns = static_cast<int32_t>(std::floor(getTavernValue(beer ? "BeerDrinkTurns" : "DrinkTurns") + 0.5));
+    return std::max(turns, static_cast<int32_t>(1));
+}
+
+//! \brief True while another guest of the same keeper sits at the table of the seat and drinks: a guest that wants a
+//! game waits for it, since it is done after this drink at the latest.
+bool RoomTavern::hasDrinkingTableMate(const RoomTavernSeat& seat) const
+{
+    std::map<RoomTavernSeat, RoomTavernSpot>::const_iterator own = mSpots.find(seat);
+    if(own == mSpots.end())
+        return false;
+
+    for(const std::pair<const RoomTavernSeat, RoomTavernSpot>& entry : mSpots)
+    {
+        if((entry.first.mTable != seat.mTable) || (entry.first == seat) || (entry.second.mCreature == nullptr))
+            continue;
+
+        if((entry.second.mState == TavernGuestState::drinking) &&
+           (entry.second.mCreature->getSeat() == own->second.mCreature->getSeat()))
+            return true;
+    }
+    return false;
+}
+
 //! \brief Finishes a drink and chooses the guest's next tavern activity.
 void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
 {
@@ -1429,7 +1559,7 @@ void RoomTavern::finishDrink(Tile* tile, RoomTavernSpot& spot)
             std::pow(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("TavernDrinkChainHalving", 2.0), static_cast<double>(spot.mDrinks - 1));
         if(Random::Double(0.0, PERCENT_SCALE) < nextDrinkPercent)
         {
-            setSpotState(spot, TavernGuestState::drinking, static_cast<int32_t>(getTavernValue("DrinkTurns")));
+            setSpotState(spot, TavernGuestState::drinking, nextDrinkTurns(*creature));
             showSpotState(tile, spot);
             return;
         }
@@ -1569,11 +1699,11 @@ void RoomTavern::playDuelTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator
     uint32_t& targetSlaps = game.mTurnIsA ? game.mSlapsTakenB : game.mSlapsTakenA;
 
     // The slapper swings; a miss passes the turn
-    slapper->setAnimationState(EntityAnimation::sit_slap_anim, false, directionTo(*slapper, target->getPosition()), false);
+    slapper->setAnimationState(EntityAnimation::sit_slap_anim, false, getFacingDirection(*slapper, *target), false);
     playSoundAt(slapper->getPositionTile(), SOUND_SLAP);
     if(target->rollAttackHit(slapper->getAttackRating(), slapper->getLevel(), slapper->isPossessed()))
     {
-        target->setAnimationState(EntityAnimation::sit_slapped_anim, false, directionTo(*target, slapper->getPosition()), false);
+        target->setAnimationState(EntityAnimation::sit_slapped_anim, false, getFacingDirection(*target, *slapper), false);
         // A critical slap (10 percent at equal level, 0.25 points per level of difference) wins the duel at once
         const double levelDifference = static_cast<double>(slapper->getLevel()) - static_cast<double>(target->getLevel());
         const double criticalPercent = getTavernValue("SlapCritBasePercent") +
@@ -1727,10 +1857,25 @@ bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
     // The tiles around the seat; the table is two tiles long, so the seat may lie on either of its tiles
     const int32_t seatX = Helper::round(position.x);
     const int32_t seatY = Helper::round(position.y);
+    // A large guest finds no floor between the tables that its lying body fits on: it slumps on its seat
+    if(isLargeGuest(*creature))
+        return false;
+
+    // The floor the lying body covers (decision 833): the loser looks towards its seat when it goes down, so its body lies
+    // on the side away from the table; that whole stretch must stay clear of every piece of furniture
+    const TavernLyingBody* body = &TAVERN_LYING_BODY_DEFAULT;
+    for(const TavernLyingBody& entry : TAVERN_LYING_BODIES)
+    {
+        if(creature->getDefinition()->getMeshName() == entry.mMesh)
+            body = &entry;
+    }
+    const float scale = static_cast<float>(creature->getLevelScale());
+    const std::vector<RoomObjectPath::Obstacle> lying = RoomObjectNavigation::collect(*getGameMap(), body->mHalfWidth * scale);
     const std::vector<RoomObjectPath::Obstacle> solid = RoomObjectNavigation::bodyObstacles(*creature);
     const std::vector<RoomObjectPath::Obstacle> onTheWay = RoomObjectNavigation::bodyObstacles(*creature, ownTable->second);
     Tile* best = nullptr;
     Ogre::Vector2 bestPoint = position;
+    Ogre::Vector2 bestTurn = position;
     float bestDistance = std::numeric_limits<float>::max();
     for(int32_t dx = -1; dx <= 1; ++dx)
     {
@@ -1753,8 +1898,22 @@ bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
 
             const Ogre::Vector2 middle(static_cast<Ogre::Real>(tile->getX()), static_cast<Ogre::Real>(tile->getY()));
             Ogre::Vector2 point = middle;
-            if(!RoomObjectNavigation::standingPosition(solid, middle, point) ||
-               !RoomObjectPath::clearSegment(onTheWay, position, point))
+            if(!RoomObjectNavigation::standingPosition(solid, middle, point))
+                continue;
+
+            // Away from the seat: the loser walks KO_TURN_STEP past the point, turns back and goes down looking at
+            // its seat, its body on the floor behind it from mBehindMin to mBehindMax
+            Ogre::Vector2 away = point - position;
+            if(away.squaredLength() < static_cast<Ogre::Real>(DIRECTION_EPSILON))
+                continue;
+            away.normalise();
+            const Ogre::Vector2 turn = point + away * KO_TURN_STEP;
+            const Ogre::Vector2 feet = point + away * (body->mBehindMin * scale);
+            const Ogre::Vector2 head = point + away * (body->mBehindMax * scale);
+            Tile* headTile = getGameMap()->getTile(Helper::round(head.x), Helper::round(head.y));
+            if((headTile == nullptr) || (headTile->getCoveringRoom() != this) ||
+               !RoomObjectPath::clearSegment(onTheWay, position, turn) ||
+               !RoomObjectPath::clearSegment(lying, feet, head))
                 continue;
 
             const float distance = point.squaredDistance(position);
@@ -1763,6 +1922,7 @@ bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
                 bestDistance = distance;
                 best = tile;
                 bestPoint = point;
+                bestTurn = turn;
             }
         }
     }
@@ -1770,8 +1930,10 @@ bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
     if(best == nullptr)
         return false;
 
-    // The loser reels off the bench and goes down where the short walk ends
-    const std::vector<Ogre::Vector2> route(1, bestPoint);
+    // The loser reels off the bench, turns back towards its table and goes down where the short walk ends
+    std::vector<Ogre::Vector2> route;
+    route.push_back(bestTurn);
+    route.push_back(bestPoint);
     creature->setWalkPath(EntityAnimation::stagger_anim, EntityAnimation::knockedout_anim, true, false, route, false, true);
     return true;
 }

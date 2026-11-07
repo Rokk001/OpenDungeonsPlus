@@ -189,7 +189,7 @@ for room in re.findall(r'RoomType::(\w+):', pictures):
 print('4. feed: every post row of both feeds has a picture (%d painted post scenes, portrait otherwise)' % len(used))
 
 # 4b. Values (owner decision 816): Strength, Dexterity, Life and Mana side by side in ONE row as in book-variant-2,
-# between the portrait ring and the combat block, each cell with the label on top and the exact value below
+# between the portrait ring and the combat block, each cell with the label on top and the rounded value below
 attribute_names = ('Strength', 'Dexterity', 'Life', 'Mana')
 cells = [boxes['ValuesPage/' + name] for name in attribute_names]
 for name, (cell, element) in zip(attribute_names, cells):

@@ -1911,7 +1911,10 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
         break;
 
     case OIS::KC_F9:
-        RenderManager::getSingleton().rrToggleHandSelectorVisibility();
+        // The hand is the only visible mouse cursor (the CEGUI arrow is transparent and the system cursor is hidden),
+        // so it is never hidden by a key; it is restored here for a stray hide (decision 839).
+        if(!RenderManager::getSingleton().isKeeperHandVisible() && !mDefeatSequence.isStarted())
+            RenderManager::getSingleton().rrToggleHandSelectorVisibility();
         break;
 
     case OIS::KC_F10:
@@ -5180,6 +5183,11 @@ void GameMode::refreshActionFeedback(float elapsed)
     // While a tablet or carry entry of the Workers window is dragged, the hand grabs instead of pointing
     RenderManager::getSingleton().rrSetHandGrabbing(mWorkersWindow != nullptr && mWorkersWindow->isDragging());
     RenderManager::getSingleton().rrSetHandPose(overGui || (!holding && (active || mActionTargetValid)), digging, building);
+    // The hand is the mouse cursor: whatever hid it (key, window, pick-up), it comes back at once. Only the defeat
+    // sequence hides it on purpose, and it gives the hand back itself.
+    if(!mDefeatSequence.isStarted() && !RenderManager::getSingleton().isKeeperHandVisible())
+        RenderManager::getSingleton().rrToggleHandSelectorVisibility();
+    CEGUI::System::getSingleton().getDefaultGUIContext().getMouseCursor().setVisible(!mDefeatSequence.isStarted());
     updateIdleHand(elapsed, !holding &&
         !mGameMap->getGamePaused() && !cameraInputBlocked() &&
         !inputManager.mLMouseDown && !inputManager.mRMouseDown && !inputManager.mMMouseDown &&

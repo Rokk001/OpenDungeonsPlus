@@ -422,7 +422,7 @@ namespace PoolAttendantPose
     static const std::string sit = "Sit"; static const std::string whistle = "Whistle"; static const std::string towelWave = "TowelWave";
     static const std::string doze = "Doze"; static const std::string climb = "Climb";
 }
-static const Ogre::Vector3 AWAY_FROM_POOL(0.0f, -1.0f, 0.0f);
+static const Ogre::Vector3 TOWARDS_CHAIR(0.0f, 1.0f, 0.0f);
 struct Tile { };
 static double getClipTurns() { return 40.0; }
 struct RenderedMovableEntity { static void setPosition(const Ogre::Vector3& position) { } };

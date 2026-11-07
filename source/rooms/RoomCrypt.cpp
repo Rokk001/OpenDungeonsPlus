@@ -155,11 +155,11 @@ BuildingObject* RoomCrypt::notifyActiveSpotCreated(ActiveSpotPlace place, Tile* 
         }
         case ActiveSpotPlace::activeSpotLeft:
         {
-            return new BuildingObject(getGameMap(), *this, "KnightStatue", *tile, 90.0, false);
+            return new BuildingObject(getGameMap(), *this, "KnightStatue2", *tile, 90.0, false);
         }
         case ActiveSpotPlace::activeSpotRight:
         {
-            return new BuildingObject(getGameMap(), *this, "KnightStatue", *tile, 270.0, false);
+            return new BuildingObject(getGameMap(), *this, "KnightStatue2", *tile, 270.0, false);
         }
         case ActiveSpotPlace::activeSpotTop:
         {
@@ -377,6 +377,15 @@ bool RoomCrypt::hasReservedDelivery(const Creature& body, const Tile* delivery)
         if(spot.second == &body)
             return getDeliveryTile(spot.first) == delivery;
     return false;
+}
+
+//! \brief Returns the grave a body is dragged into: the body lies in its grave tile, not on the tile beside it.
+Tile* RoomCrypt::getReservedGrave(const Creature& body, const Tile* delivery)
+{
+    for(const std::pair<Tile* const, Creature*>& spot : mRottingCreatures)
+        if(spot.second == &body)
+            return getDeliveryTile(spot.first) == delivery ? spot.first : nullptr;
+    return nullptr;
 }
 
 //! \brief Confirms delivery without an independent rot timer, or releases an interrupted delivery.

@@ -172,6 +172,12 @@ assert 'setScrollPosition(0)' in social, 'a newly selected creature must open on
 scale_body = gui[gui.index('void Gui::applyScale('):gui.index('bool Gui::isScreenSizedContainer')]
 assert 'layoutCreatureProfilePage(page)' in scale_body, 'profiles must reflow after UI or resolution changes'
 assert scale_body.index('updateResourceScaling(displaySize)') < scale_body.index('layoutCreatureProfilePage(page)')
+# The health and experience row is one label line high (at least PROFILE_BAR_ROW_MIN_HEIGHT) and followed by
+# PROFILE_BAR_ROW_GAP, so the bars stay clear of the handle line (owner decision 830, check_dungeonbook_profile_overlap.py)
+bar_row_min = float(re.search(r'PROFILE_BAR_ROW_MIN_HEIGHT = ([0-9.]+)f;', gui)[1])
+bar_row_gap = float(re.search(r'PROFILE_BAR_ROW_GAP = ([0-9.]+)f;', gui)[1])
+assert 'y += barRowHeight + PROFILE_BAR_ROW_GAP;' in profile_layout and 'y += 24.0f;' not in profile_layout
+bar_row = max(bar_row_min, line_height + 4) + bar_row_gap
 
 for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for percent in range(80, 121):
@@ -185,7 +191,7 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
             if owner == 'Dungeonbook':
                 # Compact page: health and experience bars first, then the social rows, all reachable by scrolling
                 assert page_width - 48 >= 200, ('the social rows of the book are too narrow', page_width)
-                core_bottom = 4 + 4 + 20
+                core_bottom = 4 + bar_row
                 assert core_bottom <= viewport
                 rows_bottom = core_bottom
                 for lines in (1, 1, 1, 1, 1, 2, 8, 4, 3, 3, 2, 2, 4, 4, 6):
@@ -214,7 +220,7 @@ for screen_width, screen_height in ((640, 480), (1024, 768), (1920, 1200), (7680
             equipment_bottom = max(bounds[3] for bounds in slot_bounds)
             attribute_top = max(132.0, equipment_bottom + 4)
             attribute_bottom = attribute_top + sum(wrapped_lines(line, page_width - 48) for line in attribute_lines) * line_height + 4
-            core_bottom = attribute_bottom + 4 + 20
+            core_bottom = attribute_bottom + 4 + bar_row
             assert core_bottom <= viewport, (owner, screen_width, screen_height, percent, core_bottom, viewport)
             assert 124 <= attribute_top and 26 <= 34, 'portrait/header overlaps the following essential rows'
             assert equipment_bottom + 4 <= attribute_top, 'attributes overlap the equipment header'

@@ -41,7 +41,7 @@ def steppable(name):
 
 # the pieces of the crypt: graves, cross and statues, all measured obstacles of the catalog
 crypt = set(re.findall(r'new BuildingObject\(getGameMap\(\), \*this, "([^"]+)"', read('source/rooms/RoomCrypt.cpp')))
-assert {'KnightCoffin', 'StoneCoffin', 'CelticCross', 'KnightStatue', 'KnightStatue2'} <= crypt, crypt
+assert {'KnightCoffin', 'StoneCoffin', 'CelticCross', 'KnightStatue2'} <= crypt, crypt
 catalog = set(re.findall(r'^    \{"([^"]+)",', between(bounds_source, 'static const MeshBounds meshBounds[] = {', '\n};'), re.M))
 for name in sorted(crypt):
     assert name in catalog, name

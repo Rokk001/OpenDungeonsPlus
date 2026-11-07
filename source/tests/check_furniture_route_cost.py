@@ -27,7 +27,7 @@ REPO = Path(__file__).resolve().parents[2]
 NAVIGATION = 'source/gamemap/RoomObjectNavigation.cpp'
 PATH_HEADER = 'source/gamemap/RoomObjectPath.h'
 # Functions of RoomObjectNavigation.cpp that run terrain tests and each create one PassableTiles
-SEARCH_FUNCTIONS = ('bool RoomObjectNavigation::refine(', 'bool RoomObjectNavigation::foodApproach(',
+SEARCH_FUNCTIONS = ('static bool refineAround(', 'bool RoomObjectNavigation::foodApproach(',
                     'bool RoomObjectNavigation::workApproach(')
 # Number of PassableTiles objects in RoomObjectNavigation.cpp (one per function above)
 EXPECTED_PASSABLE_TILES = 3
@@ -94,7 +94,7 @@ def main():
         function = body(navigation, signature)
         require(function.count('PassableTiles passable(creature);') == 1,
                 NAVIGATION + ': ' + signature + ' must create one PassableTiles for all its terrain tests')
-    refine = body(navigation, 'bool RoomObjectNavigation::refine(')
+    refine = body(navigation, 'static bool refineAround(')
     require('{ return terrainClear(passable, from, to); };' in refine,
             NAVIGATION + ': the route search terrain of refine() must use its PassableTiles')
     require(refine.count('smoothCorridor(creature, passable, obstacles,') == 2,

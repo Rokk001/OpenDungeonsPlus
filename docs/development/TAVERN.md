@@ -27,7 +27,8 @@ once the keeper has researched Beer, beer for gold. All numbers are keys of `con
 - A tavern needs a block of three by three tiles. One that loses it takes no guests until it has one again, and
   its room information says why. When a tavern grows or shrinks, the furniture is spread again, all guests stand
   up, running games end without a winner and the guests look for a place again.
-- A drink takes `DrinkTurns` turns. The keeper chooses per tavern who pays for the beer: the keeper (treasury)
+- A beer takes `BeerDrinkTurns` turns (30 seconds), a water `DrinkTurns`; the guest holds a mug in its hand and the
+  drink clip loops for the whole drink. The keeper chooses per tavern who pays for the beer: the keeper (treasury)
   or the creature (its own purse). If the payer cannot pay, the guest gets water (a creature that cannot pay
   also loses `NoCoinMood` mood). Beer adds drunkenness, mood and urge; water only a little urge.
 - A creature that is not thirsty comes for a leisure visit. It gives at most `PleasureVisitMax` of rooms.cfg (200) mood
@@ -39,7 +40,8 @@ once the keeper has researched Beer, beer for gold. All numbers are keys of `con
   `MaxDrinksPerVisit` per visit. Drunkenness falls by `DrunkDecayPerTurn`; from `StaggerAt` the creature walks
   slower, from `VomitAt` it vomits once per drunk episode (a dirt pile that workers clean). A creature that falls
   asleep above `HangoverAt` wakes up with a hangover (`HangoverTurns`: half work and experience, less mood).
-- After the last drink a guest plays a game with `GameChancePercent` when a guest at the same table is done as well: arm
+- After the last drink a guest plays a game with `GameChancePercent` when a guest at the same table is done as well (it
+  waits while another guest of its keeper still drinks at its table): arm
   wrestling, dice or (with Beer) a slap duel. Games cost no gold. The weaker creature has the better chance than
   its level suggests (`GameUnderdog...`). In a slap duel a normal slap takes `SlapDamage` hit points, a critical
   slap (`SlapCritBasePercent` plus `SlapCritPerLevel` per level of difference) ends the duel, and so does

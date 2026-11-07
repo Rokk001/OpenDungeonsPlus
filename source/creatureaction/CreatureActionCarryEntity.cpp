@@ -417,6 +417,16 @@ void CreatureActionCarryEntity::followTrail(Creature& dragged, double targetArc)
     dragged.setWalkPath(EntityAnimation::dragged_anim, EntityAnimation::dragged_anim, true, false, path, false, true);
 }
 
+//! \brief Returns the grave tile a pulled dead body is laid into (the crypt it is delivered to), or nullptr.
+Tile* CreatureActionCarryEntity::getCryptGrave(const Creature& dragged) const
+{
+    if(!mExternalDrag || mDragPhase != 1 || mBuildingDest == nullptr || dragged.isAlive() ||
+       mBuildingDest->getObjectType() != GameEntityType::room ||
+       static_cast<Room*>(mBuildingDest)->getType() != RoomType::crypt)
+        return nullptr;
+    return static_cast<RoomCrypt*>(mBuildingDest)->getReservedGrave(dragged, mTileDest);
+}
+
 void CreatureActionCarryEntity::startLaying(Creature& dragged)
 {
     mDragPhase = 1;
@@ -433,6 +443,13 @@ void CreatureActionCarryEntity::startLaying(Creature& dragged)
     {
         path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(homeTile->getX()),
             static_cast<Ogre::Real>(homeTile->getY())));
+        // A dead body in a crypt is pulled on into its grave tile and lies in the grave, not beside it
+        Tile* graveTile = getCryptGrave(dragged);
+        if(graveTile != nullptr)
+        {
+            path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(graveTile->getX()),
+                static_cast<Ogre::Real>(graveTile->getY())));
+        }
     }
     dragged.setWalkPath(EntityAnimation::dragged_anim, EntityAnimation::dragged_anim, true, false, path, false, true);
 }
@@ -491,7 +508,8 @@ bool CreatureActionCarryEntity::handleDragCreature()
         {
             if(dragged->isMoving())
                 return false;
-            if(dragged->getPositionTile() != mTileDest)
+            Tile* graveTile = getCryptGrave(*dragged);
+            if(dragged->getPositionTile() != (graveTile != nullptr ? graveTile : mTileDest))
                 return stopDragging(true);
             mDelivered = true;
             return stopDragging(false);

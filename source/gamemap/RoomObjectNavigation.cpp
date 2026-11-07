@@ -63,6 +63,8 @@ const float WALK_DISTORTION_REACH = 0.425f;
 const float WALK_DISTORTION_JITTER = 0.3f;
 // Distance from a tile centre to the border of the tile.
 const float HALF_TILE = 0.5f;
+// Half the side of the mud piece of a spa pool tile (SpaMudPool fills its tile, meshBounds -0.5 to 0.5).
+const float SPA_POOL_HALF_SIDE = 0.5f;
 // Free standing points are searched on a grid of STANDING_GRID_SIZE x STANDING_GRID_SIZE
 // points per tile; the points are STANDING_POINT_SPACING apart and start at STANDING_GRID_START
 // from the tile centre.
@@ -438,10 +440,9 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
     return result;
 }
 
-std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creature& creature,
-    const BuildingObject* interaction)
+//! \brief Gives obstacles collected without clearance the walking body of the creature (see bodyObstacles).
+static std::vector<RoomObjectPath::Obstacle> withWalkingBody(Creature& creature, std::vector<RoomObjectPath::Obstacle> result)
 {
-    std::vector<RoomObjectPath::Obstacle> result = collect(*creature.getGameMap(), 0.0f, interaction);
     Ogre::Vector2 minimum(-DEFAULT_WALKING_RADIUS), maximum(DEFAULT_WALKING_RADIUS);
     for(const RoomObjectPath::WalkingRadius& model : RoomObjectPath::walkingRadii)
         if(creature.getMeshName() == model.name)
@@ -476,6 +477,37 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creatu
         }
         obstacle.initialHeading = heading;
         ++it;
+    }
+    return result;
+}
+
+std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creature& creature,
+    const BuildingObject* interaction)
+{
+    return withWalkingBody(creature, collect(*creature.getGameMap(), 0.0f, interaction));
+}
+
+std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::spaPoolObstacles(GameMap& map, float clearance,
+    const Ogre::Vector2& start, const Ogre::Vector2& goal)
+{
+    std::vector<RoomObjectPath::Obstacle> result;
+    const int startX = Helper::round(start.x), startY = Helper::round(start.y);
+    const int goalX = Helper::round(goal.x), goalY = Helper::round(goal.y);
+    for(Room* room : map.getRooms())
+    {
+        if(room->getType() != RoomType::spa)
+            continue;
+        for(const std::pair<Tile* const, BuildingObject*>& entry : room->getBuildingObjects())
+        {
+            if(entry.second->getMeshName() != RoomObjectPath::SPA_POOL_MESH)
+                continue;
+            // The bather wades into the tile of its place and out of the tile it stands in
+            const Tile* tile = entry.first;
+            if(((tile->getX() == startX) && (tile->getY() == startY)) || ((tile->getX() == goalX) && (tile->getY() == goalY)))
+                continue;
+            const Ogre::Vector2 half(SPA_POOL_HALF_SIDE + clearance, SPA_POOL_HALF_SIDE + clearance);
+            result.push_back({-half, half, {static_cast<float>(tile->getX()), static_cast<float>(tile->getY())}, 1.0f, 0.0f});
+        }
     }
     return result;
 }
@@ -711,16 +743,25 @@ bool RoomObjectNavigation::separate(Creature& creature, std::vector<Ogre::Vector
     return separateCached(creature, path, adjacent, room, cache);
 }
 
-bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache)
+//! \brief Searches the route of refine(); pool holds the mud pieces of the spas that are solid for this walk (no clearance).
+static bool refineAround(Creature& creature, std::vector<Ogre::Vector2>& path, RoomObjectNavigation::RouteCache& cache,
+    const std::vector<RoomObjectPath::Obstacle>& pool)
 {
     if(path.empty())
         return false;
     GameMap& map = *creature.getGameMap();
     const BuildingObject* interaction = interactionObject(creature, path.back());
-    const float radius = clearance(creature);
+    const float radius = RoomObjectNavigation::clearance(creature);
     // Each client jitter coordinate is +/-0.3, so a rotated object needs the
     // full diagonal displacement as well as the creature's walking radius.
-    std::vector<RoomObjectPath::Obstacle> obstacles = collect(map, radius + WALK_DISTORTION_REACH, interaction);
+    std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::collect(map, radius + WALK_DISTORTION_REACH, interaction);
+    const Ogre::Vector2 reach(radius + WALK_DISTORTION_REACH, radius + WALK_DISTORTION_REACH);
+    for(RoomObjectPath::Obstacle piece : pool)
+    {
+        piece.minimum -= reach;
+        piece.maximum += reach;
+        obstacles.push_back(piece);
+    }
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
     Ogre::Vector2 previous = start;
     bool nearby = !RoomObjectPath::clearSegment(obstacles, start, path.back());
@@ -735,7 +776,9 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     if(!nearby)
         return smoothCorridor(creature, passable, obstacles, path);
 
-    obstacles = bodyObstacles(creature, interaction);
+    obstacles = RoomObjectNavigation::bodyObstacles(creature, interaction);
+    const std::vector<RoomObjectPath::Obstacle> poolBodies = withWalkingBody(creature, pool);
+    obstacles.insert(obstacles.end(), poolBodies.begin(), poolBodies.end());
     // A route search tests every grid point and every step against all obstacles, and there are hundreds of them on
     // a map. Only the furniture around the path can touch a position the searches look at, so the rest is dropped.
     Ogre::Vector2 regionMinimum = start, regionMaximum = start;
@@ -747,7 +790,7 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     keepObstaclesNear(obstacles, regionMinimum - Ogre::Vector2(OBSTACLE_REGION_TILES),
         regionMaximum + Ogre::Vector2(OBSTACLE_REGION_TILES));
     Ogre::Vector2 goal = path.back();
-    if(!standingPosition(obstacles, goal, goal))
+    if(!RoomObjectNavigation::standingPosition(obstacles, goal, goal))
     {
         path.clear();
         return true;
@@ -866,6 +909,31 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
     smoothCorridor(creature, passable, obstacles, result);
     path.swap(result);
     return true;
+}
+
+bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache)
+{
+    if(path.empty())
+        return false;
+
+    // Nobody walks over the mud of a spa (decision 837): its pool pieces are solid, except the tile the creature stands
+    // in and the tile it walks to (a bather wades to its place and out again). Only when there is no way around the
+    // pool (a closed room, a place in the middle of the pool) the creature wades through the mud, as the spa plan allows.
+    const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
+    const std::vector<RoomObjectPath::Obstacle> pool = spaPoolObstacles(*creature.getGameMap(), 0.0f, start, path.back());
+    if(!pool.empty())
+    {
+        std::vector<Ogre::Vector2> around = path;
+        // The failed searches around the pool are not valid without it, so they get their own cache
+        RouteCache poolCache;
+        const bool refined = refineAround(creature, around, poolCache, pool);
+        if(!around.empty())
+        {
+            path.swap(around);
+            return refined;
+        }
+    }
+    return refineAround(creature, path, cache, std::vector<RoomObjectPath::Obstacle>());
 }
 
 bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path)

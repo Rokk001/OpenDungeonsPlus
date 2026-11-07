@@ -88,10 +88,7 @@ def run_checks(texts):
     need(stretch.get("Kind") == ["CreatureClip"] and stretch.get("Clips") == ["Stretch"],
          "the creature stretches with the clip Stretch")
 
-    crypt = effect("CryptSleepClip")
-    need(crypt.get("Kind") == ["Clip"] and crypt.get("Clips") == ["Sleep"] and crypt.get("Loop") == ["yes"],
-         "the crypt objects loop the clip Sleep")
-    need(set(crypt.get("Match", [])) == CRYPT_ALL, "the crypt clip matches the coffins and the statues")
+    need("CryptSleepClip" not in cfg, "the crypt objects stand still: no looping Sleep clip (X1, decision 826)")
 
     raised = effect("CryptWakeClip")
     need(raised.get("Event") == ["CryptRaised"] and raised.get("Clips") == ["Wake"], "the crypt wakes with Wake on CryptRaised")
@@ -102,7 +99,7 @@ def run_checks(texts):
     gaps = texts["gaps"]
     need("Name        DormitoryWakeBlanket" in gaps and "Name        DormitoryWakeLight" in gaps,
          "the effects DormitoryWakeBlanket and DormitoryWakeLight must stay")
-    for name in ("DormitoryBedSleepClip", "DormitoryWakeBedClip", "DormitoryWakeStretch", "CryptSleepClip", "CryptWakeClip"):
+    for name in ("DormitoryBedSleepClip", "DormitoryWakeBedClip", "DormitoryWakeStretch", "CryptWakeClip"):
         need(cfg.get(name, {}).get("Reduced") == ["yes"], "%s is also shown in the mode reduced" % name)
 
     # --- the format is known to the code and to the config check
@@ -161,7 +158,7 @@ def mutations():
         ("effect missing", swap("clips", "Name        DormitoryWakeStretch", "Name        DormitoryWakeStretchGone")),
         ("bed clip name", swap("clips", "Clips       Wake\n            Amount      2.5", "Clips       Awake\n            Amount      2.5")),
         ("creature clip name", swap("clips", "Clips       Stretch", "Clips       Stretching")),
-        ("crypt sleep name", swap("clips", "Name        CryptSleepClip", "Name        CryptRestClip")),
+        ("crypt sleeps again", swap("clips", "Name        CryptWakeClip", "Name        CryptSleepClip")),
         ("crypt event", swap("clips", "Event       CryptRaised", "Event       CryptRisen")),
         ("not included", swap("main", "Include roomAmbienceWakeClips.cfg", "")),
         ("checker does not know the kind", swap("checker", "CreatureClip", "Creature_Clip")),

@@ -22,6 +22,11 @@ std::vector<RoomObjectPath::Obstacle> collect(GameMap& map, float clearance,
 // Like collect(), but with the real walking body of the creature instead of a plain clearance.
 std::vector<RoomObjectPath::Obstacle> bodyObstacles(Creature& creature,
     const BuildingObject* interaction = nullptr);
+//! \brief The mud pieces of the spa pools as solid obstacles widened by the clearance (decision 837: nobody walks over
+//! the pool). The pieces of the tiles of start and goal are left out, so that a bather wades to its place and out again.
+//! refine() uses them and falls back to wading through the mud when there is no way around the pool.
+std::vector<RoomObjectPath::Obstacle> spaPoolObstacles(GameMap& map, float clearance, const Ogre::Vector2& start,
+    const Ogre::Vector2& goal);
 // Finds the point nearest to the wanted one where nothing blocks a creature; returns
 // false if there is none in the tile.
 bool standingPosition(const std::vector<RoomObjectPath::Obstacle>& obstacles,

@@ -111,6 +111,9 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
          creature.getThirst() >= ConfigManager::getSingleton().getTavernConfigDouble("ThirstSeek"));
     if(creature.needInterrupt(servingNeed))
     {
+        // A guest on a tavern bench first gets off it; the room ends the visit and the action goes on until then
+        if(room->keepGuestUntilItLeft(creature))
+            return room->useRoom(creature, forced);
         bool foodAvailable = false;
         bool drinkAvailable = false;
         if(!servingNeed && creature.isHungry() && !creature.hasActionBeenTried(CreatureActionType::searchFood))
@@ -139,6 +142,9 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
         creature.isActionInList(CreatureActionType::fightFriendly);
     if(moodRoom && !fighting && creature.getMoodValue() <= CreatureMoodLevel::Neutral)
     {
+        // A guest on a tavern bench first gets off it; the room ends the visit and the action goes on until then
+        if(room->keepGuestUntilItLeft(creature))
+            return room->useRoom(creature, forced);
         creature.popAction();
         return true;
     }
@@ -196,6 +202,13 @@ bool CreatureActionUseRoom::handleJob(Creature& creature, Room* room, bool force
     if((room->shouldStopUseIfHungrySleepy(creature, forced)) &&
        (!creature.hasSlapEffect()))
     {
+        // A guest on a tavern bench that is tired, hungry or wants its wage first gets off the bench
+        if((creature.isTired() || creature.isHungry() ||
+            ((creature.getGoldFee() > 0) && (!creature.hasActionBeenTried(CreatureActionType::getFee)) &&
+             (creature.getSeat()->getGold() > 0))) &&
+           room->keepGuestUntilItLeft(creature))
+            return room->useRoom(creature, forced);
+
         // The creature should look for gold after payday if the keeper is not broke
         if((creature.getGoldFee() > 0) &&
            (!creature.hasActionBeenTried(CreatureActionType::getFee)) &&

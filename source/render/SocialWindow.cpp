@@ -52,6 +52,7 @@
 #include <cmath>
 #include <deque>
 #include <iomanip>
+#include <locale>
 #include <sstream>
 
 namespace
@@ -90,7 +91,7 @@ const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInv
 //! Digits between two thousands commas of a value ("42,600", book-variant-2)
 const std::string::size_type THOUSANDS_GROUP = 3;
 //! Characters of one value line in the attribute cells (Strength, Dexterity, Life, Mana side by side in one row,
-//! book-variant-2, owner decision 816): a longer exact value continues on the next line of its cell
+//! book-variant-2, owner decision 816): a longer value continues on the next line of its cell
 const std::string::size_type ATTRIBUTE_LINE_CHARS = 14;
 
 bool isEntryBefore(const std::pair<std::string, std::string>& a, const std::pair<std::string, std::string>& b)
@@ -345,15 +346,15 @@ std::string groupThousands(const std::string& number)
     return result;
 }
 
-//! \brief Formats a Dungeonbook value exactly, without rounding (owner decision 732): the shortest decimal text that
-//! reads back as the same double (Creature::formatExactNumber), with a comma between the thousands of the whole part
-//! as in book-variant-2 ("42,600"). 14.8 stays "14.8", 41.666666666666664 stays "41.666666666666664".
+//! \brief Formats a Dungeonbook value rounded to at most two decimals without zeros at the end (owner decision 830,
+//! Creature::formatRoundedNumber), with a comma between the thousands of the whole part as in book-variant-2
+//! ("42,600"). 14.8 stays "14.8", 51.59700000000005 is shown as "51.6", 41.666666666666664 as "41.67".
 std::string formatProfileValue(double value)
 {
-    return groupThousands(Creature::formatExactNumber(value));
+    return groupThousands(Creature::formatRoundedNumber(value));
 }
 
-//! \brief Breaks an exact value into the lines of an attribute cell (owner decision 816): at most ATTRIBUTE_LINE_CHARS
+//! \brief Breaks a value into the lines of an attribute cell (owner decision 816): at most ATTRIBUTE_LINE_CHARS
 //! characters per line, broken after a comma or point or before the exponent when one lies in the second half of the
 //! line, otherwise after the last character that fits. Every character is kept, nothing is rounded or cut.
 std::string breakAttributeValue(const std::string& value)
@@ -392,8 +393,9 @@ std::vector<std::string> splitStatisticsValue(const std::string& value)
     }
 }
 
-//! \brief The statistics value with the thousands of every part that is a plain number grouped. The digits are the
-//! ones the server wrote (exactly, Creature::formatExactNumber), nothing is rounded or read back.
+//! \brief The statistics value with every part that is a plain number rounded to at most two decimals and its
+//! thousands grouped (formatProfileValue, owner decision 830). The server already writes the values rounded; a text
+//! of an older server with the raw sum (51.59700000000005) is rounded here as well.
 std::string formatStatisticsNumbers(const std::string& value)
 {
     if(value.empty())
@@ -404,10 +406,11 @@ std::string formatStatisticsNumbers(const std::string& value)
     for(std::size_t i = 0; i < parts.size(); ++i)
     {
         std::istringstream parser(parts[i]);
+        parser.imbue(std::locale::classic());
         double number = 0.0;
         std::string rest;
         const bool isNumber = static_cast<bool>(parser >> number) && !(parser >> rest);
-        result += (i > 0 ? " / " : "") + (isNumber ? groupThousands(parts[i]) : parts[i]);
+        result += (i > 0 ? " / " : "") + (isNumber ? formatProfileValue(number) : parts[i]);
     }
     return result;
 }
@@ -1249,7 +1252,7 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
         page->getChild(std::string(line.window) + "Label")->setTooltipText(tooltip);
     }
 
-    // The four attributes side by side in one row (book-variant-2, owner decision 816): the label on top, the exact
+    // The four attributes side by side in one row (book-variant-2, owner decision 816): the label on top, the rounded
     // value on the line below, a long value continues on further lines of its cell
     const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};
     const double values[] = {entry.strength, entry.dexterity, entry.life, entry.mana};

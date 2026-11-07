@@ -50,6 +50,8 @@ public:
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
     //! \brief Checks that a body still owns its original accessible grave delivery tile.
     bool hasReservedDelivery(const Creature& body, const Tile* delivery);
+    //! \brief Returns the grave reserved for the body whose delivery tile is the given tile, or nullptr.
+    Tile* getReservedGrave(const Creature& body, const Tile* delivery);
 
     //! \brief Returns the reserved grave for a delivered uncarried corpse, or nullptr.
     Tile* getCorpseSpot(const Creature& creature) const;

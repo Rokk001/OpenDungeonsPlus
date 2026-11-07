@@ -310,6 +310,12 @@ public:
     //! \brief A guest in a game, lying on the floor or getting up does not stop because of its mood.
     bool shouldNotUseIfBadMood(Creature& creature, bool forced) override;
 
+    //! \brief A guest that sits on its bench ends its visit before it is sent away: no further drink, a game ends without
+    //! effects, a slumped duel loser first gets up; then useRoom steps it off the bench (decision 833).
+    //! \param creature The guest.
+    //! \return True while the guest still sits on its bench.
+    bool keepGuestUntilItLeft(Creature& creature) override;
+
     //! \brief Sets the name, seat and tiles. The first tile is the counter tile. A tavern of a seat that is played by
     //! the computer lets the creatures pay for the beer.
     void setupRoom(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles) override;
@@ -449,6 +455,12 @@ private:
     //! \param places The number of places the guest takes.
     bool isOnSeat(const Creature& creature, const RoomTavernSeat& seat, uint32_t places) const;
 
+    //! \brief The direction a guest looks in while it plays a game with another guest or slaps it: across its table
+    //! while it is on its seat (the seated clips are made for that direction), otherwise towards the partner.
+    //! \param creature The guest.
+    //! \param partner The other guest of the game or the duel.
+    Ogre::Vector3 getFacingDirection(const Creature& creature, const Creature& partner);
+
     //! \brief Finds free points next to the seat from where a creature gets onto the bench.
     //! \param creature The guest.
     //! \param seat The seat.
@@ -535,6 +547,15 @@ private:
     //! \param noCoin Set to true when the guest had to pay and had not enough gold.
     //! \return True when the beer is paid.
     bool payForBeer(Creature& creature, bool& noCoin);
+
+    //! \brief The turns the next drink of the guest lasts: BeerDrinkTurns for a beer (the tavern serves beer and the
+    //! payer has the price), DrinkTurns for water ([Tavern] of global.cfg).
+    //! \param creature The guest.
+    int32_t nextDrinkTurns(const Creature& creature) const;
+
+    //! \brief True while another guest of the same keeper drinks at the table of the seat.
+    //! \param seat The seat of the guest that waits for a game.
+    bool hasDrinkingTableMate(const RoomTavernSeat& seat) const;
 
     //! \brief Lets the guest that wants a game start it with a guest of the same table that is done too; a guest on the
     //! opposite bench comes first. The guest asks again every turn while it waits.
