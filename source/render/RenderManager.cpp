@@ -4165,6 +4165,22 @@ void RenderManager::rrUpdateEntityOpacity(RenderedMovableEntity* entity)
     }
 }
 
+//! \brief Gives the plain ReflMetal sub entities of an animated creature the hardware skinned ReflMetalSkinned.
+//! An entity is only skinned on the GPU when the materials of all its sub entities are, and the Wyvern
+//! mesh has a ReflMetal part next to its creature material. ReflMetal itself stays unskinned for weapons.
+static void useSkinnedMetalMaterial(Ogre::Entity* entity)
+{
+    if(!entity->hasSkeleton())
+        return;
+
+    for(unsigned int sub = 0; sub < entity->getNumSubEntities(); ++sub)
+    {
+        Ogre::SubEntity* part = entity->getSubEntity(sub);
+        if(part->getMaterialName() == "ReflMetal")
+            part->setMaterialName("ReflMetalSkinned");
+    }
+}
+
 void RenderManager::rrCreateCreature(Creature* curCreature)
 {
     const std::string& meshName = curCreature->getCurrentMeshName();
@@ -4185,6 +4201,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
     }    
     std::string creatureName = curCreature->getOgreNamePrefix() + curCreature->getName();
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
+    useSkinnedMetalMaterial(ent);
 
 
     Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(creatureName + "_node");
@@ -4249,6 +4266,7 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
     }
 
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
+    useSkinnedMetalMaterial(ent);
     node->attachObject(ent);
 
     Ogre::Camera* cam = mViewport->getCamera();
@@ -7827,6 +7845,8 @@ void RenderManager::rrAddOutliner(Creature* creature)
                 vertex_program = mgr.createProgram("Enlarge", "Graphics","glsl" ,Ogre::GpuProgramType::GPT_VERTEX_PROGRAM);
 
                 vertex_program->setSourceFile("Enlarge.vert");
+                // The contour follows the hardware skinned creature, so it skins the same way
+                vertex_program->setSkeletalAnimationIncluded(true);
             }
             else
             {
@@ -7839,7 +7859,8 @@ void RenderManager::rrAddOutliner(Creature* creature)
             const float contourWidth = std::max(meshSize.x, std::max(meshSize.y, meshSize.z)) * OutlinerContourWidthFactor;
          
             myPass1->getVertexProgramParameters()->setNamedConstant("width", contourWidth);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldViewProj", Ogre::GpuProgramParameters::ACT_WORLDVIEWPROJ_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewProjectionMatrix", Ogre::GpuProgramParameters::ACT_VIEWPROJ_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4);
 
             Ogre::HighLevelGpuProgramPtr fragment_program;
             if(!mgr.resourceExists("Custom_color","Graphics"))
