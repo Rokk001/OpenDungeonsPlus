@@ -18,7 +18,10 @@ This part fails on the GhostBox mesh, textures and code of build 41 (base 94b29d
 Owner decision 726 wants the whole catch to take about 20 s so the player can follow it: 2 s throw, 16 s beam and 2 s
 snap, the same for every hunter; efficiency and the CatchTime research only act on emptying the box (GhostEmptyTurns).
 Each visual step stays visible for its full time. This part fails on the code and config of base e877bfe66 (0.5 s
-throw, 5.5 beam turns divided by efficiency and research, no snap step)."""
+throw, 5.5 beam turns divided by efficiency and research, no snap step).
+Owner decision 733: the hunter wears the capture-beam backpack on his back (taken from and hung back on its hook), only
+the small box is in the hand on the way back to the cauldron, the box is thrown under the ghost and the beam comes from
+the weapon. This part fails on base 0c9e8c329 (pack in front of the hunter, beam from the backpack nozzle)."""
 from pathlib import Path
 import re
 import struct
@@ -399,6 +402,79 @@ def small_textured_box():
     print("small textured ghost box in the hand: ok")
 
 
+# Hunter creature blocks of creatures.cfg: creature name, right and left spawn weapon, ghost room efficiency.
+def ghost_hunters():
+    hunters = {}
+    for block in re.findall(r"^\s*\[Creature\]\s*$(.*?)^\s*\[/Creature\]", read("config/creatures.cfg"), re.M | re.S):
+        name = re.search(r"^\s*Name\s+(\S+)", block, re.M).group(1)
+        ghost = re.search(r"^\s*GhostRoom\s+\S+\s+([0-9.]+)\s*$", block, re.M)
+        if ghost and float(ghost.group(1)) > 0.0:
+            weapons = dict(re.findall(r"^\s*WeaponSpawn([RL])\s+(\S+)", block, re.M))
+            hunters[name] = (weapons.get("R", "none"), weapons.get("L", "none"))
+    return hunters
+
+
+# Owner decision 733: the backpack is worn on the back (from the hook and back to it), only the small box is in the
+# hand on the way out and back to the cauldron, the box is thrown under the ghost and the beam comes from the weapon.
+# Fails on base 0c9e8c329: the pack hung at -0.3 y, in front of the hunter (creatures face -y), and the beam and its
+# sparks left the backpack nozzle.
+def backpack_on_back_beam_from_weapon():
+    render = read("source/render/RenderManager.cpp")
+    has(render, "creatures face the negative y axis of their node", "creatures face the negative y axis of the mesh")
+    orient = body(render, "void RenderManager::rrOrientEntityToward(")
+    has(orient, "the facing rotation turns local -y to the walk direction",
+        "Ogre::Vector3 tempVector = node->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Y;", "node->rotate(tempVector.getRotationTo(direction));")
+    models = read("assets-src/rooms/ghostroom/create_models.py")
+    has(models, "the pack straps lie on its +y side", "box('Worn leather strap', pos(x,0.095,0.24)")
+    creature = read("source/entities/Creature.cpp")
+    update = body(creature, "void Creature::updateGhostHuntVisuals(double seconds)")
+    has(update, "the pack moves with the hunter, is worn on the back and turned with its straps to the hunter",
+        'mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",Ogre::Vector3(0.0f,0.3f,0.5f*creatureHeight),',
+        "Ogre::Quaternion(Ogre::Degree(180.0f),Ogre::Vector3::UNIT_Z));", '"GhostBackpack.mesh"')
+    assert "Ogre::Vector3(0.0f,-0.3f," not in update, "the backpack must not hang in front of the hunter"
+    has(update, "no backpack, no hunter equipment", "if(!mGhostBackpack) { clearGhostHuntVisuals();return; }")
+    ordered(update, "the beam and its sparks start at the weapon",
+        "const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);",
+        "const Ogre::Vector3 start=ghostBeamOrigin(scene,*this,body,end,nozzlePosition);",
+        "mGhostSparkNode->setPosition(start);", "Ogre::Vector3 point=start+(end-start)*fraction;")
+    assert "start=nozzlePosition" not in update and "setPosition(nozzlePosition)" not in update, "the beam must not leave the backpack"
+    origin = body(creature, "static Ogre::Vector3 ghostBeamOrigin(")
+    has(origin, "the weapon mesh of the hunter, by the name the renderer gives it",
+        "const Weapon* weapons[2]={hunter.getWeaponR(),hunter.getWeaponL()};", 'const char* hands[2]={"R","L"};',
+        'const std::string name=weapons[i]->getOgreNamePrefix()+hands[i]+"_"+hunter.getName();',
+        "getWorldBoundingBox(true);", "tip.makeCeil(bounds.getMinimum());tip.makeFloor(bounds.getMaximum());")
+    has(origin, "a weapon that is part of the model fires from its bone", 'const std::string bone=std::string("Weapon_")+hands[i];',
+        "body->getSkeleton()->getBone(bone)->_getDerivedPosition()")
+    assert origin.rstrip("}\n ").endswith("return nozzle;"), "the nozzle is only the last resort"
+    weapon = body(render, "void RenderManager::rrCreateWeapon(")
+    has(weapon, "the renderer names the weapon mesh the same way", "mSceneManager->createEntity(curWeapon->getOgreNamePrefix()\n                                + hand + \"_\" + curCreature->getName(),")
+    has(read("source/entities/Weapon.h"), "weapon prefix", '{ return "Weapon_"; }')
+    # Every ghost hunter carries a weapon in the right hand, so no hunter fires from the backpack nozzle.
+    hunters = ghost_hunters()
+    assert sorted(hunters) == ["Defender", "Knight", "PitDemon", "RunelordDwarf", "Skeleton", "Troll"], sorted(hunters)
+    assert all(right != "none" for right, _ in hunters.values()), hunters
+    # The box is in the hand on the way out and on the whole way back to the cauldron and the hook (mode 2), it is
+    # thrown under the ghost (mode 1) and lies there (3, 4); the held box is shown only in mode 2.
+    header = read("source/creatureaction/CreatureActionHuntGhost.h")
+    has(header, "box phases", "uint32_t getBoxVisualState() const { return !hasBackpack()?0u:mState==2?1u:mState==3 || mState==9?3u:mState==10?4u:2u; }",
+        "bool hasBackpack() const { return mEquipped && !mInterrupted; }")
+    has(update, "only the small box is in the hand", "mGhostHeldBox->setVisible(mGhostBoxMode==2);", '"_HeldGhostBox","GhostBox.mesh"',
+        "position=hand+(floor-hand)*progress;")
+    assert update.count("attachObjectToBone(") == 1, "nothing but the small box is put into the hand"
+    # The pack comes from its hook and goes back to it.
+    action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
+    hunt = body(action, "bool CreatureActionHuntGhost::handleHunt()")
+    ordered(body(hunt, "    if(mState==0)"), "taken from the hook", "Tile* hook=map.getTile(mHookX,mHookY);", "if(!moveTo(hook))",
+        "room->equipHook(mCreature,true);mEquipped=true;mState=1;")
+    ordered(body(hunt, "    if(mState==7)"), "hung back on the hook", "Tile* hook=map.getTile(mHookX,mHookY);", "if(!moveTo(hook))",
+        "if(mCreature.isMoving()) return false;", "interrupt();mCreature.popAction();")
+    has(body(action, "void CreatureActionHuntGhost::interrupt()"), "the hook gets the pack back", "releaseHunter(mCreature);", "mEquipped=false;")
+    room = read("source/rooms/RoomGhostRoom.cpp")
+    has(body(room, "void RoomGhostRoom::releaseHunter("), "release shows the pack on the hook", "equipHook(hunter,false);")
+    has(body(room, "void RoomGhostRoom::equipHook("), "an empty hook while the pack is worn", 'const std::string mesh=equipped?"GhostHookEmpty":"GhostHook";')
+    print("backpack on the back, box in the hand, beam from the weapon: ok")
+
+
 def main():
     box_in_hand()
     visual_states()
@@ -407,6 +483,7 @@ def main():
     alarm_lamps()
     no_flat_panels()
     small_textured_box()
+    backpack_on_back_beam_from_weapon()
     print("ghost catch flow: ok")
 
 
