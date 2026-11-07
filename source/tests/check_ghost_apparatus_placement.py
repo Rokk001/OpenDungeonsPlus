@@ -14,6 +14,7 @@ from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
 D4 = [(0, 1), (-1, 0), (1, 0), (0, -1)]
+WALL_DISTANCE_MAX = 9
 
 
 # Read a tracked source using the repository root rather than the caller's directory.
@@ -45,8 +46,17 @@ def source_rules():
     layout = body(room, "void RoomGhostRoom::layoutApparatuses(")
     has(layout, "floor stands ranked inner, wall edge, open edge", "for(int rank=0;rank<3;++rank)",
         "if(blocked.count(tile)!=0 || inOpening(tile)) continue;",
-        "if((inner?0:openSide?2:1)==rank) candidates.push_back(tile);",
+        "if((inner?0:openSide?2:1)==rank) { ranked.push_back(tile);tileRank[tile]=rank; }",
         "if(floor.count(getGameMap()->getTile(tile->getX()+x,tile->getY()+y))==0) inner=false;")
+    # Decision 825: within a rank the tiles farthest from a wall (ring of the nearest wall tile or map border) come first
+    has(layout, "far from the walls first within a rank", "const int wallDistanceMax=9;", "int distance=wallDistanceMax;",
+        "for(int radius=1;radius<wallDistanceMax && distance==wallDistanceMax;++radius)",
+        "if(std::max(std::abs(x),std::abs(y))!=radius) continue;",
+        "if(nearby==nullptr || nearby->isFullTile()) { distance=radius;break; }",
+        "const std::function<bool(Tile*,Tile*)> fartherFromWall=[&wallDistance](Tile* a,Tile* b) { return wallDistance[a]>wallDistance[b]; };",
+        "std::stable_sort(ranked.begin(),ranked.end(),fartherFromWall);",
+        "farFirst.insert(farFirst.end(),ranked.begin(),ranked.end());")
+    assert WALL_DISTANCE_MAX == 9, "the model uses the same limit as the source"
     # The old wall binding is gone: no wall test decides a place
     for removed in ("atWall", "pass<3", "any free floor tile", "no wall place"):
         assert removed not in layout, ("wall binding removed", removed)
@@ -62,8 +72,14 @@ def source_rules():
         "for(size_t wanted=APPARATUS_COUNT;wanted>chosen.size() && !found;--wanted)",
         "for(int spaced=1;spaced>=0 && !found;--spaced)", "if(search(0,wanted,spaced==1)) { chosen=picked;found=true; }")
     # Only these two places add an apparatus tile
-    assert layout.count("chosen.push_back(") == 1 and layout.count("chosen=") == 1, "no other placement path"
-    assert layout.count("candidates.push_back(") == 1
+    assert layout.count("chosen.push_back(") == 1 and layout.count("chosen=") == 3, "no other placement path"
+    has(layout, "far placement unless the tile order places better (decision 825)",
+        "std::vector<Tile*> chosen=place(farFirst);", "const std::vector<Tile*> inOrder=place(byOrder);",
+        "if(score(inOrder)>score(chosen)) chosen=inOrder;", "value[0]=static_cast<int>(placed.size());",
+        "for(Tile* tile : placed) { value[1]+=tileRank[tile]==0?1:0;value[2]+=tileRank[tile]<=1?1:0; }",
+        "byOrder.insert(byOrder.end(),ranked.begin(),ranked.end());", "farFirst.insert(farFirst.end(),ranked.begin(),ranked.end());")
+    assert layout.count("ranked.push_back(") == 1 and layout.count("farFirst.insert(") == 1 and layout.count("byOrder.insert(") == 1
+    assert "candidates.push_back(" not in layout
     has(layout, "connected free tiles, an entrance, a stand per apparatus",
         "if(blocked.count(tile)==0 && std::find(taken.begin(),taken.end(),tile)==taken.end()) open.insert(tile);",
         "if(open.empty()) return taken.empty();", "if(walkableOutside(neighbor)) entrance=true;",
@@ -156,33 +172,52 @@ def layout(room, walls):
         open_side = any(walkable((t[0] + dx, t[1] + dy)) for dx, dy in D4)
         return 0 if inner else 2 if open_side else 1
 
+    # Ring of the nearest wall tile (Chebyshev distance), at most WALL_DISTANCE_MAX; far tiles first within a rank
+    def wall_distance(t):
+        for r in range(1, WALL_DISTANCE_MAX):
+            if any((t[0] + x, t[1] + y) in walls for x in range(-r, r + 1) for y in range(-r, r + 1) if max(abs(x), abs(y)) == r):
+                return r
+        return WALL_DISTANCE_MAX
+
     ordered = sorted(room, key=lambda t: (t[1], t[0]))
-    candidates = [t for r in range(3) for t in ordered if t not in blocked and not opening(t) and rank(t) == r]
-    chosen = []
-    for spaced in (True, False):
-        for t in candidates:
-            if len(chosen) >= 3:
-                break
-            if t in chosen or (spaced and beside(chosen, t)) or not reachable(chosen + [t]):
-                continue
-            chosen.append(t)
-    searched = False
-    if len(chosen) < 3:
-        limited = candidates[:40]
-        for wanted in range(3, len(chosen), -1):
-            found = None
-            for spaced in (True, False):
-                for picked in combinations(limited, wanted):
-                    if spaced and any(beside(picked[:i], picked[i]) for i in range(1, wanted)):
-                        continue
-                    if reachable(list(picked)):
-                        found = list(picked)
+    by_order = [t for r in range(3) for t in ordered if t not in blocked and not opening(t) and rank(t) == r]
+    far_first = [t for r in range(3) for t in sorted((t for t in ordered if t not in blocked and not opening(t) and rank(t) == r),
+                                                     key=lambda t: -wall_distance(t))]
+
+    def place(candidates):
+        chosen = []
+        for spaced in (True, False):
+            for t in candidates:
+                if len(chosen) >= 3:
+                    break
+                if t in chosen or (spaced and beside(chosen, t)) or not reachable(chosen + [t]):
+                    continue
+                chosen.append(t)
+        searched = False
+        if len(chosen) < 3:
+            limited = candidates[:40]
+            for wanted in range(3, len(chosen), -1):
+                found = None
+                for spaced in (True, False):
+                    for picked in combinations(limited, wanted):
+                        if spaced and any(beside(picked[:i], picked[i]) for i in range(1, wanted)):
+                            continue
+                        if reachable(list(picked)):
+                            found = list(picked)
+                            break
+                    if found:
                         break
                 if found:
+                    chosen, searched = found, True
                     break
-            if found:
-                chosen, searched = found, True
-                break
+        return chosen, searched
+
+    # Far from the walls first (decision 825) unless the tile order places more, more on inner tiles or more at a wall
+    score = lambda placed: [len(placed), sum(rank(t) == 0 for t in placed), sum(rank(t) <= 1 for t in placed)]
+    chosen, searched = place(far_first)
+    in_order = place(by_order)
+    if score(in_order[0]) > score(chosen):
+        chosen, searched = in_order
     chosen.sort(key=lambda t: (t[1], t[0]))
     # Every placed apparatus obeys the rule
     for t in chosen:
@@ -274,14 +309,20 @@ def fixed_layouts():
     room, walls, _ = rect(4, 4)
     chosen = layout(room, walls)[0]
     assert chosen == [(0, 0), (1, 0), (2, 0)], chosen
-    # Walled 6x6: inner tiles beside the cauldron first, a free tile between them
+    # Walled 6x6: inner tiles, a free tile between them, the ones farthest from the walls first (decision 825; the tile
+    # order alone gave (3, 1), (1, 3), (3, 3), one of them right in front of the low wall row)
     room, walls, _ = rect(6, 6)
     chosen = layout(room, walls)[0]
-    assert chosen == [(3, 1), (1, 3), (3, 3)], chosen
+    assert chosen == [(3, 2), (1, 3), (3, 4)], chosen
     # Walled 7x7 with four cauldrons: the stands keep the passages between the cauldrons free
     room, walls, _ = rect(7, 7)
     chosen = layout(room, walls)[0]
     assert chosen == [(3, 1), (1, 3), (4, 3)], chosen
+    # There the far placement would put one on the wall edge, so the tile order with three inner tiles is kept
+    # Walled 8x8: off the walls in the middle of the room
+    room, walls, _ = rect(8, 8)
+    chosen = layout(room, walls)[0]
+    assert chosen == [(6, 1), (3, 3), (6, 4)], chosen
     # Free-standing 4x4 room (decision 790 left it empty): now all three stand on its open edge
     room, walls, _ = rect(4, 4, mask=15)
     chosen, _, blocked, _ = layout(room, walls)

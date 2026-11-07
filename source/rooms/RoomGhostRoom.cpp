@@ -618,8 +618,31 @@ void RoomGhostRoom::layoutApparatuses()
     // The apparatuses stand on floor stands inside the room like the furniture of other rooms (decision 793), not bound
     // to the wall: inner tiles first (all eight neighbours belong to the room), then edge tiles at a wall, then edge
     // tiles at an open room side. Tiles under a cauldron and door openings are never used.
-    std::vector<Tile*> candidates;
+    // Within a rank the tiles farthest from any wall come first (decision 825): an inner tile directly in front of the
+    // wall row is taken only after the tiles in the middle of the room, so the apparatuses stand off the wall wherever
+    // the room allows it. The distance is the ring (Chebyshev distance) of the nearest wall tile or map border.
+    // A tile without a wall within the first rings gets this distance
+    const int wallDistanceMax=9;
+    std::map<Tile*,int> wallDistance;
+    for(Tile* tile : ordered)
+    {
+        int distance=wallDistanceMax;
+        for(int radius=1;radius<wallDistanceMax && distance==wallDistanceMax;++radius)
+            for(int y=-radius;y<=radius && distance==wallDistanceMax;++y)
+                for(int x=-radius;x<=radius;++x)
+                {
+                    if(std::max(std::abs(x),std::abs(y))!=radius) continue;
+                    Tile* nearby=getGameMap()->getTile(tile->getX()+x,tile->getY()+y);
+                    if(nearby==nullptr || nearby->isFullTile()) { distance=radius;break; }
+                }
+        wallDistance[tile]=distance;
+    }
+    const std::function<bool(Tile*,Tile*)> fartherFromWall=[&wallDistance](Tile* a,Tile* b) { return wallDistance[a]>wallDistance[b]; };
+    std::map<Tile*,int> tileRank;
+    std::vector<Tile*> byOrder,farFirst;
     for(int rank=0;rank<3;++rank)
+    {
+        std::vector<Tile*> ranked;
         for(Tile* tile : ordered)
         {
             if(blocked.count(tile)!=0 || inOpening(tile)) continue;
@@ -628,53 +651,74 @@ void RoomGhostRoom::layoutApparatuses()
                 if(floor.count(getGameMap()->getTile(tile->getX()+x,tile->getY()+y))==0) inner=false;
             for(int i=0;i<4;++i)
                 if(walkableOutside(getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]))) openSide=true;
-            if((inner?0:openSide?2:1)==rank) candidates.push_back(tile);
+            if((inner?0:openSide?2:1)==rank) { ranked.push_back(tile);tileRank[tile]=rank; }
         }
-    // Pass 0: a free tile between the apparatuses; pass 1: also side by side
-    std::vector<Tile*> chosen;
-    for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)
-    {
-        for(Tile* tile : candidates)
-        {
-            if(chosen.size()>=APPARATUS_COUNT) break;
-            if(std::find(chosen.begin(),chosen.end(),tile)!=chosen.end()) continue;
-            bool beside=false;
-            for(Tile* placed : chosen)
-                if(std::abs(placed->getX()-tile->getX())<=1 && std::abs(placed->getY()-tile->getY())<=1) beside=true;
-            if(pass==0 && beside) continue;
-            std::vector<Tile*> taken=chosen;taken.push_back(tile);
-            if(!keepsReachable(taken)) continue;
-            chosen.push_back(tile);
-        }
+        byOrder.insert(byOrder.end(),ranked.begin(),ranked.end());
+        std::stable_sort(ranked.begin(),ranked.end(),fartherFromWall);
+        farFirst.insert(farFirst.end(),ranked.begin(),ranked.end());
     }
-    // The greedy order can block itself in a small room (a 4x4 room around its cauldron with doors): then every
-    // combination of the first candidates is tried, spaced ones first, and the first one that keeps every tile reachable
-    // wins. Larger rooms succeed greedily, so the search is bounded to the first searchLimit candidates.
-    if(chosen.size()<APPARATUS_COUNT)
+    // Places up to three apparatuses on the candidates in their order
+    const std::function<std::vector<Tile*>(std::vector<Tile*>)> place=[&](std::vector<Tile*> candidates)
     {
-        const size_t searchLimit=40;
-        if(candidates.size()>searchLimit) candidates.resize(searchLimit);
-        std::vector<Tile*> picked;
-        const std::function<bool(size_t,size_t,bool)> search=[&](size_t from,size_t wanted,bool spaced)
+        // Pass 0: a free tile between the apparatuses; pass 1: also side by side
+        std::vector<Tile*> chosen;
+        for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)
         {
-            if(picked.size()==wanted) return keepsReachable(picked);
-            for(size_t index=from;index<candidates.size();++index)
+            for(Tile* tile : candidates)
             {
+                if(chosen.size()>=APPARATUS_COUNT) break;
+                if(std::find(chosen.begin(),chosen.end(),tile)!=chosen.end()) continue;
                 bool beside=false;
-                for(Tile* placed : picked)
-                    if(std::abs(placed->getX()-candidates[index]->getX())<=1 && std::abs(placed->getY()-candidates[index]->getY())<=1) beside=true;
-                if(spaced && beside) continue;
-                picked.push_back(candidates[index]);
-                if(search(index+1,wanted,spaced)) return true;
-                picked.pop_back();
+                for(Tile* placed : chosen)
+                    if(std::abs(placed->getX()-tile->getX())<=1 && std::abs(placed->getY()-tile->getY())<=1) beside=true;
+                if(pass==0 && beside) continue;
+                std::vector<Tile*> taken=chosen;taken.push_back(tile);
+                if(!keepsReachable(taken)) continue;
+                chosen.push_back(tile);
             }
-            return false;
-        };
-        bool found=false;
-        for(size_t wanted=APPARATUS_COUNT;wanted>chosen.size() && !found;--wanted)
-            for(int spaced=1;spaced>=0 && !found;--spaced)
-                if(search(0,wanted,spaced==1)) { chosen=picked;found=true; }
-    }
+        }
+        // The greedy order can block itself in a small room (a 4x4 room around its cauldron with doors): then every
+        // combination of the first candidates is tried, spaced ones first, and the first one that keeps every tile
+        // reachable wins. Larger rooms succeed greedily, so the search is bounded to the first searchLimit candidates.
+        if(chosen.size()<APPARATUS_COUNT)
+        {
+            const size_t searchLimit=40;
+            if(candidates.size()>searchLimit) candidates.resize(searchLimit);
+            std::vector<Tile*> picked;
+            const std::function<bool(size_t,size_t,bool)> search=[&](size_t from,size_t wanted,bool spaced)
+            {
+                if(picked.size()==wanted) return keepsReachable(picked);
+                for(size_t index=from;index<candidates.size();++index)
+                {
+                    bool beside=false;
+                    for(Tile* placed : picked)
+                        if(std::abs(placed->getX()-candidates[index]->getX())<=1 && std::abs(placed->getY()-candidates[index]->getY())<=1) beside=true;
+                    if(spaced && beside) continue;
+                    picked.push_back(candidates[index]);
+                    if(search(index+1,wanted,spaced)) return true;
+                    picked.pop_back();
+                }
+                return false;
+            };
+            bool found=false;
+            for(size_t wanted=APPARATUS_COUNT;wanted>chosen.size() && !found;--wanted)
+                for(int spaced=1;spaced>=0 && !found;--spaced)
+                    if(search(0,wanted,spaced==1)) { chosen=picked;found=true; }
+        }
+        return chosen;
+    };
+    // Far from the walls first (decision 825), unless the tile order places more apparatuses or more of them on inner
+    // tiles or on tiles at a wall rather than at an open side; equal places keep the far placement
+    const std::function<std::vector<int>(const std::vector<Tile*>&)> score=[&](const std::vector<Tile*>& placed)
+    {
+        std::vector<int> value(3,0);
+        value[0]=static_cast<int>(placed.size());
+        for(Tile* tile : placed) { value[1]+=tileRank[tile]==0?1:0;value[2]+=tileRank[tile]<=1?1:0; }
+        return value;
+    };
+    std::vector<Tile*> chosen=place(farFirst);
+    const std::vector<Tile*> inOrder=place(byOrder);
+    if(score(inOrder)>score(chosen)) chosen=inOrder;
     // In tile order as in the room picture, left to right: mana still, ghost press, soul forge
     std::sort(chosen.begin(),chosen.end(),tileOrder);
     const GhostProduct order[APPARATUS_COUNT]={GhostProduct::mana,GhostProduct::research,GhostProduct::crystal};

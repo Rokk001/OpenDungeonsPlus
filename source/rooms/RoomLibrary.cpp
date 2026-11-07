@@ -402,25 +402,31 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
     return false;
 }
 
-bool RoomLibrary::hasCarryEntitySpot(GameEntity* carriedEntity)
+Tile* RoomLibrary::bookshelfTile()
 {
-    if(carriedEntity == nullptr || carriedEntity->getObjectType() != GameEntityType::itemBagEntity || mCoveredTiles.empty())
-        return false;
-    const ItemInstance* item = static_cast<ItemBagEntity*>(carriedEntity)->getItem();
-    return item != nullptr && item->mGhostItem == GhostItem::researchBook;
-}
-
-Tile* RoomLibrary::askSpotForCarriedEntity(GameEntity* carriedEntity)
-{
-    if(!hasCarryEntitySpot(carriedEntity))
-        return nullptr;
     for(Tile* tile : mCoveredTiles)
     {
         BuildingObject* object = getBuildingObjectFromTile(tile);
         if(object != nullptr && object->getMeshName() == "Bookshelf")
             return tile;
     }
-    return mCoveredTiles.front();
+    return nullptr;
+}
+
+bool RoomLibrary::hasCarryEntitySpot(GameEntity* carriedEntity)
+{
+    if(carriedEntity == nullptr || carriedEntity->getObjectType() != GameEntityType::itemBagEntity || mCoveredTiles.empty())
+        return false;
+    const ItemInstance* item = static_cast<ItemBagEntity*>(carriedEntity)->getItem();
+    // A library without a bookshelf takes no book; the book then goes to the treasury (G5, G6)
+    return item != nullptr && item->mGhostItem == GhostItem::researchBook && bookshelfTile() != nullptr;
+}
+
+Tile* RoomLibrary::askSpotForCarriedEntity(GameEntity* carriedEntity)
+{
+    if(!hasCarryEntitySpot(carriedEntity))
+        return nullptr;
+    return bookshelfTile();
 }
 
 void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
