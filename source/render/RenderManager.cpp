@@ -3909,6 +3909,10 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
                     getTreasuryCameraDistance(renderedMovableEntity->getPosition()));
         }
         meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName, pileFar);
+        // A full ghost room wall hook is drawn as the bare hook; BuildingObject::createMeshLocal hangs the textured
+        // hunter backpack on it, so the pack on the hook looks like the pack the hunters wear (decision 798)
+        if(meshName == "GhostHook")
+            meshName = "GhostHookEmpty";
         refreshCreaturesOnTile(renderedMovableEntity->getPositionTile());
         refreshBuriedObjectsOnTile(renderedMovableEntity->getPositionTile());
     }
