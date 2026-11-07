@@ -4,6 +4,7 @@
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 #include "game/SeatData.h"
+#include <OgreVector3.h>
 #include <array>
 #include <map>
 #include <memory>
@@ -81,6 +82,9 @@ public:
     size_t getHunterHookSlot(const Creature& hunter) const;
     //! \brief Returns the exact cauldron anchor reserved by a hunter.
     Tile* getHunterCauldron(const Creature& hunter) const;
+    //! \brief Returns the delivery point of a cauldron (decision 845): the top of the trap socket over the middle of the
+    //! cauldron's mouth, where the hunter sets the trap and the ghost waits while it flows into the cauldron.
+    static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor);
     //! \brief Reserves the nearest free equipment hook for a hunter.
     Tile* reserveHook(Creature& hunter);
     //! \brief Changes a reserved hook between its equipped and empty appearance.

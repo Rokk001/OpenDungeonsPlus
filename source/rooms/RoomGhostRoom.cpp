@@ -1102,6 +1102,14 @@ Tile* RoomGhostRoom::getHunterCauldron(const Creature& hunter) const
     return nullptr;
 }
 
+Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(const Tile& anchor)
+{
+    // The cauldron stands centred on its 2x2 block (createCauldronObjects); the glowing intake ring of its trap socket
+    // tops out 1.574 above the floor (models/GhostCauldron.mesh, measured on the export)
+    static const float TRAP_SOCKET_HEIGHT=1.574f;
+    return Ogre::Vector3(anchor.getX()+0.5f,anchor.getY()+0.5f,TRAP_SOCKET_HEIGHT);
+}
+
 void RoomGhostRoom::releaseCauldron(Creature& hunter)
 {
     for(Cauldron& cauldron : mCauldrons) if(cauldron.hunter==&hunter) cauldron.hunter=nullptr;

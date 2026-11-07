@@ -379,7 +379,7 @@ int main(int argc,char** argv){try {
         {T::roomArena,"LevelCap",20,20,26.66666,40},{T::roomPrison,"Capacity",1,1,1.5,2},{T::roomPrison,"SkeletonLevel",1,1,2,3},
         {T::roomCrypt,"LichCorpses",10,10,8,6},{T::roomCrypt,"LichLevel",0,0,1,2},
         {T::roomGhostRoom,"EctoplasmLevels",10,10,8,6},{T::roomGhostRoom,"BoxCapacity",1,1,2,3},
-        {T::roomGhostRoom,"BeamRange",1,1,2,3},{T::roomGhostRoom,"CatchTime",5.5,5.5,4.4,3.6685},
+        {T::roomGhostRoom,"BeamRange",1,1,2,3},{T::roomGhostRoom,"CatchTime",20,20,16,13.34},
         {T::roomGhostRoom,"RevivePrice",14000,14000,12000,10000},{T::roomBridgeWooden,"ClaimResistance",1,1,1.25,1.5},{T::roomBridgeStone,"ClaimResistance",1,1,1.5,2},
         {T::roomTorture,"ConversionSpeed",1,1,1.218,1.436},{T::roomTemple,"PrayerMana",60,60,72,84},
         {T::keeperDominion,"CreatureLimit",10,12,14,16},{T::tavernBeer,"PortalCooldown",50,50,45,40},

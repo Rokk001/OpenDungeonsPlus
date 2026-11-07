@@ -110,6 +110,38 @@ double CreatureActionHuntGhost::getCaptureTurns() const
     return ConfigManager::getSingleton().getRoomConfigDouble("GhostBeamSeconds")*ODApplication::turnsPerSecond;
 }
 
+uint32_t CreatureActionHuntGhost::getBoxVisualState() const
+{
+    if(!hasBackpack()) return 0u;
+    if(mState==2) return 1u;
+    if(mState==3 || mState==9) return 3u;
+    if(mState==10) return 4u;
+    // At the cauldron the trap stands open in the trap socket while its ghost flows into the cauldron (decision 845)
+    if(isTransferring()) return 5u;
+    return 2u;
+}
+
+std::string CreatureActionHuntGhost::getThrowGhostName() const
+{
+    if(mState==2 || mState==3 || mState==10 || mState==9) return mTarget;
+    if(isTransferring()) return mGhosts.front();
+    return std::string();
+}
+
+double CreatureActionHuntGhost::getTransferTurns() const
+{
+    // One ghost flows from the trap socket into the cauldron in GhostTransferSeconds (decision 845); it replaces the
+    // GhostEmptyTurns emptying with its one-second Empty clip. Hunter efficiency no longer shortens it; the CatchTime
+    // research of the room, which shortened the emptying, now shortens the transfer
+    return researched("GhostTransferSeconds","CatchTime")*ODApplication::turnsPerSecond;
+}
+
+bool CreatureActionHuntGhost::isTransferring() const
+{
+    return mState==6 && !mGhosts.empty() && mDestination!=nullptr && !mEmptyRoom.empty() && mEmptyAnchor!=nullptr &&
+        !mCreature.isMoving() && mCreature.getPositionTile()==mDestination;
+}
+
 double CreatureActionHuntGhost::researched(const std::string& key,const std::string& effect) const
 { return SkillManager::getResearchValue(mCreature.getSeat(),SkillType::roomGhostRoom,ConfigManager::getSingleton().getRoomConfigDouble(key),effect); }
 
@@ -454,14 +486,22 @@ bool CreatureActionHuntGhost::handleHunt()
         RoomGhostRoom* empty=roomNamed(map,mEmptyRoom);
         if(empty==nullptr || empty->getSeat()!=mCreature.getSeat()) { interrupt();return false; }
         if(mCreature.getAnimationStateName()!=EntityAnimation::empty_anim) mCreature.setAnimationState(EntityAnimation::empty_anim,true,Ogre::Vector3::ZERO,false);
+        // The hunter sets the trap into the trap socket over the cauldron's mouth, the delivery point (decision 845): the
+        // ghost waits there, the client shows it flowing out of the open trap down into the cauldron, and it reaches the
+        // cauldron after GhostTransferSeconds. mTurns is saved, so a loaded game resumes the remaining time.
+        if(mEmptyAnchor==nullptr) mEmptyAnchor=empty->getHunterCauldron(mCreature);
+        if(mEmptyAnchor==nullptr) { interrupt();return false; }
+        GhostEntity* poured=ghostNamed(map,mGhosts.front());
+        const Ogre::Vector3 socket=RoomGhostRoom::getTrapSocketPosition(*mEmptyAnchor);
+        if(poured!=nullptr && poured->getPosition()!=socket) poured->teleport(socket);
         if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }
-        // Emptying is the hunting step that hunter efficiency and the CatchTime research shorten (decision 726).
-        const double duration=researched("GhostEmptyTurns","CatchTime")/mCreature.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency();
+        const double duration=getTransferTurns();
         while(!mGhosts.empty() && mTurns>=duration)
         {
             mTurns-=duration;GhostEntity* ghost=ghostNamed(map,mGhosts.front());
             if(ghost!=nullptr) empty->emptyGhost(mCreature,*ghost);
             mGhosts.erase(mGhosts.begin());
+            // The next ghost of the pack comes into the socket on the next turn
         }
         if(mGhosts.empty()) { empty->releaseCauldron(mCreature);empty->updateActiveSpots();mDestination=nullptr;mState=7;return true; }
         return false;

@@ -119,7 +119,7 @@ def item_flow_and_unlocks():
         "mine.pendingEctoplasm+=theirs.pendingEctoplasm+(theirs.working?1:0);", "mine.crystalEctoplasm+=theirs.crystalEctoplasm;")
     # G10 (decision 793): one of each apparatus on a floor stand inside the room, outside door openings, every other tile reachable
     layout = body(room, "void RoomGhostRoom::layoutApparatuses(")
-    has(layout, "placement", "for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)", "if(blocked.count(tile)!=0 || inOpening(tile)) continue;", "if(!keepsReachable(taken)) continue;",
+    has(layout, "placement", "for(int pass=spacedFirst?0:1;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)", "if(blocked.count(tile)!=0 || inOpening(tile)) continue;", "if(!keepsReachable(taken)) continue;",
         "GhostProduct::mana,GhostProduct::research,GhostProduct::crystal")
     # Only workers handle the goods: creatures never pick ectoplasm, mana crystals or books up
     has(read("source/creatureaction/CreatureActionPickupItem.cpp"), "worker goods", "if(item->mGhostItem != GhostItem::none)")
