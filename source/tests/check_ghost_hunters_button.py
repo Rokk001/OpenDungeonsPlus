@@ -42,6 +42,12 @@ def has(text, rule, *fragments):
         assert fragment in text, (rule, fragment)
 
 
+# Remove C++ comments so that only code is matched.
+def strip_comments(text):
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    return re.sub(r"//[^\n]*", "", text)
+
+
 # Return the properties of a layout window.
 def props(node):
     return {p.get("name"): p.get("value") for p in node.findall("Property")}
@@ -148,12 +154,30 @@ def icon():
     green = sum(1 for py in range(20, 236) for px in range(20, 236)
                 if (lambda c: c[1] >= 110 and c[1] >= c[0] + 25 and c[1] >= c[2] + 10)(tile.getpixel((px, py))))
     assert green >= 0.08 * 216 * 216, green
+    # Decision 825: painted in the row style, not a render. The free top corners of the inset are the painted cracked
+    # stone of the row tiles (tiles/ItemSlotEmpty.png, the stone without a motif), and the trap carries the warm bronze
+    # of the row's painted metal. The Blender render of decision 800 fails both (correlation below 0.3, bronze 0.4 %).
+    stone = Image.open(repo / "assets-src/gui/icons/tiles/ItemSlotEmpty.png").convert("L")
+    grey = tile.convert("L")
+
+    def correlation(x0, y0, size=38):
+        a = list(stone.crop((x0, y0, x0 + size, y0 + size)).tobytes())
+        b = list(grey.crop((x0, y0, x0 + size, y0 + size)).tobytes())
+        ma, mb = sum(a) / len(a), sum(b) / len(b)
+        cov = sum((u - ma) * (v - mb) for u, v in zip(a, b))
+        return cov / (sum((u - ma) ** 2 for u in a) * sum((v - mb) ** 2 for v in b)) ** 0.5
+
+    for corner in ((18, 18), (200, 18)):
+        assert correlation(*corner) >= 0.85, ("painted stone inset", corner, correlation(*corner))
+    bronze = sum(1 for py in range(20, 236) for px in range(20, 236)
+                 if (lambda c: c[0] >= 120 and c[0] >= c[1] + 25 and c[1] >= c[2] + 10)(tile.getpixel((px, py))))
+    assert bronze >= 0.02 * 216 * 216, bronze
     slots = read("assets-src/gui/icons/slots.json")
     assert re.search(r'"name": "GhostHuntersButton",\s*"width": "128",\s*"xPos": "640",\s*"yPos": "2176",\s*"source": "tiles/GhostHuntersButton.png"', slots)
     credits = read("CREDITS")
     for name in ("assets-src/gui/icons/tiles/GhostHuntersButton.png", "gui/ODIcons.png (GhostHuntersButton)"):
         assert any(row.startswith(name) and "GPLv3+" in row for row in credits.splitlines()), name
-    print("ghost hunters icon: own atlas cell, iron row frame, green-white trap light: ok")
+    print("ghost hunters icon: own atlas cell, iron row frame, painted stone and bronze, green-white trap light: ok")
 
 
 # The game code: the button opens the window like the merchant button, follows the ghost rooms, and the tile click is gone.
@@ -181,7 +205,65 @@ def game_code():
     assert "tileMatchesRoomType(*tileClicked, RoomType::ghostRoom)" not in game, "no ghost room tile click"
     assert "showGhostRoomWindow(tileClicked)" not in game, "no ghost room tile click"
     assert len(re.findall(r"\bshowGhostRoomWindow\(", game)) == 2, "only the definition and the toggle"
-    print("button opens the window, follows the ghost rooms, tile click removed: ok")
+    # Decision 825: the click opened nothing because a human client never knew the owner of a ghost room tile
+    # (findOwnGhostRoomTile compares tile->getSeat()), so the toggle had no tile to open. The server now sends the
+    # owner of ghost room tiles like that of the other rooms, and always the keeper's own tiles.
+    seat = strip_comments(read("source/game/Seat.cpp"))
+    export = body(seat, "void Seat::exportTileToPacket(")
+    owner_switch = export[export.index("switch(tileState.mTileVisual)"):export.index("default:")]
+    ghost_case = owner_switch[owner_switch.index("case TileVisual::ghostRoom:"):]
+    ghost_case = ghost_case[:ghost_case.index("break;")]
+    has(ghost_case, "the owner of a ghost room tile is sent, the own one always", "tileSeatId = tileState.mSeatIdOwner;",
+        "if(tileSeatId == -1 && tile->getSeat() == this && tile->getTileVisual() == TileVisual::ghostRoom)",
+        "tileSeatId = getId();")
+    update = body(seat, "void Seat::updateTileStateForSeat(")
+    remembered = update[update.index("switch(jj->second.mTileVisual)"):]
+    first = remembered[:remembered.index("jj->second.mSeatIdOwner = tile->getSeat()->getId();")]
+    assert "case TileVisual::ghostRoom:" in first, "the ghost room owner is remembered for humans too"
+    ai_only = remembered[remembered.index("case TileVisual::merchantRoom:"):]
+    ai_only = ai_only[:ai_only.index("break;")]
+    assert "TileVisual::ghostRoom" not in ai_only, "no longer only for AI seats"
+    reader = body(strip_comments(read("source/entities/Tile.cpp")), "void Tile::updateFromPacket(")
+    has(reader, "the client takes the sent owner", "Seat* seat = getGameMap()->getSeatById(seatId);", "setSeat(seat);")
+    # Replay: an own ghost room tile now reaches findOwnGhostRoomTile with its seat; before, the seat was always -1
+    def sent(visual, stored, own, fixed):
+        if not fixed:
+            return -1 if visual == "ghostRoom" else stored
+        return 1 if visual == "ghostRoom" and stored == -1 and own else stored
+    assert [sent("ghostRoom", -1, True, False), sent("ghostRoom", -1, True, True), sent("ghostRoom", 2, False, True),
+            sent("ghostRoom", -1, False, True)] == [-1, 1, 2, -1]
+    print("button opens the window, follows the ghost rooms, tile click removed, own tiles known: ok")
+
+
+# Decision 825: the merchant button (scale icon) is shown while the keeper has a merchant room and opens its window;
+# both buttons carry a tooltip and a context help line.
+def merchant_and_tooltips():
+    root = ET.parse(repo / "gui/ModeGame.layout").getroot()
+    nodes = {n.get("name"): n for n in root.iter("Window")}
+    for name, tooltip in (("MerchantButton", "Merchant (K)"), ("GhostHuntersButton", "Ghost hunters")):
+        p = props(nodes[name])
+        assert p["TooltipText"] == tooltip, (name, p.get("TooltipText"))
+        help_lines = {u.get("name"): u.get("value") for u in nodes[name].findall("UserString")}
+        assert help_lines.get("ContextHelp", "").startswith(tooltip.split(" (")[0] + ":"), (name, help_lines)
+    assert props(nodes["MerchantButton"])["NormalImage"] == "OpenDungeonsIcons/MerchantButton", "the scale icon"
+    game = read("source/modes/GameMode.cpp")
+    frame = body(game, "void GameMode::onFrameStarted(")
+    has(frame, "shown while the keeper has a merchant room",
+        "merchantPlayer->getSeat()->getNbRooms(RoomType::merchant) > 0;", 'mRootWindow->getChild("MerchantButton")->setVisible(hasMerchant);')
+    merchant = read("source/modes/GameModeMerchant.cpp")
+    has(body(merchant, "void GameMode::initializeMerchantWindow()"), "the click opens the merchant window",
+        'addEventConnection(mRootWindow->getChild("MerchantButton")->subscribeEvent(CEGUI::PushButton::EventClicked,\n'
+        '        CEGUI::Event::Subscriber(&GameMode::toggleMerchantWindow, this)));')
+    toggle = body(merchant, "bool GameMode::toggleMerchantWindow(")
+    has(toggle, "opens the window and asks the server for its stock",
+        "player->getSeat()->getNbRooms(RoomType::merchant) == 0) return true;", 'mRootWindow->getChild("MerchantWindow")->show();',
+        "new ClientNotification(ClientNotificationType::askMerchantWindow);", "request->mPacket << true;")
+    assert game.count("initializeMerchantWindow();") == 1, "connected once"
+    assert "case ClientNotificationType::askMerchantWindow:" in read("source/network/ODServer.cpp")
+    # The test map has a merchant room for the keeper, so the button is shown there
+    level = read("levels/skirmish/TestGhosts.level")
+    assert re.search(r"\[Room\]\n20\tMerchant1\t1\t16\n", level), "a merchant room of seat 1 on [Test] Ghosts"
+    print("merchant button shown with a merchant room and opens its window, tooltips on both buttons: ok")
 
 
 # The start choice of decision 800, read from the code and replayed for every room research level.
@@ -221,6 +303,7 @@ def main():
     resolutions(root, nodes, row)
     icon()
     game_code()
+    merchant_and_tooltips()
     start_choice()
     print("ghost hunters button: ok")
 

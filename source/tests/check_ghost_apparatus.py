@@ -182,8 +182,17 @@ def treasury_rule():
         "config.getMaxManaPerSeat() - getSeat()->getMana() >= config.getRoomConfigDouble(\"GhostEctoplasmMana\")")
     has(body(temple, "bool RoomDungeonTemple::hasCarryEntitySpot("), "heart takes mana crystals",
         "case GameEntityType::itemBagEntity:\n            return canBreakManaCrystal(*carriedEntity);")
-    has(body(read("source/rooms/RoomLibrary.cpp"), "bool RoomLibrary::hasCarryEntitySpot("), "a library takes every book",
-        "item->mGhostItem == GhostItem::researchBook")
+    library = read("source/rooms/RoomLibrary.cpp")
+    has(body(library, "bool RoomLibrary::hasCarryEntitySpot("), "a library with a bookshelf takes every book (G5)",
+        "item->mGhostItem == GhostItem::researchBook && bookshelfTile() != nullptr")
+    shelf = body(library, "Tile* RoomLibrary::bookshelfTile(")
+    has(shelf, "only a bookshelf tile holds a book", "object->getMeshName() == \"Bookshelf\"", "return tile;", "return nullptr;")
+    spot = body(library, "Tile* RoomLibrary::askSpotForCarriedEntity(")
+    has(spot, "the worker is sent to a bookshelf only", "return bookshelfTile();")
+    for text, rule in ((spot, "askSpotForCarriedEntity"), (shelf, "bookshelfTile")):
+        assert "mCoveredTiles.front()" not in text, ("no plain tile fallback for a research book (G5)", rule)
+    opening = body(library, "bool RoomLibrary::openResearchBook(")
+    has(opening, "a researcher opens a lying book", "bag->getItem()->mGhostItem != GhostItem::researchBook", "bag->takeItem();")
     has(body(read("source/rooms/RoomMerchant.cpp"), "bool RoomMerchant::hasCarryEntitySpot("), "the merchant takes the level crystal only",
         "item->mGhostItem == GhostItem::none")
     print("treasury rule: ok")

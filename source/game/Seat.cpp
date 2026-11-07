@@ -2430,6 +2430,8 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
         case TileVisual::toiletRoom:
         case TileVisual::tavernRoom:
         case TileVisual::spaRoom:
+        // The ghost room owner is remembered for humans too: the ghost hunters button needs the own room tiles
+        case TileVisual::ghostRoom:
             if(tile->getSeat() == nullptr)
             {
                 OD_LOG_ERR("Tile=" + Tile::displayAsString(tile));
@@ -2457,7 +2459,6 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
         case TileVisual::herbGardenRoom:
         case TileVisual::alchemyLabRoom:
         case TileVisual::infirmaryRoom:
-        case TileVisual::ghostRoom:
             jj->second.mSeatIdOwner = (mPlayer != nullptr && !mPlayer->getIsHuman() && tile->getSeat() != nullptr)
                 ? tile->getSeat()->getId() : -1;
             break;
@@ -2563,6 +2564,13 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
             case TileVisual::spaRoom:
                 
                 tileSeatId = tileState.mSeatIdOwner;
+                break;
+            // The client finds the keeper's own ghost rooms by the tile owner (ghost hunters button, decision 825);
+            // a state stored before the owner was remembered for humans still has -1, the own room is always known
+            case TileVisual::ghostRoom:
+                tileSeatId = tileState.mSeatIdOwner;
+                if(tileSeatId == -1 && tile->getSeat() == this && tile->getTileVisual() == TileVisual::ghostRoom)
+                    tileSeatId = getId();
                 break;
             case TileVisual::waterGround:
             case TileVisual::lavaGround:
