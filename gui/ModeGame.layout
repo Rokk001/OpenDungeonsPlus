@@ -333,7 +333,7 @@
             <UserString name="ContextHelp" value="Production: view workshop progress and change trap order priority" />
         </Window>
         <Window type="OD/GameTabButton" name="LabButton">
-            <Property name="Area" value="{{0,340},{1,-224},{0,380},{1,-184}}" />
+            <Property name="Area" value="{{0,388},{1,-224},{0,428},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/LabButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />
@@ -378,8 +378,18 @@
             <Property name="Visible" value="False" />
             <UserString name="AllowEdgeScrolling" value="true" />
         </Window>
+        <Window type="OD/GameTabButton" name="GhostHuntersButton">
+            <Property name="Area" value="{{0,340},{1,-224},{0,380},{1,-184}}" />
+            <Property name="NormalImage" value="OpenDungeonsIcons/GhostHuntersButton" />
+            <Property name="NavigationFrame" value="True" />
+            <Property name="AlwaysOnTop" value="True" />
+            <Property name="TooltipText" value="Ghost hunters" />
+            <UserString name="ContextHelp" value="Ghost hunters: ectoplasm progress, the apparatus for the next ectoplasm, revive own" />
+            <Property name="Visible" value="False" />
+            <UserString name="AllowEdgeScrolling" value="true" />
+        </Window>
         <Window type="OD/GameTabButton" name="SandboxButton">
-            <Property name="Area" value="{{0,388},{1,-224},{0,428},{1,-184}}" />
+            <Property name="Area" value="{{0,436},{1,-224},{0,476},{1,-184}}" />
             <Property name="NormalImage" value="OpenDungeonsIcons/WavePortalButton" />
             <Property name="NavigationFrame" value="True" />
             <Property name="AlwaysOnTop" value="True" />

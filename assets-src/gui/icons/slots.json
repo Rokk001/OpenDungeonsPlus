@@ -1139,5 +1139,13 @@
     "xPos": "384",
     "yPos": "2176",
     "source": "tiles/WorkersTitlePlaque.png"
+  },
+  {
+    "height": "128",
+    "name": "GhostHuntersButton",
+    "width": "128",
+    "xPos": "640",
+    "yPos": "2176",
+    "source": "tiles/GhostHuntersButton.png"
   }
 ]

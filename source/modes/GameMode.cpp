@@ -578,7 +578,9 @@ GameMode::GameMode(ModeManager *modeManager):
 
     initializeMerchantWindow();
 
-    // Ghost room keeper controls.
+    // Ghost room keeper controls, opened only by their own button above the minimap (decision 800).
+    addEventConnection(guiSheet->getChild("GhostHuntersButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleGhostRoomWindow, this)));
     addEventConnection(guiSheet->getChild("GhostRoomWindow")->subscribeEvent(
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::hideGhostRoomWindow, this)));
     addEventConnection(guiSheet->getChild("GhostRoomWindow/GhostProductButton")->subscribeEvent(
@@ -1009,6 +1011,7 @@ void GameMode::activate()
     guiSheet->getChild("ObjectivesWindow")->hide();
     guiSheet->getChild("CasinoPayoutWindow")->hide();
     guiSheet->getChild("GhostRoomWindow")->hide();
+    guiSheet->getChild("GhostHuntersButton")->hide();
     guiSheet->getChild("InfirmaryWindow")->hide();
     guiSheet->getChild("InfirmaryButton")->hide();
     mWorkersWindow->hide();
@@ -1660,18 +1663,6 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
            room->getSeat() == localPlayer->getSeat())
         {
             showInfirmaryWindow(tileClicked);
-            return true;
-        }
-    }
-
-    // Clients identify ghost rooms through the tile visual sent by the server.
-    if(mPlayerSelection.getCurrentAction() == SelectedAction::none)
-    {
-        Player* localPlayer = mGameMap->getLocalPlayer();
-        if(localPlayer != nullptr && tileClicked->getSeat() == localPlayer->getSeat() &&
-            tileMatchesRoomType(*tileClicked, RoomType::ghostRoom))
-        {
-            showGhostRoomWindow(tileClicked);
             return true;
         }
     }
@@ -2546,6 +2537,11 @@ void GameMode::onFrameStarted(const Ogre::FrameEvent& evt)
     const bool hasLab = labPlayer != nullptr && labPlayer->getSeat() != nullptr &&
         labPlayer->getSeat()->getNbRooms(RoomType::alchemyLab) > 0;
     mRootWindow->getChild("LabButton")->setVisible(hasLab);
+    // The ghost hunters button follows the keeper's ghost rooms like the merchant button follows the merchant room
+    const bool hasGhostRoom = merchantPlayer != nullptr && merchantPlayer->getSeat() != nullptr &&
+        merchantPlayer->getSeat()->getNbRooms(RoomType::ghostRoom) > 0;
+    mRootWindow->getChild("GhostHuntersButton")->setVisible(hasGhostRoom);
+    if(!hasGhostRoom && mRootWindow->getChild("GhostRoomWindow")->isVisible()) hideGhostRoomWindow();
 
     // Recover releases missed while focus was elsewhere without changing the toggle.
     if(!getKeyboard()->isKeyDown(OIS::KC_LMENU))
@@ -6136,7 +6132,39 @@ void GameMode::buildPlayerSettingsWindow()
     getModeManager().getGui().registerWindowHierarchy(tmpWin);
 }
 
-//! \brief Opens the selected own ghost room and requests its authoritative switches.
+//! \brief Returns a tile of one of the local keeper's ghost rooms; clients know them by the tile visual the server sends.
+Tile* GameMode::findOwnGhostRoomTile() const
+{
+    Player* player = mGameMap->getLocalPlayer();
+    if(player == nullptr || player->getSeat() == nullptr)
+        return nullptr;
+    Tile* remembered = mGameMap->getTile(mGhostRoomX, mGhostRoomY);
+    if(remembered != nullptr && remembered->getSeat() == player->getSeat() && tileMatchesRoomType(*remembered, RoomType::ghostRoom))
+        return remembered;
+    for(int y = 0; y < mGameMap->getMapSizeY(); ++y)
+        for(int x = 0; x < mGameMap->getMapSizeX(); ++x)
+        {
+            Tile* tile = mGameMap->getTile(x, y);
+            if(tile != nullptr && tile->getSeat() == player->getSeat() && tileMatchesRoomType(*tile, RoomType::ghostRoom))
+                return tile;
+        }
+    return nullptr;
+}
+
+//! \brief Opens or closes the ghost room window from the ghost hunters button, like the merchant button does.
+bool GameMode::toggleGhostRoomWindow(const CEGUI::EventArgs&)
+{
+    if(mRootWindow->getChild("GhostRoomWindow")->isVisible())
+        return hideGhostRoomWindow();
+    Player* player = mGameMap->getLocalPlayer();
+    if(!isConnected() || player == nullptr || player->getSeat() == nullptr ||
+        player->getSeat()->getNbRooms(RoomType::ghostRoom) == 0)
+        return true;
+    showGhostRoomWindow(findOwnGhostRoomTile());
+    return true;
+}
+
+//! \brief Opens the window for one own ghost room tile and requests its authoritative switches.
 void GameMode::showGhostRoomWindow(Tile* tile)
 {
     Player* player = mGameMap->getLocalPlayer();
@@ -6221,13 +6249,15 @@ void GameMode::setGhostRoomSettingsShown(int32_t x, int32_t y, uint32_t product,
 void GameMode::refreshGhostRoomWindow()
 {
     Player* player = mGameMap->getLocalPlayer();
-    Tile* tile = mGameMap->getTile(mGhostRoomX, mGhostRoomY);
-    if(player == nullptr || player->getSeat() == nullptr || tile == nullptr ||
-        tile->getSeat() != player->getSeat() || !tileMatchesRoomType(*tile, RoomType::ghostRoom))
+    // A sold or lost room hands the window to another own ghost room; without one it closes
+    Tile* tile = findOwnGhostRoomTile();
+    if(player == nullptr || player->getSeat() == nullptr || tile == nullptr)
     {
         hideGhostRoomWindow();
         return;
     }
+    mGhostRoomX = tile->getX();
+    mGhostRoomY = tile->getY();
     Seat* seat = player->getSeat();
     // Only the progress to the next ectoplasm: every full one is already an item next to its cauldron
     const double perEctoplasm = RoomGhostRoom::getLevelsPerEctoplasm(*seat);

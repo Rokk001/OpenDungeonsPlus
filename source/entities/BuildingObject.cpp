@@ -131,6 +131,36 @@ void BuildingObject::createMeshLocal(NodeType type)
         mGhostFillNode->attachObject(fill);
         mGhostFillNode->setScale(1.0f,1.0f,static_cast<float>(std::max(0.0,mGhostFill)));
     }
+    if(!getIsOnServerMap() && getMeshName()=="GhostHook" && getEntityNode()!=nullptr)
+    {
+        // The pack on the wall hook is the textured pack the hunters wear (decision 798): the renderer draws the bare
+        // hook (GhostHookEmpty) for a full hook, and the worn GhostBackpack with its holstered capture cannon hangs on it.
+        // In the hook's frame the wall bolts lie at -y and the hook tip at about y 0.075, z 0.49 to 0.64.
+        const Ogre::Real packHeight=0.30f,packBackY=0.03f,packTopZ=0.56f;
+        Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+        Ogre::Entity* pack=scene->createEntity(getName()+"_GhostHookPack","GhostBackpack.mesh");
+        pack->setCastShadows(true);pack->setQueryFlags(0);
+        const Ogre::AxisAlignedBox packBounds=pack->getMesh()->getBounds();
+        const Ogre::Vector3 packSize=packBounds.getSize();
+        const Ogre::Real fit=packHeight/packSize.z;
+        // Half a turn round the vertical axis: the straps (+y of the pack) lie against the hook and the wall, the
+        // generator plate with its power cells faces the room as on the hunter's back
+        mGhostHookPackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostHookPackNode",
+            Ogre::Vector3(fit*0.5f*(packBounds.getMinimum().x+packBounds.getMaximum().x),
+                packBackY+fit*packBounds.getMaximum().y,packTopZ-fit*packBounds.getMaximum().z),
+            Ogre::Quaternion(Ogre::Degree(180.0f),Ogre::Vector3::UNIT_Z));
+        mGhostHookPackNode->setScale(Ogre::Vector3(fit,fit,fit));
+        mGhostHookPackNode->attachObject(pack);
+        // The capture cannon waits upright in its holster on the pack's side, exactly as on the worn pack
+        // (Creature::updateGhostHuntVisuals)
+        Ogre::Entity* gun=scene->createEntity(getName()+"_GhostHookPackGun","GhostCaptureGun.mesh");
+        gun->setCastShadows(true);gun->setQueryFlags(0);
+        const Ogre::Real holster=0.85f*packSize.z/gun->getMesh()->getBounds().getSize().z;
+        Ogre::SceneNode* holsterNode=mGhostHookPackNode->createChildSceneNode(getName()+"_GhostHookHolsterNode",
+            Ogre::Vector3(-0.5f*packSize.x-0.045f,0.0f,0.05f*packSize.z));
+        holsterNode->setScale(Ogre::Vector3(holster,holster,holster));
+        holsterNode->attachObject(gun);
+    }
     if(!getIsOnServerMap() && mItemBagQuality >= 0)
         RenderManager::getSingleton().rrRefreshItemBagAppearance(this, static_cast<Quality>(mItemBagQuality), mItemBagSealed);
 }
@@ -255,6 +285,27 @@ void BuildingObject::destroyMeshLocal(NodeType type)
             mGhostLampNode->detachObject(object);scene->destroyMovableObject(object);
         }
         scene->destroySceneNode(mGhostLampNode);mGhostLampNode=nullptr;
+    }
+    if(mGhostHookPackNode!=nullptr)
+    {
+        // The holster node with the cannon first, then the pack itself
+        Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+        while(mGhostHookPackNode->numChildren()>0)
+        {
+            Ogre::SceneNode* child=static_cast<Ogre::SceneNode*>(mGhostHookPackNode->getChild(static_cast<unsigned short>(0)));
+            while(child->numAttachedObjects()>0)
+            {
+                Ogre::MovableObject* object=child->getAttachedObject(static_cast<unsigned short>(0));
+                child->detachObject(object);scene->destroyMovableObject(object);
+            }
+            scene->destroySceneNode(child);
+        }
+        while(mGhostHookPackNode->numAttachedObjects()>0)
+        {
+            Ogre::MovableObject* object=mGhostHookPackNode->getAttachedObject(static_cast<unsigned short>(0));
+            mGhostHookPackNode->detachObject(object);scene->destroyMovableObject(object);
+        }
+        scene->destroySceneNode(mGhostHookPackNode);mGhostHookPackNode=nullptr;
     }
     RenderedMovableEntity::destroyMeshLocal(type);
 }

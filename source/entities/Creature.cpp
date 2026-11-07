@@ -12780,9 +12780,15 @@ void Creature::clearGhostHuntVisuals()
     // The hunter's own weapons come back as its combat look wants them.
     if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
     mGhostCaptureShown=0.0;
+    mGhostLidShown=0.0;
+    // The light of the open trap goes with the box
+    if(mGhostTrapGlow!=nullptr) { scene->destroyBillboardSet(mGhostTrapGlow);mGhostTrapGlow=nullptr; }
+    if(mGhostTrapCone!=nullptr) { scene->destroyBillboardChain(mGhostTrapCone);mGhostTrapCone=nullptr; }
+    if(mGhostTrapNode!=nullptr) { scene->destroySceneNode(mGhostTrapNode);mGhostTrapNode=nullptr; }
     if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
     if(mGhostBeamSparks!=nullptr) { scene->destroyParticleSystem(mGhostBeamSparks);mGhostBeamSparks=nullptr; }
     if(mGhostSparkNode!=nullptr) { scene->destroySceneNode(mGhostSparkNode);mGhostSparkNode=nullptr; }
+    if(mGhostBeamImpact!=nullptr) { scene->destroyBillboardSet(mGhostBeamImpact);mGhostBeamImpact=nullptr; }
     if(mGhostBeamChain!=nullptr) { scene->destroyBillboardChain(mGhostBeamChain);mGhostBeamChain=nullptr; }
     if(mGhostBeamNode!=nullptr) { scene->destroySceneNode(mGhostBeamNode);mGhostBeamNode=nullptr; }
     if(mGhostBackpackNode!=nullptr)
@@ -12922,6 +12928,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
     }
     // The thrown and lying box keeps the size it had in the hand (mesh size times the hunter's level growth).
     if(mGhostBoxNode!=nullptr) mGhostBoxNode->setScale(getEntityNode()->getScale());
+    // How far the trap is open and how bright its light shines this frame (decisions 801 and 806)
+    double lidTarget=0.0,trapLight=0.0;
+    const ConfigManager& config=ConfigManager::getSingleton();
     if(mGhostBoxNode!=nullptr)
     {
         mGhostBoxNode->setVisible(lyingBox);
@@ -12934,19 +12943,26 @@ void Creature::updateGhostHuntVisuals(double seconds)
             if(mGhostBoxMode==1)
             {
                 mGhostThrowClientTurns+=seconds*ODApplication::turnsPerSecond*getGameMap()->getGameSpeedFactor();
-                const double duration=ConfigManager::getSingleton().getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond;
+                const double duration=config.getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond;
                 const float progress=static_cast<float>(std::min(1.0,mGhostThrowClientTurns/duration));
                 position=hand+(floor-hand)*progress;
                 position.z+=4.0f*progress*(1.0f-progress)*0.5f;
                 mGhostCaptureShown=0.0;
+                // The lid stays shut in flight
+                mGhostLidShown=0.0;
             }
             else if(mGhostBoxMode==4)
             {
-                // The box snaps shut over the fully pulled-in ghost for GhostBoxSnapSeconds: a hard jolt with the bang,
-                // then it rocks and settles until the catch is complete.
+                // The box snaps shut over the fully pulled-in ghost for GhostBoxSnapSeconds: the lid slams down within
+                // GhostLidSnapSeconds with the bang, a hard jolt, then it rocks and settles until the catch is complete;
+                // the light of the trap fades within GhostTrapFadeSeconds.
                 mGhostThrowClientTurns+=seconds*ODApplication::turnsPerSecond*getGameMap()->getGameSpeedFactor();
-                const double duration=ConfigManager::getSingleton().getRoomConfigDouble("GhostBoxSnapSeconds")*ODApplication::turnsPerSecond;
+                const double duration=config.getRoomConfigDouble("GhostBoxSnapSeconds")*ODApplication::turnsPerSecond;
                 const float progress=static_cast<float>(std::min(1.0,mGhostThrowClientTurns/duration));
+                const double snapped=mGhostThrowClientTurns/ODApplication::turnsPerSecond;
+                mGhostLidShown=std::max(0.0,1.0-snapped/config.getRoomConfigDouble("GhostLidSnapSeconds"));
+                lidTarget=mGhostLidShown;
+                trapLight=std::max(0.0,1.0-snapped/config.getRoomConfigDouble("GhostTrapFadeSeconds"));
                 const float settle=(1.0f-progress)*(1.0f-progress);
                 const float rock=settle*std::sin(progress*6.0f*Ogre::Math::PI);
                 position.z+=0.08f*settle*std::fabs(std::sin(progress*4.0f*Ogre::Math::PI));
@@ -12958,34 +12974,109 @@ void Creature::updateGhostHuntVisuals(double seconds)
             }
             else
             {
-                // The beam pulls the ghost down into the lying box: it shrinks smoothly towards the pulled-in share.
+                // The beam weakens the ghost to half its size, then the open trap pulls it down into its opening
+                // (GhostEntity::updateLook): the share follows the server's pulled-in share smoothly.
                 mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
+                // The lid opens at the start of the beam step within GhostLidOpenSeconds and stays open while the
+                // ghost is pulled in; the trap shines as far as it is open.
+                const double beamed=mGhostThrowTurns*config.getRoomConfigDouble("GhostBeamSeconds");
+                lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));
+                mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);
+                trapLight=mGhostLidShown;
             }
             // Only the snap rocks the box; thrown and lying boxes stand upright.
             if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(Ogre::Quaternion::IDENTITY);
             mGhostBoxNode->setPosition(position);
             ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
+            // The hinged lid of the box mesh turns open on its "Open" clip: 0 shut, the clip end fully open.
+            Ogre::Entity* trap=static_cast<Ogre::Entity*>(mGhostBoxNode->getAttachedObject(static_cast<unsigned short>(0)));
+            if(trap->hasSkeleton() && trap->hasAnimationState("Open"))
+            {
+                Ogre::AnimationState* open=trap->getAnimationState("Open");
+                open->setEnabled(true);open->setLoop(false);
+                open->setTimePosition(static_cast<Ogre::Real>(mGhostLidShown)*open->getLength());
+            }
+            // The open trap lights up in the green-white of the beam (decision 806): a bright glow in its opening and a
+            // light cone shining up out of it, for the whole time it is open, fading when the lid snaps shut.
+            if(trapLight>0.0)
+            {
+                if(mGhostTrapNode==nullptr)
+                {
+                    mGhostTrapNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_GhostTrapLightNode");
+                    mGhostTrapGlow=scene->createBillboardSet(getName()+"_GhostTrapGlow",2);
+                    mGhostTrapGlow->setMaterialName("GhostBeam");mGhostTrapGlow->setCastShadows(false);mGhostTrapGlow->setQueryFlags(0);
+                    mGhostTrapGlow->createBillboard(Ogre::Vector3::ZERO);mGhostTrapGlow->createBillboard(Ogre::Vector3::ZERO);
+                    mGhostTrapNode->attachObject(mGhostTrapGlow);
+                    mGhostTrapCone=scene->createBillboardChain(getName()+"_GhostTrapCone");
+                    mGhostTrapCone->setNumberOfChains(1);mGhostTrapCone->setMaxChainElements(6);
+                    mGhostTrapCone->setMaterialName("GhostBeam");mGhostTrapCone->setCastShadows(false);mGhostTrapCone->setQueryFlags(0);
+                    mGhostTrapNode->attachObject(mGhostTrapCone);
+                }
+                mGhostTrapNode->setVisible(true);
+                const Ogre::Real top=trap->getMesh()->getBounds().getMaximum().z*mGhostBoxNode->getScale().z;
+                mGhostTrapNode->setPosition(position+Ogre::Vector3(0.0f,0.0f,top));
+                const Ogre::Real light=static_cast<Ogre::Real>(trapLight);
+                const Ogre::Real flicker=static_cast<Ogre::Real>(Random::Double(0.85,1.0));
+                const Ogre::Real glow=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostTrapGlowSize"));
+                // A wide soft halo and a small white-hot heart in the opening
+                mGhostTrapGlow->getBillboard(0)->setDimensions(glow*light*flicker,glow*light*flicker);
+                mGhostTrapGlow->getBillboard(0)->setColour(Ogre::ColourValue(0.55f,1.0f,0.65f,0.75f*light));
+                mGhostTrapGlow->getBillboard(1)->setDimensions(0.4f*glow*light*flicker,0.4f*glow*light*flicker);
+                mGhostTrapGlow->getBillboard(1)->setColour(Ogre::ColourValue(0.92f,1.0f,0.94f,light));
+                // The cone widens upwards and fades out at its top
+                const Ogre::Real height=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostTrapConeHeight"));
+                const Ogre::Real base=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostTrapConeBaseWidth"));
+                const Ogre::Real wide=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostTrapConeTopWidth"));
+                mGhostTrapCone->clearChain(0);
+                for(size_t i=0;i<6;++i)
+                {
+                    const Ogre::Real up=static_cast<Ogre::Real>(i)/5.0f;
+                    mGhostTrapCone->addChainElement(0,Ogre::BillboardChain::Element(Ogre::Vector3(0.0f,0.0f,height*up),
+                        (base+(wide-base)*up)*flicker,0.5f,Ogre::ColourValue(0.7f,1.0f,0.78f,0.6f*light*(1.0f-up)),Ogre::Quaternion::IDENTITY));
+                }
+            }
         }
     }
+    if(trapLight<=0.0 && mGhostTrapNode!=nullptr) mGhostTrapNode->setVisible(false);
     if(target==nullptr || mGhostBeamTarget.empty())
     {
         if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
         if(mGhostBeamSparks!=nullptr) { scene->destroyParticleSystem(mGhostBeamSparks);mGhostBeamSparks=nullptr; }
         if(mGhostSparkNode!=nullptr) { scene->destroySceneNode(mGhostSparkNode);mGhostSparkNode=nullptr; }
+        if(mGhostBeamImpact!=nullptr) { scene->destroyBillboardSet(mGhostBeamImpact);mGhostBeamImpact=nullptr; }
         if(mGhostBeamChain!=nullptr) { scene->destroyBillboardChain(mGhostBeamChain);mGhostBeamChain=nullptr; }
         if(mGhostBeamNode!=nullptr) { scene->destroySceneNode(mGhostBeamNode);mGhostBeamNode=nullptr; }
         return;
     }
+    // The capture beam (decision 805, GHOSTS-PLAN section 16.4 GhostBeam): a soft glow round the beam, a thick bright
+    // core, GhostBeamBolts jagged lightning bolts at once with GhostBeamBranches forks each, all re-shaped every
+    // GhostBeamFlickerSeconds, sparks at the cannon tip and a flickering impact glow on the ghost, for the whole beam step.
+    const size_t segments=config.getRoomConfigUInt32("GhostBeamSegments");
+    const size_t bolts=config.getRoomConfigUInt32("GhostBeamBolts");
+    const size_t branches=config.getRoomConfigUInt32("GhostBeamBranches");
     if(mGhostBeamChain==nullptr)
     {
         mGhostBeamChain=scene->createBillboardChain(getName()+"_GhostBeam");
-        mGhostBeamChain->setNumberOfChains(3);mGhostBeamChain->setMaxChainElements(9);
+        // Chain 0 the glow, chain 1 the core, then the bolts, then the forks of every bolt
+        mGhostBeamChain->setNumberOfChains(2+bolts+bolts*branches);mGhostBeamChain->setMaxChainElements(segments+1);
         mGhostBeamChain->setMaterialName("GhostBeam");mGhostBeamChain->setCastShadows(false);mGhostBeamChain->setQueryFlags(0);
         mGhostBeamNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_GhostBeamNode");mGhostBeamNode->attachObject(mGhostBeamChain);
         mGhostBeamSparks=scene->createParticleSystem(getName()+"_GhostBeamSparks","GhostBeam");
         mGhostBeamSparks->setQueryFlags(0);
+        // The tip keeps spraying sparks for the whole beam step
+        const Ogre::Real spark=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostBeamTipSparkSize"));
+        mGhostBeamSparks->setDefaultDimensions(spark,spark);
+        for(unsigned short i=0;i<mGhostBeamSparks->getNumEmitters();++i)
+        {
+            mGhostBeamSparks->getEmitter(i)->setEmissionRate(static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostBeamTipSparkRate")));
+            mGhostBeamSparks->getEmitter(i)->setDuration(0.0f);
+        }
         mGhostSparkNode=mGhostBeamNode->createChildSceneNode(getName()+"_GhostSparkNode");mGhostSparkNode->attachObject(mGhostBeamSparks);
-        mGhostBeamSample=0.1;
+        mGhostBeamImpact=scene->createBillboardSet(getName()+"_GhostBeamImpact",2);
+        mGhostBeamImpact->setMaterialName("GhostBeam");mGhostBeamImpact->setCastShadows(false);mGhostBeamImpact->setQueryFlags(0);
+        mGhostBeamImpact->createBillboard(Ogre::Vector3::ZERO);mGhostBeamImpact->createBillboard(Ogre::Vector3::ZERO);
+        mGhostBeamNode->attachObject(mGhostBeamImpact);
+        mGhostBeamSample=config.getRoomConfigDouble("GhostBeamFlickerSeconds");
         mGhostBeamSound=SoundEffectsManager::getSingleton().startSpatialLoop("Rooms/GhostRoom/Beam",getPosition().x,getPosition().y);
     }
     SoundEffectsManager::getSingleton().setSpatialLoopPosition(mGhostBeamSound,getPosition().x,getPosition().y);
@@ -12993,20 +13084,73 @@ void Creature::updateGhostHuntVisuals(double seconds)
     const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
     const Ogre::Vector3 start=ghostCannonTip(*mGhostCaptureGun);
     if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(start);
+    const double flickerSeconds=config.getRoomConfigDouble("GhostBeamFlickerSeconds");
     mGhostBeamSample+=seconds;
-    if(mGhostBeamSample<0.1) return;
-    mGhostBeamSample=std::fmod(mGhostBeamSample,0.1);
-    for(size_t chain=0;chain<3;++chain)
+    if(mGhostBeamSample<flickerSeconds) return;
+    mGhostBeamSample=std::fmod(mGhostBeamSample,flickerSeconds);
+    const Ogre::Real core=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostBeamCoreWidth"));
+    const Ogre::Real boltWidth=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostBeamBoltWidth"));
+    const Ogre::Real glowWidth=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostBeamGlowWidth"));
+    const double jitter=config.getRoomConfigDouble("GhostBeamJitter");
+    const double branchStep=config.getRoomConfigDouble("GhostBeamBranchLength");
+    const Ogre::Real impact=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostBeamImpactSize"));
+    const Ogre::ColourValue glowColour(0.35f,0.9f,0.45f,0.4f),coreColour(0.92f,1.0f,0.94f,1.0f),boltColour(0.55f,1.0f,0.65f,1.0f);
+    const float last=static_cast<float>(segments);
+    // The glow: straight and wide; the core: almost straight, thick and white-hot
+    for(size_t chain=0;chain<2;++chain)
     {
         mGhostBeamChain->clearChain(chain);
-        for(size_t i=0;i<9;++i)
+        const double wobble=chain==0?0.0:0.25*jitter;
+        const Ogre::Real width=(chain==0?glowWidth:core)*static_cast<Ogre::Real>(Random::Double(0.8,1.2));
+        for(size_t i=0;i<=segments;++i)
         {
-            const float fraction=static_cast<float>(i)/8.0f;
+            const float fraction=static_cast<float>(i)/last;
             Ogre::Vector3 point=start+(end-start)*fraction;
-            if(i!=0 && i!=8) point+=Ogre::Vector3(Random::Double(-0.08,0.08),Random::Double(-0.08,0.08),Random::Double(-0.08,0.08));
-            mGhostBeamChain->addChainElement(chain,Ogre::BillboardChain::Element(point,0.025f,fraction,Ogre::ColourValue(0.55f,1.0f,0.65f,1.0f),Ogre::Quaternion::IDENTITY));
+            if(i!=0 && i!=segments) point+=Ogre::Vector3(Random::Double(-wobble,wobble),Random::Double(-wobble,wobble),Random::Double(-wobble,wobble));
+            mGhostBeamChain->addChainElement(chain,Ogre::BillboardChain::Element(point,width,fraction,chain==0?glowColour:coreColour,Ogre::Quaternion::IDENTITY));
         }
     }
+    // The jagged bolts, each flickering in its own brightness, and their forks
+    std::vector<Ogre::Vector3> points(segments+1);
+    for(size_t bolt=0;bolt<bolts;++bolt)
+    {
+        const size_t chain=2+bolt;
+        mGhostBeamChain->clearChain(chain);
+        Ogre::ColourValue colour=boltColour;colour.a=static_cast<float>(Random::Double(0.6,1.0));
+        for(size_t i=0;i<=segments;++i)
+        {
+            const float fraction=static_cast<float>(i)/last;
+            points[i]=start+(end-start)*fraction;
+            if(i!=0 && i!=segments) points[i]+=Ogre::Vector3(Random::Double(-jitter,jitter),Random::Double(-jitter,jitter),Random::Double(-jitter,jitter));
+            mGhostBeamChain->addChainElement(chain,Ogre::BillboardChain::Element(points[i],boltWidth,fraction,colour,Ogre::Quaternion::IDENTITY));
+        }
+        for(size_t branch=0;branch<branches;++branch)
+        {
+            const size_t fork=2+bolts+bolt*branches+branch;
+            mGhostBeamChain->clearChain(fork);
+            if(segments<3) continue;
+            // A fork leaves a random inner point of its bolt sideways for two or three short jagged steps
+            Ogre::Vector3 point=points[static_cast<size_t>(Random::Uint(1,static_cast<unsigned int>(segments-2)))];
+            const Ogre::Vector3 away(Random::Double(-1.0,1.0),Random::Double(-1.0,1.0),Random::Double(-0.5,1.0));
+            const size_t steps=static_cast<size_t>(Random::Uint(2,3));
+            Ogre::ColourValue forkColour=colour;forkColour.a*=0.7f;
+            for(size_t i=0;i<=steps;++i)
+            {
+                if(i!=0) point+=away.normalisedCopy()*static_cast<Ogre::Real>(branchStep)+
+                    Ogre::Vector3(Random::Double(-jitter,jitter),Random::Double(-jitter,jitter),Random::Double(-jitter,jitter))*0.5f;
+                mGhostBeamChain->addChainElement(fork,Ogre::BillboardChain::Element(point,0.6f*boltWidth,
+                    static_cast<float>(i)/static_cast<float>(steps),forkColour,Ogre::Quaternion::IDENTITY));
+            }
+        }
+    }
+    // The impact glow flickers on the ghost: a wide halo and a white-hot heart
+    const Ogre::Real flare=impact*static_cast<Ogre::Real>(Random::Double(0.7,1.15));
+    mGhostBeamImpact->getBillboard(0)->setPosition(end);
+    mGhostBeamImpact->getBillboard(0)->setDimensions(flare,flare);
+    mGhostBeamImpact->getBillboard(0)->setColour(Ogre::ColourValue(0.55f,1.0f,0.65f,static_cast<float>(Random::Double(0.6,0.9))));
+    mGhostBeamImpact->getBillboard(1)->setPosition(end);
+    mGhostBeamImpact->getBillboard(1)->setDimensions(0.4f*flare,0.4f*flare);
+    mGhostBeamImpact->getBillboard(1)->setColour(coreColour);
 }
 
 void Creature::transferGhostHuntRoom(const std::string& previous, const std::string& current, bool hook, bool empty)

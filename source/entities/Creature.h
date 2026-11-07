@@ -85,6 +85,7 @@ namespace Ogre
 {
 class ParticleSystem;
 class BillboardChain;
+class BillboardSet;
 class Entity;
 }
 
@@ -2264,6 +2265,15 @@ private:
     Ogre::BillboardChain* mGhostBeamChain = nullptr;
     Ogre::SceneNode* mGhostSparkNode = nullptr;
     Ogre::ParticleSystem* mGhostBeamSparks = nullptr;
+    //! \brief The flickering impact glow of the beam on the ghost (decision 805), on mGhostBeamNode.
+    Ogre::BillboardSet* mGhostBeamImpact = nullptr;
+    //! \brief The light of the open trap (decision 806): a bright glow in its opening and a light cone shining up, on
+    //! mGhostTrapNode at the lying box; shown while the lid is open, fading when it snaps shut.
+    Ogre::SceneNode* mGhostTrapNode = nullptr;
+    Ogre::BillboardSet* mGhostTrapGlow = nullptr;
+    Ogre::BillboardChain* mGhostTrapCone = nullptr;
+    //! \brief Open share of the lying box's lid shown on the client, 0 closed, 1 open (decision 801).
+    double mGhostLidShown = 0.0;
     //! \brief The running mood effects (buffs and debuffs). Saved on the server, sent to the keeper for the effect line.
     //! Declared before mActions, so that it is still alive when the actions of the creature end a pleasure visit (the
     //! pleasure buff starts then).
