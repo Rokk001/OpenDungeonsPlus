@@ -7,8 +7,8 @@ Compiles nothing and never starts the game.
   (updateActiveSpots -> layoutApparatuses -> createApparatusObjects), so a changed placement rule reaches the
   ghost rooms of every old save.
 - The layout model of check_ghost_apparatus_placement.py runs on the ghost room of levels/skirmish/TestGhosts.level
-  (the owner's [Test] Ghosts map): the three apparatuses stand on inner floor tiles, none touches a wall tile
-  (fixed values, also the places the deployed build 0.7.4.47 logged for this room).
+  (the owner's [Test] Ghosts map): the three apparatuses stand off the wall, two of them in the middle row three
+  tiles from both long walls (fixed values, decision 845).
 - The same model runs on every ghost room of every save in the user's save folder (%APPDATA%/opendungeons/saves),
   when there is one: its GhostApparatus record holds twelve counters and no place, and a loaded room gets the places
   of the current rule (inner tiles first, an inner tile never touches a wall); the count off the wall is printed.
@@ -106,14 +106,18 @@ def test_level():
     _, room, _ = rooms[0]
     assert room == {(x, y) for x in range(15, 20) for y in range(7, 12)}, sorted(room)
     chosen, _, blocked, openings = placement.layout(room, walls)
-    # Fixed values: the places the deployed build 0.7.4.47 logged for this room (mana still, ghost press, soul forge
-    # in tile order), all on inner tiles beside the cauldron, none touching a wall
+    # Fixed values (mana still, ghost press, soul forge in tile order). Build 0.7.4.49 put all three one row in front of
+    # a long wall (18, 8), (16, 10), (18, 10), which the owner still saw as at the wall (decision 845). Now two stand
+    # in the middle row of the room, three tiles from both long walls, one on the open edge, and the third one row
+    # off the wall: the whole middle row cannot be taken, it would cut the room in two.
     assert blocked == {(16, 8), (17, 8), (16, 9), (17, 9)}, blocked
-    assert chosen == [(18, 8), (16, 10), (18, 10)], chosen
+    assert chosen == [(18, 8), (15, 9), (18, 9)], chosen
     assert not openings
     assert all(off_wall(t, walls) for t in chosen), chosen
-    assert placement.log_layout(room, walls, chosen, blocked) == "o#####o/o.....o/o.A.A.o/o.CC..o/o.CCA.o/o.....o/o######"
-    print("[Test] Ghosts room: three apparatuses on inner floor tiles, none at a wall: ok")
+    distance = lambda t: min(max(abs(t[0] - w[0]), abs(t[1] - w[1])) for w in walls)
+    assert [distance(t) for t in chosen] == [2, 3, 3], [distance(t) for t in chosen]
+    assert placement.log_layout(room, walls, chosen, blocked) == "o#####o/o.....o/o.....o/oACCA.o/o.CCA.o/o.....o/o######"
+    print("[Test] Ghosts room: three apparatuses off the wall, two in the middle row: ok")
 
 
 def user_saves():

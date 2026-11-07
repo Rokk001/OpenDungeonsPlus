@@ -616,11 +616,12 @@ void RoomGhostRoom::layoutApparatuses()
         return true;
     };
     // The apparatuses stand on floor stands inside the room like the furniture of other rooms (decision 793), not bound
-    // to the wall: inner tiles first (all eight neighbours belong to the room), then edge tiles at a wall, then edge
-    // tiles at an open room side. Tiles under a cauldron and door openings are never used.
-    // Within a rank the tiles farthest from any wall come first (decision 825): an inner tile directly in front of the
-    // wall row is taken only after the tiles in the middle of the room, so the apparatuses stand off the wall wherever
-    // the room allows it. The distance is the ring (Chebyshev distance) of the nearest wall tile or map border.
+    // to the wall. Decision 845: a tile that touches a wall (a wall tile among its eight neighbours) is taken last, so
+    // the ranks are: inner tiles off the wall (all eight neighbours belong to the room), then edge tiles at an open room
+    // side off the wall, then every tile that touches a wall. Tiles under a cauldron and door openings are never used.
+    // The tiles farthest from any wall come first (decision 825, over all ranks since decision 845): an inner tile
+    // directly in front of the wall row is taken only after the tiles in the middle of the room, so the apparatuses
+    // stand off the wall wherever the room allows it. The distance is the ring (Chebyshev distance) of the nearest wall tile or map border.
     // A tile without a wall within the first rings gets this distance
     const int wallDistanceMax=9;
     std::map<Tile*,int> wallDistance;
@@ -646,23 +647,24 @@ void RoomGhostRoom::layoutApparatuses()
         for(Tile* tile : ordered)
         {
             if(blocked.count(tile)!=0 || inOpening(tile)) continue;
-            bool inner=true,openSide=false;
+            bool inner=true;
             for(int y=-1;y<=1;++y) for(int x=-1;x<=1;++x)
                 if(floor.count(getGameMap()->getTile(tile->getX()+x,tile->getY()+y))==0) inner=false;
-            for(int i=0;i<4;++i)
-                if(walkableOutside(getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]))) openSide=true;
-            if((inner?0:openSide?2:1)==rank) { ranked.push_back(tile);tileRank[tile]=rank; }
+            // A wall in the first ring touches the tile
+            const bool touchesWall=wallDistance[tile]==1;
+            if((touchesWall?2:inner?0:1)==rank) { ranked.push_back(tile);tileRank[tile]=rank; }
         }
         byOrder.insert(byOrder.end(),ranked.begin(),ranked.end());
-        std::stable_sort(ranked.begin(),ranked.end(),fartherFromWall);
-        farFirst.insert(farFirst.end(),ranked.begin(),ranked.end());
     }
-    // Places up to three apparatuses on the candidates in their order
-    const std::function<std::vector<Tile*>(std::vector<Tile*>)> place=[&](std::vector<Tile*> candidates)
+    // Decision 845: the farthest from the walls first over all ranks; the rank and the tile order decide equal distances
+    farFirst.insert(farFirst.end(),byOrder.begin(),byOrder.end());
+    std::stable_sort(farFirst.begin(),farFirst.end(),fartherFromWall);
+    // Places up to three apparatuses on the candidates in their order; spacedFirst false skips the spaced pass
+    const std::function<std::vector<Tile*>(std::vector<Tile*>,bool)> place=[&](std::vector<Tile*> candidates,bool spacedFirst)
     {
         // Pass 0: a free tile between the apparatuses; pass 1: also side by side
         std::vector<Tile*> chosen;
-        for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)
+        for(int pass=spacedFirst?0:1;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)
         {
             for(Tile* tile : candidates)
             {
@@ -707,18 +709,26 @@ void RoomGhostRoom::layoutApparatuses()
         }
         return chosen;
     };
-    // Far from the walls first (decision 825), unless the tile order places more apparatuses or more of them on inner
-    // tiles or on tiles at a wall rather than at an open side; equal places keep the far placement
+    // Far from the walls first (decision 825), unless another placement places more apparatuses, keeps the nearest one
+    // farther from a wall (decision 845), is farther from the walls in sum, or has more of them on inner tiles; equal
+    // places keep the spaced far placement
     const std::function<std::vector<int>(const std::vector<Tile*>&)> score=[&](const std::vector<Tile*>& placed)
     {
-        std::vector<int> value(3,0);
+        std::vector<int> value(4,0);
         value[0]=static_cast<int>(placed.size());
-        for(Tile* tile : placed) { value[1]+=tileRank[tile]==0?1:0;value[2]+=tileRank[tile]<=1?1:0; }
+        value[1]=placed.empty()?0:wallDistanceMax;
+        for(Tile* tile : placed)
+        {
+            value[1]=std::min(value[1],wallDistance[tile]);value[2]+=wallDistance[tile];value[3]+=tileRank[tile]==0?1:0;
+        }
         return value;
     };
-    std::vector<Tile*> chosen=place(farFirst);
-    const std::vector<Tile*> inOrder=place(byOrder);
+    std::vector<Tile*> chosen=place(farFirst,true);
+    const std::vector<Tile*> inOrder=place(byOrder,true);
     if(score(inOrder)>score(chosen)) chosen=inOrder;
+    // Decision 845: side by side far from the walls beats spaced places nearer a wall
+    const std::vector<Tile*> sideBySide=place(farFirst,false);
+    if(score(sideBySide)>score(chosen)) chosen=sideBySide;
     // In tile order as in the room picture, left to right: mana still, ghost press, soul forge
     std::sort(chosen.begin(),chosen.end(),tileOrder);
     const GhostProduct order[APPARATUS_COUNT]={GhostProduct::mana,GhostProduct::research,GhostProduct::crystal};
