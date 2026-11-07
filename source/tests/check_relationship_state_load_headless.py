@@ -57,8 +57,10 @@ RESTORED_LINE = re.compile(
 # game). The runtime comparison with the game log is run only by the --exe part, and was not run in this change (no
 # build).
 FIXTURE_EXPECTED = {
-    "Knight1": {"grief": 0, "rageTurns": 5, "rageSeat": 0, "brawlOpponent": "", "captors": []},
-    "Knight3": {"grief": 0, "rageTurns": 0, "rageSeat": -1, "brawlOpponent": "", "captors": ["Knight4"]},
+    # Knight1 is in an eligible seat with nonzero grief; Knight3 is a prisoner (ineligible) with nonzero grief,
+    # which the loader keeps as a record like its captors
+    "Knight1": {"grief": -150, "rageTurns": 5, "rageSeat": 0, "brawlOpponent": "", "captors": []},
+    "Knight3": {"grief": -320, "rageTurns": 0, "rageSeat": -1, "brawlOpponent": "", "captors": ["Knight4"]},
 }
 # The loader keeps the grief within this many points in both directions (CreatureRelationships.cpp, STATE_GRIEF_LIMIT)
 GRIEF_LIMIT = 100000

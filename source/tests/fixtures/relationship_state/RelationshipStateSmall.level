@@ -254,6 +254,6 @@ ProtectDungeonTemple	NULL
 [/Chickens]
 
 [RelationshipState]
-Knight1	0	5	0		0
-Knight3	0	0	-1		0	Knight4
+Knight1	-150	5	0		0
+Knight3	-320	0	-1		0	Knight4
 [/RelationshipState]
