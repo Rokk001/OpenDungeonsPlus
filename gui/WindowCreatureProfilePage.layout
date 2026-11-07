@@ -66,7 +66,7 @@
             <Property name="HorzFormatting" value="WordWrapLeftAligned" />
         </Window>
         <Window type="OD/StaticText" name="HealthLabel" >
-            <Property name="Area" value="{{0.0,16},{0.0,146},{0.0,64},{0.0,166}}" />
+            <Property name="Area" value="{{0.0,16},{0.0,146},{0.0,72},{0.0,169}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -74,13 +74,13 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/ProgressBar" name="HealthBar" >
-            <Property name="Area" value="{{0.0,66},{0.0,148},{0.5,-8},{0.0,164}}" />
+            <Property name="Area" value="{{0.0,80},{0.0,149},{0.5,-8},{0.0,165}}" />
             <Property name="StepSize" value="0.01" />
             <Property name="CurrentProgress" value="1.0" />
             <Property name="TooltipText" value="Health" />
         </Window>
         <Window type="OD/StaticText" name="ExperienceLabel" >
-            <Property name="Area" value="{{0.5,8},{0.0,146},{0.5,38},{0.0,166}}" />
+            <Property name="Area" value="{{0.5,8},{0.0,146},{0.5,40},{0.0,169}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
             <Property name="Font" value="MedievalSharp-8" />
@@ -88,7 +88,7 @@
             <Property name="HorzFormatting" value="LeftAligned" />
         </Window>
         <Window type="OD/ProgressBar" name="ExperienceBar" >
-            <Property name="Area" value="{{0.5,42},{0.0,148},{1.0,-32},{0.0,164}}" />
+            <Property name="Area" value="{{0.5,48},{0.0,149},{1.0,-32},{0.0,165}}" />
             <Property name="StepSize" value="0.01" />
             <Property name="CurrentProgress" value="0.0" />
             <Property name="TooltipText" value="Progress to the next level" />

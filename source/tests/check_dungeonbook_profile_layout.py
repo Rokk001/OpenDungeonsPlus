@@ -170,8 +170,9 @@ for width, height in ((1024, 768), (1280, 720), (1920, 1080), (2560, 1440)):
 # these pages has a back arrow to the start page and previous / next arrows around the name. No button in mid-page.
 # Every page is measured with the shipped font at 640x480, 1920x1200 and 7680x4320 (and 1024x768), UI scale 80 % and
 # 120 %: the window stays on the screen, no text is higher or wider than its window and nothing leaves its parent.
-# Owner decision 732: names and post texts are never shortened with "..." but word wrap, values are written exactly
-# (no rounding); the longest name, post, nick and value the game can produce are measured here.
+# Owner decision 732: names and post texts are never shortened with "..." but word wrap; owner decision 830: the game
+# values are rounded to at most two decimals (no raw float sums); the longest name, post, nick and value the game can
+# produce are measured here.
 from PIL import ImageFont
 
 social = (repo / 'source/render/SocialWindow.cpp').read_text()
@@ -323,8 +324,8 @@ assert scheme.find("Imageset[@filename='DungeonbookIcons.imageset'][@name='Dunge
 assert scheme.find("Imageset[@filename='DungeonbookFrame.imageset'][@name='DungeonbookFrame']") is not None
 assert 'gui/DungeonbookIcons.png' in (repo / 'CREDITS').read_text()
 
-# Code: real game data only, every value of today kept, written exactly (owner decision 732: no rounding), and the slots
-# filled by the creature code
+# Code: real game data only, every value of today kept, rounded to at most two decimals (owner decision 830: no raw
+# float sums such as 51.59700000000005), and the slots filled by the creature code
 for label in ('"Experience"', '"HP"', '"Gold"', '"Sight radius"', '"Potions"', '"Inventory"', '"Raw damage per second"',
               '"Skill points earned / spent"'):
     assert label in social, label
@@ -339,49 +340,49 @@ def function_of(text, signature):
     return body[:body.index('\n}\n')]
 
 
-# The book rounds nothing: its value text is the exact text of the creature code with the thousands grouped
+# The book rounds in ONE place, the creature code: its value text is the rounded text with the thousands grouped
 for rounding in ('setprecision', 'std::fixed', 'std::round', 'lround', 'std::trunc', 'std::ceil'):
-    assert rounding not in social, 'the Dungeonbook must not round a value: ' + rounding
+    assert rounding not in social, 'the Dungeonbook rounds through Creature::formatRoundedNumber only: ' + rounding
 profile_value = function_of(social, 'std::string formatProfileValue(double value)')
-assert 'return groupThousands(Creature::formatExactNumber(value));' in profile_value, profile_value
+assert 'return groupThousands(Creature::formatRoundedNumber(value));' in profile_value, profile_value
 statistics_numbers = function_of(social, 'std::string formatStatisticsNumbers(')
-assert 'groupThousands(parts[i])' in statistics_numbers and 'formatProfileValue' not in statistics_numbers, \
-    'the statistics values keep the digits the server wrote'
+assert 'formatProfileValue(number)' in statistics_numbers and 'groupThousands(parts[i])' not in statistics_numbers, \
+    'the statistics values are rounded as well, also a raw sum an older server wrote'
+assert 'parser.imbue(std::locale::classic());' in statistics_numbers
 group = function_of(social, 'std::string groupThousands(const std::string& number)')
 assert 'THOUSANDS_GROUP = 3;' in social and 'result.insert(comma - THOUSANDS_GROUP, ",")' in group
-# The exact number text of the creature code: fewest decimals that read back as the same double, 17 digits at most
+# The rounded number text of the creature code: two decimals at most, zeros at the end dropped, exponent from 1e15 on
 creature_header = (repo / 'source/entities/Creature.h').read_text()
-assert 'static std::string formatExactNumber(double value);' in creature_header
+assert 'static std::string formatRoundedNumber(double value);' in creature_header
 creature_cpp = (repo / 'source/entities/Creature.cpp').read_text()
-exact = function_of(creature_cpp, 'std::string Creature::formatExactNumber(double value)')
-for fragment in ('std::numeric_limits<double>::max_digits10', 'for(int32_t digits = 0; digits <= maxDigits; ++digits)',
-                 'stream << std::fixed;', 'stream << std::scientific;', 'stream << std::setprecision(digits) << value;',
-                 'if(readsBackAs(text, value))', 'std::locale::classic()'):
-    assert fragment in exact, fragment
-reads_back = function_of(creature_cpp, 'static bool readsBackAs(')
-assert '(parsed == value)' in reads_back and 'std::locale::classic()' in reads_back
-assert re.search(r'EXACT_FIXED_MIN = 0\.001;', creature_cpp) and re.search(r'EXACT_FIXED_MAX = 1e15;', creature_cpp)
+assert 'formatExactNumber' not in creature_cpp + creature_header + social, 'the raw exact number text is gone'
+rounded = function_of(creature_cpp, 'std::string Creature::formatRoundedNumber(double value)')
+for fragment in ('stream << std::fixed;', 'stream << std::scientific;', 'if(std::fabs(value) >= ROUNDED_FIXED_MAX)',
+                 'stream << std::setprecision(ROUNDED_DECIMALS) << value;', 'std::locale::classic()',
+                 "while(!mantissa.empty() && (mantissa[mantissa.size() - 1] == '0'))",
+                 "if(!mantissa.empty() && (mantissa[mantissa.size() - 1] == '.'))", 'if(mantissa == "-0")',
+                 'return mantissa + suffix;'):
+    assert fragment in rounded, fragment
+assert re.search(r'ROUNDED_DECIMALS = 2;', creature_cpp) and re.search(r'ROUNDED_FIXED_MAX = 1e15;', creature_cpp)
 stats_text = function_of(creature_cpp, 'std::string Creature::getStatsText(const Seat* viewer)')
-for fragment in ('"Experience: " << formatExactNumber(mExp)',
-                 '"HP: " << formatExactNumber(getHP()) << " / " << formatExactNumber(mMaxHP)',
-                 '"Gold: " << formatExactNumber(mGoldCarried)'):
+for fragment in ('"Experience: " << formatRoundedNumber(mExp)',
+                 '"HP: " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP)',
+                 '"Gold: " << formatRoundedNumber(mGoldCarried)'):
     assert fragment in stats_text, fragment
 server_text = (repo / 'source/network/ODServer.cpp').read_text()
 for getter in ('getAttackRating', 'getDefenseRating', 'getRawDamagePerSecond'):
-    assert 'Creature::formatExactNumber(creature->%s())' % getter in server_text, getter
-    assert 'Helper::toString(creature->%s())' % getter not in server_text, getter + ' is rounded to six digits'
+    assert 'Creature::formatRoundedNumber(creature->%s())' % getter in server_text, getter
+    assert 'Helper::toString(creature->%s())' % getter not in server_text, getter + ' is written with six digits'
 
 
-def exact_number(value):
-    """Python replica of Creature::formatExactNumber: fixed form from 0.001 to 1e15, exponent form outside."""
-    if value == 0:
-        return '0'
-    fixed = 0.001 <= abs(value) < 1e15
-    for digits in range(18):
-        text = ('%.*f' if fixed else '%.*e') % (digits, value)
-        if float(text) == value:
-            return text
-    return '%.17g' % value
+def rounded_number(value):
+    """Python replica of Creature::formatRoundedNumber: two decimals, zeros at the end dropped, exponent from 1e15."""
+    text = ('%.2e' if abs(value) >= 1e15 else '%.2f') % value
+    mantissa, sep, exponent = text.partition('e')
+    mantissa = mantissa.rstrip('0').rstrip('.')
+    if mantissa == '-0':
+        mantissa = '0'
+    return mantissa + sep + exponent
 
 
 def group_thousands(number):
@@ -396,25 +397,26 @@ def group_thousands(number):
     return number
 
 
-# Exact means: the text reads back as the same double, and no shorter text of the same form does
-for value, text in ((14.8, '14.8'), (42600.0, '42,600'), (41.666666666666664, '41.666666666666664'), (0.1 + 0.2,
-                    '0.30000000000000004'), (12.0, '12'), (-1234567.25, '-1,234,567.25'), (3e-05, '3e-05')):
-    assert group_thousands(exact_number(value)) == text, (value, group_thousands(exact_number(value)))
-for value in (1.0 / 3, 2.0 / 3 * 100, 1e-7 / 3, 123456789.123, 5e20 / 7, 0.001, 999999999999999.9):
-    shown = exact_number(value)
-    assert float(shown) == value, (value, shown)
-    assert len(shown.replace('-', '').replace('.', '').lstrip('0')) <= 22, shown
-# The widest value text the book can show: 17 significant digits in every magnitude and form, negative
-WORST_NUMBERS = tuple(sorted({group_thousands(exact_number(float('-9.8765432109876543e%d' % e))) for e in range(-320, 308)},
+# Rounded means: at most two decimals, no zero at the end, the nearest such number (the owner's raw sums included)
+for value, text in ((51.59700000000005, '51.6'), (56.51100000000007, '56.51'), (14.8, '14.8'), (42600.0, '42,600'),
+                    (41.666666666666664, '41.67'), (0.1 + 0.2, '0.3'), (12.0, '12'), (-1234567.25, '-1,234,567.25'),
+                    (3e-05, '0'), (-0.004, '0'), (4.5864, '4.59'), (5e20 / 7, '7.14e+19')):
+    assert group_thousands(rounded_number(value)) == text, (value, group_thousands(rounded_number(value)))
+for value in (1.0 / 3, 2.0 / 3 * 100, 1e-7 / 3, 123456789.123, 0.001, 999999999999999.9, 51.59700000000005):
+    shown = rounded_number(value)
+    assert abs(float(shown) - value) <= 0.005 + abs(value) * 1e-15, (value, shown)
+    assert '.' not in shown or len(shown.split('.')[1]) <= 2, shown
+# The widest value text the book can show: every magnitude and form, negative
+WORST_NUMBERS = tuple(sorted({group_thousands(rounded_number(float('-9.8765432109876543e%d' % e))) for e in range(-320, 308)},
                        key=lambda n: (text_width('MedievalSharp-8', n), n))[-12:])
-assert all(len(n) >= 20 for n in WORST_NUMBERS), WORST_NUMBERS
-# Every magnitude and form (17 significant digits, and the long zero runs of 1.0000000000000002), for the attribute
-# cells whose line breaks depend on where the commas, points and exponent lie
-ALL_NUMBERS = tuple(sorted({group_thousands(exact_number(float(m % e))) for m in ('-9.8765432109876543e%d',
-                            '-1.0000000000000002e%d', '9.8765432109876543e%d') for e in range(-320, 308)}))
-assert len(ALL_NUMBERS) > 1500 and set(WORST_NUMBERS) <= set(ALL_NUMBERS)
+assert all(len(n) >= 10 for n in WORST_NUMBERS) and '-987,654,321,098,765.38' in WORST_NUMBERS, WORST_NUMBERS
+# Every magnitude and form (and the round values like 1.0000000000000002), for the attribute cells whose line breaks
+# depend on where the commas, points and exponent lie
+ALL_NUMBERS = tuple(sorted({group_thousands(rounded_number(float(m % e))) for m in ('-9.8765432109876543e%d',
+                            '-1.0000000000000002e%d', '9.8765432109876543e%d', '1.2345e%d') for e in range(-320, 308)}))
+assert len(ALL_NUMBERS) > 1000 and set(WORST_NUMBERS) <= set(ALL_NUMBERS), len(ALL_NUMBERS)
 # Owner decision 816: Strength, Dexterity, Life and Mana side by side in ONE row (book-variant-2), label on top, the
-# exact value below it; a long value is broken into lines of ATTRIBUTE_LINE_CHARS characters (breakAttributeValue)
+# rounded value below it; a long value is broken into lines of ATTRIBUTE_LINE_CHARS characters (breakAttributeValue)
 ATTRIBUTES = ('Strength', 'Dexterity', 'Life', 'Mana')
 LINE_CHARS = int(re.search(r'ATTRIBUTE_LINE_CHARS = (\d+);', social)[1])
 break_value = function_of(social, 'std::string breakAttributeValue(const std::string& value)')
@@ -426,7 +428,7 @@ for fragment in ('while(rest.size() > ATTRIBUTE_LINE_CHARS)', 'std::string::size
 values_fill = function_of(social, 'void SocialWindow::refreshValues(')
 assert 'const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};' in values_fill
 assert ('text << names[i] << "\\n" << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));'
-        in values_fill), 'the attribute cells show label and exact value, broken into the lines of the cell'
+        in values_fill), 'the attribute cells show label and rounded value, broken into the lines of the cell'
 
 
 def break_attribute_value(value):
@@ -655,7 +657,7 @@ require('ProfilePage/InfoText', 'MedievalSharp-8', lines=4, texts=('Mood: Furiou
 require('ProfilePage/PostsTitle', 'MedievalSharp-10', texts=('Posts (200)',))
 require('ProfilePage/SocialHolder', 'MedievalSharp-8', lines=6)
 require('ProfilePage/PostsEmpty', 'MedievalSharp-8', lines=2, texts=('Nothing posted yet.',))
-# Values: exact numbers (17 significant digits at most, every magnitude); a pair "a / b" wraps after the slash
+# Values: rounded numbers (two decimals at most, every magnitude); a pair "a / b" wraps after the slash
 pairs = tuple(a + ' / ' + b for a in WORST_NUMBERS[-3:] for b in WORST_NUMBERS[-3:])
 for name, label in (('Experience', 'Experience:'), ('HitPoints', 'Hit points:'), ('Gold', 'Gold:'),
                     ('SightRadius', 'Sight radius:'), ('Potions', 'Potions:'), ('Inventory', 'Inventory:'),
