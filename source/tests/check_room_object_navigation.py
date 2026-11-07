@@ -285,7 +285,7 @@ int main(){
   const float crossingY=5+std::sin(angle)*(row.minX+row.maxX)*.5f+std::cos(angle)*(row.minY+row.maxY)*.5f;
   creature.pos={1,crossingY,0};
   std::vector<Ogre::Vector2> path;for(int x=2;x<=10;++x)path.push_back({float(x),crossingY});
-  check(RoomObjectNavigation::blocked(creature,path)!=std::isfinite(row.maxZ),"straight crossing is permitted only over measured beds (this worker is wider than the lane between beds)");
+  check(RoomObjectNavigation::blocked(creature,path)!=(std::isfinite(row.maxZ)&&RoomObjectPath::isSteppableMesh(row.name)),"straight crossing is permitted only over measured steppable beds (this worker is wider than the lane between beds)");
   check(RoomObjectNavigation::refine(creature,path),"furniture routes suppress independent client jitter");
   if(path.empty())std::cout<<"NO_ROUTE "<<row.name<<" rotation="<<rotation<<'\n';
   check(!path.empty()&&path.back()==Ogre::Vector2(10,crossingY),"route keeps accessible destination");

@@ -2,7 +2,7 @@
 
 <GUILayout version="4" >
     <Window type="OD/FrameWindow" name="CasinoPayoutWindow" >
-        <Property name="Area" value="{{0.5,-150},{0.5,-70},{0.5,150},{0.5,70}}" />
+        <Property name="Area" value="{{0.5,-150},{0.5,-80},{0.5,150},{0.5,80}}" />
         <Property name="Text" value="Casino" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />

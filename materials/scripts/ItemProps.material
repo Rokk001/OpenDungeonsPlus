@@ -374,6 +374,27 @@ material MerchantHood
     }
 }
 
+// A2 rework 2 (decision 710 finding 3): the ragged over-cloak layer of the merchant between robe and hood cape.
+material MerchantCloak
+{
+    receive_shadows on
+    technique
+    {
+        pass
+        {
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
+            specular 0.04 0.04 0.04 1 10
+            texture_unit
+            {
+                texture MerchantCloak.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
 material MerchantBrass
 {
     receive_shadows on

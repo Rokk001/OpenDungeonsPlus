@@ -160,7 +160,8 @@ client_top = client.find("Dim[@type='TopEdge']")
 assert len(client_top) == 1 and client_top[0].tag == 'WidgetDim' and client_top[0].get('widget') == '__auto_titlebar__',     'frame contents must start directly below the title bar'
 for section_name in ('withtitle_frame', 'withtitle_frame_disabled'):
     section = frame.find(".//ImagerySection[@name='%s']/FrameComponent" % section_name)
-    parts = {image.get('component') for image in section.findall('Image')}
+    parts = {image.get('component') for image in section.findall('Image') + section.findall('ImageProperty')}
+    assert {'LeftEdge', 'RightEdge', 'BottomEdge'} <= parts, section_name + ' lost its side or bottom edge'
     assert not parts & {'TopEdge', 'TopLeftCorner', 'TopRightCorner'}, section_name + ' draws a second top frame'
 profile = ET.parse(repo / 'gui/WindowCreatureProfile.layout').getroot().find('Window')
 tab_top = min(udims(profile.find("Window[@name='%s']/Property[@name='Area']" % name).get('value'))[1][0]
@@ -233,7 +234,29 @@ for part in dungeonbook.iter('Window'):
         if prop.get('name') == 'Area':
             assert all(offset == 0 for _scale, offset in udims(prop.get('value'))), \
                 part.get('name') + ' of the Dungeonbook uses a fixed pixel area'
-print('Dungeonbook pages fit at every scale (relative areas, no scrollbar on the values sheet)')
+# Decision 732: the values sheet shows exact values without a scrollbar, so its value cells word wrap a pair "a / b"
+# onto a second line instead of cutting it, and no tile holds a text that would have to be shortened
+for part in values_sheet.findall('Window'):
+    name = part.get('name')
+    assert not name.endswith('Value') or name[:-5] + 'Label' in [w.get('name') for w in values_sheet.findall('Window')],         name + ' is a shortened tile text'
+    if name.endswith('Value'):
+        formatting = part.find("Property[@name='HorzFormatting']")
+        assert formatting is not None and formatting.get('value') == 'WordWrapRightAligned', name + ' must word wrap'
+# Owner decision 816: the four attributes sit in ONE row (book-variant-2) inside the values sheet, equally wide, side
+# by side without overlap; the text of each cell (label and exact value lines) is measured per screen and UI scale in
+# check_dungeonbook_profile_layout.py
+attribute_cells = []
+for name in ('Strength', 'Dexterity', 'Life', 'Mana'):
+    part = values_sheet.find("Window[@name='%s']" % name)
+    assert part is not None, name + ' is missing on the values sheet'
+    attribute_cells.append([scale for scale, _offset in udims(part.find("Property[@name='Area']").get('value'))])
+for cell in attribute_cells:
+    assert 0.0 <= cell[0] < cell[2] <= 1.0 and 0.0 <= cell[1] < cell[3] <= 1.0, 'an attribute cell leaves the sheet'
+    assert cell[1] == attribute_cells[0][1] and cell[3] == attribute_cells[0][3], 'the attributes are not in one row'
+    assert abs((cell[2] - cell[0]) - (attribute_cells[0][2] - attribute_cells[0][0])) < 1e-3, 'unequal attribute cells'
+for left, right in zip(attribute_cells, attribute_cells[1:]):
+    assert left[2] < right[0], 'the attribute cells overlap or leave their order'
+print('Dungeonbook pages fit at every scale (relative areas, no scrollbar on the values sheet, attributes in one row)')
 
 # The Workers window (key J) is part of the checked windows, fits every tested screen without being shrunk below its
 # text, and everything inside it uses relative areas (check_workers_window.py pins its parts and behaviour).

@@ -108,10 +108,11 @@ assert 'handleDragCreature, this' in carry
 # longest time, when it died or was knocked out to death, when it is left behind
 drag = function_body(carry, 'bool CreatureActionCarryEntity::handleDragCreature(')
 for needle in ('isHostileNear(', 'DormitoryWoundedCarryEnemyRadius', 'DormitoryWoundedCarryMaxTurns',
-               'DormitoryWoundedDragMaxDistance', 'DormitoryWoundedDragGap', 'DormitoryWoundedDragLayTurns',
+               'DormitoryWoundedDragMaxDistance', 'dragGap(', 'DormitoryWoundedDragLayTurns',
                'followTrail(', 'setDragDestination(', 'startLaying(', 'isAlive()',
                'getNbTurnsActive()'):
     assert needle in drag, needle
+assert 'DormitoryWoundedDragGap' in carry, 'the configured gap is the minimum of dragGap()'
 assert 'getKoTurnCounter() < 0' not in drag, 'a creature knocked out to death is pulled on, not let go'
 assert 'popAction' not in drag and 'setDragDestination(' in drag and 'setDestination(' not in drag, 'only stopDragging may pop the action'
 stop = function_body(carry, 'bool CreatureActionCarryEntity::stopDragging(')

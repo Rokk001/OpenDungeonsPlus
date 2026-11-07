@@ -87,6 +87,11 @@ const char* const FEED_TEXT_COLOUR = "[colour='FFE8DCC0']";
 const char* const FILTER_BUTTONS[] = {"FilterAll", "FilterWorkers", "FilterFighters", "FilterUnhappy"};
 const char* const FILTER_LABELS[] = {"All", "Workers", "Fighters", "Unhappy"};
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
+//! Digits between two thousands commas of a value ("42,600", book-variant-2)
+const std::string::size_type THOUSANDS_GROUP = 3;
+//! Characters of one value line in the attribute cells (Strength, Dexterity, Life, Mana side by side in one row,
+//! book-variant-2, owner decision 816): a longer exact value continues on the next line of its cell
+const std::string::size_type ATTRIBUTE_LINE_CHARS = 14;
 
 bool isEntryBefore(const std::pair<std::string, std::string>& a, const std::pair<std::string, std::string>& b)
 {
@@ -146,133 +151,150 @@ std::string renderPostText(const social::Post& post, const social::CreatureProfi
         post.mCategory >= social::PostCategory::Bought ? post.mOther : "");
 }
 
-//! \brief Name of the HUD picture of a room type in the OpenDungeonsIcons imageset, empty if the room has none.
+//! \brief Name of the painted scene (DungeonbookIcons/Post...) of the room of a post: the place where the creature
+//! worked, trained or wants to go. Empty if the room has no scene of its own.
 std::string roomPictureName(int32_t roomType)
 {
     switch(static_cast<RoomType>(roomType))
     {
-        case RoomType::dungeonTemple: return "TempleButton";
-        case RoomType::dormitory: return "DormitoryButton";
-        case RoomType::treasury: return "TreasuryButton";
-        case RoomType::portal:
-        case RoomType::portalWave: return "PortalButton";
-        case RoomType::workshop: return "WorkshopButton";
-        case RoomType::trainingHall: return "TrainingHallButton";
-        case RoomType::library: return "LibraryButton";
-        case RoomType::hatchery: return "HatcheryButton";
-        case RoomType::crypt: return "CryptButton";
-        case RoomType::prison: return "PrisonButton";
-        case RoomType::bridgeWooden: return "WoodenBridgeButton";
-        case RoomType::bridgeStone: return "StoneBridgeButton";
-        case RoomType::arena: return "ArenaButton";
-        case RoomType::casino: return "CasinoButton";
-        case RoomType::torture: return "TortureButton";
-        case RoomType::guardRoom: return "GuardRoomButton";
-        case RoomType::temple: return "PrayerTempleButton";
-        case RoomType::toilet: return "ToiletButton";
-        case RoomType::merchant: return "MerchantButton";
-        case RoomType::herbGarden: return "HerbGardenButton";
-        case RoomType::alchemyLab: return "AlchemyLabButton";
-        case RoomType::tavern: return "TavernButton";
-        case RoomType::infirmary: return "InfirmaryButton";
-        case RoomType::ghostRoom: return "GhostRoomButton";
-        case RoomType::spa: return "SpaButton";
+        case RoomType::dungeonTemple: return "PostTemple";
+        case RoomType::temple: return "PostTemple";
+        case RoomType::dormitory: return "PostSleep";
+        case RoomType::treasury: return "PostGold";
+        case RoomType::casino: return "PostGold";
+        case RoomType::portal: return "PostPortal";
+        case RoomType::portalWave: return "PostPortal";
+        case RoomType::workshop: return "PostWorkshop";
+        case RoomType::trainingHall: return "PostTrain";
+        case RoomType::library: return "PostLibrary";
+        case RoomType::hatchery: return "PostFood";
+        case RoomType::crypt: return "PostDied";
+        case RoomType::prison: return "PostJail";
+        case RoomType::torture: return "PostJail";
+        case RoomType::bridgeWooden: return "PostDig";
+        case RoomType::bridgeStone: return "PostDig";
+        case RoomType::arena: return "PostFight";
+        case RoomType::guardRoom: return "PostFight";
+        case RoomType::toilet: return "PostToilet";
+        case RoomType::merchant: return "PostMerchant";
+        case RoomType::herbGarden: return "PostPotion";
+        case RoomType::alchemyLab: return "PostPotion";
+        case RoomType::tavern: return "PostTavern";
+        case RoomType::infirmary: return "PostHurt";
+        case RoomType::ghostRoom: return "PostGhost";
+        case RoomType::spa: return "PostSpa";
         default: return "";
     }
 }
 
-//! \brief Name of the game picture (OpenDungeonsIcons) of what the post is about: the room of a work, training or
-//! wish post, the room or the thing of a meal, a night, a payday, a drink, a purchase and so on. Empty when the post
-//! is about the creature itself (level up, hurt, friendship, ...); the book shows the portrait of the creature then.
+//! \brief Name of the painted scene (DungeonbookIcons/Post...) that shows what the post is about, as the pictures
+//! of the posts in book-switch-variant-1: a mine for digging, a treasure chest for gold, a crawler fight for fights,
+//! a golden arrow for a level up, a sack and meat for hunger, and so on. Work, training and wish posts show the
+//! scene of their room. Every category has a scene, so two posts of different kinds never share a picture.
 std::string postPictureName(const social::Post& post)
 {
     using social::PostCategory;
     switch(post.mCategory)
     {
         case PostCategory::Work:
-        case PostCategory::Wish:
-        case PostCategory::ThanksWish:
-            return roomPictureName(post.mArgument);
+        case PostCategory::ThanksWork:
+        {
+            const std::string room = roomPictureName(post.mArgument);
+            return room.empty() ? "PostDig" : room;
+        }
         case PostCategory::Train:
         {
             const std::string room = roomPictureName(post.mArgument);
-            return room.empty() ? "TrainingHallButton" : room;
+            return room.empty() ? "PostTrain" : room;
+        }
+        case PostCategory::Wish:
+        case PostCategory::ThanksWish:
+        {
+            const std::string room = roomPictureName(post.mArgument);
+            return room.empty() ? "PostUnhappy" : room;
         }
         case PostCategory::Eat:
         case PostCategory::ComplainHungry:
         case PostCategory::ThanksHungry:
-            return "HatcheryButton";
+            return "PostFood";
         case PostCategory::Sleep:
         case PostCategory::ComplainBed:
         case PostCategory::ThanksBed:
         case PostCategory::ComplainTired:
         case PostCategory::ThanksTired:
-            return "DormitoryButton";
+            return "PostSleep";
         case PostCategory::Payday:
         case PostCategory::ComplainWage:
         case PostCategory::ThanksWage:
-            return "GoldCoin";
+            return "PostGold";
         case PostCategory::Fight:
         case PostCategory::ComplainFight:
         case PostCategory::ThanksFight:
-            return "FighterButton";
+            return "PostFight";
+        case PostCategory::Hurt:
+        case PostCategory::Ko:
+        case PostCategory::ComplainWounded:
+        case PostCategory::ThanksWounded:
+            return "PostHurt";
+        case PostCategory::LevelUp:
+            return "PostLevelUp";
+        case PostCategory::Unhappy:
+        case PostCategory::ComplainWork:
+            return "PostUnhappy";
+        case PostCategory::Died:
+            return "PostDied";
         case PostCategory::Jail:
-            return "PrisonButton";
+            return "PostJail";
         case PostCategory::PickedUp:
         case PostCategory::ComplainHeld:
         case PostCategory::ThanksHeld:
-            return "WorkerHandActive";
+            return "PostHand";
         case PostCategory::Arrived:
-            return "PortalButton";
+        case PostCategory::Left:
+            return "PostPortal";
+        case PostCategory::Friendship:
+        case PostCategory::Converted:
+        case PostCategory::Couple:
+            return "PostFriends";
+        case PostCategory::Hatred:
+        case PostCategory::Nemesis:
+        case PostCategory::Breakup:
+        case PostCategory::SplitUp:
+            return "PostHatred";
         case PostCategory::Relieved:
-            return "ToiletButton";
+        case PostCategory::Filthy:
+            return "PostToilet";
         case PostCategory::Bought:
         case PostCategory::Bargain:
         case PostCategory::Fleeced:
-            return "MerchantButton";
+            return "PostMerchant";
         case PostCategory::Gift:
-            return "WorkerCarryGift";
+        case PostCategory::EpicFind:
+            return "PostGift";
         case PostCategory::Drank:
         case PostCategory::ComplainThirsty:
         case PostCategory::ThanksThirsty:
-            return "BeerButton";
         case PostCategory::DuelWon:
         case PostCategory::DuelLost:
         case PostCategory::Drunk:
         case PostCategory::Hungover:
-            return "TavernButton";
+            return "PostTavern";
         case PostCategory::GhostScared:
         case PostCategory::GhostHunted:
-            return "GhostRoomButton";
+            return "PostGhost";
         case PostCategory::Relaxed:
-            return "SpaButton";
+            return "PostSpa";
         default:
             return "";
     }
 }
 
-//! \brief The text shortened with "..." so it is not wider than the given pixel width
-std::string elideToWidth(const CEGUI::Font* font, const std::string& text, float maxWidth)
+//! \brief Sets the whole plain text of a window. Names and texts are never shortened (owner decision 732): the
+//! windows of the book word wrap and gui/WindowSocial.layout gives them the room of the longest name and post
+//! (check_dungeonbook_profile_layout.py measures it with the shipped font).
+void setFullText(CEGUI::Window* window, const std::string& text)
 {
-    if((font == nullptr) || (font->getTextExtent(text) <= maxWidth))
-        return text;
-
-    std::string shortened = text;
-    while(!shortened.empty() && (font->getTextExtent(shortened + "...") > maxWidth))
-        shortened.erase(shortened.size() - 1);
-    return shortened + "...";
-}
-
-//! \brief Sets the plain text of a single-line window, shortened with "..." to the width of the window.
-void setElidedText(CEGUI::Window* window, const std::string& text)
-{
-    window->setText(escapeMarkup(elideToWidth(window->getFont(), text, window->getPixelSize().d_width)));
-}
-
-//! \brief True if the text of the window is not higher than the given pixel height.
-bool isTileTextFitting(const CEGUI::Window* tile, float height)
-{
-    return CEGUI::PropertyHelper<float>::fromString(tile->getProperty("VertExtent")) <= height;
+    window->setText(escapeMarkup(text));
 }
 
 //! \brief Returns the value after "label: " of the first line of the statistics text that starts with the label,
@@ -306,23 +328,53 @@ std::string findStatisticsValue(const std::string& stats, const std::string& lab
     return std::string();
 }
 
-//! \brief Formats a Dungeonbook value for display with at most two decimals and without trailing zeros.
-//! The stored values are doubles (for example 1.83149...), which would otherwise show four or more decimals.
+//! \brief The number text with a comma between the thousands of its whole part ("42600.5" -> "42,600.5"). The digits
+//! stay as they are; a text in exponent form, "inf" or "nan" is returned unchanged.
+std::string groupThousands(const std::string& number)
+{
+    std::string result = number;
+    if(result.find_first_of("eEin") != std::string::npos)
+        return result;
+
+    const std::string::size_type sign = (!result.empty() && result[0] == '-') ? 1 : 0;
+    std::string::size_type wholeEnd = result.find('.');
+    if(wholeEnd == std::string::npos)
+        wholeEnd = result.size();
+    for(std::string::size_type comma = wholeEnd; comma > sign + THOUSANDS_GROUP; comma -= THOUSANDS_GROUP)
+        result.insert(comma - THOUSANDS_GROUP, ",");
+    return result;
+}
+
+//! \brief Formats a Dungeonbook value exactly, without rounding (owner decision 732): the shortest decimal text that
+//! reads back as the same double (Creature::formatExactNumber), with a comma between the thousands of the whole part
+//! as in book-variant-2 ("42,600"). 14.8 stays "14.8", 41.666666666666664 stays "41.666666666666664".
 std::string formatProfileValue(double value)
 {
-    std::ostringstream text;
-    text << std::fixed << std::setprecision(2) << value;
-    std::string result = text.str();
-    if(result.find('.') != std::string::npos)
+    return groupThousands(Creature::formatExactNumber(value));
+}
+
+//! \brief Breaks an exact value into the lines of an attribute cell (owner decision 816): at most ATTRIBUTE_LINE_CHARS
+//! characters per line, broken after a comma or point or before the exponent when one lies in the second half of the
+//! line, otherwise after the last character that fits. Every character is kept, nothing is rounded or cut.
+std::string breakAttributeValue(const std::string& value)
+{
+    std::string result;
+    std::string rest = value;
+    while(rest.size() > ATTRIBUTE_LINE_CHARS)
     {
-        while(!result.empty() && result[result.size() - 1] == '0')
-            result.erase(result.size() - 1);
-        if(!result.empty() && result[result.size() - 1] == '.')
-            result.erase(result.size() - 1);
+        std::string::size_type cut = ATTRIBUTE_LINE_CHARS;
+        for(std::string::size_type i = ATTRIBUTE_LINE_CHARS; i >= ATTRIBUTE_LINE_CHARS / 2; --i)
+        {
+            if(rest[i - 1] == ',' || rest[i - 1] == '.' || rest[i] == 'e' || rest[i] == 'E')
+            {
+                cut = i;
+                break;
+            }
+        }
+        result += rest.substr(0, cut) + "\n";
+        rest = rest.substr(cut);
     }
-    if(result == "-0")
-        result = "0";
-    return result;
+    return result + rest;
 }
 
 //! \brief Splits a statistics value like "12.5 / 40" at its " / " separators.
@@ -340,7 +392,8 @@ std::vector<std::string> splitStatisticsValue(const std::string& value)
     }
 }
 
-//! \brief The statistics value with every part that is a plain number rounded like the other values of the book.
+//! \brief The statistics value with the thousands of every part that is a plain number grouped. The digits are the
+//! ones the server wrote (exactly, Creature::formatExactNumber), nothing is rounded or read back.
 std::string formatStatisticsNumbers(const std::string& value)
 {
     if(value.empty())
@@ -354,7 +407,7 @@ std::string formatStatisticsNumbers(const std::string& value)
         double number = 0.0;
         std::string rest;
         const bool isNumber = static_cast<bool>(parser >> number) && !(parser >> rest);
-        result += (i > 0 ? " / " : "") + (isNumber ? formatProfileValue(number) : parts[i]);
+        result += (i > 0 ? " / " : "") + (isNumber ? groupThousands(parts[i]) : parts[i]);
     }
     return result;
 }
@@ -373,32 +426,6 @@ std::string countFilledSlots(const std::string& value)
             ++filled;
     }
     return std::to_string(filled) + " / " + std::to_string(parts.size());
-}
-
-//! \brief Fills a text window with a head (markup) and a value, shortening the value with "..." until the text
-//! fits the height of the window, so the window never needs a scrollbar.
-void fitTextToWindow(CEGUI::Window* window, const std::string& head, const std::string& value)
-{
-    const float height = window->getPixelSize().d_height;
-    window->setText(head + escapeMarkup(value));
-    if(height <= 0.0f || isTileTextFitting(window, height))
-        return;
-
-    // Binary search for the longest prefix (cut at a character boundary) that fits together with the dots
-    std::size_t low = 0;
-    std::size_t high = value.size();
-    while(low < high)
-    {
-        std::size_t middle = (low + high + 1) / 2;
-        while(middle > 0 && (static_cast<unsigned char>(value[middle]) & 0xC0) == 0x80)
-            --middle;
-        window->setText(head + escapeMarkup(value.substr(0, middle) + "..."));
-        if(middle > low && isTileTextFitting(window, height))
-            low = middle;
-        else
-            high = (middle > low) ? middle - 1 : low;
-    }
-    window->setText(head + escapeMarkup(value.substr(0, low) + "..."));
 }
 
 //! \brief Lets the mouse wheel of every window below the given one reach it.
@@ -826,11 +853,12 @@ const CEGUI::Image* SocialWindow::findPortrait(const std::string& creatureName, 
 
 const CEGUI::Image* SocialWindow::findPostPicture(const social::Post& post) const
 {
+    // The painted scene of the post kind (DungeonbookIcons/Post...), never the small HUD icon of a room
     const std::string name = postPictureName(post);
     CEGUI::ImageManager& images = CEGUI::ImageManager::getSingleton();
-    if(!name.empty() && images.isDefined("OpenDungeonsIcons/" + name))
-        return &images.get("OpenDungeonsIcons/" + name);
-    // Every post has a picture: without a room or a thing it is the portrait of the creature
+    if(!name.empty() && images.isDefined("DungeonbookIcons/" + name))
+        return &images.get("DungeonbookIcons/" + name);
+    // Every post has a picture: a post of an unknown kind shows the portrait of the creature
     return findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false);
 }
 
@@ -941,7 +969,7 @@ void SocialWindow::rebuildCreatureList()
     if(mListedCreatures.size() != mEntries.size())
         label << " of " << mEntries.size();
     label << ")";
-    setElidedText(home->getChild("CreaturesLabel"), label.str());
+    setFullText(home->getChild("CreaturesLabel"), label.str());
     home->getChild("ListRows")->setTooltipText(localRoster ?
         "Only locally known creatures are shown; detailed server statistics are unavailable." :
         "Click a creature to see its pages.");
@@ -975,14 +1003,14 @@ void SocialWindow::refreshListRows()
         const social::CreatureProfile& profile = cache.getProfile(entry->name, entry->className, entry->worker);
         row->getChild("Highlight")->setVisible(entry->name == mSelectedCreature);
         setImage(row->getChild("Portrait"), findPortrait(entry->name, entry->className, entry->worker, false));
-        setElidedText(row->getChild("Name"), profile.getFullName());
+        setFullText(row->getChild("Name"), profile.getFullName());
         // The champion shows a crown instead of its level
         row->getChild("Level")->setText(entry->champion ? CHAMPION_CROWN_MARKUP : "Lv. " + std::to_string(entry->level));
         std::string mood;
         std::string icon;
         describeMood(*entry, mood, icon);
         row->getChild("MoodIcon")->setProperty("Image", icon);
-        setElidedText(row->getChild("Mood"), mood);
+        setFullText(row->getChild("Mood"), mood);
         row->getChild("Button")->setTooltipText(profile.getFullName() + " (" +
             social::SocialGenerator::displayClassName(cache.getData(), entry->className) + "), keeper " + entry->keeper);
     }
@@ -1035,20 +1063,17 @@ void SocialWindow::rebuildFeed()
         if(entry != nullptr)
             level = (entry->champion ? std::string(CHAMPION_CROWN_MARKUP) : "Lv. " + std::to_string(entry->level)) + " - ";
         const std::string age = formatAge(turnNow - post.mTurn);
-        // The name gives way to level and age; the crown is about as wide as two letters
+        // The whole name, then level and age; the head word wraps, so nothing is shortened
         CEGUI::Window* head = row->getChild("Head");
-        const std::string plainMeta = "   " + (entry == nullptr ? std::string() :
-            (entry->champion ? std::string("WW - ") : level)) + age;
-        const float nameWidth = head->getPixelSize().d_width -
-            (head->getFont() == nullptr ? 0.0f : head->getFont()->getTextExtent(plainMeta));
-        head->setText(std::string(FEED_NAME_COLOUR) + escapeMarkup(elideToWidth(head->getFont(), profile.getFullName(),
-            std::max(0.0f, nameWidth))) + FEED_TIME_COLOUR + "   " + level + age);
+        head->setText(std::string(FEED_NAME_COLOUR) + escapeMarkup(profile.getFullName()) + FEED_TIME_COLOUR + "   " +
+            level + age);
+        // The whole post text, word wrapped; the text window holds the longest post of config/social-texts.cfg
         CEGUI::Window* textWindow = row->getChild("Text");
-        fitTextToWindow(textWindow, FEED_TEXT_COLOUR, text);
+        textWindow->setText(std::string(FEED_TEXT_COLOUR) + escapeMarkup(text));
         textWindow->setTooltipText(text);
-        // The game picture of the post below its text
+        // The painted scene of the post kind below its text, filling the frame like the concept
         CEGUI::Window* picture = row->getChild("Picture");
-        setImage(picture->getChild("Image"), findPostPicture(post));
+        setImage(picture->getChild("Clip/Image"), findPostPicture(post));
         picture->setTooltipText(text);
     }
     CEGUI::Window* empty = page->getChild("FeedEmpty");
@@ -1080,7 +1105,7 @@ void SocialWindow::refreshHeader(const social::DungeonbookEntry& entry)
     social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
     const social::CreatureProfile& profile = cache.getProfile(entry.name, entry.className, entry.worker);
     CEGUI::Window* header = mWindow->getChild("Header");
-    setElidedText(header->getChild("NameText"), profile.getFullName());
+    setFullText(header->getChild("NameText"), profile.getFullName());
     // The arrows switch through the list as it is filtered; with a single creature there is nothing to switch to
     const bool canSwitch = mListedCreatures.size() > 1;
     header->getChild("PrevButton")->setEnabled(canSwitch);
@@ -1094,8 +1119,8 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
     social::SocialProfileCache& cache = social::SocialProfileCache::getSingleton();
     const social::CreatureProfile& profile = cache.getProfile(entry.name, entry.className, entry.worker);
     setImage(page->getChild("Portrait/Clip/Image"), findPortrait(entry.name, entry.className, entry.worker, false));
-    setElidedText(page->getChild("NameText"), profile.getFullName());
-    setElidedText(page->getChild("KeeperText"), "Keeper: " + entry.keeper);
+    setFullText(page->getChild("NameText"), profile.getFullName());
+    setFullText(page->getChild("KeeperText"), "Keeper: " + entry.keeper);
     std::string mood;
     std::string icon;
     describeMood(entry, mood, icon);
@@ -1141,7 +1166,8 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
     }
     else
     {
-        // Out of sight the profile still comes from the name, with the path and skills of the roster
+        // Out of sight the profile still comes from the name, with the hands, path and skills of the roster. The text
+        // word wraps in full; when it is longer than the column, the column scrolls (VertScrollbar in the layout).
         std::vector<std::string> likes;
         std::vector<std::string> dislikes;
         for(std::size_t i = 0; i < 2; ++i)
@@ -1153,7 +1179,7 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
         }
         std::string text = "Age: " + profile.mAgeText + (profile.mGender.empty() ? "" : " - " + profile.mGender) +
             "\nRelationship: " + profile.mRelationship + "\nFrom: " + profile.mHometown + "\nJob: " + profile.mJob +
-            "\nPath: " + entry.path + "\nSkills: " + entry.skills + "\nLikes: ";
+            "\nEquipment: " + entry.equipment + "\nPath: " + entry.path + "\nSkills: " + entry.skills + "\nLikes: ";
         for(std::size_t i = 0; i < likes.size(); ++i)
             text += (i > 0 ? ", " : "") + likes[i];
         text += "\nDislikes: ";
@@ -1183,7 +1209,7 @@ void SocialWindow::refreshProfile(const social::DungeonbookEntry& entry)
         {
             CEGUI::Window* thumb = page->getChild("PostThumb" + std::to_string(rows));
             thumb->setVisible(true);
-            setImage(thumb->getChild("Image"), findPostPicture(*it));
+            setImage(thumb->getChild("Clip/Image"), findPostPicture(*it));
             thumb->setTooltipText(text + "  (" + formatAge(turnNow - it->mTurn) + ")");
             ++rows;
         }
@@ -1214,7 +1240,7 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
     {
         const std::string value = known ? findStatisticsValue(entry.stats, line.label) : std::string();
         CEGUI::Window* valueWindow = page->getChild(std::string(line.window) + "Value");
-        setElidedText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));
+        setFullText(valueWindow, line.slots ? countFilledSlots(value) : formatStatisticsNumbers(value));
         // The item names of the potion and inventory slots and the meaning of the skill points stay readable
         std::string tooltip = value;
         if(std::string(line.window) == "SkillPoints" && !value.empty())
@@ -1223,12 +1249,14 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
         page->getChild(std::string(line.window) + "Label")->setTooltipText(tooltip);
     }
 
+    // The four attributes side by side in one row (book-variant-2, owner decision 816): the label on top, the exact
+    // value on the line below, a long value continues on further lines of its cell
     const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};
     const double values[] = {entry.strength, entry.dexterity, entry.life, entry.mana};
     for(std::size_t i = 0; i < 4; ++i)
     {
         std::ostringstream text;
-        text << names[i] << "\n" << (known ? formatProfileValue(values[i]) : std::string("-"));
+        text << names[i] << "\n" << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));
         page->getChild(names[i])->setText(text.str());
     }
     // The labels are fixed in the layout; the value column holds one line per label, right aligned.
@@ -1236,7 +1264,7 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
     std::ostringstream defense;
     if(known)
     {
-        combat << formatProfileValue(entry.critical) << " %\n" << formatProfileValue(entry.attackRating) << "\n"
+        combat << formatProfileValue(entry.critical) << "%\n" << formatProfileValue(entry.attackRating) << "\n"
             << formatProfileValue(entry.defenseRating);
         defense << formatProfileValue(entry.physicalDefense) << "\n" << formatProfileValue(entry.magicalDefense) << "\n"
             << formatProfileValue(entry.elementDefense);
@@ -1249,14 +1277,17 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
     page->getChild("CombatValues")->setText(combat.str());
     page->getChild("DefenseValues")->setText(defense.str());
 
+    // The tiles show symbol and title as in book-variant-2; their whole text is shown on the profile page (path and
+    // skills rows, which word wrap and scroll) and the hands on the inventory page. The tooltip repeats it.
     const char* const tiles[] = {"Equipment", "Path", "Skills"};
     const std::string tileValues[] = {entry.equipment, entry.path, entry.skills};
     for(std::size_t i = 0; i < 3; ++i)
     {
         const std::string value = (known && !tileValues[i].empty()) ? tileValues[i] : std::string("-");
-        CEGUI::Window* tile = page->getChild(std::string(tiles[i]) + "Value");
-        fitTextToWindow(tile, FEED_TEXT_COLOUR, value);
-        tile->setTooltipText(value);
+        const std::string tooltip = std::string(tiles[i]) + ": " + value;
+        page->getChild(std::string(tiles[i]) + "Tile")->setTooltipText(tooltip);
+        page->getChild(std::string(tiles[i]) + "Icon")->setTooltipText(tooltip);
+        page->getChild(std::string(tiles[i]) + "Title")->setTooltipText(tooltip);
     }
 }
 

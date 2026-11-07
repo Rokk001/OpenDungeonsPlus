@@ -167,8 +167,15 @@ check('MAX_OWN_POSTS = 6' in window and '(rows < MAX_OWN_POSTS)' in window,
 for name in ('FriendLink0', 'FriendLink1', 'FoeLink'):
     check('type="OD/InvisibleButton" name="%s"' % name in page, name + ' is a borderless button')
 check('LinkButton' not in layout + window + gamemode, 'the friend and foe buttons below the profile are gone')
-check('getHorzScrollbar' not in window and 'elideToWidth' in window,
-      'long names are shortened, no horizontal scrollbar')
+check('getHorzScrollbar' not in window and 'elideToWidth' not in window and 'fitTextToWindow' not in window
+      and '"..."' not in window, 'long names are not shortened (decision 732) and need no horizontal scrollbar')
+for name in ('CreaturesLabel', 'Name', 'Head', 'Text', 'NameText', 'KeeperText'):
+    windows = social_root.findall(".//Window[@name='%s']" % name)
+    check(windows, name)
+    for part in windows:
+        formatting = part.find("Property[@name='HorzFormatting']")
+        check(formatting is not None and formatting.get('value').startswith('WordWrap'),
+              name + ' word wraps its whole text (check_dungeonbook_profile_layout.py measures the longest one)')
 check('EventMouseDoubleClick' not in window, 'no double click window')
 selection = window[window.index('bool SocialWindow::onListRowClicked'):]
 selection = selection[:selection.index('\n}\n')]

@@ -45,7 +45,7 @@
                 <Property name="ReadOnly" value="True" />
             </Window>
             <Window type="OD/Checkbox" name="RelationshipsCheckbox" >
-                <Property name="Area" value="{{0.57,0},{0.5,16},{0.70,0},{0.5,40}}" />
+                <Property name="Area" value="{{0.56,0},{0.5,16},{0.92,0},{0.5,40}}" />
                 <Property name="Text" value="Creature relationships" />
                 <Property name="TooltipText" value="Creatures of the same keeper form friendships and rivalries" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
@@ -57,7 +57,7 @@
                 <Property name="Sort" value="True" />
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
-                <Property name="Area" value="{{0.73,0},{0.5,28},{0.92,0},{1,-132}}" />
+                <Property name="Area" value="{{0.73,0},{0.5,44},{0.92,0},{1,-132}}" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="HorzFormatting" value="WordWrapLeftAligned" />

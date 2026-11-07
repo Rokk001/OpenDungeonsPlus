@@ -200,7 +200,7 @@
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Working0">
-            <Property name="Area" value="{{-0.0044,0},{0.653,0},{0.2271,0},{0.707,0}}" />
+            <Property name="Area" value="{{0,0},{0.653,0},{0.2227,0},{0.707,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
@@ -540,7 +540,7 @@
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Working5">
-            <Property name="Area" value="{{0.8522,0},{0.653,0},{1.0044,0},{0.707,0}}" />
+            <Property name="Area" value="{{0.8566,0},{0.653,0},{1,0},{0.707,0}}" />
             <Property name="Font" value="MedievalSharp-8" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />

@@ -116,6 +116,11 @@ void MovableGameEntity::setWalkPath(const std::string& walkAnim, const std::stri
         RoomObjectNavigation::separate(static_cast<Creature&>(*this), walkPath);
         walkDistortion = false;
     }
+    // The jitter of the client moves each coordinate of a walk point by up to 0.3, which carries the body of a wide
+    // creature into the walls next to its path; such a path is walked as it is (decision 727)
+    if(walkDistortion && getIsOnServerMap() && getObjectType() == GameEntityType::creature &&
+        RoomObjectNavigation::walkDistortionReachesWall(static_cast<Creature&>(*this), walkPath))
+        walkDistortion = false;
     mWalkQueue.clear();
     // We set the animation after clearing mWalkQueue and before filling it to be
     // sure it is empty when we set it
@@ -289,6 +294,13 @@ void MovableGameEntity::startAnimationClip()
     // clip does not start again, so the body does not stand up and fall once more, and the death touches do not repeat
     if((mPrevAnimationState == EntityAnimation::die_anim) && (getObjectType() == GameEntityType::creature) &&
        RenderManager::getSingleton().rrIsCreatureDown(static_cast<Creature*>(this)))
+        return;
+
+    // A dead body that a worker pulls keeps the lying pose it already has (the last frame of its death clip, the lying
+    // fallback pose, the decay clip). The Dragged clip is made for a living, hurt creature that is pulled by the legs: on a
+    // body it stood up half way and floated along above the ground (decision 710)
+    if((mPrevAnimationState == EntityAnimation::dragged_anim) && (getObjectType() == GameEntityType::creature) &&
+       !static_cast<Creature*>(this)->isAlive() && RenderManager::getSingleton().rrIsCreatureDown(static_cast<Creature*>(this)))
         return;
 
     RenderManager::getSingleton().rrSetObjectAnimationState(this, mPrevAnimationState, mPrevAnimationStateLoop);
