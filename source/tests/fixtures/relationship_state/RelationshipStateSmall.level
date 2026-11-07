@@ -255,5 +255,5 @@ ProtectDungeonTemple	NULL
 
 [RelationshipState]
 Knight1	-150	5	0		0
-Knight3	-320	0	-1		0	Knight4
+Knight3	-320	7	0	Knight1	12	Knight4
 [/RelationshipState]

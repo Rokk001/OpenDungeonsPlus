@@ -7355,10 +7355,9 @@ bool Creature::getRelationshipState(RelationshipCreatureState& state) const
     state.mName = getName();
     // The captors belong to creatures that are held prisoner, which cannot have relationships
     state.mCaptors = mCaptors;
-    // Saved whether or not the creature can have relationships at the moment (a prisoner keeps its grief record)
+    // Every field is saved whether or not the creature can have relationships at the moment (a prisoner keeps its grief,
+    // rage and brawl records). The gameplay checks that need eligibility are made where the fields are used.
     state.mGriefMood = mGriefMood;
-    if(!canHaveRelationships())
-        return !state.isEmpty();
 
     if(mRageUntilTurn > turn)
     {
@@ -7399,9 +7398,8 @@ void Creature::setRelationshipState(const RelationshipCreatureState& state)
     // The grief record is restored only as a record: the mood it came from is already in the saved mood, so no mood is applied here
     mGriefMood = state.mGriefMood;
 
-    if(!canHaveRelationships())
-        return;
-
+    // The rage and the brawl are restored whether or not the creature can have relationships now (the same rule as the
+    // grief record above). The gameplay checks decide when they have an effect.
     const RelationshipSettings& settings = gameMap->getCreatureRelationships()->getSettings();
     int64_t turn = gameMap->getTurnNumber();
     if((state.mRageTurnsLeft > 0) && (state.mRageSeatId >= 0))

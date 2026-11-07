@@ -51,16 +51,15 @@ RESTORED_LINE = re.compile(
     r"captorNames=(?P<captors>[^,\r\n]*), grief=(?P<grief>-?\d+)")
 
 # Expected restored values of the committed fixture, written by hand from its block (not derived from the game).
-# Each creature must be in a seat that allows relationships (a seat that exists, not rogue, not Hero, not a worker, not
-# in prison), because Creature::setRelationshipState keeps the rage and the brawl only then; the fixture has only
-# seat 1 (Keeper), so all of them are in it. The expectations are compared with the rules derived from the block (no
-# game). The runtime comparison with the game log is run only by the --exe part, and was not run in this change (no
-# build).
+# Rage and brawl are kept whatever the eligibility of the creature (only a seat id below 0 drops the rage, as the
+# loader does); the gameplay checks decide when they have an effect. The fixture has only seat 1 (Keeper). The
+# expectations are compared with the rules derived from the block (no game). The runtime comparison with the game log
+# is run only by the --exe part, and was not run in this change (no build).
 FIXTURE_EXPECTED = {
-    # Knight1 is in an eligible seat with nonzero grief; Knight3 is a prisoner (ineligible) with nonzero grief,
-    # which the loader keeps as a record like its captors
+    # Knight1 is in an eligible seat with nonzero grief and rage; Knight3 is a prisoner (ineligible) with nonzero grief,
+    # rage and a brawl, which the loader keeps as records like its captors
     "Knight1": {"grief": -150, "rageTurns": 5, "rageSeat": 0, "brawlOpponent": "", "captors": []},
-    "Knight3": {"grief": -320, "rageTurns": 0, "rageSeat": -1, "brawlOpponent": "", "captors": ["Knight4"]},
+    "Knight3": {"grief": -320, "rageTurns": 7, "rageSeat": 0, "brawlOpponent": "Knight1", "captors": ["Knight4"]},
 }
 # The loader keeps the grief within this many points in both directions (CreatureRelationships.cpp, STATE_GRIEF_LIMIT)
 GRIEF_LIMIT = 100000
