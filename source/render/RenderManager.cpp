@@ -1786,7 +1786,7 @@ RenderManager::~RenderManager()
 }
 
 //! \brief Builds the rock border around the map from shared earth wall meshes, grouped in chunk nodes so
-//! that chunks outside the view are skipped as a whole.
+//! that chunks outside the view are skipped as a whole; compatible earth shares draw submission.
 void RenderManager::createWorldBorder(GameMap* gameMap)
 {
     const std::vector<TileSetValue>& borderMeshes = gameMap->getMeshesForEnclosedEarth();
@@ -1846,6 +1846,7 @@ void RenderManager::createWorldBorder(GameMap* gameMap)
             Ogre::SceneNode* tileNode = chunk->second->createChildSceneNode(
                 Ogre::Vector3(static_cast<Ogre::Real>(xx), static_cast<Ogre::Real>(yy), 0.0f), orientation);
             tileNode->attachObject(entity);
+            mTerrainDrawBatch.add(mSceneManager, entity);
         }
     }
 }
@@ -2152,8 +2153,10 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 }
 
 
+//! Releases terrain batches before destroying their source entities and game visuals.
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    mTerrainDrawBatch.clear();
     mGameMap = nullptr;
     mForeignWealth.clear();
     if(mSceneManager->hasEntity(GROUND_UNDERLAY_ENTITY_NAME))
@@ -3594,8 +3597,8 @@ static void rrPlaceFogInstance(Ogre::InstancedEntity* instance)
     instance->setPosition(Ogre::Vector3::ZERO);
 }
 
-//! \brief Creates or updates discovered terrain or matching neutral earth, its delayed cloud
-//! and the dig mark of the local player.
+//! \brief Creates or updates discovered terrain or matching neutral earth, its delayed cloud,
+//! the dig mark of the local player and look-neutral earth submission batches.
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
 {
     if (tile.getEntityNode() == nullptr)
@@ -3633,6 +3636,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     meshName = tileSetValue.getMeshName();
     Ogre::Entity* tileMeshEnt = nullptr;
     const std::string tileMeshName = tileName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_tileMesh";
+    mTerrainDrawBatch.remove(tileMeshName);
     if(mSceneManager->hasEntity(tileMeshName))
     {
         tileMeshEnt = mSceneManager->getEntity(tileMeshName);
@@ -3814,6 +3818,8 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
 
 
     
+    if(nt == NodeType::MTILES_NODE && tileMeshEnt != nullptr)
+        mTerrainDrawBatch.add(mSceneManager, tileMeshEnt);
 }
 
 void RenderManager::rrCreateTile(Tile& tile, GameMap& dtc, const Player& localPlayer, NodeType nt)
@@ -3832,6 +3838,7 @@ void RenderManager::rrCreateTile(Tile& tile, GameMap& dtc, const Player& localPl
     rrRefreshTile(tile, dtc, localPlayer,nt);
 }
 
+//! Removes terrain batch membership before releasing the tile's original query entity.
 void RenderManager::rrDestroyTile(Tile& tile, NodeType nt)
 {
     if (tile.getEntityNode() == nullptr)
@@ -3853,6 +3860,7 @@ void RenderManager::rrDestroyTile(Tile& tile, NodeType nt)
     }
 
     const std::string tileMeshName = tileName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_tileMesh";
+    mTerrainDrawBatch.remove(tileMeshName);
     if(mSceneManager->hasSceneNode(tileMeshName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_node"))
     {
         Ogre::SceneNode* tileMeshNode = mSceneManager->getSceneNode(tileMeshName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_node");

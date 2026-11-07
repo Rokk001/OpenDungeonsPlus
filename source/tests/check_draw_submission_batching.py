@@ -1,11 +1,9 @@
 """Check what batches the draw submission of the main scene today. It does not start a game.
 
-Cause 5 of the slow frames is the submission of the main scene (SceneManager::_renderVisibleObjects: one
-renderSingleObject, one GPU parameter update and one draw per tile, room and creature part). No change that keeps the
-look exactly was found that is safe to make without a profile and a build (see the result of package F1): merging
-tiles into static geometry or instancing them changes the shader inputs of every tile material, and the seat
-colour clones (colourizeMaterial) are separate materials by design. So this check only guards the batching that
-exists, so that none of it is lost by accident:
+Cause 5 is main-scene submission: one renderSingleObject, GPU parameter update and draw per object part.
+Earth now shares draws within small cells only when each original has the same ordered light list.
+The original entities remain available for picking and fallback; the separate terrain check covers that contract.
+This check also guards the existing batches so none are lost by accident:
   - the fog of war clouds are drawn as hardware instanced batches,
   - tile meshes of the tile node are not shadow casters (they add nothing to the shadow pass),
   - the dirt fog instancing material keeps its instancing shader.
@@ -22,4 +20,9 @@ assert 'tileMeshEnt->setCastShadows(false);' in render
 
 dirt = (repo / 'materials/scripts/DirtInstanced.material').read_text(encoding='utf-8')
 assert 'source DirtTileInstanced.vert' in dirt
+
+terrain = (repo / 'source/render/TerrainDrawBatch.cpp').read_text(encoding='utf-8')
+assert 'createStaticGeometry' in terrain and 'lights != mLights' in terrain
+assert 'mTerrainDrawBatch.add(mSceneManager, tileMeshEnt);' in render
+assert 'mTerrainDrawBatch.add(mSceneManager, entity);' in render
 print('ok')

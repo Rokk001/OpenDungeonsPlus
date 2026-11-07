@@ -34,6 +34,7 @@
 #include "entities/GameEntity.h"
 #include "render/TreasuryCreatureRules.h"
 #include "render/TreasuryGoldBatch.h"
+#include "render/TerrainDrawBatch.h"
 #include "rooms/HatcheryNestField.h"
 #include <OgreVector2.h>
 
@@ -871,6 +872,8 @@ private:
     int mTreasuryDentNumber = 0;
     //! The settled piles of a treasury are drawn as one batch per room
     TreasuryGoldBatch mTreasuryBatch;
+    //! Earth submission batches retain per-tile lighting and original query entities.
+    TerrainDrawBatch mTerrainDrawBatch;
 
     //! An object standing in the gold of a treasury, drawn partly buried: only its node is lifted by mCurrent
     struct TreasuryBuriedObject
