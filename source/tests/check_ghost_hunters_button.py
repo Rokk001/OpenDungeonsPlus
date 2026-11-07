@@ -193,7 +193,14 @@ def start_choice():
     has(body(room, "GhostProduct RoomGhostRoom::getChosenApparatus("), "a locked choice works as the mana still",
         "isApparatusUnlocked(seat,seat.getGhostProduct())?seat.getGhostProduct():GhostProduct::mana")
     has(body(room, "uint32_t RoomGhostRoom::getUnlockLevel("), "unlock levels", "kind==GhostProduct::mana?1:kind==GhostProduct::research?2:3")
-    assert "setGhostProduct(" not in body(room, "void RoomGhostRoom::doUpkeep("), "the stored choice is kept while locked"
+    upkeep = body(room, "void RoomGhostRoom::doUpkeep(")
+    # The stored choice is kept while locked; only an old save (plan constraint 4) replaces a locked choice by the mana still
+    assert upkeep.count("setGhostProduct(") == 1, "the stored choice is kept while locked outside the old save conversion"
+    has(upkeep, "only the old save conversion overwrites the choice",
+        "if(mOldSaveChoice)",
+        "if(!isApparatusUnlocked(*getSeat(),getSeat()->getGhostProduct())) getSeat()->setGhostProduct(GhostProduct::mana);")
+    assert "mOldSaveChoice=getGameMap()->getSavedTurnNumber()>0;" in body(room, "bool RoomGhostRoom::importFromStream("), \
+        "a new game (level file, saved turn 0) is never converted"
     ai = body(read("source/ai/AiRooms.cpp"), "void ghostProduct(KeeperAI& ai)")
     has(ai, "the AI never picks a locked apparatus and keeps the start rule",
         "if(!RoomGhostRoom::isApparatusUnlocked(*seat, product))\n        product = RoomGhostRoom::getChosenApparatus(*seat);")
@@ -202,8 +209,10 @@ def start_choice():
     unlock = {"mana": 1, "research": 2, "crystal": 3}
     chosen = lambda stored, level: stored if level >= unlock[stored] else "mana"
     assert [chosen("research", level) for level in (0, 1, 2, 3)] == ["mana", "mana", "research", "research"]
-    # An old save keeps its stored choice: a locked soul forge works as the mana still until room research 3
-    assert [chosen("crystal", level) for level in (1, 2, 3)] == ["mana", "mana", "crystal"]
+    # An old save with a locked soul forge stores the mana still after loading (plan constraint 4); it then stays there
+    stored = lambda choice, level: "mana" if level < unlock[choice] else choice
+    assert [chosen(stored("crystal", level), level) for level in (1, 2, 3)] == ["mana", "mana", "crystal"]
+    assert [stored("crystal", level) for level in (1, 2, 3)] == ["mana", "mana", "crystal"]
     print("start choice: ghost press when unlocked, mana still until then: ok")
 
 

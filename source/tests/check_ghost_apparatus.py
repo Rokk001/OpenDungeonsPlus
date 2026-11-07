@@ -196,6 +196,13 @@ def saving():
     imported = body(room, "bool RoomGhostRoom::importFromStream(")
     has(imported, "apparatus record and old saves", "if(!(is >> marker) || marker!=\"GhostApparatus\")", "is.clear();is.seekg(position);",
         "is >> apparatus.queue >> apparatus.working >> apparatus.workTurns >> apparatus.crystalEctoplasm")
+    # Plan constraint 4: only a saved game without the apparatus record (an old save) marks its choice for conversion;
+    # a level file (no record, saved turn 0) and a new save (record present) do not
+    old_branch = imported[imported.index("marker!=\"GhostApparatus\")"):imported.index("return true;")]
+    has(old_branch, "only an old saved game is marked", "mOldSaveChoice=getGameMap()->getSavedTurnNumber()>0;")
+    assert imported.count("mOldSaveChoice") == 1, "a new save with the record never marks the choice"
+    assert "bool mOldSaveChoice = false;" in read("source/rooms/RoomGhostRoom.h"), "rooms start unmarked"
+    assert room.count("mOldSaveChoice") == 3, "the mark is set on load and read and cleared only in the upkeep"
     assert "Room::importRoomFromStream(*room,stream);" in room
     instance = read("source/entities/ItemInstance.cpp")
     has(body(instance, "void ItemInstance::exportToStream("), "item record", "<< \" GhostItem \" << static_cast<uint32_t>(mGhostItem) << ' ' << mGhostTarget;")
@@ -211,11 +218,26 @@ def saving():
     assert "GhostProduct mGhostProduct = GhostProduct::mana;" not in read("source/game/SeatData.h"), "old mana still start rule gone"
     assert re.search(r"enum class GhostProduct : uint32_t \{ research = 0, mana = 1, crystal = 2 \};", read("source/game/SeatData.h")), "old saves map 1:1"
     upkeep = body(room, "void RoomGhostRoom::doUpkeep(")
-    has(upkeep, "old saves keep their choice, a locked one works as the mana still",
-        "// A locked choice (the ghost press of a new game, or a choice after loading) is kept: getChosenApparatus uses the",
+    has(upkeep, "new games and new saves keep a locked choice, it works as the mana still",
+        "// A locked choice of a new game or a new save (the ghost press of a new game) is kept: getChosenApparatus uses the",
         "if(!mCauldrons.empty()) produceEctoplasm(*mCauldrons.front().anchor);")
-    assert "setGhostProduct(" not in upkeep, "the upkeep never overwrites the stored choice"
-    assert upkeep.index("rooms.front()!=this) return;") < upkeep.index("produceEctoplasm"), "only the keeper's first ghost room converts"
+    # Plan constraint 4: an old save whose stored choice is locked at the room research level becomes the mana still
+    migration = upkeep[upkeep.index("if(mOldSaveChoice)"):]
+    migration = migration[:migration.index("\n    }") + 6]
+    has(migration, "old save locked choice becomes the mana still, once for the keeper",
+        "for(Room* room : rooms) static_cast<RoomGhostRoom*>(room)->mOldSaveChoice=false;",
+        "if(!isApparatusUnlocked(*getSeat(),getSeat()->getGhostProduct())) getSeat()->setGhostProduct(GhostProduct::mana);")
+    assert upkeep.count("setGhostProduct(") == 1 and "setGhostProduct(" in migration, \
+        "the upkeep overwrites the stored choice only in the old save conversion"
+    assert upkeep.index("rooms.front()!=this) return;") < upkeep.index("if(mOldSaveChoice)") < upkeep.index("produceEctoplasm"), \
+        "only the keeper's first ghost room converts, before it uses the choice"
+    # Replay of the stored choice after the first upkeep: unlock level 1 mana still, 2 ghost press, 3 soul forge
+    unlock = {"mana": 1, "research": 2, "crystal": 3}
+    def stored_after(stored, level, old_save):
+        return "mana" if old_save and level < unlock[stored] else stored
+    assert [stored_after("crystal", level, True) for level in (1, 2, 3)] == ["mana", "mana", "crystal"]
+    assert [stored_after("research", level, True) for level in (0, 1, 2, 3)] == ["mana", "mana", "research", "research"]
+    assert [stored_after("research", level, False) for level in (0, 1, 2, 3)] == ["research"] * 4, "decision 800 kept"
     print("saving: ok")
 
 

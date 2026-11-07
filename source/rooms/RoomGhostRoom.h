@@ -164,6 +164,9 @@ private:
     std::vector<BuildingObject*> mCauldronObjects;
     bool mLayingOut = false;
     double mAlarmTurns = 0.0;
+    //! \brief True for a ghost room of an old saved game (no GhostApparatus record): the first upkeep of the keeper's
+    //! first ghost room then replaces a stored choice that is still locked by the mana still (plan constraint 4).
+    bool mOldSaveChoice = false;
     std::array<Apparatus, APPARATUS_COUNT> mApparatuses;
 };
 #endif

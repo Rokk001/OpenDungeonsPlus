@@ -888,12 +888,14 @@ void RoomGhostRoom::exportToStream(std::ostream& os) const
 bool RoomGhostRoom::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is)) return false;
-    // Old saves end the room here: the apparatuses start idle and empty
+    // Old saves end the room here: the apparatuses start idle and empty. A level file has no record either (the
+    // editor does not write it), so only a saved game (saved turn above 0) marks its stored choice for conversion
     const std::streampos position=is.tellg();
     std::string marker;
     if(!(is >> marker) || marker!="GhostApparatus")
     {
         is.clear();is.seekg(position);
+        mOldSaveChoice=getGameMap()->getSavedTurnNumber()>0;
         return true;
     }
     for(Apparatus& apparatus : mApparatuses)
@@ -913,7 +915,14 @@ void RoomGhostRoom::doUpkeep()
     for(BuildingObject* object : mWallObjects) object->setGhostRoomState(-1.0,mAlarmTurns);
     const std::vector<Room*> rooms=getGameMap()->getRoomsByTypeAndSeat(RoomType::ghostRoom,getSeat());
     if(rooms.empty() || rooms.front()!=this) return;
-    // A locked choice (the ghost press of a new game, or a choice after loading) is kept: getChosenApparatus uses the
+    // Plan constraint 4: an old save whose stored choice is still locked at the keeper's room research level becomes
+    // the mana still, once, on the first upkeep of the keeper's first ghost room after loading
+    if(mOldSaveChoice)
+    {
+        for(Room* room : rooms) static_cast<RoomGhostRoom*>(room)->mOldSaveChoice=false;
+        if(!isApparatusUnlocked(*getSeat(),getSeat()->getGhostProduct())) getSeat()->setGhostProduct(GhostProduct::mana);
+    }
+    // A locked choice of a new game or a new save (the ghost press of a new game) is kept: getChosenApparatus uses the
     // mana still until room research unlocks it, then the chosen apparatus (decision 800)
     // Full ectoplasm still in the keeper value (an old save, or a cauldron without a free floor tile) comes out next
     // to the first cauldron of the keeper's first ghost room
