@@ -79,6 +79,11 @@ public:
     //! \param gameMap The map, the one of the entity if null.
     virtual void setPosition(const Ogre::Vector3& position, GameMap* gameMap = nullptr) override;
 
+    //! \brief Puts the figure on its tile and keeps its height. GameEntity writes the floor height of the tile over z,
+    //! which put the attendant on the floor under the chair instead of on the seat (decision 837).
+    //! \param gameMap The map, the one of the entity if null.
+    virtual void addEntityToPositionTile(GameMap* gameMap = nullptr) override;
+
     //! \brief Server side. Puts a new attendant on the seat of the chair, owned by the seat of the room.
     //! \param gameMap The map to put the figure on.
     //! \param room The spa the attendant belongs to.

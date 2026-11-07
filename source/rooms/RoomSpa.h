@@ -263,6 +263,15 @@ public:
     //! \param y The y of the tile.
     bool isPoolPosition(int32_t x, int32_t y) const;
 
+    //! \brief The walk of the pool attendant between two tiles of the room: around the pool on the rim (decision 837,
+    //! nobody walks over the pool), out of the mud by the fewest pool tiles after a jump. See SpaLayout::rimWalk.
+    //! \param from The tile he starts on.
+    //! \param to The tile he walks to.
+    //! \param path Set to the middles of the tiles he walks over, the last one is the middle of to.
+    //! \return False when the room does not connect the two tiles.
+    bool getAttendantWalk(const std::pair<int32_t, int32_t>& from, const std::pair<int32_t, int32_t>& to,
+        std::vector<std::pair<int32_t, int32_t> >& path) const;
+
     //! \brief Shows the splash of a landing on a pool tile (mud splash effect and sound) for the keepers that see it.
     //! \param x The x of the pool tile.
     //! \param y The y of the pool tile.

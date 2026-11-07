@@ -5,7 +5,8 @@ of it. The block is the lava spa (SpaMudPool and SpaPoolRim), not the crypt: eve
    emissive and paints an untextured surface white, so the colour has to come from a texture unit (colour_op_ex src_manual).
 2  The puffs are SpaSteam: the emitter sat at the origin of the pool piece, inside the mud (top 0.28), so the lower half of each
    puff was cut off and the rest was a large opaque white blob. The emitter now starts above the mud and the puffs are thin.
-3  Skeletons and other creatures walk over the pool on purpose (isWalkableSpaMesh); graves (coffins) stay solid.
+3  The pool pieces stay out of the furniture list (isWalkableSpaMesh); graves (coffins) stay solid. Decision 837 makes the
+   mud solid for the route search instead (RoomObjectNavigation::spaPoolObstacles, check_spa_owner_837.py).
 """
 from pathlib import Path
 import re

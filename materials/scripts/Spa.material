@@ -5,13 +5,18 @@ material SpaMud : RTSS/PerPixel_SinglePass
 {
     technique
     {
+        // Decision 837: hot liquid mud instead of a near-black slab (the dark ground texture of dug-out tiles times 0.4 0.25
+        // 0.13 was almost black). Own painted mud (tools/spa-textures/generate_spa_mud.py), a wet gloss and a faint warmth
+        // of the lava below; it stays opaque, because the mud hides the lower body of the bathers (spa plan D6, 5.3).
         pass
         {
-            diffuse 0.4 0.25 0.13 1
-            specular 0 0 0 0 1
+            ambient 1 1 1 1
+            diffuse 1 1 1 1
+            specular 0.5 0.42 0.32 1 36
+            emissive 0.14 0.06 0.02
             texture_unit
             {
-                texture Dirt.png
+                texture SpaMud.png
                 scroll_anim 0.02 0.01
             }
         }
@@ -58,6 +63,34 @@ material SpaIron : RTSS/PerPixel_SinglePass
         {
             diffuse 0.12 0.11 0.09 1
             specular 0 0 0 0 1
+        }
+    }
+}
+
+// The red and the off-white bands of the lifebuoy at the attendant's chair (decision 837, variant 1 of the design:
+// a worn red and white life ring); faded colours, a little sheen of old paint
+material SpaLifebuoyRed : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            ambient 1 1 1 1
+            diffuse 0.62 0.1 0.07 1
+            specular 0.12 0.1 0.1 1 16
+        }
+    }
+}
+
+material SpaLifebuoyWhite : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            ambient 1 1 1 1
+            diffuse 0.78 0.74 0.66 1
+            specular 0.12 0.12 0.11 1 16
         }
     }
 }

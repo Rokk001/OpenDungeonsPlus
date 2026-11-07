@@ -126,7 +126,13 @@ def source_rules(ref):
     require('class RouteCache' in navigation_header and
             'bool refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache);' in navigation_header,
             NAVIGATION_HEADER + ': RouteCache and refine() with a cache are missing')
-    refine = body(navigation, 'bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache)')
+    # The route search is refineAround(); refine() gives it the cache, and the try around the spa pools its own cache
+    # (decision 837), because a failure around the pool says nothing about the way through the mud
+    wrapper = body(navigation, 'bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache)')
+    require('return refineAround(creature, path, cache, std::vector<RoomObjectPath::Obstacle>());' in wrapper and
+            'RouteCache poolCache;' in wrapper and 'refineAround(creature, around, poolCache, pool)' in wrapper,
+            NAVIGATION + ': refine() must give its cache to the search without the pool and a fresh one to the search around it')
+    refine = body(navigation, 'static bool refineAround(')
     require('RoomObjectPath::RouteFailures& furnitureFailures = cache.failures(creature, interaction);' in refine,
             NAVIGATION + ': refine() must use the failures of the cache for the furniture without its interaction object')
     require(refine.count('terrain, route, true, &failures)') == 2,

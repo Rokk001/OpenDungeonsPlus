@@ -42,7 +42,7 @@ assert 'terrain(start, point)' in search            # first node of the start
 assert 'terrain(point, goal)' in search             # first node of the goal
 assert '!terrain(from, to)' in search               # every edge between two grid nodes
 assert 'terrain(goal, goal)' in search and 'terrain(start, goal)' in search
-refine = between(nav, 'bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache)',
+refine = between(nav, 'static bool refineAround(Creature& creature, std::vector<Ogre::Vector2>& path, RoomObjectNavigation::RouteCache& cache,',
                  'bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path)\n')
 assert '{ return terrainClear(passable, from, to); }' in refine
 smooth = between(nav, 'bool smoothCorridor(', 'void keepObstaclesNear')

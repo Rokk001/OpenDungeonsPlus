@@ -19,8 +19,10 @@
 #define ROOMSPALAYOUT_H
 
 #include <cstdint>
+#include <map>
 #include <set>
 #include <utility>
+#include <vector>
 
 //! \brief A set of tile positions (x, y) of a lava spa. The pure layout rules of the spa work on such sets so that
 //! they do not need a map; the room maps its tiles to a set and back.
@@ -194,6 +196,71 @@ namespace SpaLayout
                 best = *it;
         }
         tile = std::make_pair(best.first, best.second + 1);
+        return true;
+    }
+
+    //! \brief Cost of stepping onto a pool tile on a walk of the pool attendant. A step on the rim costs 1, so he goes
+    //! around the pool on the rim and wades only out of the mud after a jump (decision 837: nobody walks over the pool).
+    const int32_t POOL_STEP_COST = 100;
+
+    //! \brief The tiles the pool attendant walks over from one covered tile to another: steps between the four
+    //! neighbours, around the pool on the rim where the rim connects them, through the fewest pool tiles otherwise.
+    //! \param covered All the tiles the room covers.
+    //! \param pool The pool tiles of the room.
+    //! \param from The tile he starts on (not part of the result).
+    //! \param to The tile he walks to (the last tile of the result).
+    //! \param path Set to the tiles in walking order.
+    //! \return False when the room does not connect the two tiles.
+    inline bool rimWalk(const SpaTileSet& covered, const SpaTileSet& pool, const std::pair<int32_t, int32_t>& from,
+        const std::pair<int32_t, int32_t>& to, std::vector<std::pair<int32_t, int32_t> >& path)
+    {
+        path.clear();
+        if((covered.find(from) == covered.end()) || (covered.find(to) == covered.end()))
+            return false;
+        if(from == to)
+            return true;
+
+        // Dijkstra over the room tiles; the room is small, a plain search for the cheapest open tile is enough
+        static const int32_t DX[] = { 0, 1, 0, -1 };
+        static const int32_t DY[] = { -1, 0, 1, 0 };
+        std::map<std::pair<int32_t, int32_t>, int32_t> cost;
+        std::map<std::pair<int32_t, int32_t>, std::pair<int32_t, int32_t> > previous;
+        SpaTileSet done;
+        cost[from] = 0;
+        while(true)
+        {
+            bool found = false;
+            std::pair<int32_t, int32_t> current;
+            int32_t best = 0;
+            for(std::map<std::pair<int32_t, int32_t>, int32_t>::const_iterator it = cost.begin(); it != cost.end(); ++it)
+            {
+                if((done.find(it->first) != done.end()) || (found && (it->second >= best)))
+                    continue;
+                found = true;
+                best = it->second;
+                current = it->first;
+            }
+            if(!found)
+                return false;
+            if(current == to)
+                break;
+            done.insert(current);
+            for(int32_t i = 0; i < 4; ++i)
+            {
+                const std::pair<int32_t, int32_t> next(current.first + DX[i], current.second + DY[i]);
+                if((covered.find(next) == covered.end()) || (done.find(next) != done.end()))
+                    continue;
+                const int32_t step = (pool.find(next) != pool.end()) ? POOL_STEP_COST : 1;
+                std::map<std::pair<int32_t, int32_t>, int32_t>::iterator known = cost.find(next);
+                if((known != cost.end()) && (known->second <= best + step))
+                    continue;
+                cost[next] = best + step;
+                previous[next] = current;
+            }
+        }
+
+        for(std::pair<int32_t, int32_t> tile = to; tile != from; tile = previous[tile])
+            path.insert(path.begin(), tile);
         return true;
     }
 }

@@ -74,15 +74,21 @@ const uint32_t SPA_STEAM_TURNS = 5040;
 const int32_t SPA_SPLASH_TURNS = 1;
 //! \brief Sound family of the splash of a landing.
 const std::string SOUND_SPLASH = "Rooms/Spa/Splash";
-//! \brief Angles (degrees) of an object whose edge or back is on the side +y, -x, -y and +x of its tile (the same
-//! convention as the other rooms with wall furniture: the engine turns counter-clockwise).
-const double OBJECT_ANGLE_SIDE_TOP = 0.0;
-const double OBJECT_ANGLE_SIDE_LEFT = 90.0;
-const double OBJECT_ANGLE_SIDE_BOTTOM = 180.0;
-const double OBJECT_ANGLE_SIDE_RIGHT = 270.0;
-//! \brief Angle of the chair (it faces the pool, which lies below it) and of the springboard (it faces the pool above it).
-const double CHAIR_ANGLE = 180.0;
-const double SPRINGBOARD_ANGLE = 0.0;
+//! \brief Angles (degrees) that turn the rim piece onto the side +y, -x, -y and +x of its pool tile. The SpaPoolRim mesh
+//! lies on the -y edge of its tile (meshBounds -0.575 to -0.425), and the engine turns counter-clockwise: 0 keeps it on
+//! -y, 90 puts it on +x, 180 on +y, 270 on -x. The old values (+y 0, -x 90, -y 180, +x 270) put every rim piece on the
+//! opposite edge, inside the pool, and left the outer edges bare (decision 837).
+const double OBJECT_ANGLE_SIDE_TOP = 180.0;
+const double OBJECT_ANGLE_SIDE_LEFT = 270.0;
+const double OBJECT_ANGLE_SIDE_BOTTOM = 0.0;
+const double OBJECT_ANGLE_SIDE_RIGHT = 90.0;
+//! \brief Angle of the chair and of the springboard. Both meshes have their front on +y (the chair: backrest and ladder
+//! on -y; the springboard: the board reaches out on +y). The chair stands at y - 1 of the pool, so 0 turns its seat to
+//! the pool; the springboard stands at y + 1, so 180 lets the board reach over the pool (decision 837).
+const double CHAIR_ANGLE = 0.0;
+const double SPRINGBOARD_ANGLE = 180.0;
+//! \brief Angle of the pool attendant on the chair: his mesh looks along -y, so 180 turns him to the pool (+y).
+const double ATTENDANT_ANGLE = 180.0;
 //! \brief Largest distance (tiles) at which a bather counts as standing in the middle of its block.
 const double CENTRE_EPSILON = 0.01;
 //! \brief Angle differences smaller than this (degrees) count as the same angle.
@@ -351,6 +357,13 @@ SpaTileSet RoomSpa::getCoveredSet() const
 SpaTileSet RoomSpa::getPoolSet() const
 {
     return SpaLayout::poolTiles(getCoveredSet());
+}
+
+bool RoomSpa::getAttendantWalk(const std::pair<int32_t, int32_t>& from, const std::pair<int32_t, int32_t>& to,
+    std::vector<std::pair<int32_t, int32_t> >& path) const
+{
+    const SpaTileSet covered = getCoveredSet();
+    return SpaLayout::rimWalk(covered, SpaLayout::poolTiles(covered), from, to, path);
 }
 
 SpaTileSet RoomSpa::getTakenSet() const
@@ -1134,7 +1147,7 @@ void RoomSpa::placeAttendant()
     if(mAttendant != nullptr)
         return;
 
-    mAttendant = PoolAttendantEntity::spawnOnChair(getGameMap(), this, chair, static_cast<Ogre::Real>(CHAIR_ANGLE));
+    mAttendant = PoolAttendantEntity::spawnOnChair(getGameMap(), this, chair, static_cast<Ogre::Real>(ATTENDANT_ANGLE));
     if((mAttendant != nullptr) && mPendingAttendant.mPresent)
         mAttendant->restoreFromSave(mPendingAttendant.mSave);
 
