@@ -234,7 +234,7 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
             walls.push_back(Wall(tile,i==0?activeSpotTop:i==1?activeSpotLeft:i==2?activeSpotRight:activeSpotBottom));
         }
     }
-    // The apparatuses stand at the wall: their wall faces keep no decoration while other wall faces remain
+    // An apparatus on an edge tile keeps the wall face behind it free of decoration while other wall faces remain
     std::vector<Wall> freeWalls;
     for(const Wall& wall : walls)
     {
@@ -255,6 +255,10 @@ void RoomGhostRoom::updateActiveSpots(GameMap* map)
             {
                 Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
                 if(neighbor!=nullptr && neighbor->getCoveringRoom()==this) continue;
+                // No rack stands on the tile of an apparatus on its floor stand
+                bool apparatusTile=false;
+                for(const Apparatus& apparatus : mApparatuses) if(apparatus.tile==tile) apparatusTile=true;
+                if(apparatusTile) continue;
                 walls.push_back(Wall(tile,i==0?activeSpotTop:i==1?activeSpotLeft:i==2?activeSpotRight:activeSpotBottom));
             }
         }
@@ -545,55 +549,94 @@ void RoomGhostRoom::layoutApparatuses()
     std::vector<Tile*> ordered=mCoveredTiles;
     std::sort(ordered.begin(),ordered.end(),tileOrder);
     const int dx[]={0,-1,1,0},dy[]={1,0,0,-1};
-    // An orthogonal neighbour that is a wall (or the map edge)
-    const std::function<bool(Tile*)> atWall=[&](Tile* tile)
-    {
-        for(int i=0;i<4;++i)
-        {
-            Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
-            if(neighbor==nullptr || neighbor->isFullTile()) return true;
-        }
-        return false;
-    };
-    // A door opening: an orthogonal neighbour outside the room that can be walked on
+    // A tile outside the room that can be walked on
+    const std::function<bool(Tile*)> walkableOutside=[&](Tile* tile)
+    { return tile!=nullptr && floor.count(tile)==0 && !tile->isFullTile(); };
+    // A door opening (decision 793): an orthogonal neighbour outside the room that can be walked on and lies in a gap
+    // that a wall or another part of the room closes on at least one end before the room side ends. A whole open room
+    // side (a free-standing room, a room open to a cave) is no door: the room is entered there everywhere.
     const std::function<bool(Tile*)> inOpening=[&](Tile* tile)
     {
         for(int i=0;i<4;++i)
         {
             Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
-            if(neighbor!=nullptr && floor.count(neighbor)==0 && !neighbor->isFullTile()) return true;
+            if(!walkableOutside(neighbor)) continue;
+            // Along the room side, perpendicular to the step into the gap
+            const int px=dy[i],py=dx[i];
+            bool framed=false;
+            for(int sign=-1;sign<=1;sign+=2)
+            {
+                for(int step=1;;++step)
+                {
+                    Tile* side=getGameMap()->getTile(tile->getX()+sign*step*px,tile->getY()+sign*step*py);
+                    if(side==nullptr || floor.count(side)==0) break;
+                    Tile* beside=getGameMap()->getTile(neighbor->getX()+sign*step*px,neighbor->getY()+sign*step*py);
+                    if(walkableOutside(beside)) continue;
+                    framed=true;break;
+                }
+            }
+            if(framed) return true;
         }
         return false;
     };
-    // Every free floor tile stays connected to every other one when the given tiles are taken
+    // A room with an entrance: an orthogonal neighbour of a room tile outside the room that can be walked on
+    bool hasEntrance=false;
+    for(Tile* tile : mCoveredTiles)
+        for(int i=0;i<4;++i)
+            if(walkableOutside(getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]))) hasEntrance=true;
+    // Every free floor tile stays connected to every other one when the given tiles are taken, a room with an entrance
+    // keeps a free tile at it, and every taken tile keeps a free neighbour where workers put the ectoplasm down
     const std::function<bool(const std::vector<Tile*>&)> keepsReachable=[&](const std::vector<Tile*>& taken)
     {
         std::set<Tile*> open;
         for(Tile* tile : mCoveredTiles)
             if(blocked.count(tile)==0 && std::find(taken.begin(),taken.end(),tile)==taken.end()) open.insert(tile);
-        if(open.empty()) return true;
+        if(open.empty()) return taken.empty();
         std::set<Tile*> reached;std::vector<Tile*> pending(1,*open.begin());reached.insert(*open.begin());
+        bool entrance=false;
         while(!pending.empty())
         {
             Tile* tile=pending.back();pending.pop_back();
             for(int i=0;i<4;++i)
             {
                 Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
+                if(walkableOutside(neighbor)) entrance=true;
                 if(neighbor!=nullptr && open.count(neighbor)!=0 && reached.insert(neighbor).second) pending.push_back(neighbor);
             }
         }
-        return reached.size()==open.size();
+        if(reached.size()!=open.size() || (hasEntrance && !entrance)) return false;
+        for(Tile* placed : taken)
+        {
+            bool stand=false;
+            for(int y=-1;y<=1;++y) for(int x=-1;x<=1;++x)
+                if(open.count(getGameMap()->getTile(placed->getX()+x,placed->getY()+y))!=0) stand=true;
+            if(!stand) return false;
+        }
+        return true;
     };
-    // Pass 0: wall tiles outside door openings with a free tile between the apparatuses; pass 1: also side by side.
-    // There is no fallback (decision 731): an apparatus never stands in a door opening or away from the wall.
+    // The apparatuses stand on floor stands inside the room like the furniture of other rooms (decision 793), not bound
+    // to the wall: inner tiles first (all eight neighbours belong to the room), then edge tiles at a wall, then edge
+    // tiles at an open room side. Tiles under a cauldron and door openings are never used.
+    std::vector<Tile*> candidates;
+    for(int rank=0;rank<3;++rank)
+        for(Tile* tile : ordered)
+        {
+            if(blocked.count(tile)!=0 || inOpening(tile)) continue;
+            bool inner=true,openSide=false;
+            for(int y=-1;y<=1;++y) for(int x=-1;x<=1;++x)
+                if(floor.count(getGameMap()->getTile(tile->getX()+x,tile->getY()+y))==0) inner=false;
+            for(int i=0;i<4;++i)
+                if(walkableOutside(getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]))) openSide=true;
+            if((inner?0:openSide?2:1)==rank) candidates.push_back(tile);
+        }
+    // Pass 0: a free tile between the apparatuses; pass 1: also side by side
     std::vector<Tile*> chosen;
     for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)
     {
-        for(Tile* tile : ordered)
+        for(Tile* tile : candidates)
         {
             if(chosen.size()>=APPARATUS_COUNT) break;
-            if(blocked.count(tile)!=0 || std::find(chosen.begin(),chosen.end(),tile)!=chosen.end()) continue;
-            if(!atWall(tile) || inOpening(tile)) continue;
+            if(std::find(chosen.begin(),chosen.end(),tile)!=chosen.end()) continue;
             bool beside=false;
             for(Tile* placed : chosen)
                 if(std::abs(placed->getX()-tile->getX())<=1 && std::abs(placed->getY()-tile->getY())<=1) beside=true;
@@ -603,13 +646,14 @@ void RoomGhostRoom::layoutApparatuses()
             chosen.push_back(tile);
         }
     }
-    // The greedy order can block itself (a 4x4 room with two doors): then every combination of the same wall tiles is
-    // tried, spaced ones first, and the first one in tile order that keeps every tile reachable wins.
+    // The greedy order can block itself in a small room (a 4x4 room around its cauldron with doors): then every
+    // combination of the first candidates is tried, spaced ones first, and the first one that keeps every tile reachable
+    // wins. Larger rooms succeed greedily, so the search is bounded to the first searchLimit candidates.
     if(chosen.size()<APPARATUS_COUNT)
     {
-        std::vector<Tile*> candidates,picked;
-        for(Tile* tile : ordered)
-            if(blocked.count(tile)==0 && atWall(tile) && !inOpening(tile)) candidates.push_back(tile);
+        const size_t searchLimit=40;
+        if(candidates.size()>searchLimit) candidates.resize(searchLimit);
+        std::vector<Tile*> picked;
         const std::function<bool(size_t,size_t,bool)> search=[&](size_t from,size_t wanted,bool spaced)
         {
             if(picked.size()==wanted) return keepsReachable(picked);
@@ -630,13 +674,15 @@ void RoomGhostRoom::layoutApparatuses()
             for(int spaced=1;spaced>=0 && !found;--spaced)
                 if(search(0,wanted,spaced==1)) { chosen=picked;found=true; }
     }
-    // Left to right as in the room picture: mana still, ghost press, soul forge
+    // In tile order as in the room picture, left to right: mana still, ghost press, soul forge
+    std::sort(chosen.begin(),chosen.end(),tileOrder);
     const GhostProduct order[APPARATUS_COUNT]={GhostProduct::mana,GhostProduct::research,GhostProduct::crystal};
     for(size_t index=0;index<chosen.size();++index)
     {
         Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(order[index])];
         apparatus.tile=chosen[index];apparatus.stand=chosen[index];
-        // Workers put the ectoplasm down on a free neighbour in front of it, an orthogonal one first
+        // Workers put the ectoplasm down on a free neighbour in front of it, an orthogonal one first; keepsReachable
+        // guarantees one
         const int ndx[]={0,-1,1,0,-1,1,-1,1},ndy[]={1,0,0,-1,1,1,-1,-1};
         for(int i=0;i<8;++i)
         {
@@ -672,7 +718,7 @@ void RoomGhostRoom::layoutApparatuses()
         for(size_t index=chosen.size();index<APPARATUS_COUNT;++index) missing+=std::string(missing.empty()?"":", ")+names[index];
         OD_LOG_WRN("Ghost room " + getName() + " " + std::to_string(maxX-minX+1) + "x" + std::to_string(maxY-minY+1) + " ("
             + std::to_string(mCoveredTiles.size()) + " tiles) at " + std::to_string(minX) + "," + std::to_string(minY)
-            + ": no wall place outside the door openings for " + missing + "; layout " + layout);
+            + ": no floor place outside the door openings for " + missing + "; layout " + layout);
     }
 }
 
@@ -684,22 +730,19 @@ void RoomGhostRoom::createApparatusObjects(GameMap* map)
         apparatus.object=nullptr;apparatus.shownState.clear();
         if(apparatus.tile==nullptr) continue;
         Tile* tile=apparatus.tile;
-        // It stands with its back to the wall, facing the room
+        // It stands on its floor stand in the middle of its tile like the furniture of other rooms (decision 793). Inside
+        // the room it faces the viewer as in the room picture (rotation 0); on an edge tile it turns its back to the room
+        // edge, wall or open side, and faces into the room
         double rotation=0.0;
         const int dx[]={0,-1,1,0},dy[]={1,0,0,-1};const double rotations[]={0.0,90.0,270.0,180.0};
         for(int i=0;i<4;++i)
         {
             Tile* neighbor=getGameMap()->getTile(tile->getX()+dx[i],tile->getY()+dy[i]);
-            if(neighbor==nullptr || neighbor->isFullTile()) { rotation=rotations[i];break; }
+            if(neighbor==nullptr || neighbor->getCoveringRoom()!=this) { rotation=rotations[i];break; }
         }
         const std::string& mesh=getApparatusMesh(static_cast<GhostProduct>(index));
-        double depth=0.0;
-        for(const RoomObjectPath::MeshBounds& bounds : RoomObjectPath::meshBounds)
-            if(mesh==bounds.name) { depth=bounds.maxY-bounds.minY;break; }
-        const double angle=rotation*RoomObjectPath::degreesToRadians,forward=0.5-depth/2.0;
         BuildingObject* object=new BuildingObject(getGameMap(),*this,mesh,tile,
-            static_cast<float>(tile->getX()-std::sin(angle)*forward),static_cast<float>(tile->getY()+std::cos(angle)*forward),
-            0.0f,static_cast<float>(rotation),false);
+            static_cast<float>(tile->getX()),static_cast<float>(tile->getY()),0.0f,static_cast<float>(rotation),false);
         object->setFurnitureScale(Ogre::Vector2(1.0f,1.0f));
         // The constructor only stores the position; setPosition puts the object into its tile, whose seats with vision
         // then send it to the clients. Without it the apparatus exists on the server only and is never seen.

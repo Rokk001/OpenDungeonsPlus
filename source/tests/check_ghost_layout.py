@@ -11,10 +11,10 @@ def layout_fixture():
 struct RoomGhostRoom:Room{GameMap* map=nullptr;std::vector<Tile*> mCoveredTiles;
  //! \brief Stores the actual anchor/reservation pair.
  struct Cauldron{Tile* anchor;Creature* hunter;};std::vector<Cauldron> mCauldrons;
- //! \brief Stores the wall tile and the delivery tile of one apparatus, as the production placement sets them.
+ //! \brief Stores the floor stand tile and the delivery tile of one apparatus, as the production placement sets them.
  struct Apparatus{Tile* tile=nullptr;Tile* stand=nullptr;};
  static const uint32_t APPARATUS_COUNT=3;std::array<Apparatus,APPARATUS_COUNT> mApparatuses;
- //! \brief Runs the actual apparatus placement at the room wall.
+ //! \brief Runs the actual apparatus placement on floor stands inside the room.
  void layoutApparatuses();
  //! \brief Returns the controlled map.
  GameMap* getGameMap(){return map;}
