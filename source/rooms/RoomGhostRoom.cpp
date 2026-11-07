@@ -913,8 +913,8 @@ void RoomGhostRoom::doUpkeep()
     for(BuildingObject* object : mWallObjects) object->setGhostRoomState(-1.0,mAlarmTurns);
     const std::vector<Room*> rooms=getGameMap()->getRoomsByTypeAndSeat(RoomType::ghostRoom,getSeat());
     if(rooms.empty() || rooms.front()!=this) return;
-    // A locked choice (for example after loading) becomes the mana still
-    if(getChosenApparatus(*getSeat())!=getSeat()->getGhostProduct()) getSeat()->setGhostProduct(GhostProduct::mana);
+    // A locked choice (the ghost press of a new game, or a choice after loading) is kept: getChosenApparatus uses the
+    // mana still until room research unlocks it, then the chosen apparatus (decision 800)
     // Full ectoplasm still in the keeper value (an old save, or a cauldron without a free floor tile) comes out next
     // to the first cauldron of the keeper's first ghost room
     if(!mCauldrons.empty()) produceEctoplasm(*mCauldrons.front().anchor);

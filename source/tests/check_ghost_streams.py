@@ -103,8 +103,9 @@ struct CreatureActionHuntGhost{Creature& mCreature;uint32_t mState=0;std::string
     code += function(hunter,'void CreatureActionHuntGhost::exportToStream(')+function(hunter,'bool CreatureActionHuntGhost::importFromStream(')
     code += function(hunter,'GhostEntity* ghostNamed(')+function(hunter,'RoomGhostRoom* roomNamed(')+function(hunter,'void CreatureActionHuntGhost::restore(')
     seat = read('source/game/Seat.cpp')
-    # A new game and a seat saved before the ghost room both start with the mana still chosen (decision G2)
-    assert 'GhostProduct mGhostProduct = GhostProduct::mana;' in read('source/game/SeatData.h')
+    # A new game and a seat saved before the ghost room both start on the ghost press, the research apparatus
+    # (decision 800 replaces the G2 mana still start rule; a locked press works as the mana still)
+    assert 'GhostProduct mGhostProduct = GhostProduct::research;' in read('source/game/SeatData.h')
     seat_import = function(seat,'    if(str == "[GhostBells]")')+function(seat,'    if(str == "[GhostRoom]")')
     seat_start = seat.index('    os << "[GhostBells]')
     seat_end = seat.index('    os << "[Merchant]',seat_start)
