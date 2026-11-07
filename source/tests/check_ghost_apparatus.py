@@ -91,9 +91,9 @@ def item_flow_and_unlocks():
         "apparatus.queue+(apparatus.working?1:0)+apparatus.crystalEctoplasm", "GhostItem::ectoplasm")
     has(body(room, "void RoomGhostRoom::absorbRoom("), "joined rooms keep the ectoplasm",
         "mine.queue+=theirs.queue+(theirs.working?1:0);", "mine.crystalEctoplasm+=theirs.crystalEctoplasm;")
-    # G10: one of each apparatus at the wall, outside door openings, every other tile reachable
+    # G10 (decision 793): one of each apparatus on a floor stand inside the room, outside door openings, every other tile reachable
     layout = body(room, "void RoomGhostRoom::layoutApparatuses(")
-    has(layout, "placement", "for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)", "if(!atWall(tile) || inOpening(tile)) continue;", "if(!keepsReachable(taken)) continue;",
+    has(layout, "placement", "for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)", "if(blocked.count(tile)!=0 || inOpening(tile)) continue;", "if(!keepsReachable(taken)) continue;",
         "GhostProduct::mana,GhostProduct::research,GhostProduct::crystal")
     # Only workers handle the goods: creatures never pick ectoplasm, mana crystals or books up
     has(read("source/creatureaction/CreatureActionPickupItem.cpp"), "worker goods", "if(item->mGhostItem != GhostItem::none)")
@@ -205,11 +205,16 @@ def saving():
     has(body(instance, "bool ItemInstance::importFromPacket("), "item packet read", "if(ghost >> marker && marker == \"GhostItem\")")
     seat = read("source/game/Seat.cpp")
     assert "os << \"[GhostRoom] \" << mEctoplasmLevels << ' ' << static_cast<uint32_t>(mGhostProduct)" in seat, "chosen apparatus saved"
-    assert "GhostProduct mGhostProduct = GhostProduct::mana;" in read("source/game/SeatData.h"), "new game starts with the mana still"
+    # Decision 800 replaces the G2 start rule: a new game starts on the ghost press (research points); while it is locked
+    # the effective choice is the mana still, and the stored choice is kept so the press takes over once unlocked
+    assert "GhostProduct mGhostProduct = GhostProduct::research;" in read("source/game/SeatData.h"), "new game starts on the ghost press"
+    assert "GhostProduct mGhostProduct = GhostProduct::mana;" not in read("source/game/SeatData.h"), "old mana still start rule gone"
     assert re.search(r"enum class GhostProduct : uint32_t \{ research = 0, mana = 1, crystal = 2 \};", read("source/game/SeatData.h")), "old saves map 1:1"
     upkeep = body(room, "void RoomGhostRoom::doUpkeep(")
-    has(upkeep, "old saves", "if(getChosenApparatus(*getSeat())!=getSeat()->getGhostProduct()) getSeat()->setGhostProduct(GhostProduct::mana);",
+    has(upkeep, "old saves keep their choice, a locked one works as the mana still",
+        "// A locked choice (the ghost press of a new game, or a choice after loading) is kept: getChosenApparatus uses the",
         "if(!mCauldrons.empty()) produceEctoplasm(*mCauldrons.front().anchor);")
+    assert "setGhostProduct(" not in upkeep, "the upkeep never overwrites the stored choice"
     assert upkeep.index("rooms.front()!=this) return;") < upkeep.index("produceEctoplasm"), "only the keeper's first ghost room converts"
     print("saving: ok")
 

@@ -32,7 +32,7 @@ PALETTE = {
 PAINTED = {'GhostPackCanvas', 'GhostPackSteel', 'GhostPackRubber'}
 # Editable Blender sources of the reworked hunter gear live outside Git (project rule), on the media share.
 MEDIA_MODELS = Path(r'G:\Moreya-Internal\medien\ghost-apparatus\models')
-OUTSIDE_GIT = {'GhostBackpack', 'GhostCaptureGun'}
+OUTSIDE_GIT = {'GhostBackpack', 'GhostCaptureGun', 'GhostBox'}
 # Fine, high-contrast grain for the small box surfaces so they stay readable at hand size.
 FINE_GRAIN = {'GhostBoxCase', 'GhostBoxHazard'}
 SPECS = {
@@ -518,7 +518,10 @@ def gauges():
 def ghost_box():
     # Light gunmetal case and lid; the fit shrinks the whole design to the hand size of SPECS.
     box('Riveted box case',(0,0,.085),(.24,.20,.17),'GhostBoxCase',.012)
-    box('Hinged lid',(0,0,.182),(.25,.21,.03),'GhostBoxCase',.009)
+    # The lid parts hang on the 'Lid' bone of the box rig (owner decision 801): it swings open on the rear hinge pins.
+    box('Hinged lid',(0,0,.182),(.25,.21,.03),'GhostBoxCase',.009,group='Lid')
+    # The green containment glow in the case opening shows once the lid is open; the shut lid covers it.
+    box('Inner containment glow',(0,0,.1712),(.20,.16,.003),'GhostBoxGlow',.001)
     # Glowing green containment windows on front and back show where the ghost goes.
     for y in (-.101,.101):
         box('Green containment window',(0,y,.115),(.15,.008,.042),'GhostBoxGlow',.003)
@@ -535,17 +538,19 @@ def ghost_box():
     for x in (-.12,.12):
         for y in (-.10,.10):
             rod('Brass corner guard',(x,y,.004),(x,y,.172),.012,'GhostBrass',10)
-    box('Locking latch',(0,.108,.165),(.035,.012,.04),'GhostBrass',.003)
+    # The latch sits on the front (-y, the side the camera sees), the hinge on the rear (+y), so the open lid swings
+    # away from the viewer and shows the glowing inside.
+    box('Locking latch',(0,-.108,.165),(.035,.012,.04),'GhostBrass',.003)
     for x in (-.075,.075):
-        rod('Rear hinge pin',(x-.025,-.108,.17),(x+.025,-.108,.17),.011,'GhostBrass',10)
+        rod('Rear hinge pin',(x-.025,.108,.17),(x+.025,.108,.17),.011,'GhostBrass',10)
     for x in (-.10,.10):
         for y in (-.08,.08):
-            rod('Box lid rivet',(x,y,.196),(x,y,.203),.008,'GhostBrass',8)
+            rod('Box lid rivet',(x,y,.196),(x,y,.203),.008,'GhostBrass',8,'Lid')
     # Carrying handle on the lid for the hunter's grip, and a green charge lamp beside it.
     for x in (-.06,.06):
-        rod('Handle post',(x,0,.196),(x,0,.236),.010,'GhostBrass',10)
-    rod('Handle grip',(-.07,0,.236),(.07,0,.236),.013,'GhostBoxCase',12)
-    rod('Charge lamp',(.09,.065,.196),(.09,.065,.212),.016,'GhostBoxGlow',12)
+        rod('Handle post',(x,0,.196),(x,0,.236),.010,'GhostBrass',10,'Lid')
+    rod('Handle grip',(-.07,0,.236),(.07,0,.236),.013,'GhostBoxCase',12,'Lid')
+    rod('Charge lamp',(.09,.065,.196),(.09,.065,.212),.016,'GhostBoxGlow',12,'Lid')
 
 
 # Shape a jagged pale-green crystal and its luminous inner core.
@@ -609,6 +614,34 @@ def gauge_rig(obj,factors,centre):
     return arm
 
 
+# Hinge the lid of the capture box on its rear pins at +y (owner decision 801): clip "Open" turns it from shut (time 0) to fully
+# open (its end); the game sets the clip time to the open share, so it opens at the start of the beam and slams shut.
+def box_rig(obj,factors,centre):
+    bpy.ops.object.armature_add(enter_editmode=True)
+    arm=bpy.context.object
+    arm.name='GhostBoxRig'
+    root=arm.data.edit_bones[0]
+    root.name='Root'
+    root.head=(0,0,0)
+    root.tail=(0,0,.05)
+    bone=arm.data.edit_bones.new('Lid')
+    pivot=(Vector((0,.108,.17))-centre)*factors
+    bone.head=pivot
+    bone.tail=pivot+Vector((0,.025,0))
+    bone.parent=root
+    bpy.ops.object.mode_set(mode='OBJECT')
+    arm['ogre_bone_order']=['Root','Lid']
+    modifier=obj.modifiers.new('Box lid','ARMATURE')
+    modifier.object=arm
+    obj.parent=arm
+    action=oo.new_action(arm,'Open',1.0)
+    oo.assign_action(arm,action)
+    for frame in range(11):
+        t=frame/10
+        oo.add_pose_key(arm,action,'Lid',t,rot=Quaternion((1,0,0),-math.radians(110.0)*t))
+    return arm
+
+
 # Add a normal Blender preview camera and lights for visual review of the authored asset.
 def preview(name,private):
     scene=bpy.context.scene
@@ -654,7 +687,7 @@ def main():
     builders={'GhostCauldron':cauldron,'GhostCauldronFill':fill_level,'CrystalBowl':crystal_bowl,'GhostBell':bell,'GhostHook':lambda:hook(True),'GhostHookEmpty':lambda:hook(False),'GhostWallGauges':gauges,'GhostRack':rack,'GhostBackpack':worn_backpack,'GhostCaptureGun':capture_gun,'GhostBox':ghost_box,'SoulCrystal':crystal}
     builders[name]()
     obj,factors,centre=join_and_fit(name)
-    arm=gauge_rig(obj,factors,centre) if name=='GhostWallGauges' else None
+    arm=gauge_rig(obj,factors,centre) if name=='GhostWallGauges' else box_rig(obj,factors,centre) if name=='GhostBox' else None
     report=oo.export_mesh_xml(obj,arm,str(out/(name+'.mesh.xml')),name+'.skeleton',smooth=False)
     if arm:
         oo.export_skeleton_xml(arm,str(out/(name+'.skeleton.xml')))

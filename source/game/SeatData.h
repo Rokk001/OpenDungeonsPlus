@@ -220,8 +220,9 @@ protected:
     uint32_t mFreeWorkers = 0;
     //! \brief Shared ghost-room state, also retained by Seat save records.
     double mEctoplasmLevels = 0.0;
-    //! A new game starts with the mana still chosen
-    GhostProduct mGhostProduct = GhostProduct::mana;
+    //! A new game starts on the apparatus that makes research points, the ghost press (GHOSTS-PLAN D25, decision 800);
+    //! until room research unlocks it, RoomGhostRoom::getChosenApparatus uses the mana still
+    GhostProduct mGhostProduct = GhostProduct::research;
     bool mGhostRevive = true;
     //! \brief Reads the shared room-settings data without adopting incomplete values.
     bool importItemSettingsFromPacket(ODPacket& packet);

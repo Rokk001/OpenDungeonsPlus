@@ -26,7 +26,7 @@ public:
     //! mana = mana still, crystal = soul forge.
     struct Apparatus
     {
-        //! Floor tile at the room wall it stands on, null while the room has no place for it
+        //! Floor tile its floor stand stands on inside the room, null while the room has no place for it
         Tile* tile = nullptr;
         //! Floor tile where workers put down the ectoplasm for it
         Tile* stand = nullptr;
@@ -136,7 +136,8 @@ private:
     void produceEctoplasm(Tile& cauldron);
     //! \brief Places an item owned by the keeper on a floor tile.
     void spawnItem(Tile& tile, std::unique_ptr<ItemInstance> item, Seat* seat);
-    //! \brief Places the three apparatuses on floor tiles at the room wall, keeping every other tile reachable.
+    //! \brief Places the three apparatuses on floor stands inside the room like the furniture of other rooms, never in a
+    //! door opening and never on a cauldron, keeping every other tile reachable.
     void layoutApparatuses();
     //! \brief Creates the apparatus furniture for the current layout.
     void createApparatusObjects(GameMap* map);

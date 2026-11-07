@@ -126,7 +126,7 @@ def read_skeleton(name):
 def client_creation():
     room = read("source/rooms/RoomGhostRoom.cpp")
     create = body(room, "void RoomGhostRoom::createApparatusObjects(")
-    # Every apparatus of the room gets its own building object with its own mesh at its wall tile
+    # Every apparatus of the room gets its own building object with its own mesh on its floor stand tile
     for fragment in ("const std::string& mesh=getApparatusMesh(static_cast<GhostProduct>(index));",
             "new BuildingObject(getGameMap(),*this,mesh,tile,", "object->setFurnitureScale(Ogre::Vector2(1.0f,1.0f));",
             "apparatus.object=object;"):
@@ -156,10 +156,10 @@ def client_creation():
                 continue
             assert variable + "->setPosition(" in function, (signature.strip(), variable, "never enters its tile, so no client sees it")
     assert re.search(r"object->addToGameMap\(map\);object->setPosition\(object->getPosition\(\),map\);object->createMesh\(\);", create), \
-        "the apparatus enters its wall tile"
-    # The apparatus stays in its own wall tile: its position moves less than half a tile towards the wall
-    assert "const double angle=rotation*RoomObjectPath::degreesToRadians,forward=0.5-depth/2.0;" in create
-    assert "if(mesh==bounds.name) { depth=bounds.maxY-bounds.minY;break; }" in create
+        "the apparatus enters its floor stand tile"
+    # The apparatus stands on its floor stand in the middle of its own tile (decision 793), not pushed to a wall
+    assert "static_cast<float>(tile->getX()),static_cast<float>(tile->getY()),0.0f,static_cast<float>(rotation),false);" in create
+    assert "forward=" not in create and "std::sin(angle)" not in create, "no offset towards a wall"
     # The client draws the packet: furniture scale and animation state travel with the object
     building = read("source/entities/BuildingObject.cpp")
     assert "os << mFurnitureScale.x << mFurnitureScale.y;" in body(building, "void BuildingObject::exportToPacket(")
