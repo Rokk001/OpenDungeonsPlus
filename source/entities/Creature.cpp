@@ -11996,6 +11996,12 @@ bool Creature::takeCorpse()
     if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker() || getDefinition()->isUndead())
         return false;
 
+    // A body in a crypt belongs to its grave: the crypt raises liches from it, never skeletons
+    Tile* corpseTile = getPositionTile();
+    if(corpseTile != nullptr && corpseTile->getCoveringRoom() != nullptr &&
+       corpseTile->getCoveringRoom()->getType() == RoomType::crypt)
+        return false;
+
     // The counter is 0 until death drops and notices have run; consumption is deferred safely.
     if(mDeathCounter == 0 || mDeathCounter == std::numeric_limits<unsigned int>::max() ||
        mDecayTurns >= 0.0 || mIsCarried)
