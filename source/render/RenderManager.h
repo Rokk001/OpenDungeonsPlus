@@ -159,6 +159,13 @@ public:
     //! which stalls a camera flight. Call it after pinMenuShaderLights(), so the shaders match the fixed light count.
     void prepareMenuShaders();
 
+    //! \brief Makes the generated shaders of an animated entity skin it on the GPU instead of Ogre skinning it on the CPU.
+    //! Every sub entity gets its own copy of its material (one per material and mesh) that carries the RTSS hardware
+    //! skinning stage, because the stage is stored in the material and would break meshes without a skeleton that share it.
+    //! The copy keeps the name of the original as prefix, so name based shading (the menu display stage) is unchanged.
+    //! Does nothing, and returns false, when a material has its own vertex program or the mesh has no usable skeleton.
+    bool useShaderSkinning(Ogre::Entity* entity);
+
     //! \brief Switches the dynamic texture shadows on or off.
     //! Updates the scene manager's shadow technique, the generated-shader shadow receiver and the
     //! shadowingEnabled constant of every loaded material that declares it.
