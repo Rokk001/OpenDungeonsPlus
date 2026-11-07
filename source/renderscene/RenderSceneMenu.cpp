@@ -199,8 +199,7 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     updateFireLights(timeSinceLastFrame);
     if(!mFlight.isActive())
         return;
-    // Measured before the flight clamps its step, so a slow frame keeps its real length in the log.
-    mFlightFrames.addFrame(timeSinceLastFrame);
+    // Measured at the render listener before the flight clamps its step, so slow frames keep their real length.
     const bool arrived = mFlight.advance(timeSinceLastFrame);
     applyCameraPose(cameraManager, samplePath(mFlight.getProgress()));
     const Ogre::Real fillTarget = mFlightPlace == OVERVIEW_PLACE ? 0.0f : 1.0f;
@@ -213,6 +212,13 @@ void RenderSceneMenu::updateMenu(CameraManager& cameraManager, RenderManager& re
     }
 }
 
+//! \brief Counts only rendered frames during an active flight, never zero-time setup updates.
+void RenderSceneMenu::recordFrameStatistics(float seconds)
+{
+    if(mActive && mFlight.isActive())
+        mFlightFrames.addFrame(seconds);
+}
+
 //! \brief Logs one line per flight, so that every route can be read after a menu session.
 void RenderSceneMenu::logFlightFrames(const char* outcome) const
 {
@@ -220,6 +226,7 @@ void RenderSceneMenu::logFlightFrames(const char* outcome) const
     line << std::fixed << std::setprecision(2) << "Menu flight " << mCurrentPlace << " -> " << mFlightPlace
         << " " << outcome << ": frames=" << mFlightFrames.getFrames()
         << " meanMs=" << mFlightFrames.getMeanMilliseconds()
+        << " p95Ms=" << mFlightFrames.getP95Milliseconds()
         << " maxMs=" << mFlightFrames.getMaxMilliseconds()
         << " framesOver33Ms=" << mFlightFrames.getSlowFrames();
     OD_LOG_INF(line.str());

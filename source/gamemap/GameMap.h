@@ -25,6 +25,7 @@
 #include "gamemap/TileDirtSync.h"
 #include "ai/AIManager.h"
 #include "rooms/WallTorches.h"
+#include "game/CreatureRelationships.h"
 
 #include <memory>
 
@@ -141,7 +142,15 @@ public:
     void setProperPositions();
 
     //! \brief Creates meshes for all the tiles, creatures, rooms, traps and lights stored in this GameMap.
+    //! On the server it also applies the pending relationship states once the creature definitions are set up.
     void createAllEntities();
+
+    //! \brief Keeps the relationship states read from a saved game until createAllEntities applies them.
+    //! A state can only be applied to a creature whose definition is set up, which happens after the level is read.
+    void setPendingRelationshipStates(const std::vector<RelationshipCreatureState>& states);
+
+    //! \brief Applies the pending relationship states to the creatures on the map and forgets them.
+    void applyPendingRelationshipStates();
 
     //! \brief Destroyes meshes for all the tiles, creatures, rooms, traps and lights stored in this GameMap.
     void destroyAllEntities();
@@ -1019,6 +1028,9 @@ private:
 
     //! Relationships between the creatures. nullptr when the option is off.
     CreatureRelationships* mCreatureRelationships;
+
+    //! Relationship states of the creatures read from a saved game, applied by createAllEntities
+    std::vector<RelationshipCreatureState> mPendingRelationshipStates;
 
     //! Map tileset
     const TileSet* mTileSet;
