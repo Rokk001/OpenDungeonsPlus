@@ -32,7 +32,8 @@ PALETTE = {
 PAINTED = {'GhostPackCanvas', 'GhostPackSteel', 'GhostPackRubber'}
 # Editable Blender sources of the reworked hunter gear live outside Git (project rule), on the media share.
 MEDIA_MODELS = Path(r'G:\Moreya-Internal\medien\ghost-apparatus\models')
-OUTSIDE_GIT = {'GhostBackpack', 'GhostCaptureGun', 'GhostBox'}
+# GhostCauldron: the decision 845 rework (no press) keeps its source on the media share; the tracked GhostCauldron.blend is the old press
+OUTSIDE_GIT = {'GhostBackpack', 'GhostCaptureGun', 'GhostBox', 'GhostCauldron'}
 # Fine, high-contrast grain for the small box surfaces so they stay readable at hand size.
 FINE_GRAIN = {'GhostBoxCase', 'GhostBoxHazard'}
 SPECS = {
@@ -382,11 +383,20 @@ def capture_gun():
     rod('Glowing emitter tip',(0,0,.295),(0,0,.31),.03,'GhostBoxGlow',18)
 
 
-# Author the press cauldron with four clawed feet, screw, rivets, pipes and green window.
+# Author the ghost cauldron (owner decision 845: it must not look like a press): an open-mouthed, bellied iron pot with a
+# rolled rim and a glowing ectoplasm surface, side ring handles, four clawed feet over a fire grate with coals and embers,
+# the green inspection window, worn pipes and, over the middle of the mouth, the brass trap socket on three curved arms:
+# the delivery point where the hunter sets the ghost trap and the ghost is poured into the cauldron.
 def cauldron():
-    body=lathe('Forged pressure body', [(0,.18),(.43,.18),(.59,.31),(.69,.77),(.64,1.02),(.54,1.08),(.46,1.08),(.47,.92),(.0,.92)])
+    if 'GhostEmbers' not in bpy.data.materials:
+        glow_material('GhostEmbers', (1.0, 0.36, 0.06, 1.0), 2.0)
+    if 'GhostCoal' not in bpy.data.materials:
+        coal=bpy.data.materials.new('GhostCoal')
+        coal.diffuse_color=(0.07,0.065,0.06,1.0)
+    body=lathe('Bellied cauldron body', [(0,.16),(.40,.17),(.60,.30),(.71,.52),(.72,.70),(.66,.88),(.57,.99),(.55,1.04),
+        (.61,1.07),(.63,1.11),(.58,1.13),(.52,1.06),(.0,1.03)])
     # The porthole is a true opening; the independent fill can sit behind its glass.
-    bpy.ops.mesh.primitive_cylinder_add(vertices=40,radius=.258,depth=1.2,location=(0,.65,.65),rotation=(math.pi/2,0,0))
+    bpy.ops.mesh.primitive_cylinder_add(vertices=40,radius=.238,depth=1.2,location=(0,.65,.62),rotation=(math.pi/2,0,0))
     cutter=bpy.context.object
     modifier=body.modifiers.new('Inspection opening','BOOLEAN')
     modifier.operation='DIFFERENCE'
@@ -395,31 +405,48 @@ def cauldron():
     bpy.context.view_layer.objects.active=body
     bpy.ops.object.modifier_apply(modifier=modifier.name)
     bpy.data.objects.remove(cutter,do_unlink=True)
-    ring('Lower reinforced rim',(0,0,.32),.58,.045)
-    ring('Upper reinforced rim',(0,0,1.01),.64,.048)
-    rivets('Drum rivet',(0,0,.96),.64,18,size=.024)
+    # Glowing ectoplasm fills the open mouth up to just under the rim
+    rod('Ectoplasm surface',(0,0,1.02),(0,0,1.05),.535,'GhostEctoplasm',32)
+    ring('Rolled rim',(0,0,1.10),.60,.04,'GhostIron')
+    ring('Lower hoop',(0,0,.31),.60,.04)
+    ring('Belly hoop',(0,0,.86),.68,.04)
+    rivets('Hoop rivet',(0,0,.82),.69,18,size=.022)
+    # Ring handles on both sides, hanging from forged lugs
+    for sx in (-1,1):
+        box('Handle lug',(sx*.70,0,.96),(.10,.12,.10),'GhostIron',.012)
+        ring('Ring handle',(sx*.80,0,.86),.13,.025,'GhostIron',True)
     for sx in (-1,1):
         for sy in (-1,1):
-            rod('Claw leg',(sx*.46,sy*.46,.47),(sx*.77,sy*.77,.12),.09,'GhostIron')
+            rod('Claw leg',(sx*.44,sy*.44,.42),(sx*.75,sy*.75,.12),.085,'GhostIron')
             for offset in (-.085,0,.085):
-                a=(sx*.72-offset,sy*.73+offset,.13)
-                b=(sx*.93-offset*.35,sy*.93+offset*.35,.035)
+                a=(sx*.70-offset,sy*.71+offset,.13)
+                b=(sx*.91-offset*.35,sy*.91+offset*.35,.035)
                 cone('Clawed toe',a,b,.055,.008,'GhostIron',10)
-    for sx in (-1,1):
-        box('Press upright',(sx*.74,-.05,.89),(.12,.16,1.36),'GhostIron',.018)
-        box('Brass guide shoe',(sx*.74,-.05,1.22),(.18,.20,.19),'GhostBrass',.012)
-    box('Uneven press crossbar',(0,-.05,1.52),(1.68,.22,.16),'GhostIron',.02,rot=.018)
-    rod('Threaded press spindle',(0,-.05,1.02),(0,-.05,1.53),.055,'GhostBrass',20)
-    for turn in range(13):
-        ring('Screw thread',(0,-.05,1.03+turn*.036),.062,.013,'GhostIron')
-    rod('Press wheel axle',(-.26,-.05,1.50),(.26,-.05,1.50),.022,'GhostIron')
-    rod('Green inspection glass',(0,.697,.65),(0,.710,.65),.255,'GhostWindow',36)
-    ring('Inspection window rim',(0,.725,.65),.277,.034,'GhostBrass',True)
-    rivets('Window bolt',(0,.758,.65),.276,12,True,.017)
-    for x in (-.10,.10):
-        rod('Window iron grille',(x,.761,.43),(x,.761,.87),.012,'GhostIron',10)
-    pipe('Left worn feed pipe',[(-.63,-.15,.74),(-.86,-.15,.74),(-.89,-.45,.36),(-.89,-.45,.01)],.042)
-    pipe('Right worn exhaust',[(.51,-.36,.87),(.80,-.37,.87),(.82,-.63,.43),(.82,-.63,.02)],.035)
+    # The fire under the pot: an iron grate ring, dark coals and glowing embers between them
+    ring('Fire grate',(0,0,.08),.34,.025,'GhostIron')
+    for k in range(9):
+        angle=k*2*math.pi/9+.2
+        radius=.12+.14*((k*37)%5)/4
+        box('Coal',(radius*math.cos(angle),radius*math.sin(angle),.05),(.11,.09,.07),'GhostCoal',.015,rot=angle)
+        if k%2==0:
+            box('Ember',(radius*.8*math.cos(angle+.35),radius*.8*math.sin(angle+.35),.07),(.07,.06,.05),'GhostEmbers',.01,rot=angle)
+    rod('Green inspection glass',(0,.712,.62),(0,.725,.62),.236,'GhostWindow',36)
+    ring('Inspection window rim',(0,.737,.62),.256,.032,'GhostBrass',True)
+    rivets('Window bolt',(0,.768,.62),.256,12,True,.016)
+    for x in (-.09,.09):
+        rod('Window iron grille',(x,.771,.42),(x,.771,.82),.012,'GhostIron',10)
+    pipe('Left worn feed pipe',[(-.64,-.20,.70),(-.86,-.20,.70),(-.89,-.48,.36),(-.89,-.48,.01)],.040)
+    pipe('Right worn exhaust',[(.52,-.40,.80),(.80,-.41,.80),(.82,-.64,.43),(.82,-.64,.02)],.033)
+    # The trap socket: a brass funnel in the middle of the mouth on three curved arms from the rim, with a glowing
+    # intake ring at its top where the trap stands while the ghost flows down into the ectoplasm
+    for k in range(3):
+        angle=math.pi/2+k*2*math.pi/3
+        pipe('Socket arm'+str(k),[(.57*math.cos(angle),.57*math.sin(angle),1.12),(.36*math.cos(angle),.36*math.sin(angle),1.30),
+            (.17*math.cos(angle),.17*math.sin(angle),1.38)],.026,'GhostIron')
+    cone('Trap intake funnel',(0,0,1.10),(0,0,1.39),.05,.19,'GhostBrass',24)
+    ring('Trap socket ring',(0,0,1.40),.19,.028,'GhostBrass')
+    rod('Trap socket glow',(0,0,1.385),(0,0,1.405),.165,'GhostEctoplasm',24)
+    rivets('Socket rivet',(0,0,1.405),.19,8,size=.016)
 
 
 # Make the independent green fill plane with a floor-centred origin for height scaling.
