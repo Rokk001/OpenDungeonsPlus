@@ -316,11 +316,21 @@ void GhostEntity::updateLook()
         alpha *= static_cast<float>(1.0 - progress);
     else if(mState == GhostState::boxed)
         alpha = 0.0f;
-    // One size for every ghost; it only shrinks while it is being captured.
-    const double scale=1.0-mCaptureProgress;
+    // One size for every ghost; it only shrinks while it is being captured (decisions 801 and 802): the beam weakens it
+    // down to GhostCaptureMinScale (half its size, it never vanishes) over the first GhostPullStartShare of the beam,
+    // then the open trap pulls the half-size ghost straight down into its opening, GhostPullDepth below the floor once
+    // fully inside, before the lid snaps shut.
+    const ConfigManager& config = ConfigManager::getSingleton();
+    const double capture = std::max(0.0, std::min(1.0, mCaptureProgress));
+    const double minScale = config.getRoomConfigDouble("GhostCaptureMinScale");
+    const double pullStart = config.getRoomConfigDouble("GhostPullStartShare");
+    const double shrink = pullStart > 0.0 ? std::min(1.0, capture / pullStart) : 1.0;
+    const double scale = 1.0 - (1.0 - minScale) * shrink;
+    const double pull = capture <= pullStart ? 0.0 : std::min(1.0, (capture - pullStart) / (1.0 - pullStart));
     node->setScale(Ogre::Vector3::UNIT_SCALE*static_cast<Ogre::Real>(scale));
     node->setVisible(mState != GhostState::boxed);
-    node->setPosition(mPosition + Ogre::Vector3(0, 0, height));
+    const double sink = height * (1.0 - pull) - pull * config.getRoomConfigDouble("GhostPullDepth");
+    node->setPosition(mPosition + Ogre::Vector3(0, 0, static_cast<Ogre::Real>(sink)));
     setMeshOpacity(alpha);
 }
 

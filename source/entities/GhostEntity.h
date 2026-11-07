@@ -48,7 +48,8 @@ public:
     GhostState getState() const { return mState; }
     //! \brief Sets capture state, stopping autonomous movement and hiding boxed ghosts.
     void setState(GhostState state);
-    //! \brief Applies the hunter's client-only shrink into its thrown capture box.
+    //! \brief Applies the hunter's client-only capture share (0 to 1 over the beam): the shrink to half size, then the
+    //! pull down into the open thrown capture box.
     void setCaptureProgress(double progress) { mCaptureProgress = progress; }
     //! \brief Returns the name of the hunter that reserved this ghost.
     const std::string& getAssignedHunter() const { return mAssignedHunter; }

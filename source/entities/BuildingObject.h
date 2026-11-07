@@ -88,6 +88,8 @@ private:
     Ogre::SceneNode* mGhostFillNode = nullptr;
     //! \brief Client only: the red and green alarm lamps beside a ghost room bell.
     Ogre::SceneNode* mGhostLampNode = nullptr;
+    //! \brief Client only: the textured hunter backpack with its holstered capture cannon hanging on a full wall hook.
+    Ogre::SceneNode* mGhostHookPackNode = nullptr;
     Ogre::Vector2 mFurnitureScale = Ogre::Vector2::ZERO;
     //! \brief Negative means ordinary furniture; otherwise this is a decorative bag quality.
     int32_t mItemBagQuality = -1;

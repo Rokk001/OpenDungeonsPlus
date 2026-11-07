@@ -844,7 +844,8 @@ void auditInfirmary(KeeperAI& ai)
 }
 
 //! \brief Chooses the apparatus by its product (ghost press for research, mana still for scarce mana, soul forge for
-//! saleable crystals) and affordable own-body revival. A locked apparatus is never chosen: the choice becomes the mana still.
+//! saleable crystals) and affordable own-body revival. A locked apparatus is never chosen: the keeper's effective choice
+//! is taken instead, the ghost press of the start rule once unlocked and the mana still until then (decision 800).
 void ghostProduct(KeeperAI& ai)
 {
     // AI row B17
@@ -876,7 +877,7 @@ void ghostProduct(KeeperAI& ai)
         seat->getGold() < ECON::wageBill(ai))
         product = GhostProduct::crystal;
     if(!RoomGhostRoom::isApparatusUnlocked(*seat, product))
-        product = GhostProduct::mana;
+        product = RoomGhostRoom::getChosenApparatus(*seat);
     const double price = SkillManager::getResearchValue(seat, SkillType::roomGhostRoom,
         config.getRoomConfigDouble("GhostReviveMana"), ResearchEffect::RevivePrice);
     const bool revive = seat->getMana() > config.getAiConfigDouble("ReviveManaFactor") * price;

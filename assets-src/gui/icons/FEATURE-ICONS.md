@@ -163,3 +163,9 @@ Prompt:
 ```text
 Use case: stylized-concept. Generate ONE painted square dungeon room button for OpenDungeonsPlus. Reference image supplies the exact established hand-painted detailed aged dark stone and iron frame style, restrained warm copper edge glints, tactile materials and composition. New subject: a hot dark brown mud pool built of rough dungeon stones, gently steaming, a folded pale linen towel draped over its stone rim, a subtle warm orange ember seam between rim stones. Clear full silhouette, strong readable mud pool and towel at small UI size. Frame matching reference: thin weathered square black iron border with corner rivets and cracked dark stone background. No people, no text, no letters, no symbols, no logos, no red lava pool. Original painted game artwork. Output square intended to downsample cleanly to 256x256 source.
 ```
+
+### GhostHuntersButton
+
+Source: tiles/GhostHuntersButton.png
+
+Not an image-generation call (owner decision 800, 2026-11-07): a Blender render of the game's own GhostBox trap with its lid open, its green-white light cone and a ghost wisp being pulled in, on dark cracked stone, downsampled to 256x256 and set into the painted iron frame cut from tiles/MerchantButton.png with an inner frame shadow. The render and compose scripts are kept with the Blender sources on the media share, outside Git.
