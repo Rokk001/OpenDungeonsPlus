@@ -18,6 +18,7 @@
 #include "render/RoomAmbience.h"
 
 #include "camera/CameraManager.h"
+#include "entities/CreatureDefinition.h"
 #include "entities/Creature.h"
 #include "entities/GameEntityType.h"
 #include "entities/RenderedMovableEntity.h"
