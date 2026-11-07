@@ -160,7 +160,7 @@ for system in ('SpaSteam', 'SpaMudSplash'):
 production = read('particles/RoomAmbienceProduction.particle')
 assert production.index('particle_system RoomAmbSteam') < production.index('particle_system SpaSteam'), 'SpaSteam follows RoomAmbSteam'
 steam = script_block(production.replace('particle_system', 'particle_system'), 'particle_system', 'SpaSteam')
-assert re.search(r'colour_range_start\s+0\.9 0\.9 0\.9 0\.5', steam) and re.search(r'emission_rate\s+2\b', steam) and re.search(r'time_to_live\s+3\b', steam)
+assert re.search(r'colour_range_start\s+0\.85 0\.8 0\.75 0\.3', steam) and re.search(r'emission_rate\s+2\b', steam) and re.search(r'time_to_live\s+3\b', steam)
 feathers = read('particles/ChickenFeathers.particle')
 assert feathers.index('particle_system ChickenFeathers') < feathers.index('particle_system SpaMudSplash'), 'SpaMudSplash follows ChickenFeathers'
 splash = script_block(feathers, 'particle_system', 'SpaMudSplash')

@@ -155,6 +155,12 @@ material SpaLavaGlow
             lighting off
             diffuse 1.0 0.15 0.015 1
             emissive 1.0 0.15 0.015
+            // With lighting off the fixed pipeline ignores diffuse and emissive and paints an untextured surface white
+            // (white rectangles at the pool rim): the colour has to come from the texture unit
+            texture_unit
+            {
+                colour_op_ex source1 src_manual src_current 1.0 0.15 0.015
+            }
         }
     }
 }
