@@ -9,6 +9,7 @@
 #include "network/ODPacket.h"
 #include "render/RenderManager.h"
 #include "rooms/Room.h"
+#include "rooms/RoomGhostRoom.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
@@ -131,7 +132,8 @@ void ItemBagEntity::drop(const Ogre::Vector3& position)
 }
 
 //! \brief Workers move old bags to their use room first and otherwise leave treasury storage undisturbed.
-//! Ectoplasm, mana crystals and research books, and every ghost good in a ghost room, are carried at once.
+//! Ectoplasm, mana crystals and research books, and every ghost good in a ghost room, are carried at once, except
+//! ectoplasm waiting in front of its busy apparatus.
 EntityCarryType ItemBagEntity::getEntityCarryType(Creature* carrier)
 {
     if(carrier == nullptr || mItem.get() == nullptr || !getIsOnMap() || getCarryLock(*carrier))
@@ -139,6 +141,9 @@ EntityCarryType ItemBagEntity::getEntityCarryType(Creature* carrier)
     Tile* tile = getPositionTile();
     Room* storage = tile == nullptr ? nullptr : tile->getCoveringRoom();
     const bool inGhostRoom = storage != nullptr && storage->getType() == RoomType::ghostRoom;
+    // Ectoplasm waiting in front of its busy apparatus stays lying until the apparatus takes it in (decision 813)
+    if(inGhostRoom && mItem->mGhostItem == GhostItem::ectoplasm && static_cast<RoomGhostRoom*>(storage)->isWaitingEctoplasm(*this))
+        return EntityCarryType::notCarryable;
     const uint32_t idleLimit = static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemDrops", "ItemBagIdleTurns"));
     if(mIdleTurns < idleLimit && mItem->mGhostItem == GhostItem::none && !(mItem->mSoulCrystal && inGhostRoom))
         return EntityCarryType::notCarryable;

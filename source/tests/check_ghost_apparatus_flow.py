@@ -1,7 +1,8 @@
 """Follow one ectoplasm per apparatus through the item flow without compiling (GHOST-APPARATUS-PLAN G1 to G5).
 
 For the mana still, the ghost press and the soul forge one ectoplasm comes out of the cauldron, is picked up, stamped with
-the chosen apparatus, carried to that apparatus, queued, worked and turned into its product, which then goes to the room
+the chosen apparatus, carried to that apparatus, taken in at once by the idle apparatus or left lying in front of the busy
+one as a real item until it is taken in (decision 813), worked and turned into its product, which then goes to the room
 that uses it. Every step of the model below is pinned to the line of the game source it follows, and the values come from
 the shipped config, so a change of the source or the config that breaks the way of one apparatus fails here."""
 from pathlib import Path
@@ -81,7 +82,7 @@ def use_rooms():
 class Room:
     def __init__(self, level, chosen):
         self.level, self.chosen = level, chosen
-        self.apparatus = {kind: {"queue": 0, "working": False, "turns": 0.0, "crystal": 0, "state": None,
+        self.apparatus = {kind: {"pending": 0, "working": False, "turns": 0.0, "crystal": 0, "state": None,
             "stand": "stand-of-" + kind} for kind in KINDS}
         self.floor = []
 
@@ -127,22 +128,59 @@ class Room:
         kind = NAMES[item["target"]] if item["carried"] and 0 <= item["target"] < len(KINDS) else self.chosen_apparatus()
         return self.apparatus[kind]["stand"] if self.unlocked(kind) else None
 
-    # Step 4: put down in front of the apparatus, the ectoplasm joins its queue
+    # Step 4: put down in front of the apparatus; the idle apparatus takes it in at once, at a busy one it stays lying on
+    # the stand tile as a real item (decision 813)
     def put_down(self, item):
         drop = body(ROOM, "void RoomGhostRoom::notifyCarryingStateChanged(")
         has(drop, "delivery", "const int32_t target=bag->getItem()->mGhostTarget;",
-            "Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];", "bag->takeItem();", "++apparatus.queue;")
+            "Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];",
+            "if(!apparatus.working)\n    {\n        takeInEctoplasm(apparatus,*bag,ConfigManager::getSingleton().getRoomConfigDouble(\"GhostApparatusTurns\"));\n        return;\n    }",
+            "bag->getItem()->mGhostTarget=static_cast<int32_t>(kind);\n    bag->setSeat(getSeat());\n}")
         item["carried"] = False
         kind = NAMES[item["target"]]
-        if not self.unlocked(kind):
-            self.floor.append(item)
+        item["at"] = self.apparatus[kind]["stand"] if self.unlocked(kind) else "floor"
+        if self.unlocked(kind) and not self.apparatus[kind]["working"]:
+            self.take_in(kind)
             return
-        self.apparatus[kind]["queue"] += 1
+        self.floor.append(item)
+
+    # The idle apparatus takes one ectoplasm item in and starts its work time
+    def take_in(self, kind):
+        has(body(ROOM, "void RoomGhostRoom::takeInEctoplasm("), "take in", "bag.takeItem();",
+            "bag.removeFromGameMap();bag.deleteYourself();", "apparatus.working=true;apparatus.workTurns+=turns;")
+        apparatus = self.apparatus[kind]
+        apparatus["working"] = True
+        apparatus["turns"] += TURNS
+
+    # The ectoplasm items waiting in front of the apparatus, in the order they were put down
+    def waiting(self, kind):
+        has(body(ROOM, "bool RoomGhostRoom::isWaitingEctoplasm("), "waiting item",
+            "bag.getPositionTile()==apparatus.stand", "isApparatusUnlocked(*getSeat(),kind);")
+        return [item for item in self.floor if item.get("ghost") == "ectoplasm" and item.get("at") == self.apparatus[kind]["stand"]
+            and item.get("target") == KINDS[kind] and self.unlocked(kind)]
+
+    # A worker carries a lying item only if it is not waiting in front of its apparatus
+    def carryable(self, item):
+        has(body(read("source/entities/ItemBagEntity.cpp"), "EntityCarryType ItemBagEntity::getEntityCarryType("), "waiting stays",
+            "static_cast<RoomGhostRoom*>(storage)->isWaitingEctoplasm(*this))\n        return EntityCarryType::notCarryable;")
+        return not any(item in self.waiting(kind) for kind in KINDS)
+
+    # The first upkeep after loading an old save lays its waiting count out as items in front of the apparatus
+    def lay_out(self):
+        has(body(ROOM, "void RoomGhostRoom::layOutPendingEctoplasm("), "old save count",
+            "item->mGhostTarget=static_cast<int32_t>(index);", "apparatus.pendingEctoplasm=0;")
+        for kind, apparatus in self.apparatus.items():
+            for _ in range(apparatus["pending"]):
+                self.floor.append({"ghost": "ectoplasm", "target": KINDS[kind], "carried": False, "at": apparatus["stand"]})
+            apparatus["pending"] = 0
 
     # Step 5: one upkeep of the apparatuses; returns the products of this turn
     def upkeep(self):
+        has(body(ROOM, "void RoomGhostRoom::doUpkeep("), "lay out first", "    layOutPendingEctoplasm();\n    workApparatuses();")
+        self.lay_out()
         work = body(ROOM, "void RoomGhostRoom::workApparatuses(")
-        has(work, "work", "if(!apparatus.working && apparatus.queue>0)", "--apparatus.queue;apparatus.working=true;apparatus.workTurns+=turns;",
+        has(work, "work", "if(!apparatus.working)\n            {\n                ItemBagEntity* waiting=findWaitingEctoplasm(kind);",
+            "if(waiting!=nullptr) takeInEctoplasm(apparatus,*waiting,turns);",
             "apparatus.workTurns-=1.0;", "if(apparatus.workTurns<=0.0)", "apparatus.working=false;\n                    finishEctoplasm(kind);",
             "const std::string state=!unlocked?\"Locked\":apparatus.working?\"Working\":\"Idle\";",
             "apparatus.object->setAnimationState(state,true);")
@@ -150,10 +188,10 @@ class Room:
         for kind, apparatus in self.apparatus.items():
             unlocked = self.unlocked(kind)
             if unlocked:
-                if not apparatus["working"] and apparatus["queue"] > 0:
-                    apparatus["queue"] -= 1
-                    apparatus["working"] = True
-                    apparatus["turns"] += TURNS
+                waiting = self.waiting(kind)
+                if not apparatus["working"] and waiting:
+                    self.floor.remove(waiting[0])
+                    self.take_in(kind)
                 if apparatus["working"]:
                     apparatus["turns"] -= 1.0
                     if apparatus["turns"] <= 0.0:
@@ -184,12 +222,22 @@ class Room:
         self.floor.append(product)
         return product
 
-    # Ectoplasm held by the apparatus when the room goes (G2)
+    # Ectoplasm held by the apparatus when the room goes (G2); waiting ectoplasm already lies on the floor as items
     def held(self, kind):
         has(body(ROOM, "void RoomGhostRoom::dropHeldEctoplasm("), "nothing is lost",
-            "const uint32_t count=apparatus.queue+(apparatus.working?1:0)+apparatus.crystalEctoplasm;")
+            "const uint32_t count=apparatus.pendingEctoplasm+(apparatus.working?1:0)+apparatus.crystalEctoplasm;")
         apparatus = self.apparatus[kind]
-        return apparatus["queue"] + (1 if apparatus["working"] else 0) + apparatus["crystal"]
+        return apparatus["pending"] + (1 if apparatus["working"] else 0) + apparatus["crystal"]
+
+    # The room is sold, destroyed or taken over: held ectoplasm falls, waiting items stay as normal floor items
+    def lose(self):
+        for kind in KINDS:
+            for _ in range(self.held(kind)):
+                self.floor.append({"ghost": "ectoplasm", "target": -1, "carried": False, "at": "floor"})
+            self.apparatus[kind].update(pending=0, working=False, turns=0.0, crystal=0)
+        for item in self.floor:
+            if item.get("ghost") == "ectoplasm":
+                item["at"] = "floor"
 
 
 # Step 7: the room that takes the product and what it gives the keeper
@@ -241,9 +289,9 @@ def follow(kind):
     assert room.carry_spot(item) == "stand-of-" + kind, (kind, "carried ectoplasm keeps its apparatus")
     room.chosen = kind
     room.put_down(item)
-    assert room.apparatus[kind]["queue"] == 1 and item not in room.floor, (kind, "queued")
-    assert all(room.apparatus[other]["queue"] == 0 for other in others), (kind, "no other apparatus gets it")
-    assert room.held(kind) == 1, (kind, "the queued ectoplasm is held")
+    assert room.apparatus[kind]["working"] and item not in room.floor, (kind, "the idle apparatus takes it in at once")
+    assert all(not room.apparatus[other]["working"] and not room.waiting(other) for other in others), (kind, "no other apparatus gets it")
+    assert room.held(kind) == 1, (kind, "the ectoplasm in the apparatus is held")
     finished, turn, products = None, 0, []
     while turn < 100 and not products:
         turn += 1
@@ -259,15 +307,17 @@ def follow(kind):
         # One ectoplasm is forged into the level crystal; it stays held until the crystal is complete
         assert finished == work_turns and not products, (kind, finished, products)
         assert room.held(kind) == 1 and room.apparatus[kind]["state"] == "Idle", (kind, "forged ectoplasm held")
-        for _ in range(int(PER_CRYSTAL) - 1):
+        for index in range(int(PER_CRYSTAL) - 1):
             extra = room.cauldron()
             assert room.pick_up(extra) == "stand-of-crystal"
             room.put_down(extra)
+            # The first goes in at once, the others lie in front of the busy forge as items
+            assert len(room.waiting(kind)) == index and room.held(kind) == 2, (kind, index, "waiting as items")
         for _ in range(1000):
             products = room.upkeep()
             if products:
                 break
-        assert room.held(kind) == 0, (kind, "the crystal used every forged ectoplasm")
+        assert room.held(kind) == 0 and not room.waiting(kind), (kind, "the crystal used every forged ectoplasm")
     else:
         assert turn == work_turns, (kind, "product after the work time", turn, work_turns)
         assert room.held(kind) == 0 and room.apparatus[kind]["state"] == "Idle", (kind, "idle again")
@@ -278,7 +328,62 @@ def follow(kind):
     print(f"{kind}: ectoplasm -> {mesh} -> {product_item if product_item != 'none' else 'SoulCrystal'} -> {target}: ok")
 
 
-# A locked apparatus takes no ectoplasm: the choice falls back to the mana still and nothing is queued at the locked one.
+# Decision 813: ectoplasm for a busy apparatus waits as real items lying in front of it, which workers leave lying, and is
+# taken in one after the other with the work time of each; nothing is lost when the room goes.
+def busy():
+    turns_each = math.ceil(TURNS)
+    for kind in ("mana", "research", "crystal"):
+        room = Room(unlock_level(kind), kind)
+        items = [room.cauldron() for _ in range(3)]
+        for item in items:
+            assert room.pick_up(item) == "stand-of-" + kind
+            room.put_down(item)
+        assert room.apparatus[kind]["working"] and room.waiting(kind) == items[1:], (kind, "two lie in front of it")
+        assert all(item in room.floor and item["at"] == "stand-of-" + kind for item in items[1:]), (kind, "real floor items")
+        assert not any(room.carryable(item) for item in items[1:]), (kind, "workers leave waiting items lying")
+        # A new choice does not move ectoplasm that already waits
+        room.chosen = "mana" if kind != "mana" else "research"
+        assert room.waiting(kind) == items[1:], (kind, "waiting items keep their apparatus")
+        room.chosen = kind
+        taken = []
+        for turn in range(1, 40):
+            before = len(room.waiting(kind))
+            room.upkeep()
+            if len(room.waiting(kind)) < before:
+                taken.append(turn)
+        # Taken in one after the other, each as soon as the previous one is done: 5.5 turns each, carried fractions
+        assert taken == [turns_each + 1, math.ceil(2 * TURNS) + 1], (kind, taken)
+        assert not room.waiting(kind) and room.held(kind) == (3 % int(PER_CRYSTAL) if kind == "crystal" else 0), (kind, room.held(kind))
+    # The room goes while items wait: the running one falls, the waiting ones stay on the floor as normal items
+    room = Room(1, "mana")
+    items = [room.cauldron() for _ in range(3)]
+    for item in items:
+        room.pick_up(item)
+        room.put_down(item)
+    ectoplasm_before = sum(1 for item in room.floor if item.get("ghost") == "ectoplasm") + room.held("mana")
+    room.lose()
+    ectoplasm_after = sum(1 for item in room.floor if item.get("ghost") == "ectoplasm")
+    assert ectoplasm_before == ectoplasm_after == 3, (ectoplasm_before, ectoplasm_after)
+    assert all(room.carryable(item) for item in room.floor), "after the loss they are normal items again"
+    print("busy apparatus: ectoplasm waits as items in front of it: ok")
+
+
+# An old save with a waiting count: the first upkeep lays the count out as items in front of the apparatus.
+def old_save():
+    room = Room(1, "mana")
+    room.apparatus["mana"]["pending"] = 4
+    assert room.held("mana") == 4, "the count is held until it is laid out"
+    room.upkeep()
+    assert room.apparatus["mana"]["pending"] == 0 and room.apparatus["mana"]["working"], "laid out, one taken in at once"
+    assert len(room.waiting("mana")) == 3 and room.held("mana") == 1, "three lie in front of the mana still"
+    finished = 0
+    for _ in range(100):
+        finished += len(room.upkeep())
+    assert finished == 4 and not room.waiting("mana") and room.held("mana") == 0, finished
+    print("old save waiting count becomes floor items: ok")
+
+
+# A locked apparatus takes no ectoplasm: the choice falls back to the mana still and nothing waits at the locked one.
 def locked():
     for kind in ("research", "crystal"):
         room = Room(unlock_level(kind) - 1, kind)
@@ -287,7 +392,7 @@ def locked():
         item = room.cauldron()
         assert room.pick_up(item) == "stand-of-mana", kind
         room.put_down(item)
-        assert room.apparatus[kind]["queue"] == 0 and room.apparatus["mana"]["queue"] == 1, kind
+        assert not room.apparatus[kind]["working"] and not room.waiting(kind) and room.apparatus["mana"]["working"], kind
         room.upkeep()
         assert room.apparatus[kind]["state"] == "Locked" and room.apparatus["mana"]["state"] == "Working", kind
     print("locked apparatus takes no ectoplasm: ok")
@@ -297,6 +402,8 @@ def main():
     assert set(KINDS) == {"mana", "research", "crystal"}, KINDS
     for kind in ("mana", "research", "crystal"):
         follow(kind)
+    busy()
+    old_save()
     locked()
     print("ghost apparatus flow: ok")
 

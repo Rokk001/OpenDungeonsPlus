@@ -400,14 +400,15 @@ void RoomGhostRoom::interruptHunters()
 void RoomGhostRoom::absorbRoom(Room* room)
 {
     RoomGhostRoom* other=static_cast<RoomGhostRoom*>(room);
-    // The joined room keeps one apparatus of each kind: the other room's waiting and running ectoplasm queue here
-    // (the running work time is lost, the ectoplasm is not) and its forged ectoplasm joins this level crystal.
+    // The joined room keeps one apparatus of each kind. The other room's waiting ectoplasm already lies on the floor as
+    // items; its running ectoplasm is laid out as an item in front of this apparatus on the next upkeep (the running
+    // work time is lost, the ectoplasm is not) and its forged ectoplasm joins this level crystal.
     for(uint32_t index=0;index<APPARATUS_COUNT;++index)
     {
         Apparatus& mine=mApparatuses[index];Apparatus& theirs=other->mApparatuses[index];
-        mine.queue+=theirs.queue+(theirs.working?1:0);
+        mine.pendingEctoplasm+=theirs.pendingEctoplasm+(theirs.working?1:0);
         mine.crystalEctoplasm+=theirs.crystalEctoplasm;
-        theirs.queue=0;theirs.working=false;theirs.workTurns=0.0;theirs.crystalEctoplasm=0;
+        theirs.pendingEctoplasm=0;theirs.working=false;theirs.workTurns=0.0;theirs.crystalEctoplasm=0;
     }
     mCauldrons.insert(mCauldrons.end(),other->mCauldrons.begin(),other->mCauldrons.end());
     for(Creature* hunter : getGameMap()->getCreaturesBySeat(getSeat()))
@@ -769,10 +770,12 @@ void RoomGhostRoom::workApparatuses()
                 Tile* drop=findDropTile(*apparatus.tile,0.0);
                 spawnItem(drop==nullptr?*apparatus.tile:*drop,ItemInstance::createSoulCrystal(),getSeat());
             }
-            // The next waiting ectoplasm starts; a fraction left from the previous one carries over
-            if(!apparatus.working && apparatus.queue>0)
+            // The next ectoplasm item waiting in front of it is taken in (decision 813); a fraction left from the
+            // previous one carries over
+            if(!apparatus.working)
             {
-                --apparatus.queue;apparatus.working=true;apparatus.workTurns+=turns;
+                ItemBagEntity* waiting=findWaitingEctoplasm(kind);
+                if(waiting!=nullptr) takeInEctoplasm(apparatus,*waiting,turns);
             }
             if(apparatus.working)
             {
@@ -823,12 +826,74 @@ void RoomGhostRoom::dropHeldEctoplasm(Tile* tile)
     if(getSeat()==nullptr) return;
     for(Apparatus& apparatus : mApparatuses)
     {
-        const uint32_t count=apparatus.queue+(apparatus.working?1:0)+apparatus.crystalEctoplasm;
+        // Waiting ectoplasm already lies on the floor as items and stays there as normal items
+        const uint32_t count=apparatus.pendingEctoplasm+(apparatus.working?1:0)+apparatus.crystalEctoplasm;
         Tile* place=tile!=nullptr?tile:apparatus.stand!=nullptr?apparatus.stand:mCoveredTiles.empty()?nullptr:mCoveredTiles.front();
         if(place==nullptr) continue;
         for(uint32_t index=0;index<count;++index)
             spawnItem(*place,ItemInstance::createGhostItem(GhostItem::ectoplasm),getSeat());
-        apparatus.queue=0;apparatus.working=false;apparatus.workTurns=0.0;apparatus.crystalEctoplasm=0;
+        apparatus.pendingEctoplasm=0;apparatus.working=false;apparatus.workTurns=0.0;apparatus.crystalEctoplasm=0;
+    }
+}
+
+bool RoomGhostRoom::isWaitingEctoplasm(const ItemBagEntity& bag) const
+{
+    const ItemInstance* item=bag.getItem();
+    if(item==nullptr || item->mGhostItem!=GhostItem::ectoplasm || !bag.getIsOnMap() || getSeat()==nullptr ||
+       bag.getSeat()!=getSeat() || item->mGhostTarget<0 || item->mGhostTarget>=static_cast<int32_t>(APPARATUS_COUNT)) return false;
+    const GhostProduct kind=static_cast<GhostProduct>(item->mGhostTarget);
+    const Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];
+    // Only in front of the apparatus it was delivered to; anywhere else (a changed layout, a sold or lost room, a keeper
+    // hand moving it away) it is a normal item that workers carry again
+    return apparatus.tile!=nullptr && apparatus.stand!=nullptr && bag.getPositionTile()==apparatus.stand &&
+        isApparatusUnlocked(*getSeat(),kind);
+}
+
+ItemBagEntity* RoomGhostRoom::findWaitingEctoplasm(GhostProduct kind) const
+{
+    Tile* stand=getApparatusStandTile(kind);
+    if(stand==nullptr) return nullptr;
+    // In the order they were put down: one after the other
+    for(GameEntity* entity : stand->getEntitiesInTile())
+    {
+        if(entity==nullptr || entity->getObjectType()!=GameEntityType::itemBagEntity || entity->isCarryLocked()) continue;
+        ItemBagEntity* bag=static_cast<ItemBagEntity*>(entity);
+        if(isWaitingEctoplasm(*bag) && bag->getItem()->mGhostTarget==static_cast<int32_t>(kind)) return bag;
+    }
+    return nullptr;
+}
+
+void RoomGhostRoom::takeInEctoplasm(Apparatus& apparatus, ItemBagEntity& bag, double turns)
+{
+    bag.takeItem();
+    bag.removeFromGameMap();bag.deleteYourself();
+    apparatus.working=true;apparatus.workTurns+=turns;
+}
+
+void RoomGhostRoom::layOutPendingEctoplasm()
+{
+    if(getSeat()==nullptr) return;
+    for(uint32_t index=0;index<APPARATUS_COUNT;++index)
+    {
+        Apparatus& apparatus=mApparatuses[index];
+        if(apparatus.pendingEctoplasm==0) continue;
+        // In front of the apparatus, spread over its stand tile so every waiting item can be seen; a room without a
+        // place for the apparatus lets them fall on its first tile as normal items
+        Tile* place=apparatus.stand!=nullptr?apparatus.stand:mCoveredTiles.empty()?nullptr:mCoveredTiles.front();
+        if(place==nullptr) continue;
+        const float spread[9][2]={{0.0f,0.0f},{-0.25f,-0.25f},{0.25f,-0.25f},{-0.25f,0.25f},{0.25f,0.25f},
+            {0.0f,-0.3f},{0.0f,0.3f},{-0.3f,0.0f},{0.3f,0.0f}};
+        for(uint32_t count=0;count<apparatus.pendingEctoplasm;++count)
+        {
+            std::unique_ptr<ItemInstance> item=ItemInstance::createGhostItem(GhostItem::ectoplasm);
+            item->mGhostTarget=static_cast<int32_t>(index);
+            ItemBagEntity* bag=new ItemBagEntity(getGameMap(),std::move(item));
+            bag->setSeat(getSeat());
+            bag->setPosition(Ogre::Vector3(static_cast<float>(place->getX())+spread[count%9][0],
+                static_cast<float>(place->getY())+spread[count%9][1],0.0f));
+            bag->addToGameMap();bag->createMesh();
+        }
+        apparatus.pendingEctoplasm=0;
     }
 }
 
@@ -868,9 +933,16 @@ void RoomGhostRoom::notifyCarryingStateChanged(Creature* carrier, GameEntity* ca
     const GhostProduct kind=target>=0 && target<static_cast<int32_t>(APPARATUS_COUNT)?static_cast<GhostProduct>(target):getChosenApparatus(*getSeat());
     Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];
     if(!isApparatusUnlocked(*getSeat(),kind) || apparatus.tile==nullptr) return;
-    bag->takeItem();
-    bag->removeFromGameMap();bag->deleteYourself();
-    ++apparatus.queue;
+    // An idle apparatus takes the ectoplasm in at once
+    if(!apparatus.working)
+    {
+        takeInEctoplasm(apparatus,*bag,ConfigManager::getSingleton().getRoomConfigDouble("GhostApparatusTurns"));
+        return;
+    }
+    // A busy one leaves it lying in front of it as a real item (decision 813), owned by the keeper and marked for this
+    // apparatus; it is taken in one after the other as the apparatus becomes idle, and workers leave it lying
+    bag->getItem()->mGhostTarget=static_cast<int32_t>(kind);
+    bag->setSeat(getSeat());
 }
 
 void RoomGhostRoom::exportToStream(std::ostream& os) const
@@ -878,9 +950,11 @@ void RoomGhostRoom::exportToStream(std::ostream& os) const
     Room::exportToStream(os);
     if(getGameMap()->isInEditorMode()) return;
     const std::streamsize precision=os.precision();
+    // The record keeps its old form: the first field, once the waiting count, holds only ectoplasm not yet laid out as
+    // items (0 after the first upkeep); waiting ectoplasm is saved with the other floor items
     os << "GhostApparatus" << std::setprecision(17);
     for(const Apparatus& apparatus : mApparatuses)
-        os << ' ' << apparatus.queue << ' ' << apparatus.working << ' ' << apparatus.workTurns << ' ' << apparatus.crystalEctoplasm;
+        os << ' ' << apparatus.pendingEctoplasm << ' ' << apparatus.working << ' ' << apparatus.workTurns << ' ' << apparatus.crystalEctoplasm;
     os << "\n";
     os.precision(precision);
 }
@@ -898,8 +972,10 @@ bool RoomGhostRoom::importFromStream(std::istream& is)
         mOldSaveChoice=getGameMap()->getSavedTurnNumber()>0;
         return true;
     }
+    // The waiting count of an old save is read as pending ectoplasm: the first upkeep lays it out as items in front of
+    // the apparatus (decision 813), so nothing is lost
     for(Apparatus& apparatus : mApparatuses)
-        if(!(is >> apparatus.queue >> apparatus.working >> apparatus.workTurns >> apparatus.crystalEctoplasm) ||
+        if(!(is >> apparatus.pendingEctoplasm >> apparatus.working >> apparatus.workTurns >> apparatus.crystalEctoplasm) ||
            !std::isfinite(apparatus.workTurns)) return false;
     return true;
 }
@@ -908,6 +984,7 @@ void RoomGhostRoom::doUpkeep()
 {
     Room::doUpkeep();
     mAlarmTurns=std::max(0.0,mAlarmTurns-1.0);
+    layOutPendingEctoplasm();
     workApparatuses();
     const double fill=getSeat()->getEctoplasmLevels()/getLevelsPerEctoplasm(*getSeat());
     for(const std::pair<Tile* const,BuildingObject*>& entry : getBuildingObjects())
