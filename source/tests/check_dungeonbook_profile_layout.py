@@ -408,6 +408,69 @@ for value in (1.0 / 3, 2.0 / 3 * 100, 1e-7 / 3, 123456789.123, 5e20 / 7, 0.001, 
 WORST_NUMBERS = tuple(sorted({group_thousands(exact_number(float('-9.8765432109876543e%d' % e))) for e in range(-320, 308)},
                        key=lambda n: (text_width('MedievalSharp-8', n), n))[-12:])
 assert all(len(n) >= 20 for n in WORST_NUMBERS), WORST_NUMBERS
+# Every magnitude and form (17 significant digits, and the long zero runs of 1.0000000000000002), for the attribute
+# cells whose line breaks depend on where the commas, points and exponent lie
+ALL_NUMBERS = tuple(sorted({group_thousands(exact_number(float(m % e))) for m in ('-9.8765432109876543e%d',
+                            '-1.0000000000000002e%d', '9.8765432109876543e%d') for e in range(-320, 308)}))
+assert len(ALL_NUMBERS) > 1500 and set(WORST_NUMBERS) <= set(ALL_NUMBERS)
+# Owner decision 816: Strength, Dexterity, Life and Mana side by side in ONE row (book-variant-2), label on top, the
+# exact value below it; a long value is broken into lines of ATTRIBUTE_LINE_CHARS characters (breakAttributeValue)
+ATTRIBUTES = ('Strength', 'Dexterity', 'Life', 'Mana')
+LINE_CHARS = int(re.search(r'ATTRIBUTE_LINE_CHARS = (\d+);', social)[1])
+break_value = function_of(social, 'std::string breakAttributeValue(const std::string& value)')
+for fragment in ('while(rest.size() > ATTRIBUTE_LINE_CHARS)', 'std::string::size_type cut = ATTRIBUTE_LINE_CHARS;',
+                 'for(std::string::size_type i = ATTRIBUTE_LINE_CHARS; i >= ATTRIBUTE_LINE_CHARS / 2; --i)',
+                 "if(rest[i - 1] == ',' || rest[i - 1] == '.' || rest[i] == 'e' || rest[i] == 'E')",
+                 'result += rest.substr(0, cut) + "\\n";', 'rest = rest.substr(cut);', 'return result + rest;'):
+    assert fragment in break_value, fragment
+values_fill = function_of(social, 'void SocialWindow::refreshValues(')
+assert 'const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};' in values_fill
+assert ('text << names[i] << "\\n" << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));'
+        in values_fill), 'the attribute cells show label and exact value, broken into the lines of the cell'
+
+
+def break_attribute_value(value):
+    """Python replica of breakAttributeValue in SocialWindow.cpp."""
+    lines = []
+    while len(value) > LINE_CHARS:
+        cut = LINE_CHARS
+        for i in range(LINE_CHARS, LINE_CHARS // 2 - 1, -1):
+            if value[i - 1] in ',.' or value[i] in 'eE':
+                cut = i
+                break
+        lines.append(value[:cut])
+        value = value[cut:]
+    return lines + [value]
+
+
+for value in ALL_NUMBERS + ('11', '-', '42,600', '41.666666666666664'):
+    assert ''.join(break_attribute_value(value)) == value, ('a character of the value is lost', value)
+    assert all(0 < len(part) <= LINE_CHARS for part in break_attribute_value(value)), value
+assert LINE_CHARS == 14, 'the expected breaks below are written for 14 characters per line'
+for value, expected in (('14', ['14']), ('42,600', ['42,600']), ('41.666666666666664', ['41.66666666666', '6664']),
+                        ('-9.876543210987655e+280', ['-9.87654321098', '7655e+280']),
+                        ('-987,654,321,098,765.4', ['-987,654,321,', '098,765.4']),
+                        ('-1.0000000000000002e-05', ['-1.00000000000', '00002e-05'])):
+    assert break_attribute_value(value) == expected, (value, break_attribute_value(value))
+ATTRIBUTE_TEXTS = {name: tuple(name + '\n' + '\n'.join(break_attribute_value(n)) for n in ALL_NUMBERS + ('-', '0'))
+                   for name in ATTRIBUTES}
+ATTRIBUTE_LINES = max(t.count('\n') + 1 for texts in ATTRIBUTE_TEXTS.values() for t in texts)
+cells = [boxes['ValuesPage/' + name][0] for name in ATTRIBUTES]
+for cell in cells[1:]:
+    assert abs(cell[1] - cells[0][1]) < 1e-9 and abs(cell[3] - cells[0][3]) < 1e-9, 'the four attributes share ONE row'
+    assert abs((cell[2] - cell[0]) - (cells[0][2] - cells[0][0])) < 1e-3, 'the four attribute cells are equally wide'
+for left, right in zip(cells, cells[1:]):
+    assert left[2] < right[0], 'Strength, Dexterity, Life, Mana from left to right without overlap'
+combat_panel = boxes['ValuesPage/CombatPanel'][0]
+assert abs(cells[0][0] - combat_panel[0]) < 1e-9 and abs(cells[-1][2] - combat_panel[2]) < 1e-9, \
+    'the attribute row spans the right column like the combat block below it'
+assert boxes['ValuesPage/Portrait'][0][3] <= cells[0][1] + 1e-9 and cells[0][3] <= combat_panel[1] + 1e-9, \
+    'the attribute row lies between the portrait ring and the combat block'
+for name in ATTRIBUTES:
+    cell = {p.get('name'): p.get('value') for p in boxes['ValuesPage/' + name][1].findall('Property')}
+    assert cell['Font'] == 'MedievalSharp-8' and cell['HorzFormatting'] == 'CentreAligned', name
+    assert cell['BackgroundEnabled'] == 'True' and 'Text' not in cell, name
+assert not any(re.fullmatch(r'ValuesPage/(Strength|Dexterity|Life|Mana)\w+', n) for n in boxes), 'one window per attribute'
 # The Equipment, Path and Skills tiles show symbol and title (book-variant-2); their whole text is in the tooltip and
 # in the path and skills rows of the profile page, which word wrap and scroll (first part of this check)
 assert 'entry.equipment, entry.path, entry.skills' in social and 'fitTextToWindow' not in social
@@ -600,8 +663,10 @@ for name, label in (('Experience', 'Experience:'), ('HitPoints', 'Hit points:'),
     require('ValuesPage/%sLabel' % name, 'MedievalSharp-8', texts=(label,), pad_w=4.0)
     require('ValuesPage/%sValue' % name, 'MedievalSharp-8', lines=2, texts=WORST_NUMBERS + pairs + ('-',), pad_w=4.0,
             wrap=True)
-for name in ('Strength', 'Dexterity', 'Life', 'Mana'):
-    require('ValuesPage/' + name, 'MedievalSharp-8', lines=2, texts=tuple(name + '\n' + n for n in WORST_NUMBERS))
+# The attribute cells of the one row: label and every value line of every magnitude, whole (decision 816)
+assert ATTRIBUTE_LINES == 3, ATTRIBUTE_LINES
+for name in ATTRIBUTES:
+    require('ValuesPage/' + name, 'MedievalSharp-8', lines=ATTRIBUTE_LINES, texts=ATTRIBUTE_TEXTS[name])
 require('ValuesPage/CombatLabels', 'MedievalSharp-8', lines=3, texts=('Critical %', 'Attack Rating', 'Defense Rating'))
 require('ValuesPage/DefenseLabels', 'MedievalSharp-8', lines=3, texts=('Physical Defense', 'Magical Defense', 'Element Defense'))
 require('ValuesPage/CombatValues', 'MedievalSharp-8', lines=3, texts=tuple(n + '%' for n in WORST_NUMBERS) + WORST_NUMBERS)
@@ -664,6 +729,16 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             slot = boxes['InventoryPage/SlotBox%d/Slot%d' % (i, i)][0]
             edge = min((slot[2] - slot[0]) * client_w, (slot[3] - slot[1]) * client_h) * scale
             assert edge >= 12.0, ('slot too small', screen_w, screen_h, user, edge)
+        # the one attribute row: each cell in screen pixels and the room its widest and highest text takes
+        cell = boxes['ValuesPage/Strength'][0]
+        cell_w, cell_h = (cell[2] - cell[0]) * client_w, (cell[3] - cell[1]) * client_h
+        attribute_w = max(text_width('MedievalSharp-8', part) + 6.0 for name in ATTRIBUTES
+                          for t in ATTRIBUTE_TEXTS[name] for part in t.split('\n'))
+        state_lines.append('%dx%d UI %d%%: attribute row 4 cells of %dx%d px, widest line %.0f%% of the width, '
+                           'label + %d value lines %.0f%% of the height' % (
+                               screen_w, screen_h, round(user * 100), round(cell_w * scale), round(cell_h * scale),
+                               attribute_w / cell_w * 100, ATTRIBUTE_LINES - 1,
+                               ATTRIBUTE_LINES * line_height('MedievalSharp-8') / cell_h * 100))
         state_lines.append('%dx%d UI %d%%: book %dx%d px (fit %.2f); tightest text per page: %s' % (
             screen_w, screen_h, round(user * 100), round(win_w * scale), round(win_h * scale), fit,
             ', '.join('%s %s %.0f%%' % (p.replace('Page', ''), tightest[p][1].split('/')[-1], tightest[p][0] * 100)

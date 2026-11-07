@@ -188,6 +188,26 @@ for room in re.findall(r'RoomType::(\w+):', pictures):
     assert re.search(r'\b%s\b' % room, rooms), room
 print('4. feed: every post row of both feeds has a picture (%d painted post scenes, portrait otherwise)' % len(used))
 
+# 4b. Values (owner decision 816): Strength, Dexterity, Life and Mana side by side in ONE row as in book-variant-2,
+# between the portrait ring and the combat block, each cell with the label on top and the exact value below
+attribute_names = ('Strength', 'Dexterity', 'Life', 'Mana')
+cells = [boxes['ValuesPage/' + name] for name in attribute_names]
+for name, (cell, element) in zip(attribute_names, cells):
+    p = props(element)
+    assert 'HorizontalAlignment' not in p and 'VerticalAlignment' not in p, name + ' is placed at its area'
+    assert abs(cell[1] - cells[0][0][1]) < 1e-9 and abs(cell[3] - cells[0][0][3]) < 1e-9, name + ' leaves the one row'
+    assert p['HorzFormatting'] == 'CentreAligned' and p['VertFormatting'] == 'CentreAligned', name
+for (a, _), (b, _) in zip(cells, cells[1:]):
+    assert a[2] <= b[0] and not overlaps(a, b), 'the attributes follow from left to right'
+for other in ('Portrait', 'CombatPanel', 'StatsPanel', 'DefensePanel'):
+    for name, (cell, _) in zip(attribute_names, cells):
+        assert not overlaps(cell, boxes['ValuesPage/' + other][0]), (name, other)
+assert boxes['ValuesPage/Portrait'][0][3] <= cells[0][0][1] and cells[0][0][3] <= boxes['ValuesPage/CombatPanel'][0][1]
+assert abs(cells[0][0][0] - boxes['ValuesPage/CombatPanel'][0][0]) < 1e-9
+assert abs(cells[-1][0][2] - boxes['ValuesPage/CombatPanel'][0][2]) < 1e-9
+assert 'breakAttributeValue(formatProfileValue(values[i]))' in social
+print('4b. values: Strength, Dexterity, Life and Mana in one row between portrait ring and combat block (variant 2)')
+
 # 5. Sizes at 640x480, 1920x1200 and 8K, UI 80 % and 120 % (the window is 860x620 design pixels, fitted to the screen)
 size = re.search(r'name="Area" value="\{\{0\.5,(-?\d+)\},\{0\.5,(-?\d+)\},\{0\.5,(\d+)\},\{0\.5,(\d+)\}\}"', layout_text)
 book_w, book_h = int(size[3]) - int(size[1]), int(size[4]) - int(size[2])

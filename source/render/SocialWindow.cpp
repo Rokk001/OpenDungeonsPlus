@@ -89,6 +89,9 @@ const char* const FILTER_LABELS[] = {"All", "Workers", "Fighters", "Unhappy"};
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
 //! Digits between two thousands commas of a value ("42,600", book-variant-2)
 const std::string::size_type THOUSANDS_GROUP = 3;
+//! Characters of one value line in the attribute cells (Strength, Dexterity, Life, Mana side by side in one row,
+//! book-variant-2, owner decision 816): a longer exact value continues on the next line of its cell
+const std::string::size_type ATTRIBUTE_LINE_CHARS = 14;
 
 bool isEntryBefore(const std::pair<std::string, std::string>& a, const std::pair<std::string, std::string>& b)
 {
@@ -348,6 +351,30 @@ std::string groupThousands(const std::string& number)
 std::string formatProfileValue(double value)
 {
     return groupThousands(Creature::formatExactNumber(value));
+}
+
+//! \brief Breaks an exact value into the lines of an attribute cell (owner decision 816): at most ATTRIBUTE_LINE_CHARS
+//! characters per line, broken after a comma or point or before the exponent when one lies in the second half of the
+//! line, otherwise after the last character that fits. Every character is kept, nothing is rounded or cut.
+std::string breakAttributeValue(const std::string& value)
+{
+    std::string result;
+    std::string rest = value;
+    while(rest.size() > ATTRIBUTE_LINE_CHARS)
+    {
+        std::string::size_type cut = ATTRIBUTE_LINE_CHARS;
+        for(std::string::size_type i = ATTRIBUTE_LINE_CHARS; i >= ATTRIBUTE_LINE_CHARS / 2; --i)
+        {
+            if(rest[i - 1] == ',' || rest[i - 1] == '.' || rest[i] == 'e' || rest[i] == 'E')
+            {
+                cut = i;
+                break;
+            }
+        }
+        result += rest.substr(0, cut) + "\n";
+        rest = rest.substr(cut);
+    }
+    return result + rest;
 }
 
 //! \brief Splits a statistics value like "12.5 / 40" at its " / " separators.
@@ -1222,12 +1249,14 @@ void SocialWindow::refreshValues(const social::DungeonbookEntry& entry)
         page->getChild(std::string(line.window) + "Label")->setTooltipText(tooltip);
     }
 
+    // The four attributes side by side in one row (book-variant-2, owner decision 816): the label on top, the exact
+    // value on the line below, a long value continues on further lines of its cell
     const char* names[] = {"Strength", "Dexterity", "Life", "Mana"};
     const double values[] = {entry.strength, entry.dexterity, entry.life, entry.mana};
     for(std::size_t i = 0; i < 4; ++i)
     {
         std::ostringstream text;
-        text << names[i] << "\n" << (known ? formatProfileValue(values[i]) : std::string("-"));
+        text << names[i] << "\n" << (known ? breakAttributeValue(formatProfileValue(values[i])) : std::string("-"));
         page->getChild(names[i])->setText(text.str());
     }
     // The labels are fixed in the layout; the value column holds one line per label, right aligned.

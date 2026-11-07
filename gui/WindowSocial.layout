@@ -1413,7 +1413,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="Strength">
-                <Property name="Area" value="{{0.44,0},{0.31,0},{0.7127,0},{0.395,0}}" />
+                <Property name="Area" value="{{0.44,0},{0.31,0},{0.5739,0},{0.485,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="True" />
@@ -1422,7 +1422,7 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="Dexterity">
-                <Property name="Area" value="{{0.7176,0},{0.31,0},{0.9903,0},{0.395,0}}" />
+                <Property name="Area" value="{{0.5788,0},{0.31,0},{0.7127,0},{0.485,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="True" />
@@ -1431,7 +1431,7 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="Life">
-                <Property name="Area" value="{{0.44,0},{0.4,0},{0.7127,0},{0.485,0}}" />
+                <Property name="Area" value="{{0.7176,0},{0.31,0},{0.8515,0},{0.485,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="True" />
@@ -1440,7 +1440,7 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="OD/StaticText" name="Mana">
-                <Property name="Area" value="{{0.7176,0},{0.4,0},{0.9903,0},{0.485,0}}" />
+                <Property name="Area" value="{{0.8564,0},{0.31,0},{0.9903,0},{0.485,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="True" />

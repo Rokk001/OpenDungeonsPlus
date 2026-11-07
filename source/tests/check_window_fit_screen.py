@@ -242,7 +242,21 @@ for part in values_sheet.findall('Window'):
     if name.endswith('Value'):
         formatting = part.find("Property[@name='HorzFormatting']")
         assert formatting is not None and formatting.get('value') == 'WordWrapRightAligned', name + ' must word wrap'
-print('Dungeonbook pages fit at every scale (relative areas, no scrollbar on the values sheet)')
+# Owner decision 816: the four attributes sit in ONE row (book-variant-2) inside the values sheet, equally wide, side
+# by side without overlap; the text of each cell (label and exact value lines) is measured per screen and UI scale in
+# check_dungeonbook_profile_layout.py
+attribute_cells = []
+for name in ('Strength', 'Dexterity', 'Life', 'Mana'):
+    part = values_sheet.find("Window[@name='%s']" % name)
+    assert part is not None, name + ' is missing on the values sheet'
+    attribute_cells.append([scale for scale, _offset in udims(part.find("Property[@name='Area']").get('value'))])
+for cell in attribute_cells:
+    assert 0.0 <= cell[0] < cell[2] <= 1.0 and 0.0 <= cell[1] < cell[3] <= 1.0, 'an attribute cell leaves the sheet'
+    assert cell[1] == attribute_cells[0][1] and cell[3] == attribute_cells[0][3], 'the attributes are not in one row'
+    assert abs((cell[2] - cell[0]) - (attribute_cells[0][2] - attribute_cells[0][0])) < 1e-3, 'unequal attribute cells'
+for left, right in zip(attribute_cells, attribute_cells[1:]):
+    assert left[2] < right[0], 'the attribute cells overlap or leave their order'
+print('Dungeonbook pages fit at every scale (relative areas, no scrollbar on the values sheet, attributes in one row)')
 
 # The Workers window (key J) is part of the checked windows, fits every tested screen without being shrunk below its
 # text, and everything inside it uses relative areas (check_workers_window.py pins its parts and behaviour).
