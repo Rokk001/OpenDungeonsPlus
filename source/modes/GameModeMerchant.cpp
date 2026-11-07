@@ -29,7 +29,8 @@
 namespace
 {
 static const float ICON_DESIGN_SIZE = 64.0f;
-static const float STOCK_DESIGN_WIDTH = 740.0f;
+// Design width of the stock list inside the shared window frame (780 - 2 * 16 frame - 2 * 16 margin)
+static const float STOCK_DESIGN_WIDTH = 716.0f;
 static const float MARGIN_STEP = 5.0f;
 static const uint32_t QUALITY_COLOURS[] = {0xFF8A8A8A,0xFFFFFFFF,0xFF3E7BFF,0xFFA64DFF};
 
@@ -121,6 +122,7 @@ bool GameMode::toggleMerchantWindow(const CEGUI::EventArgs&)
     Player* player = mGameMap->getLocalPlayer();
     if(!isConnected() || player == nullptr || player->getSeat()->getNbRooms(RoomType::merchant) == 0) return true;
     mRootWindow->getChild("MerchantWindow")->show();
+    mRootWindow->getChild("MerchantWindow/EmptyText")->setVisible(mMerchantItems.empty());
     mMerchantSnapshotReceived = false;
     ClientNotification* request = new ClientNotification(ClientNotificationType::askMerchantWindow);
     request->mPacket << true;
@@ -240,6 +242,8 @@ void GameMode::receiveMerchantWindow(ODPacket& packet)
         if(entry.first == selectedId) list->setItemSelectState(image, true);
     }
     mRootWindow->getChild("MerchantWindow/HistoryText")->setText(history);
+    // An empty stock says why it is empty and what to do (decision 845)
+    mRootWindow->getChild("MerchantWindow/EmptyText")->setVisible(mMerchantItems.empty());
     refreshMerchantSelection();
     if(newDeal && isConnected() && mRootWindow->getChild("MerchantWindow")->isVisible())
     {

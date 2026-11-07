@@ -998,7 +998,7 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::roomGhostRoom, "EctoplasmLevels", ResearchBaseSource::rooms, "GhostLevelsPerEctoplasm", ""},
     {SkillType::roomGhostRoom, "BoxCapacity", ResearchBaseSource::rooms, "GhostBoxCapacity", ""},
     {SkillType::roomGhostRoom, "BeamRange", ResearchBaseSource::rooms, "GhostBeamRange", ""},
-    {SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostEmptyTurns", ""},
+    {SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostTransferSeconds", ""},
     {SkillType::roomGhostRoom, "RevivePrice", ResearchBaseSource::rooms, "GhostReviveMana", ""},
     {SkillType::roomCrypt, "LichCorpses", ResearchBaseSource::rooms, "CryptCorpsesPerLich", ""},
     {SkillType::roomCrypt, "LichLevel", ResearchBaseSource::rooms, "CryptLichLevelBonus", ""},

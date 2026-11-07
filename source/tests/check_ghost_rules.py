@@ -450,6 +450,8 @@ def hunt_fixture():
     base = base.replace(' static const Vector3 ZERO;', r'''
  //! \brief Returns an endpoint direction for production pose calls.
  Vector3 operator-(const Vector3& other)const{return Vector3(x-other.x,y-other.y,z-other.z);}
+ //! \brief Compares exact positions like the engine vector (the trap socket teleport of decision 845).
+ bool operator!=(const Vector3& other)const{return x!=other.x||y!=other.y||z!=other.z;}
  static const Vector3 ZERO;''')
     base = base.replace('GhostState{rising', 'GhostState{rising')
     base = base.replace('std::set<Tile*> seen;', 'std::set<Tile*> seen;std::set<std::string> announced;')
@@ -459,7 +461,7 @@ def hunt_fixture():
  //! \brief Takes exact revival mana only when available.
  bool takeMana(double amount){if(mana<amount)return false;mana-=amount;return true;}
  Player* getPlayer()''')
-    base = base.replace('{"GhostRiseSeconds",1.5}', '{"GhostBeamSeconds",16},{"GhostBoxSnapSeconds",2},{"GhostBellSeconds",3},{"GhostEmptyTurns",5.5},{"GhostBoxCapacity",1},{"GhostRepathTurns",5},{"GhostBoxThrowSeconds",2},{"GhostReviveHpShare",.35},{"GhostRiseSeconds",1.5}')
+    base = base.replace('{"GhostRiseSeconds",1.5}', '{"GhostBeamSeconds",16},{"GhostBoxSnapSeconds",2},{"GhostBellSeconds",3},{"GhostTransferSeconds",20},{"GhostBoxCapacity",1},{"GhostRepathTurns",5},{"GhostBoxThrowSeconds",2},{"GhostReviveHpShare",.35},{"GhostRiseSeconds",1.5}')
     code = r'''
 //! \brief Supplies declared hunter efficiency independently of timing code.
 struct CreatureRoomAffinity{double efficiency=3;
@@ -528,6 +530,11 @@ struct GhostEntity:GameEntity{GhostState state=GhostState::floating;std::string 
  GhostState getState()const{return state;}
  //! \brief Receives actual capture transitions.
  void setState(GhostState value){state=value;}
+ //! \brief Records the move into the trap socket of the cauldron (decision 845).
+ void teleport(const Ogre::Vector3& value){socket=value;++teleports;}
+ //! \brief Returns the recorded socket position once teleported, else the tile position.
+ Ogre::Vector3 getPosition()const{return teleports>0?socket:Ogre::Vector3(tile?tile->x:0,tile?tile->y:0,0);}
+ Ogre::Vector3 socket;int teleports=0;
  //! \brief Returns assignment ownership.
  const std::string& getAssignedHunter()const{return assigned;}
  //! \brief Receives assignment ownership.
@@ -710,6 +717,8 @@ struct RoomGhostRoom:Room{GameMap* map=nullptr;std::vector<Tile*>& mCoveredTiles
  Tile* reserveCauldron(Creature&){return floor.empty()?nullptr:floor.front();}
  //! \brief Returns the actual reserved cauldron anchor.
  Tile* getHunterCauldron(const Creature&)const{return floor.empty()?nullptr:floor.back();}
+ //! \brief Runs the original delivery point of a cauldron (decision 845).
+ static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor);
  //! \brief Records release after emptying.
  void releaseCauldron(Creature&){}
  //! \brief Records normal layout refresh.
@@ -730,6 +739,8 @@ struct CreatureActionHuntGhost{Creature& mCreature;std::string mTarget,mBeamTarg
  RoomGhostRoom* hookRoom()const{return equipment;}
  //! \brief Runs the original research lookup.
  double researched(const std::string&,const std::string&)const;
+ //! \brief Runs the original transfer time (decision 845).
+ double getTransferTurns()const;
  //! \brief Observes target release without implementing hunt transitions.
  void releaseTarget();
  //! \brief Supplies the controlled result of finding another target.
@@ -755,7 +766,9 @@ struct CreatureActionHuntGhost{Creature& mCreature;std::string mTarget,mBeamTarg
     code += ''.join(function(action,sig) for sig in ['GhostEntity* ghostNamed(', 'RoomGhostRoom* roomNamed(', 'bool eligible(',
         'size_t pathLength(', 'Tile* targetEndpoint(', 'double CreatureActionHuntGhost::researched(',
         'void CreatureActionHuntGhost::releaseTarget(', 'void CreatureActionHuntGhost::interrupt(',
-        'void CreatureActionHuntGhost::assignHunters(', 'void CreatureActionHuntGhost::upkeep(', 'bool CreatureActionHuntGhost::selectRevival('])
+        'void CreatureActionHuntGhost::assignHunters(', 'void CreatureActionHuntGhost::upkeep(', 'bool CreatureActionHuntGhost::selectRevival(',
+        'double CreatureActionHuntGhost::getTransferTurns('])
+    code += function(room,'Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(')
     code += function(room,'bool tileOrder(')+function(room,'double RoomGhostRoom::getLevelsPerEctoplasm(')+function(room,'Tile* RoomGhostRoom::findDropTile(')+function(room,'void RoomGhostRoom::emptyGhost(')
     code += function(room,'void RoomGhostRoom::produceEctoplasm(')+function(room,'void RoomGhostRoom::spawnItem(')
     branches = ''.join(function(action, sig) for sig in ['    if(mState==2 || mState==3 || mState==10)', '    if(mState==4)',
@@ -791,12 +804,19 @@ int main(){
  hunter.definition.jobs.front().efficiency=3;seat.tier=1;seat.product=GhostProduct::research;seat.bar=0;
  GhostEntity extra1,extra2;extra1.name="extra1";extra2.name="extra2";extra1.seat=extra2.seat=&seat;extra1.tile=extra2.tile=ghost.tile;map.entities.push_back(&extra1);map.entities.push_back(&extra2);
  CreatureActionHuntGhost empty(hunter);empty.mState=6;empty.mDestination=hunter.tile;empty.mEmptyRoom="press";empty.mGhosts={"target","extra1","extra2"};room.mCauldrons={{room.floor.back(),&hunter}};
- for(int tick=0;tick<6;++tick){map.turn=100+tick;empty.step();double before=empty.mTurns;empty.step();near(empty.mTurns,before,"empty clock increments once per world turn");}
- check(empty.mGhosts.empty()&&empty.mState==7,"three ghosts emptied at efficiency three");near(empty.mTurns,.5,"emptying keeps fractional remainder");
- // The CatchTime research shortens only the emptying: tier 2 empties a ghost in 5.5*0.8/3 turns, three in 4.4 turns.
+ // Decision 845: every ghost goes into the trap socket and takes 20 s (28 turns) into the cauldron, also at efficiency three
+ for(int tick=0;tick<84;++tick){map.turn=100+tick;empty.step();double before=empty.mTurns;empty.step();near(empty.mTurns,before,"transfer clock increments once per world turn");
+  if(tick==0)check(ghost.teleports>0&&ghost.socket.z>1.5f,"the first ghost waits in the trap socket over the cauldron");
+  if(tick==26)check(empty.mGhosts.size()==3,"the first ghost is still being transferred after 27 turns");
+  if(tick==27)check(empty.mGhosts.size()==2,"the first ghost reaches the cauldron after exactly 28 turns");
+  if(tick==28)check(extra1.teleports>0,"the next ghost comes into the socket");}
+ check(empty.mGhosts.empty()&&empty.mState==7,"three ghosts transferred in 60 s at efficiency three");near(empty.mTurns,0,"the transfer keeps the exact clock");
+ // The CatchTime research shortens the transfer: tier 2 transfers a ghost in 20*0.8 s (22.4 turns), three in 67.2 turns.
  seat.tier=2;CreatureActionHuntGhost researchedEmpty(hunter);researchedEmpty.mState=6;researchedEmpty.mDestination=hunter.tile;researchedEmpty.mEmptyRoom="press";researchedEmpty.mGhosts={"target","extra1","extra2"};
- for(int tick=0;tick<4;++tick){map.turn=200+tick;researchedEmpty.step();}check(researchedEmpty.mGhosts.size()==1,"tier 2 research empties two ghosts within four turns");
- map.turn=204;researchedEmpty.step();check(researchedEmpty.mGhosts.empty()&&researchedEmpty.mState==7,"tier 2 research empties three ghosts within five turns");near(researchedEmpty.mTurns,.6,"researched emptying keeps fractional remainder");seat.tier=1;
+ for(int tick=0;tick<67;++tick){map.turn=200+tick;researchedEmpty.step();}check(researchedEmpty.mGhosts.size()==1,"tier 2 research transfers two ghosts within 67 turns");
+ map.turn=267;researchedEmpty.step();check(researchedEmpty.mGhosts.empty()&&researchedEmpty.mState==7,"tier 2 research transfers three ghosts within 68 turns");near(researchedEmpty.mTurns,.8,"researched transfer keeps fractional remainder");seat.tier=1;
+ // The fixture ghosts are reused below at their tiles: the transfer moved them into the socket
+ ghost.teleports=extra1.teleports=extra2.teleports=0;
  empty.mState=6;empty.mDestination=map.getTile(0,0);empty.mGhosts={"extra1"};double bar=seat.bar;empty.step();near(seat.bar,bar,"saved hunter cannot empty remotely");check(empty.mDestination==nullptr,"remote standing destination re-reserved");
  map.entities.resize(1);
  seat.tier=1;hunter.definition.jobs.front().efficiency=3;hunter.actions.clear();ghost.state=GhostState::floating;ghost.assigned.clear();room.backpacks=0;CreatureActionHuntGhost::assignHunters(map,seat);check(hunter.assigned==0,"zero backpacks prevents assignment");room.backpacks=1;CreatureActionHuntGhost::assignHunters(map,seat);check(hunter.assigned==1&&ghost.assigned==hunter.name,"one backpack assigns one nearest hunter");int bells=room.bells;CreatureActionHuntGhost::assignHunters(map,seat);check(room.bells==bells,"target bell fires once");

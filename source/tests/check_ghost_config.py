@@ -34,7 +34,7 @@ def main():
         "GhostAiGoldPerResearchPoint":.4144,"GhostAiGoldPerXp":0.8536668706148699}
     for key, value in expected.items():
         assert global_values[key] == value, (key, global_values.get(key), value)
-    expected = {"GhostEmptyTurns":5.5,"GhostBoxCapacity":1,"GhostBeamRange":1,
+    expected = {"GhostTransferSeconds":20,"GhostBoxCapacity":1,"GhostBeamRange":1,
         "GhostBoxOpenSeconds":120,"GhostHuntersPerCauldron":3,"GhostLevelsPerEctoplasm":10,
         "GhostEctoplasmMana":1580,"GhostEctoplasmResearchPoints":319.8663176854666,"GhostEctoplasmPerCrystal":6,"GhostReviveMana":14000,
         "GhostReviveHpShare":.35,"CryptCorpsesPerLich":10,"CryptLichLevelBonus":0,
@@ -132,7 +132,7 @@ def main():
     manager = read('source/game/SkillManager.cpp')
     for skill,effect,key in [('roomGhostRoom','EctoplasmLevels','GhostLevelsPerEctoplasm'),
             ('roomGhostRoom','BoxCapacity','GhostBoxCapacity'),('roomGhostRoom','BeamRange','GhostBeamRange'),
-            ('roomGhostRoom','CatchTime','GhostEmptyTurns'),('roomGhostRoom','RevivePrice','GhostReviveMana'),
+            ('roomGhostRoom','CatchTime','GhostTransferSeconds'),('roomGhostRoom','RevivePrice','GhostReviveMana'),
             ('roomCrypt','LichCorpses','CryptCorpsesPerLich'),('roomCrypt','LichLevel','CryptLichLevelBonus')]:
         assert re.search(r'SkillType::'+skill+r'\s*,\s*"'+effect+r'"\s*,\s*ResearchBaseSource::rooms\s*,\s*"'+key+r'"',manager), (effect,key)
 
