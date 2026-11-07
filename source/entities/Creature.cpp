@@ -4834,50 +4834,38 @@ static std::string formatDisplayNumber(double value)
     return result;
 }
 
-//! \brief Values from this magnitude on are written in fixed form by Creature::formatExactNumber.
-static const double EXACT_FIXED_MIN = 0.001;
-//! \brief Values from this magnitude on are written in exponent form by Creature::formatExactNumber.
-static const double EXACT_FIXED_MAX = 1e15;
+//! \brief Decimals a game value keeps in the statistics text and the Dungeonbook (owner decision 830): the sums of
+//! floating point steps are rounded, 51.59700000000005 is shown as 51.6.
+static const int32_t ROUNDED_DECIMALS = 2;
+//! \brief From this magnitude on a rounded value is written in exponent form, its fixed form would be very long.
+static const double ROUNDED_FIXED_MAX = 1e15;
 
-//! \brief True if the text reads back (C locale) as exactly the value.
-static bool readsBackAs(const std::string& text, double value)
-{
-    std::istringstream parser(text);
-    parser.imbue(std::locale::classic());
-    double parsed = 0.0;
-    return static_cast<bool>(parser >> parsed) && (parsed == value);
-}
-
-std::string Creature::formatExactNumber(double value)
+std::string Creature::formatRoundedNumber(double value)
 {
     if(!std::isfinite(value))
         return std::isnan(value) ? "nan" : (value < 0.0 ? "-inf" : "inf");
-    if(value == 0.0)
-        return "0";
 
-    // The fewest decimals (fixed form) or digits (exponent form) that give back the same double: nothing is rounded
-    // away, and 17 significant digits always give it back
-    const double magnitude = std::fabs(value);
-    const bool fixed = (magnitude >= EXACT_FIXED_MIN) && (magnitude < EXACT_FIXED_MAX);
-    const int32_t maxDigits = std::numeric_limits<double>::max_digits10;
-    std::string text;
-    for(int32_t digits = 0; digits <= maxDigits; ++digits)
-    {
-        std::ostringstream stream;
-        stream.imbue(std::locale::classic());
-        if(fixed)
-            stream << std::fixed;
-        else
-            stream << std::scientific;
-        stream << std::setprecision(digits) << value;
-        text = stream.str();
-        if(readsBackAs(text, value))
-            return text;
-    }
     std::ostringstream stream;
     stream.imbue(std::locale::classic());
-    stream << std::setprecision(maxDigits) << value;
-    return stream.str();
+    if(std::fabs(value) >= ROUNDED_FIXED_MAX)
+        stream << std::scientific;
+    else
+        stream << std::fixed;
+    stream << std::setprecision(ROUNDED_DECIMALS) << value;
+    const std::string text = stream.str();
+    // The zero decimals at the end go, then a point without decimals ("12.50" -> "12.5", "12.00" -> "12"); with
+    // ROUNDED_DECIMALS above zero the text always holds a point, so the zeros of the whole part stay
+    const std::string::size_type exponent = text.find('e');
+    std::string mantissa = text.substr(0, exponent);
+    const std::string suffix = (exponent == std::string::npos) ? std::string() : text.substr(exponent);
+    while(!mantissa.empty() && (mantissa[mantissa.size() - 1] == '0'))
+        mantissa.erase(mantissa.size() - 1);
+    if(!mantissa.empty() && (mantissa[mantissa.size() - 1] == '.'))
+        mantissa.erase(mantissa.size() - 1);
+    // A small negative value that rounds to zero is shown without its sign
+    if(mantissa == "-0")
+        mantissa = "0";
+    return mantissa + suffix;
 }
 
 //! \brief Returns the template name for the displays ("none" while the creature follows no template).
@@ -6917,10 +6905,10 @@ std::string Creature::getStatsText(const Seat* viewer)
     tempSS << std::endl;
     tempSS << "Path: " << getSkillPathText() << std::endl;
     tempSS << "Skills: " << getSkillListText() << std::endl;
-    // Written exactly (the stream would keep only six digits), the Dungeonbook shows these values as they are
-    tempSS << "Experience: " << formatExactNumber(mExp) << std::endl;
-    tempSS << "HP: " << formatExactNumber(getHP()) << " / " << formatExactNumber(mMaxHP) << std::endl;
-    tempSS << "Gold: " << formatExactNumber(mGoldCarried) << std::endl;
+    // Rounded to two decimals (owner decision 830), the Dungeonbook shows these values as they are written here
+    tempSS << "Experience: " << formatRoundedNumber(mExp) << std::endl;
+    tempSS << "HP: " << formatRoundedNumber(getHP()) << " / " << formatRoundedNumber(mMaxHP) << std::endl;
+    tempSS << "Gold: " << formatRoundedNumber(mGoldCarried) << std::endl;
     for(Room* room : getGameMap()->getRoomsByTypeAndSeat(RoomType::infirmary, getSeat()))
     {
         RoomInfirmary* infirmary = static_cast<RoomInfirmary*>(room);
@@ -11994,6 +11982,12 @@ Tile* Creature::getWalkDestinationTile() const
 bool Creature::takeCorpse()
 {
     if(!getIsOnServerMap() || !getIsOnMap() || isAlive() || getDefinition()->isWorker() || getDefinition()->isUndead())
+        return false;
+
+    // A body in a crypt belongs to its grave: the crypt raises liches from it, never skeletons
+    Tile* corpseTile = getPositionTile();
+    if(corpseTile != nullptr && corpseTile->getCoveringRoom() != nullptr &&
+       corpseTile->getCoveringRoom()->getType() == RoomType::crypt)
         return false;
 
     // The counter is 0 until death drops and notices have run; consumption is deferred safely.

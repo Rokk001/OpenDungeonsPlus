@@ -90,6 +90,8 @@ private:
     void startDrag();
     //! \brief Moves a pulled creature onto its cot or own bed.
     void startLaying(Creature& dragged);
+    //! \brief Returns the grave tile a pulled dead body is laid into in a crypt, or nullptr.
+    Tile* getCryptGrave(const Creature& dragged) const;
     void followTrail(Creature& dragged, double targetArc);
     bool stopDragging(bool standUp);
 
