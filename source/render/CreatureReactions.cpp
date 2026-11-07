@@ -202,6 +202,31 @@ double getArticulatedRestTime(double progress, double strength)
     return ARTICULATED_TRANSITION_SHARE * inverse;
 }
 
+//! A creature whose up axis leans this far (radians) from the vertical is tipped over
+static const double TILT_EPSILON = 0.001;
+//! Our tilt survived a turn of the creature by someone else when its lean differs by less than this (radians)
+static const double TILT_KEPT_TOLERANCE = 0.01;
+//! The node counts as turned by someone else when its orientation differs from ours by more than this (radians); far
+//! above the rounding of the float quaternions, far below any turn of a walk step or a seat
+static const double TURN_TOLERANCE = 0.01;
+
+//! \brief True while the creature plays a seated tavern clip (Sit, SitDrink and the others). The seated clips are made
+//! to keep the body on the bench and out of the table; a reaction clip, a motion of the whole body (hop, squash, sit,
+//! lie, turn, look) or a prop on top of them pushes it through the bench and the table. A seated guest only shows the
+//! emotes and particles of its reactions.
+static bool sitsAtTable(const Creature* creature)
+{
+    const Ogre::AnimationState* animState = creature->getAnimationState();
+    return (animState != nullptr) && EntityAnimation::isSeatClip(animState->getAnimationName());
+}
+
+//! \brief How far (radians) the up axis of the node leans from the vertical.
+static double nodeTilt(const Ogre::SceneNode* node)
+{
+    const Ogre::Vector3 up = node->getOrientation() * Ogre::Vector3::UNIT_Z;
+    return std::acos(std::max(-1.0, std::min(1.0, static_cast<double>(up.z))));
+}
+
 //! Seconds the target of a slap request is remembered until the server confirms the slap
 const double SLAP_MEMORY = 3.0;
 //! Without a remembered target, a creature this close (world units) to the hand got the slap
@@ -936,10 +961,13 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
 
     if(mMode == Mode::full)
     {
+        // A guest on a tavern bench neither poses nor moves its body nor holds a prop: it would reach into the table
+        const bool seated = sitsAtTable(creature);
+
         // Tier C / B: a clip, only while the creature stands still (it must not slide while posing).
         // An event that decorates the work animation plays a clip only when its variant names one: the clip is laid
         // over the running work clip (which keeps its time with weight 0) and the work clip is shown again afterwards.
-        bool clipAllowed = !event.mDying && (!event.mWhileWorking || !variant.mClip.empty());
+        bool clipAllowed = !event.mDying && (!event.mWhileWorking || !variant.mClip.empty()) && !seated;
         if(!creature->isMoving() && clipAllowed && startClip(reaction, creature, variant))
             shown = true;
 
@@ -969,13 +997,14 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
         bool playsHurtWalk = (event.mName == "HurtWalk") && (walkState != nullptr) &&
             (walkState->getAnimationName() == EntityAnimation::walk_hurt_anim);
         if((variant.mMotion.mType != ReactionMotion::Type::none) && (variant.mMotion.mDuration > 0.0) &&
-           (node != nullptr) && !(standingMotion && creature->isMoving()) && !playsHurtWalk)
+           (node != nullptr) && !(standingMotion && creature->isMoving()) && !playsHurtWalk && !seated)
         {
             if(!reaction.mArticulatedMotion)
             {
                 reaction.mMotion = variant.mMotion;
                 reaction.mMotionLastPosition = node->getPosition();
                 reaction.mMotionLastScale = node->getScale();
+                reaction.mMotionLastOrientation = node->getOrientation();
             }
             reaction.mDuration = std::max(reaction.mDuration, variant.mMotion.mDuration);
             shown = true;
@@ -989,7 +1018,7 @@ bool CreatureReactions::startReaction(Creature* creature, const ReactionEvent& e
         }
 
         // A sprite prop, only while the creature stands still
-        if((variant.mProp.mPath != ReactionProp::Path::none) && !creature->isMoving() &&
+        if((variant.mProp.mPath != ReactionProp::Path::none) && !creature->isMoving() && !seated &&
            createProps(reaction, creature, variant))
         {
             reaction.mDuration = std::max(reaction.mDuration, variant.mProp.mSeconds);
@@ -1344,6 +1373,27 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
     reaction.mMotionLastPosition = node->getPosition();
     reaction.mMotionLastScale = node->getScale();
 
+    // Whoever turns the creature (the server tells where it looks: a step of a walk, a seat, a blow) sets its
+    // orientation, so the angle we added is lost then. It is not taken back, or the creature would stay turned away or
+    // tipped over for good (a seated guest lying through its table). Such a turn only sets where the creature looks: a
+    // tilt onto its side survives it around the new forward axis, so that tilt is taken away at once.
+    if((reaction.mMotionAngle != 0.0) &&
+       !node->getOrientation().equals(reaction.mMotionLastOrientation, Ogre::Radian(static_cast<Ogre::Real>(TURN_TOLERANCE))))
+    {
+        const double tilt = nodeTilt(node);
+        if((motion.mType == ReactionMotion::Type::lie) && (tilt > TILT_EPSILON) &&
+           (std::fabs(tilt - std::fabs(reaction.mMotionAngle)) < TILT_KEPT_TOLERANCE))
+        {
+            const Ogre::Vector3 up = node->getOrientation() * Ogre::Vector3::UNIT_Z;
+            node->rotate(up.getRotationTo(Ogre::Vector3::UNIT_Z), Ogre::Node::TS_PARENT);
+        }
+        reaction.mMotionAngle = 0.0;
+        reaction.mMotionTurnLost = true;
+    }
+    // The rest of the motion turns nothing any more
+    if(reaction.mMotionTurnLost)
+        angle = 0.0;
+
     double deltaAngle = angle - reaction.mMotionAngle;
     if(std::fabs(deltaAngle) > ROTATION_EPSILON)
     {
@@ -1354,6 +1404,7 @@ void CreatureReactions::applyMotion(RunningReaction& reaction, Creature* creatur
     }
 
     reaction.mMotionAngle = angle;
+    reaction.mMotionLastOrientation = node->getOrientation();
 }
 
 //! \brief Removes the pose offset without advancing the reaction's shared clock.
@@ -1388,6 +1439,14 @@ bool CreatureReactions::updateReaction(RunningReaction& reaction, Creature* crea
     // Poses and props need a creature that stands: when it sets off the reaction is over
     if(reaction.mEndsWhenMoving && creature->isMoving())
         return false;
+
+    // A guest that sat down on a tavern bench keeps its seated pose: the clip and the motion of the reaction end there,
+    // its emote and particles stay
+    if(sitsAtTable(creature))
+    {
+        stopClip(reaction, creature);
+        clearMotion(reaction, creature);
+    }
 
     updateLate(reaction, creature);
 

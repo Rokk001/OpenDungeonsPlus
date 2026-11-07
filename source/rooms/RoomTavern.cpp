@@ -785,6 +785,20 @@ bool RoomTavern::isOnSeat(const Creature& creature, const RoomTavernSeat& seat, 
     return current.squaredDistance(position) < SEAT_REACHED_SQUARED;
 }
 
+//! \brief The direction a guest looks in while it plays a game with another guest or slaps it. A seated guest looks
+//! straight across its table like in every other seated clip: the clips are made for that direction only, and a body
+//! turned on the bench towards a partner further along the table (up to 50 degrees) or on its own bench (90 degrees)
+//! pushes its legs and arms through the bench, the pedestal and the table top. A guest that is not on its seat turns
+//! to the partner.
+Ogre::Vector3 RoomTavern::getFacingDirection(const Creature& creature, const Creature& partner)
+{
+    std::map<RoomTavernSeat, RoomTavernSpot>::iterator own = findSpotOf(&creature);
+    if((own != mSpots.end()) && isOnSeat(creature, own->first, own->second.mPlaces))
+        return getAcrossTableDirection(own->first);
+
+    return directionTo(creature, partner.getPosition());
+}
+
 //! \brief Finds free points next to the seat from where a creature gets onto the bench.
 void RoomTavern::findSeatStagingPoints(Creature& creature, const RoomTavernSeat& seat, uint32_t places,
     std::vector<Ogre::Vector2>& stagingPoints) const
@@ -1190,7 +1204,11 @@ void RoomTavern::showSpotState(Tile* tile, RoomTavernSpot& spot)
     switch(spot.mState)
     {
         case TavernGuestState::drinking:
-            creature->setAnimationState(EntityAnimation::sit_drink_anim, true, towardsTable, false);
+            // The seated drink clip is made for the bench: a guest that is not on its seat drinks standing
+            if(seated)
+                creature->setAnimationState(EntityAnimation::sit_drink_anim, true, towardsTable, false);
+            else
+                creature->setAnimationState(EntityAnimation::drink_anim, true);
             break;
         case TavernGuestState::ko:
             // Without a free floor tile the loser stays on its seat
@@ -1224,7 +1242,7 @@ void RoomTavern::showSpotState(Tile* tile, RoomTavernSpot& spot)
                     clip = EntityAnimation::sit_armwrestle_anim;
                 else if(game.mKind == TavernGameKind::dice)
                     clip = EntityAnimation::sit_dice_anim;
-                creature->setAnimationState(clip, true, directionTo(*creature, opponent->getPosition()), false);
+                creature->setAnimationState(clip, true, getFacingDirection(*creature, *opponent), false);
                 break;
             }
             break;
@@ -1569,11 +1587,11 @@ void RoomTavern::playDuelTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator
     uint32_t& targetSlaps = game.mTurnIsA ? game.mSlapsTakenB : game.mSlapsTakenA;
 
     // The slapper swings; a miss passes the turn
-    slapper->setAnimationState(EntityAnimation::sit_slap_anim, false, directionTo(*slapper, target->getPosition()), false);
+    slapper->setAnimationState(EntityAnimation::sit_slap_anim, false, getFacingDirection(*slapper, *target), false);
     playSoundAt(slapper->getPositionTile(), SOUND_SLAP);
     if(target->rollAttackHit(slapper->getAttackRating(), slapper->getLevel(), slapper->isPossessed()))
     {
-        target->setAnimationState(EntityAnimation::sit_slapped_anim, false, directionTo(*target, slapper->getPosition()), false);
+        target->setAnimationState(EntityAnimation::sit_slapped_anim, false, getFacingDirection(*target, *slapper), false);
         // A critical slap (10 percent at equal level, 0.25 points per level of difference) wins the duel at once
         const double levelDifference = static_cast<double>(slapper->getLevel()) - static_cast<double>(target->getLevel());
         const double criticalPercent = getTavernValue("SlapCritBasePercent") +
