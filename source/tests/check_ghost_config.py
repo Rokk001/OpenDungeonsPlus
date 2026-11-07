@@ -34,20 +34,28 @@ def main():
         "GhostAiGoldPerResearchPoint":.4144,"GhostAiGoldPerXp":0.8536668706148699}
     for key, value in expected.items():
         assert global_values[key] == value, (key, global_values.get(key), value)
-    expected = {"GhostBeamTurns":5.5,"GhostEmptyTurns":5.5,"GhostBoxCapacity":1,"GhostBeamRange":1,
+    expected = {"GhostEmptyTurns":5.5,"GhostBoxCapacity":1,"GhostBeamRange":1,
         "GhostBoxOpenSeconds":120,"GhostHuntersPerCauldron":3,"GhostLevelsPerEctoplasm":10,
         "GhostEctoplasmMana":1580,"GhostEctoplasmResearchPoints":319.8663176854666,"GhostEctoplasmPerCrystal":6,"GhostReviveMana":14000,
         "GhostReviveHpShare":.35,"CryptCorpsesPerLich":10,"CryptLichLevelBonus":0,
         "GhostRoomCostPerTile":620,"GhostRoomHP":50,"GhostRoomMinSide":4,
         "GhostRiseSeconds":1.5,"GhostDissolveSeconds":1.5,"GhostHowlMinSeconds":10,
-        "GhostHowlMaxSeconds":20,"GhostBellSeconds":3,"GhostBoxThrowSeconds":.5,"GhostRepathTurns":5,
+        "GhostHowlMaxSeconds":20,"GhostBellSeconds":3,"GhostRepathTurns":5,
         "GhostApparatusTurns":5.5,"GhostHeroProductFactor":4.333333333333333,"GhostHeroProductWeightMana":6,
         "GhostHeroProductWeightBook":6,"GhostHeroProductWeightCrystal":1,"GhostProductBoxChance":.05}
     for key, value in expected.items():
         assert room[key] == value, (key, room.get(key), value)
+    # Owner decision 726: the catch takes 2 s throw, 16 s beam and 2 s snap, 20 s for every hunter; the former
+    # efficiency- and research-scaled beam turns are gone.
+    catch = {"GhostBoxThrowSeconds":2,"GhostBeamSeconds":16,"GhostBoxSnapSeconds":2}
+    for key, value in catch.items():
+        assert room[key] == value, (key, room.get(key), value)
+    assert sum(catch.values()) == 20, catch
+    assert "GhostBeamTurns" not in room, "GhostBeamTurns replaced by GhostBeamSeconds"
     # Every apparatus value has a documentation line directly above its key (a comment or a key of the same block)
     rows = read('config/rooms.cfg').splitlines()
-    for key in ('GhostApparatusTurns','GhostHeroProductFactor','GhostHeroProductWeightMana','GhostProductBoxChance'):
+    for key in ('GhostApparatusTurns','GhostHeroProductFactor','GhostHeroProductWeightMana','GhostProductBoxChance',
+            'GhostBoxThrowSeconds','GhostBeamSeconds','GhostBoxSnapSeconds'):
         index = next(i for i, row in enumerate(rows) if row.split()[:1] == [key])
         assert rows[index-1].lstrip().startswith('#'), (key, 'documentation line')
     for key in ('GhostHeroProductWeightBook','GhostHeroProductWeightCrystal'):
@@ -124,7 +132,7 @@ def main():
     manager = read('source/game/SkillManager.cpp')
     for skill,effect,key in [('roomGhostRoom','EctoplasmLevels','GhostLevelsPerEctoplasm'),
             ('roomGhostRoom','BoxCapacity','GhostBoxCapacity'),('roomGhostRoom','BeamRange','GhostBeamRange'),
-            ('roomGhostRoom','CatchTime','GhostBeamTurns'),('roomGhostRoom','RevivePrice','GhostReviveMana'),
+            ('roomGhostRoom','CatchTime','GhostEmptyTurns'),('roomGhostRoom','RevivePrice','GhostReviveMana'),
             ('roomCrypt','LichCorpses','CryptCorpsesPerLich'),('roomCrypt','LichLevel','CryptLichLevelBonus')]:
         assert re.search(r'SkillType::'+skill+r'\s*,\s*"'+effect+r'"\s*,\s*ResearchBaseSource::rooms\s*,\s*"'+key+r'"',manager), (effect,key)
 

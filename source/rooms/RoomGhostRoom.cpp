@@ -23,6 +23,7 @@
 #include "ai/KeeperAI.h"
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
+#include "utils/LogManager.h"
 #include "utils/MakeUnique.h"
 #include <functional>
 #include <algorithm>
@@ -583,16 +584,16 @@ void RoomGhostRoom::layoutApparatuses()
         }
         return reached.size()==open.size();
     };
-    // Pass 0: wall tiles outside door openings with a free tile between the apparatuses; pass 1: also side by side;
-    // pass 2 (a free-standing room has no wall): any free floor tile.
+    // Pass 0: wall tiles outside door openings with a free tile between the apparatuses; pass 1: also side by side.
+    // There is no fallback (decision 731): an apparatus never stands in a door opening or away from the wall.
     std::vector<Tile*> chosen;
-    for(int pass=0;pass<3 && chosen.size()<APPARATUS_COUNT;++pass)
+    for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)
     {
         for(Tile* tile : ordered)
         {
             if(chosen.size()>=APPARATUS_COUNT) break;
             if(blocked.count(tile)!=0 || std::find(chosen.begin(),chosen.end(),tile)!=chosen.end()) continue;
-            if(pass<2 && (!atWall(tile) || inOpening(tile))) continue;
+            if(!atWall(tile) || inOpening(tile)) continue;
             bool beside=false;
             for(Tile* placed : chosen)
                 if(std::abs(placed->getX()-tile->getX())<=1 && std::abs(placed->getY()-tile->getY())<=1) beside=true;
@@ -601,6 +602,33 @@ void RoomGhostRoom::layoutApparatuses()
             if(!keepsReachable(taken)) continue;
             chosen.push_back(tile);
         }
+    }
+    // The greedy order can block itself (a 4x4 room with two doors): then every combination of the same wall tiles is
+    // tried, spaced ones first, and the first one in tile order that keeps every tile reachable wins.
+    if(chosen.size()<APPARATUS_COUNT)
+    {
+        std::vector<Tile*> candidates,picked;
+        for(Tile* tile : ordered)
+            if(blocked.count(tile)==0 && atWall(tile) && !inOpening(tile)) candidates.push_back(tile);
+        const std::function<bool(size_t,size_t,bool)> search=[&](size_t from,size_t wanted,bool spaced)
+        {
+            if(picked.size()==wanted) return keepsReachable(picked);
+            for(size_t index=from;index<candidates.size();++index)
+            {
+                bool beside=false;
+                for(Tile* placed : picked)
+                    if(std::abs(placed->getX()-candidates[index]->getX())<=1 && std::abs(placed->getY()-candidates[index]->getY())<=1) beside=true;
+                if(spaced && beside) continue;
+                picked.push_back(candidates[index]);
+                if(search(index+1,wanted,spaced)) return true;
+                picked.pop_back();
+            }
+            return false;
+        };
+        bool found=false;
+        for(size_t wanted=APPARATUS_COUNT;wanted>chosen.size() && !found;--wanted)
+            for(int spaced=1;spaced>=0 && !found;--spaced)
+                if(search(0,wanted,spaced==1)) { chosen=picked;found=true; }
     }
     // Left to right as in the room picture: mana still, ghost press, soul forge
     const GhostProduct order[APPARATUS_COUNT]={GhostProduct::mana,GhostProduct::research,GhostProduct::crystal};
@@ -617,6 +645,34 @@ void RoomGhostRoom::layoutApparatuses()
                std::find(chosen.begin(),chosen.end(),neighbor)!=chosen.end()) continue;
             apparatus.stand=neighbor;break;
         }
+    }
+    // A missing apparatus stays unplaced; one log line names the room size, its layout and what is missing, so the
+    // room can be rebuilt as a reproduction (rows from the highest y down: # wall, . floor, C cauldron, A apparatus, o open)
+    if(chosen.size()<APPARATUS_COUNT && !mCoveredTiles.empty())
+    {
+        int minX=mCoveredTiles.front()->getX(),maxX=minX,minY=mCoveredTiles.front()->getY(),maxY=minY;
+        for(Tile* tile : mCoveredTiles)
+        {
+            minX=std::min(minX,tile->getX());maxX=std::max(maxX,tile->getX());
+            minY=std::min(minY,tile->getY());maxY=std::max(maxY,tile->getY());
+        }
+        std::string layout;
+        for(int y=maxY+1;y>=minY-1;--y)
+        {
+            if(!layout.empty()) layout+="/";
+            for(int x=minX-1;x<=maxX+1;++x)
+            {
+                Tile* tile=getGameMap()->getTile(x,y);
+                layout+=tile==nullptr || tile->isFullTile()?'#':floor.count(tile)==0?'o':blocked.count(tile)!=0?'C':
+                    std::find(chosen.begin(),chosen.end(),tile)!=chosen.end()?'A':'.';
+            }
+        }
+        const char* names[APPARATUS_COUNT]={"mana still","ghost press","soul forge"};
+        std::string missing;
+        for(size_t index=chosen.size();index<APPARATUS_COUNT;++index) missing+=std::string(missing.empty()?"":", ")+names[index];
+        OD_LOG_WRN("Ghost room " + getName() + " " + std::to_string(maxX-minX+1) + "x" + std::to_string(maxY-minY+1) + " ("
+            + std::to_string(mCoveredTiles.size()) + " tiles) at " + std::to_string(minX) + "," + std::to_string(minY)
+            + ": no wall place outside the door openings for " + missing + "; layout " + layout);
     }
 }
 
