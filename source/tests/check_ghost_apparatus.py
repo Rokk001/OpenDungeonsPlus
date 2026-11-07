@@ -1,5 +1,6 @@
 """Check the ghost room apparatus rules without compiling: item flow and unlock levels, work time, treasury rule,
-hero chance and weights, item bag chance and saving (GHOST-APPARATUS-PLAN, decisions G1 to G9)."""
+hero chance and weights, item bag chance and saving (GHOST-APPARATUS-PLAN, decisions G1 to G9; decision 813: waiting
+ectoplasm lies as real items in front of the busy apparatus)."""
 from pathlib import Path
 import re
 
@@ -57,8 +58,29 @@ def item_flow_and_unlocks():
         "isApparatusUnlocked(*getSeat(),kind) && getApparatusStandTile(kind)!=nullptr")
     has(body(room, "GhostProduct RoomGhostRoom::getDeliveryTarget("), "carried ectoplasm keeps its apparatus",
         "carriedEntity.isCarryLocked() && item.mGhostTarget>=0", "return getChosenApparatus(*getSeat());")
-    has(body(room, "void RoomGhostRoom::notifyCarryingStateChanged("), "delivery queues", "++apparatus.queue;",
-        "bag->takeItem();")
+    # Decision 813 (G4 queue): an idle apparatus takes the delivered ectoplasm in at once; at a busy one it stays lying
+    # in front of it as a real item, owned by the keeper and marked for that apparatus, never a saved waiting count
+    delivery = body(room, "void RoomGhostRoom::notifyCarryingStateChanged(")
+    has(delivery, "idle apparatus takes it in, busy one leaves it lying", "if(!apparatus.working)",
+        "takeInEctoplasm(apparatus,*bag,ConfigManager::getSingleton().getRoomConfigDouble(\"GhostApparatusTurns\"));\n        return;",
+        "bag->getItem()->mGhostTarget=static_cast<int32_t>(kind);\n    bag->setSeat(getSeat());")
+    assert "queue" not in delivery and "takeItem" not in delivery and "deleteYourself" not in delivery, "a busy apparatus keeps no count"
+    has(body(room, "void RoomGhostRoom::takeInEctoplasm("), "taking one item in",
+        "bag.takeItem();", "bag.removeFromGameMap();bag.deleteYourself();", "apparatus.working=true;apparatus.workTurns+=turns;")
+    waiting = body(room, "bool RoomGhostRoom::isWaitingEctoplasm(")
+    has(waiting, "waiting item: own ectoplasm on the stand of the unlocked apparatus it was delivered to",
+        "item->mGhostItem!=GhostItem::ectoplasm", "bag.getSeat()!=getSeat()",
+        "item->mGhostTarget<0 || item->mGhostTarget>=static_cast<int32_t>(APPARATUS_COUNT)) return false;",
+        "apparatus.tile!=nullptr && apparatus.stand!=nullptr && bag.getPositionTile()==apparatus.stand &&",
+        "isApparatusUnlocked(*getSeat(),kind);")
+    has(body(room, "ItemBagEntity* RoomGhostRoom::findWaitingEctoplasm("), "next waiting item in put down order",
+        "Tile* stand=getApparatusStandTile(kind);", "for(GameEntity* entity : stand->getEntitiesInTile())",
+        "entity->isCarryLocked()) continue;",
+        "if(isWaitingEctoplasm(*bag) && bag->getItem()->mGhostTarget==static_cast<int32_t>(kind)) return bag;")
+    has(body(read("source/entities/ItemBagEntity.cpp"), "EntityCarryType ItemBagEntity::getEntityCarryType("),
+        "workers leave waiting ectoplasm lying",
+        "if(inGhostRoom && mItem->mGhostItem == GhostItem::ectoplasm && static_cast<RoomGhostRoom*>(storage)->isWaitingEctoplasm(*this))\n        return EntityCarryType::notCarryable;")
+    assert "apparatus.queue" not in room and "uint32_t queue" not in read("source/rooms/RoomGhostRoom.h"), "no waiting count left"
     grab = read("source/creatureaction/CreatureActionGrabEntity.cpp")
     has(grab, "stamp at pick up and nearest apparatus",
         "bagItem->mGhostTarget = static_cast<int32_t>(RoomGhostRoom::getChosenApparatus(*creature.getSeat()));",
@@ -87,10 +109,14 @@ def item_flow_and_unlocks():
     # G2: nothing is lost when the room goes
     has(room, "room loss", "void RoomGhostRoom::changeOwner(Seat* seat)\n{ interruptHunters(); dropHeldEctoplasm(nullptr);",
         "if(removed && mCoveredTiles.empty()) dropHeldEctoplasm(tile);")
-    has(body(room, "void RoomGhostRoom::dropHeldEctoplasm("), "waiting, running and forged ectoplasm fall",
-        "apparatus.queue+(apparatus.working?1:0)+apparatus.crystalEctoplasm", "GhostItem::ectoplasm")
+    # Waiting ectoplasm already lies on the floor as items and stays there as normal items once the room is sold,
+    # destroyed or taken over (isWaitingEctoplasm then fails on the room or the keeper); pending, running and forged
+    # ectoplasm fall as items
+    has(body(room, "void RoomGhostRoom::dropHeldEctoplasm("), "pending, running and forged ectoplasm fall",
+        "apparatus.pendingEctoplasm+(apparatus.working?1:0)+apparatus.crystalEctoplasm", "GhostItem::ectoplasm",
+        "apparatus.pendingEctoplasm=0;apparatus.working=false;apparatus.workTurns=0.0;apparatus.crystalEctoplasm=0;")
     has(body(room, "void RoomGhostRoom::absorbRoom("), "joined rooms keep the ectoplasm",
-        "mine.queue+=theirs.queue+(theirs.working?1:0);", "mine.crystalEctoplasm+=theirs.crystalEctoplasm;")
+        "mine.pendingEctoplasm+=theirs.pendingEctoplasm+(theirs.working?1:0);", "mine.crystalEctoplasm+=theirs.crystalEctoplasm;")
     # G10 (decision 793): one of each apparatus on a floor stand inside the room, outside door openings, every other tile reachable
     layout = body(room, "void RoomGhostRoom::layoutApparatuses(")
     has(layout, "placement", "for(int pass=0;pass<2 && chosen.size()<APPARATUS_COUNT;++pass)", "if(blocked.count(tile)!=0 || inOpening(tile)) continue;", "if(!keepsReachable(taken)) continue;",
@@ -103,23 +129,37 @@ def item_flow_and_unlocks():
 def work_time():
     room = read("source/rooms/RoomGhostRoom.cpp")
     work = body(room, "void RoomGhostRoom::workApparatuses(")
-    has(work, "work time", "getRoomConfigDouble(\"GhostApparatusTurns\")", "--apparatus.queue;apparatus.working=true;apparatus.workTurns+=turns;",
+    has(work, "work time", "getRoomConfigDouble(\"GhostApparatusTurns\")",
+        "if(!apparatus.working)\n            {\n                ItemBagEntity* waiting=findWaitingEctoplasm(kind);\n                if(waiting!=nullptr) takeInEctoplasm(apparatus,*waiting,turns);",
         "apparatus.workTurns-=1.0;", "if(apparatus.workTurns<=0.0)", "finishEctoplasm(kind);", "const bool unlocked=isApparatusUnlocked(*getSeat(),kind);",
         "\"Locked\"", "\"Working\"")
     has(room, "upkeep works every room", "    workApparatuses();")
     turns = scalar("config/rooms.cfg", "GhostApparatusTurns")
     assert turns == 5.5
-    # The production rule, turn by turn: a queue of ectoplasm takes exactly 5.5 turns each on average
-    queue, working, remaining, finished, finish_turns = 40, False, 0.0, 0, []
+    # The production rule, turn by turn: 40 ectoplasm delivered at once. The first goes in at once (the apparatus is
+    # idle), the other 39 lie in front of it as items and are taken in one after the other; each takes exactly 5.5 turns
+    # on average
+    lying, working, remaining, finished, finish_turns = [], False, 0.0, 0, []
+    for item in range(40):
+        if not working:
+            working, remaining = True, remaining + turns
+        else:
+            lying.append(item)
+    assert len(lying) == 39
     for turn in range(1, 1000):
-        if not working and queue > 0:
-            queue, working, remaining = queue - 1, True, remaining + turns
+        before = len(lying)
+        if not working and lying:
+            lying.pop(0)
+            working, remaining = True, remaining + turns
         if working:
             remaining -= 1.0
             if remaining <= 0.0:
                 working, finished = False, finished + 1
                 finish_turns.append(turn)
-    assert finished == 40 and queue == 0
+        assert before - len(lying) <= 1, (turn, "one item taken in at a time")
+        if turn <= 6:
+            assert len(lying) == 39, (turn, "the items stay lying while the apparatus is busy")
+    assert finished == 40 and not lying
     assert finish_turns[0] == 6 and finish_turns[-1] == 220, finish_turns[-1]
     assert abs(finish_turns[-1] / 40 - turns) < 1e-12
     print("work time: ok")
@@ -192,10 +232,23 @@ def saving():
     room = read("source/rooms/RoomGhostRoom.cpp")
     export = body(room, "void RoomGhostRoom::exportToStream(")
     has(export, "apparatus record", "Room::exportToStream(os);", "os << \"GhostApparatus\" << std::setprecision(17);",
-        "apparatus.queue << ' ' << apparatus.working << ' ' << apparatus.workTurns << ' ' << apparatus.crystalEctoplasm")
+        "apparatus.pendingEctoplasm << ' ' << apparatus.working << ' ' << apparatus.workTurns << ' ' << apparatus.crystalEctoplasm")
     imported = body(room, "bool RoomGhostRoom::importFromStream(")
     has(imported, "apparatus record and old saves", "if(!(is >> marker) || marker!=\"GhostApparatus\")", "is.clear();is.seekg(position);",
-        "is >> apparatus.queue >> apparatus.working >> apparatus.workTurns >> apparatus.crystalEctoplasm")
+        "is >> apparatus.pendingEctoplasm >> apparatus.working >> apparatus.workTurns >> apparatus.crystalEctoplasm")
+    # Decision 813: the waiting count of an old save is read as pending ectoplasm and laid out as items in front of its
+    # apparatus by the first upkeep, before the apparatus works; nothing is lost
+    lay = body(room, "void RoomGhostRoom::layOutPendingEctoplasm(")
+    has(lay, "old save count becomes floor items in front of the apparatus",
+        "Tile* place=apparatus.stand!=nullptr?apparatus.stand:mCoveredTiles.empty()?nullptr:mCoveredTiles.front();",
+        "for(uint32_t count=0;count<apparatus.pendingEctoplasm;++count)",
+        "ItemInstance::createGhostItem(GhostItem::ectoplasm);", "item->mGhostTarget=static_cast<int32_t>(index);",
+        "bag->setSeat(getSeat());", "bag->addToGameMap();bag->createMesh();", "apparatus.pendingEctoplasm=0;")
+    spread = re.search(r"const float spread\[9\]\[2\]=\{(.*?)\};", lay, re.S).group(1)
+    offsets = [tuple(float(value.strip().rstrip("f")) for value in pair.split(",")) for pair in re.findall(r"\{([^{}]*)\}", spread)]
+    assert len(offsets) == 9 and len(set(offsets)) == 9, offsets
+    assert all(abs(dx) < 0.5 and abs(dy) < 0.5 for dx, dy in offsets), "every laid out item stays on the stand tile"
+    has(body(room, "void RoomGhostRoom::doUpkeep("), "laid out before the work", "    layOutPendingEctoplasm();\n    workApparatuses();")
     # Plan constraint 4: only a saved game without the apparatus record (an old save) marks its choice for conversion;
     # a level file (no record, saved turn 0) and a new save (record present) do not
     old_branch = imported[imported.index("marker!=\"GhostApparatus\")"):imported.index("return true;")]

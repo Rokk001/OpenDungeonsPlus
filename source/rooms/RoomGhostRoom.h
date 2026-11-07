@@ -10,6 +10,7 @@
 #include <set>
 
 class GhostEntity;
+class ItemBagEntity;
 class ItemInstance;
 
 //! \brief Owns the deterministic cauldron floor and hunting equipment of a ghost room.
@@ -32,8 +33,9 @@ public:
         Tile* stand = nullptr;
         //! Its furniture
         BuildingObject* object = nullptr;
-        //! Ectoplasm waiting in front of it
-        uint32_t queue = 0;
+        //! Ectoplasm the next upkeep lays out as items in front of it: the waiting count of an old save, or the running
+        //! ectoplasm of a joined room. Waiting ectoplasm is a real item on its stand tile (decision 813), never a count
+        uint32_t pendingEctoplasm = 0;
         //! True while it works on one ectoplasm
         bool working = false;
         //! Remaining work turns of that ectoplasm; a fraction below zero carries over to the next one
@@ -107,16 +109,21 @@ public:
     const Apparatus& getApparatus(GhostProduct kind) const { return mApparatuses[static_cast<uint32_t>(kind)]; }
     //! \brief The tile where workers put down ectoplasm for the apparatus, null if the room has none.
     Tile* getApparatusStandTile(GhostProduct kind) const;
-    //! \brief Takes ectoplasm for an unlocked apparatus; ectoplasm queues there without limit.
+    //! \brief True for an ectoplasm item of this keeper lying on the stand tile of the unlocked apparatus it was delivered
+    //! to: it waits there to be taken in (decision 813), so workers leave it lying.
+    bool isWaitingEctoplasm(const ItemBagEntity& bag) const;
+    //! \brief Takes ectoplasm for an unlocked apparatus; ectoplasm waits in front of it without limit.
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
     //! \brief Directs the worker to the apparatus chosen when the ectoplasm was picked up.
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
-    //! \brief Puts delivered ectoplasm into the queue of its apparatus.
+    //! \brief An idle apparatus takes delivered ectoplasm in at once; at a busy one it stays lying in front of it.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
 protected:
-    //! \brief Saves the floor, then the queue, running work and level crystal progress of every apparatus.
+    //! \brief Saves the floor, then the pending ectoplasm, running work and level crystal progress of every apparatus.
+    //! Waiting ectoplasm is saved as floor items; the first field keeps the old waiting count place for pending ectoplasm.
     void exportToStream(std::ostream& os) const override;
-    //! \brief Reads the floor and the apparatus state; old saves without it start with idle apparatuses.
+    //! \brief Reads the floor and the apparatus state; old saves without it start with idle apparatuses. The waiting count
+    //! of an old save is read as pending ectoplasm, laid out as items in front of its apparatus on the next upkeep.
     bool importFromStream(std::istream& is) override;
     //! \brief Creates the ordered bell and backpack hooks.
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
@@ -141,11 +148,19 @@ private:
     void layoutApparatuses();
     //! \brief Creates the apparatus furniture for the current layout.
     void createApparatusObjects(GameMap* map);
-    //! \brief Advances the work of every apparatus by one turn.
+    //! \brief Lays the pending ectoplasm (an old save waiting count) out as items waiting in front of each apparatus.
+    void layOutPendingEctoplasm();
+    //! \brief Returns the first ectoplasm item waiting in front of the apparatus, or null.
+    ItemBagEntity* findWaitingEctoplasm(GhostProduct kind) const;
+    //! \brief The apparatus takes one ectoplasm item in and starts working on it.
+    //! \param turns The work turns of one ectoplasm; a fraction left from the previous one carries over
+    void takeInEctoplasm(Apparatus& apparatus, ItemBagEntity& bag, double turns);
+    //! \brief Advances the work of every apparatus by one turn; an idle one takes in the next waiting ectoplasm.
     void workApparatuses();
     //! \brief Finishes one ectoplasm in an apparatus and lets its product fall next to it.
     void finishEctoplasm(GhostProduct kind);
-    //! \brief Lets every waiting, running and forged ectoplasm fall to the floor as items; nothing is lost.
+    //! \brief Lets every pending, running and forged ectoplasm fall to the floor as items; waiting ectoplasm already lies
+    //! on the floor as items. Nothing is lost.
     //! \param tile The tile where they fall, or null for each apparatus's own place
     void dropHeldEctoplasm(Tile* tile);
     //! \brief The apparatus a delivered or carried ectoplasm goes to.
