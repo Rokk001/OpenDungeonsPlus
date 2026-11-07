@@ -479,7 +479,8 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     printDebugInfo();
 
     mGameMap.get()->processDeletionQueues();
-    ODClient::getSingleton().processClientSocketMessages();
+    // Timeout 0: the frame reads every server message that has arrived but never waits for one
+    ODClient::getSingleton().processClientSocketMessages(0);
     ODClient::getSingleton().processClientNotifications();
     LoadingScreen::update();
 
