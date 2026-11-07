@@ -25,7 +25,10 @@ the weapon. This part fails on base 0c9e8c329 (pack in front of the hunter, beam
 Owner decision 791 (build 45): the beam starts at the emitter tip of the visible capture cannon of the backpack, which
 every hunter holds while beaming (in its holster on the pack otherwise), and the worn pack is a readable textured
 ghost-hunter pack sized to each hunter. These parts replace the decision 733 weapon-origin part and fail on base
-89fbc6bd7."""
+89fbc6bd7.
+Owner decision 798 (build 46): the pack on the wall hook still showed the old dark untextured look; it must look like the
+textured pack the hunter wears. The full hook is drawn as the bare hook with the worn pack and its holstered cannon on
+it. This part fails on base 636e678c8 (GhostHook.mesh with the old GhostLeather pack drawn as it is)."""
 from pathlib import Path
 import re
 import struct
@@ -600,6 +603,49 @@ def textured_backpack_sized_to_hunter():
     print("textured backpack sized to the hunter on its back: ok")
 
 
+# Decision 798: the full wall hook shows the same textured pack, with the same holstered cannon, as the hunter wears.
+def hook_pack_like_worn_pack():
+    render = body(read("source/render/RenderManager.cpp"), "void RenderManager::rrCreateRenderedMovableEntity(")
+    ordered(render, "a full hook is drawn bare, before the entity is made", "meshName = TreasuryGoldMesh::prepareMesh(mSceneManager, meshName, pileFar);",
+        'if(meshName == "GhostHook")\n            meshName = "GhostHookEmpty";', "ent = mSceneManager->createEntity(tempString, meshPtr);")
+    building = read("source/entities/BuildingObject.cpp")
+    create = body(building, "void BuildingObject::createMeshLocal(")
+    hook = create[create.index('getMeshName()=="GhostHook"'):]
+    hook = hook[:hook.index("if(!getIsOnServerMap() && mItemBagQuality >= 0)")]
+    has(create, "only a full hook on the client", 'if(!getIsOnServerMap() && getMeshName()=="GhostHook" && getEntityNode()!=nullptr)')
+    has(hook, "the worn pack and its cannon hang on the hook",
+        'scene->createEntity(getName()+"_GhostHookPack","GhostBackpack.mesh");',
+        'scene->createEntity(getName()+"_GhostHookPackGun","GhostCaptureGun.mesh");',
+        "const Ogre::Real packHeight=0.30f,packBackY=0.03f,packTopZ=0.56f;", "const Ogre::Real fit=packHeight/packSize.z;",
+        "packBackY+fit*packBounds.getMaximum().y,packTopZ-fit*packBounds.getMaximum().z),",
+        "Ogre::Quaternion(Ogre::Degree(180.0f),Ogre::Vector3::UNIT_Z));", "mGhostHookPackNode->setScale(Ogre::Vector3(fit,fit,fit));",
+        "mGhostHookPackNode->attachObject(pack);", "holsterNode->attachObject(gun);")
+    # The holster is the one of the worn pack, line for line
+    worn = body(read("source/entities/Creature.cpp"), "void Creature::updateGhostHuntVisuals(double seconds)")
+    for line in ("const Ogre::Real holster=0.85f*packSize.z/", "Ogre::Vector3(-0.5f*packSize.x-0.045f,0.0f,0.05f*packSize.z));",
+            "holsterNode->setScale(Ogre::Vector3(holster,holster,holster));"):
+        assert line in worn and line in hook, ("same holster as the worn pack", line)
+    has(body(building, "void BuildingObject::destroyMeshLocal("), "the pack, the holster and the cannon are released",
+        "if(mGhostHookPackNode!=nullptr)", "scene->destroySceneNode(child);", "scene->destroySceneNode(mGhostHookPackNode);mGhostHookPackNode=nullptr;")
+    has(read("source/entities/BuildingObject.h"), "client node", "Ogre::SceneNode* mGhostHookPackNode = nullptr;")
+    # The bare hook carries none of the old dark pack, the hanging pack is the textured worn one
+    assert "GhostLeather" not in submesh_materials("GhostHookEmpty"), "the bare hook has no old leather pack"
+    assert "GhostLeather" in submesh_materials("GhostHook"), "the old hook mesh is the one with the dark pack"
+    worn_materials = set(submesh_materials("GhostBackpack"))
+    assert {"GhostPackCanvas", "GhostPackSteel", "GhostPackRubber"} <= worn_materials and "GhostLeather" not in worn_materials, worn_materials
+    # The pack hangs on the hook: the hook tip reaches into its strap side and its top, and it stays inside the hook object
+    positions, _ = mesh("GhostBackpack")
+    low = [min(p[i] for p in positions) for i in range(3)]
+    high = [max(p[i] for p in positions) for i in range(3)]
+    fit = 0.30 / (high[2] - low[2])
+    top, bottom, back, front = 0.56, 0.56 - fit * (high[2] - low[2]), 0.03, 0.03 + fit * (high[1] - low[1])
+    hook_positions, _ = mesh("GhostHookEmpty")
+    tip = [p for p in hook_positions if p[1] > 0.04]
+    assert max(p[1] for p in tip) > back and min(p[2] for p in tip) < top and max(p[2] for p in tip) > top - 0.1, "the hook holds the pack"
+    assert bottom > 0.1 and top < 0.8 and front < 0.2, ("the pack stays on the hook object", bottom, top, front)
+    print("pack on the wall hook looks like the worn textured pack: ok")
+
+
 def main():
     box_in_hand()
     visual_states()
@@ -610,6 +656,7 @@ def main():
     small_textured_box()
     beam_from_capture_cannon()
     textured_backpack_sized_to_hunter()
+    hook_pack_like_worn_pack()
     print("ghost catch flow: ok")
 
 

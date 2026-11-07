@@ -212,8 +212,12 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Shows/hides/toggles the player settings window
     //! \brief Casino payout control, opened by clicking on one of the player's casinos
     void showCasinoPayoutWindow(Tile* tile);
-    //! \brief Opens this keeper's shared ghost controls from an owned room tile.
+    //! \brief Opens this keeper's shared ghost controls for one of his ghost room tiles.
     void showGhostRoomWindow(Tile* tile);
+    //! \brief Opens or closes the ghost room window from its button above the minimap (decision 800).
+    bool toggleGhostRoomWindow(const CEGUI::EventArgs& = {});
+    //! \brief Returns a tile of one of the local keeper's ghost rooms, the remembered one first, or null without one.
+    Tile* findOwnGhostRoomTile() const;
     //! \brief Hides the ghost room controls.
     bool hideGhostRoomWindow(const CEGUI::EventArgs& = {});
     //! \brief Cycles the product and requests the server to apply it.
