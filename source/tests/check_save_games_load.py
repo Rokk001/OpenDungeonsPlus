@@ -13,10 +13,24 @@ that does not exist, a tile outside of the map, a truncated section).
 Usage: check_save_games_load.py [--dir FOLDER] [--verbose]
 """
 import argparse
+from decimal import Context, Decimal
+import math
 import os
 from pathlib import Path
 import re
 import sys
+
+# Smallest magnitude that rounds to infinity as a 32-bit float (FLT_MAX plus half a unit in the last place)
+FLOAT32_OVERFLOW = Decimal(2 ** 128 - 2 ** 103)
+# Smallest magnitude that rounds to infinity as a 64-bit double (DBL_MAX plus half a unit in the last place)
+DOUBLE_OVERFLOW = Decimal(2 ** 1024 - 2 ** 970)
+# Largest magnitude that rounds to zero (half of the smallest denormal, a tie that rounds to the even zero).
+# Exact: the context is wide enough for every digit of 2^-150 and 2^-1075.
+_EXACT = Context(prec=1200, Emax=10 ** 6, Emin=-10 ** 6)
+FLOAT32_UNDERFLOW = _EXACT.power(Decimal(2), -150)
+DOUBLE_UNDERFLOW = _EXACT.power(Decimal(2), -1075)
+# The white space of operator>> in the C locale (isspace); Python's str.isspace also takes other characters
+WHITESPACE = " \t\n\v\f\r"
 
 root = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -86,12 +100,12 @@ class Stream:
 
     def tok(self):
         n = len(self.text)
-        while self.pos < n and self.text[self.pos].isspace():
+        while self.pos < n and self.text[self.pos] in WHITESPACE:
             self.pos += 1
         if self.pos >= n:
             return None
         start = self.pos
-        while self.pos < n and not self.text[self.pos].isspace():
+        while self.pos < n and self.text[self.pos] not in WHITESPACE:
             self.pos += 1
         return self.text[start:self.pos]
 
@@ -116,33 +130,91 @@ class Stream:
 
     def integer(self, what):
         t = self.need(what)
-        try:
-            return int(t)
-        except ValueError:
+        if not is_int(t):
             fail("%s is not an integer: '%s'" % (what, t[:40]))
+        return int(t)
 
     def number(self, what):
+        # operator>> reads a double only in the decimal form of is_num; Python's float() also takes inf, nan and underscores
         t = self.need(what)
-        try:
-            return float(t)
-        except ValueError:
+        if not is_num(t) or abs(Decimal(t)) >= DOUBLE_OVERFLOW or rounds_to_zero(t, DOUBLE_UNDERFLOW):
             fail("%s is not a number: '%s'" % (what, t[:40]))
+        return float(t)
+
+    def real32(self, what):
+        # An Ogre::Real (float) read: operator>> also fails when the value does not fit a float (rounds to infinity)
+        t = self.need(what)
+        if not is_num(t) or abs(Decimal(t)) >= FLOAT32_OVERFLOW or rounds_to_zero(t, FLOAT32_UNDERFLOW):
+            fail("%s is not a float: '%s'" % (what, t[:40]))
+        return float(t)
 
 
 def is_int(t):
-    return re.fullmatch(r"[+-]?\d+", t) is not None
+    # ASCII digits only: \d also matches other Unicode digits, which the loader does not read
+    return re.fullmatch(r"[+-]?[0-9]+", t) is not None
 
 
 def is_num(t):
-    return re.fullmatch(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?", t) is not None
+    return re.fullmatch(r"[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?", t) is not None
+
+
+def rounds_to_zero(t, threshold):
+    """A nonzero decimal text whose magnitude is at most the threshold reads as zero. Refused: the writer never writes
+    such a value, and whether the loader's stream then fails is not verified for the Windows build (see the report)."""
+    d = abs(Decimal(t))
+    return d != 0 and d <= threshold
+
+
+def read_relationship_states(s):
+    """Mirror of readRelationshipCreatureStates, read after the [RelationshipState] tag.
+
+    readFile has already removed one trailing carriage return and the comment of each line; the reader then removes
+    one more trailing carriage return (getline), splits on tabs only, and reads each number like operator>> int64.
+    A line naming an existing creature is restored by GameMap::createAllEntities, so it must parse exactly as the
+    loader does."""
+    while True:
+        ln = s.line()
+        if ln is None:
+            fail("[RelationshipState] has no end")
+        if ln.endswith("\r"):
+            ln = ln[:-1]
+        if ln == "[/RelationshipState]":
+            return
+        if not ln or ln[0] == "#":
+            continue
+        f = ln.split("\t")
+        if len(f) < 6 or not f[0] or not loader_int(f[1]) or not loader_int(f[2]) or not loader_int(f[3]) \
+                or not loader_int(f[5]):
+            fail("relationship state line invalid: " + ln[:60])
+
+
+def loader_int(t):
+    """Mirror of the loader's parseInt: istringstream >> int64_t, then nothing but white space may follow.
+
+    Leading white space and a sign are accepted, a value outside int64 is refused (the stream fails on overflow)."""
+    m = re.fullmatch(r"[ \t\n\v\f\r]*([+-]?[0-9]+)[ \t\n\v\f\r]*", t)
+    return m is not None and -(1 << 63) <= int(m.group(1)) <= (1 << 63) - 1
+
+
+# ---------------------------------------------------------------- the mirror of the loader
+def loader_text(raw):
+    """The text the level loader reads from a save: the file is opened in text mode on Windows (CRLF becomes LF), then
+    Helper::readFile(withoutComments) removes one trailing carriage return of each line and everything from the first
+    '#'. A carriage return that is not at the end of a line stays in the text, where operator>> reads it as white space.
+    Each line of the file gives one line of the result, and the last getline that fails adds one more empty line."""
+    lines = []
+    for ln in raw.replace("\r\n", "\n").split("\n"):
+        if ln.endswith("\r"):
+            ln = ln[:-1]
+        lines.append(ln.split("#", 1)[0])
+    return "\n".join(lines) + "\n"
 
 
 # ---------------------------------------------------------------- the mirror of the loader
 class Save:
     def __init__(self, path):
-        raw = path.read_text(encoding="utf-8", errors="replace").replace("\r", "")
-        lines = [l.split("#", 1)[0] for l in raw.split("\n")]
-        self.text = "\n".join(lines) + "\n"
+        raw = path.read_bytes().decode("utf-8", errors="replace")
+        self.text = loader_text(raw)
         self.name = path.name
         self.seat_ids = set()
         self.width = self.height = 0
@@ -454,6 +526,21 @@ def read_rooms(s, save):
             fail("room %s (type %d): expected [/Room] but got %s" % (rname, rtype, t))
 
 
+def read_ghost_uint(s, what):
+    """Mirror of operator>> into a uint32_t field. The writer never writes a negative value, but the loader accepts
+    one: the magnitude must fit 32 bits and the value wraps modulo 2^32 (so -1 reads as 4294967295)."""
+    t = s.need(what)
+    if not is_int(t):
+        fail("%s is not a uint32: '%s'" % (what, t[:40]))
+    v = int(t)
+    if v < 0:
+        if -v > 0xFFFFFFFF:
+            fail("%s is below uint32: '%s'" % (what, t[:40]))
+        v += 1 << 32
+    if v > 0xFFFFFFFF:
+        fail("%s is above uint32: '%s'" % (what, t[:40]))
+
+
 def read_room_extra(s, rtype, rname, ntiles):
     """Mirror of the importFromStream of every room type (what follows the tile lines)."""
     if rtype == 1:
@@ -577,6 +664,30 @@ def read_room_extra(s, rtype, rname, ntiles):
                 fail("room %s: casino payout invalid" % rname)
         else:
             s.pos = pos
+    elif rtype == 20:
+        # RoomMerchant::importFromStream: an optional 'Merchant <x> <y>' line before [/Room]; any other token is left
+        # for the [/Room] check. A written marker needs two numbers (Ogre::Vector3 x and y, read with operator>>).
+        pos = s.pos
+        if s.tok() != "Merchant":
+            s.pos = pos
+        else:
+            s.real32("merchant x")
+            s.real32("merchant y")
+    elif rtype == 25:
+        # RoomGhostRoom::importFromStream: an optional 'GhostApparatus' marker before [/Room]; a written marker is
+        # followed by APPARATUS_COUNT (3) apparatuses of queue (uint32), working (bool, 0 or 1), workTurns (finite
+        # double) and crystalEctoplasm (uint32). Any other token is left for the [/Room] check.
+        pos = s.pos
+        if s.tok() != "GhostApparatus":
+            s.pos = pos
+        else:
+            for _ in range(3):
+                read_ghost_uint(s, "apparatus queue")
+                t = s.need("apparatus working")
+                if not is_int(t) or int(t) not in (0, 1):
+                    fail("apparatus working is not 0 or 1: '%s'" % t[:40])
+                s.number("apparatus work turns")  # a finite double: overflow and underflow refused as operator>> does
+                read_ghost_uint(s, "apparatus crystal ectoplasm")
     elif rtype == 23:
         tags = ("TavernPayer", "Innkeeper", "Counter", "SeatLayout", "Furniture", "Spot", "Game")
         while True:
@@ -1035,18 +1146,7 @@ def read_save(path):
                 fail("relationship line invalid: " + ln[:60])
         t = s.tok()
     if t == "[RelationshipState]":
-        while True:
-            ln = s.line()
-            if ln is None:
-                fail("[RelationshipState] has no end")
-            ln = ln.rstrip()
-            if ln == "[/RelationshipState]":
-                break
-            if not ln.strip():
-                continue
-            f = ln.split("\t")
-            if len(f) < 6 or not f[0] or not is_int(f[1]) or not is_int(f[2]) or not is_int(f[3]) or not is_int(f[5]):
-                fail("relationship state line invalid: " + ln[:60])
+        read_relationship_states(s)
     return seen
 
 

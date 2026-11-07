@@ -2248,6 +2248,13 @@ private:
     //! \brief The box held in the hunter's hand, attached to a hand bone (or to mGhostHandNode without hand bones).
     Ogre::Entity* mGhostHeldBox = nullptr;
     Ogre::SceneNode* mGhostHandNode = nullptr;
+    //! \brief The capture cannon of the backpack (owner decision 791): mGhostCaptureGun is held in the hunter's hand while
+    //! the beam is on (on a hand bone, or on mGhostGunHandNode without hand bones), mGhostPackGun hangs in its holster
+    //! on the pack otherwise. mGhostOwnWeaponsHidden is true while the cannon hides the hunter's own weapons.
+    Ogre::Entity* mGhostCaptureGun = nullptr;
+    Ogre::SceneNode* mGhostGunHandNode = nullptr;
+    Ogre::Entity* mGhostPackGun = nullptr;
+    bool mGhostOwnWeaponsHidden = false;
     //! \brief Client-smoothed share of the ghost already pulled into the lying box.
     double mGhostCaptureShown = 0.0;
     double mGhostBeamSample = 0.0;
@@ -2426,6 +2433,9 @@ private:
     //! Rage after the death of a friend: until which turn it lasts and the id of the seat it is against
     int64_t                         mRageUntilTurn = 0;
     int32_t                         mRageSeatId = -1;
+    //! Grief record: the mood points (negative) this creature lost from the deaths of its friends, rounded to whole points.
+    //! The mood itself is saved with the creature, so restoring this record never applies the mood again.
+    int32_t                         mGriefMood = 0;
 
     //! \brief If nullptr, the creature is not in prison. If not, it is in the prison of
     //! the given seat

@@ -892,12 +892,9 @@ bool readGameMapFromFile(const std::string& fileName, GameMap& gameMap)
             return false;
         }
 
-        for(size_t i = 0; i < states.size(); ++i)
-        {
-            Creature* creature = gameMap.getCreature(states[i].mName);
-            if(creature != nullptr)
-                creature->setRelationshipState(states[i]);
-        }
+        // The creature definitions are not set up yet while the level is read: the states are applied by
+        // GameMap::createAllEntities, so that every saved relationship of an existing creature is kept.
+        gameMap.setPendingRelationshipStates(states);
     }
 
 

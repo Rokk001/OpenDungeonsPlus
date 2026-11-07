@@ -1398,13 +1398,12 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     if(mDefeatSequence.blocksInput())
     {
         if(mDefeatSequence.allowsGuiInput())
-            CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(Gui::convertButton(id));
+            AbstractApplicationMode::mousePressed(arg, id);
         return true;
     }
     InputManager& inputManager = mModeManager->getInputManager();
 
-    CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(
-        Gui::convertButton(id));
+    AbstractApplicationMode::mousePressed(arg, id);
 
     if (!isConnected())
         return true;
@@ -1746,10 +1745,10 @@ bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     if(mDefeatSequence.blocksInput())
     {
         if(mDefeatSequence.allowsGuiInput())
-            CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));
+            AbstractApplicationMode::mouseReleased(arg, id);
         return true;
     }
-    CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));
+    AbstractApplicationMode::mouseReleased(arg, id);
 
     InputManager& inputManager = mModeManager->getInputManager();
 

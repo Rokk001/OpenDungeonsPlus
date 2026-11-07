@@ -379,6 +379,7 @@ void ODFrameListener::prepareRenderWindowShutdown()
 void ODFrameListener::exitApplication()
 {
     OD_LOG_INF("Closing down.");
+    mFrameStatistics.finish();
 
     ODClient::getSingleton().notifyExit();
     ODServer::getSingleton().notifyExit();
@@ -500,8 +501,17 @@ bool ODFrameListener::frameEnded(const Ogre::FrameEvent& evt)
     return true;
 }
 
+//! \brief Samples real frame intervals once, independently of pause and repeated mode updates.
 bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
 {
+    // The first mode is created by ModeManager::update() in frameRenderingQueued, after the
+    // first frameStarted, so the current mode is null here on the first rendered frame.
+    const AbstractApplicationMode* sampledMode = mModeManager->getCurrentMode();
+    const bool inGame = sampledMode != nullptr &&
+        sampledMode->getModeType() == ModeManager::GAME && mGameMap->getTurnNumber() != -1;
+    const float frameSeconds = mFrameStatistics.sampleFrame(inGame);
+    if(mIsMainMenuCreated)
+        mMainScene->recordFrameStatistics(frameSeconds);
     if(RunLevelTest::isActive())
         RunLevelTest::onFrame(evt.timeSinceLastFrame);
     AbstractApplicationMode* currentMode = mModeManager->getCurrentMode();

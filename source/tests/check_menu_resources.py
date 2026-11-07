@@ -481,13 +481,20 @@ def check_menu_entries(root):
 
 # Every flight logs its real frame times, measured before the step clamp.
 def check_flight_frame_log(root):
+    """Require one raw render sample before advancing or clamping a menu flight."""
     scene = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
+    listener = (root / "source/render/ODFrameListener.cpp").read_text(encoding="utf-8")
     update = scene.split("void RenderSceneMenu::updateMenu", 1)[1].split("void RenderSceneMenu::updateFireLights", 1)[0]
-    assert update.index("mFlightFrames.addFrame(timeSinceLastFrame);") < update.index("mFlight.advance(timeSinceLastFrame)"), "frame times must be taken before the flight clamps its step"
+    sample = scene.split("void RenderSceneMenu::recordFrameStatistics", 1)[1].split("void RenderSceneMenu::logFlightFrames", 1)[0]
+    frame_start = listener.split("bool ODFrameListener::frameStarted", 1)[1].split("void ODFrameListener::renderQueueStarted", 1)[0]
+    assert "if(mActive && mFlight.isActive())" in sample and "mFlightFrames.addFrame(seconds);" in sample
+    assert "mFrameStatistics.sampleFrame(inGame)" in frame_start and "mMainScene->recordFrameStatistics(frameSeconds);" in frame_start
+    assert frame_start.index("recordFrameStatistics(frameSeconds)") < frame_start.index("currentMode->onFrameStarted(evt)"), "sampling precedes any flight animation or clamp"
+    assert scene.count("mFlightFrames.addFrame(") == 1 and "addFrame" not in update.split("void RenderSceneMenu::recordFrameStatistics", 1)[0], "animation updates must not double-count render samples"
     assert 'logFlightFrames("arrived");' in update and update.index('logFlightFrames("arrived");') < update.index("mCurrentPlace = mFlightPlace;"), "each arrival must log with its starting place"
     assert 'logFlightFrames("interrupted");' in scene.split("void RenderSceneMenu::freeMenu", 1)[1].split("mFlight.reset();", 1)[0], "a flight cut off by leaving the menu must still log"
     assert "mFlightFrames.reset();" in scene.split("bool RenderSceneMenu::beginPath", 1)[1].split("return true;", 1)[0], "every flight must start with empty statistics"
-    for word in ("frames=", "meanMs=", "maxMs=", "framesOver33Ms="):
+    for word in ("frames=", "meanMs=", "p95Ms=", "maxMs=", "framesOver33Ms="):
         assert word in scene, "flight log line lacks " + word
     print("OK: every menu flight logs mean and maximum frame times")
 

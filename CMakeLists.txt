@@ -549,6 +549,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/RoomAmbienceExtras.cpp
     ${SRC}/render/WallTorchView.cpp
     ${SRC}/render/ODFrameListener.cpp
+    ${SRC}/render/FrameStatistics.cpp
     ${SRC}/render/RenderManager.cpp
     ${SRC}/render/RenderManagerChickens.cpp
     ${SRC}/render/TreasuryGoldBatch.cpp
@@ -867,6 +868,11 @@ if(WIN32 AND MSVC)
     # same set of functions, once for Ogre, once for OD. It is harmless in our case
     # to select this option.
     SET_TARGET_PROPERTIES(${PROJECT_BINARY_NAME} PROPERTIES LINK_FLAGS " /FORCE:MULTIPLE")
+    set_property(TARGET ${PROJECT_BINARY_NAME} APPEND_STRING PROPERTY LINK_FLAGS_RELEASE " /DEBUG:FULL")
+    # Keep the full Release symbols alongside the executable for deployment and profiling.
+    set_target_properties(${PROJECT_BINARY_NAME} PROPERTIES
+        PDB_OUTPUT_DIRECTORY_RELEASE "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+        PDB_NAME_RELEASE "${PROJECT_BINARY_NAME}")
 endif()
 
 if(OD_HAS_BUILD_SUFFIX)

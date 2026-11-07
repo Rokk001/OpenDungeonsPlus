@@ -128,6 +128,7 @@
 #include "render/Gui.h"
 #include "render/ODFrameListener.h"
 #include "render/CreatureReactions.h"
+#include "render/CreatureCombatReactions.h"
 #include "render/DungeonbookAppearanceConfig.h"
 #include "render/DungeonbookQuirks.h"
 #include "render/PortraitCatalogRegistry.h"
@@ -7015,6 +7016,10 @@ bool Creature::canHaveRelationships() const
     if(!optionOnServerMap)
         return false;
 
+    // The definition is set up after the level is read (GameMap::createAllEntities); until then there is no worker check
+    if(getDefinition() == nullptr)
+        return false;
+
     Seat* seat = getSeat();
     bool hasSeat = (seat != nullptr);
     return relationshipsAllowed(optionOnServerMap, hasSeat, hasSeat && seat->isRogueSeat(),
@@ -7100,6 +7105,10 @@ void Creature::reportDeathToFriends(GameEntity* killer)
         double penalty = relationships->isLovers(getName(), mourner->getName()) ?
             settings.mPartnerGriefMoodPenalty : settings.mGriefMoodPenalty;
         mourner->addRelationshipMood(-penalty);
+        // The grief record is saved with the state; the mood above is saved with the creature, so it is not applied again on load
+        static const int32_t GRIEF_RECORD_LIMIT = 100000; // same limit as the loader (CreatureRelationships.cpp)
+        int64_t grief = static_cast<int64_t>(mourner->mGriefMood) - std::llround(penalty);
+        mourner->mGriefMood = static_cast<int32_t>(std::max<int64_t>(-GRIEF_RECORD_LIMIT, grief));
         if((killer != nullptr) && (killer->getSeat() != nullptr) && (killer->getSeat() != getSeat()))
         {
             mourner->mRageUntilTurn = turn + settings.mGriefRageTurns;
@@ -7395,11 +7404,10 @@ bool Creature::getRelationshipState(RelationshipCreatureState& state) const
     state.mName = getName();
     // The captors belong to creatures that are held prisoner, which cannot have relationships
     state.mCaptors = mCaptors;
-    if(!canHaveRelationships())
-        return !state.isEmpty();
+    // Every field is saved whether or not the creature can have relationships at the moment (a prisoner keeps its grief,
+    // rage and brawl records). The gameplay checks that need eligibility are made where the fields are used.
+    state.mGriefMood = mGriefMood;
 
-    // The grief is a one-time loss now, there is no fading grief mood to save
-    state.mGriefMood = 0;
     if(mRageUntilTurn > turn)
     {
         state.mRageTurnsLeft = mRageUntilTurn - turn;
@@ -7436,9 +7444,11 @@ void Creature::setRelationshipState(const RelationshipCreatureState& state)
             mCaptors.push_back(state.mCaptors[i]);
     }
 
-    if(!canHaveRelationships())
-        return;
+    // The grief record is restored only as a record: the mood it came from is already in the saved mood, so no mood is applied here
+    mGriefMood = state.mGriefMood;
 
+    // The rage and the brawl are restored whether or not the creature can have relationships now (the same rule as the
+    // grief record above). The gameplay checks decide when they have an effect.
     const RelationshipSettings& settings = gameMap->getCreatureRelationships()->getSettings();
     int64_t turn = gameMap->getTurnNumber();
     if((state.mRageTurnsLeft > 0) && (state.mRageSeatId >= 0))
@@ -12652,8 +12662,9 @@ void Creature::refreshGhostHuntVisuals()
             }
             break;
         }
+    // The throw (1) and the snap (4) send their own step clock, the beam (3) the pulled-in share.
     if(backpack!=mGhostBackpack || target!=mGhostBeamTarget || boxMode!=mGhostBoxMode || thrown!=mGhostThrowTarget ||
-       ((boxMode==1 || boxMode==3) && turns!=mGhostThrowTurns))
+       ((boxMode==1 || boxMode==3 || boxMode==4) && turns!=mGhostThrowTurns))
     {
         mGhostBackpack=backpack;mGhostBeamTarget=target;mGhostBoxMode=boxMode;
         mGhostThrowTarget=thrown;mGhostThrowTurns=turns;mNeedFireRefresh=true;
@@ -12691,6 +12702,40 @@ static std::string ghostBoxHandBone(const Ogre::Skeleton* skeleton, bool leftFre
     return std::string();
 }
 
+//! \brief Returns the hand bone that holds the capture cannon while the hunter beams (owner decision 791): the right weapon
+//! hand first, then the common right and left hand bone names; empty for a creature without hand bones.
+static std::string ghostCannonHandBone(const Ogre::Skeleton* skeleton)
+{
+    if(skeleton==nullptr) return std::string();
+    const char* names[]={"Weapon_R","RightHand","Hand_R","hand.R","Hand.R","R_Hand","hand_r",
+        "Weapon_L","LeftHand","Hand_L","hand.L","Hand.L","L_Hand","hand_l"};
+    for(const char* name : names)
+        if(skeleton->hasBone(name)) return name;
+    return std::string();
+}
+
+//! \brief Returns the world position of the emitter tip of the capture cannon, the top centre of its authored bounds:
+//! the beam and its sparks start there for every hunter (GHOSTS-PLAN D20 and section 5 GhostBeam, owner decision 791).
+static Ogre::Vector3 ghostCannonTip(const Ogre::Entity& cannon)
+{
+    const Ogre::AxisAlignedBox& bounds=cannon.getMesh()->getBounds();
+    const Ogre::Vector3 tip(bounds.getCenter().x,bounds.getCenter().y,bounds.getMaximum().z);
+    return cannon._getParentNodeFullTransform()*tip;
+}
+
+//! \brief Shows or hides the hunter's own weapon meshes by the names RenderManager::rrCreateWeapon gives them.
+static void setGhostHunterWeaponsVisible(Ogre::SceneManager* scene, const Creature& hunter, bool visible)
+{
+    const Weapon* weapons[2]={hunter.getWeaponR(),hunter.getWeaponL()};
+    const char* hands[2]={"R","L"};
+    for(int i=0;i<2;++i)
+    {
+        if(weapons[i]==nullptr) continue;
+        const std::string name=weapons[i]->getOgreNamePrefix()+hands[i]+"_"+hunter.getName();
+        if(scene->hasEntity(name)) scene->getEntity(name)->setVisible(visible);
+    }
+}
+
 void Creature::clearGhostHuntVisuals()
 {
     if(getIsOnServerMap()) return;
@@ -12721,6 +12766,19 @@ void Creature::clearGhostHuntVisuals()
         scene->destroyEntity(mGhostHeldBox);mGhostHeldBox=nullptr;
     }
     if(mGhostHandNode!=nullptr) { scene->destroySceneNode(mGhostHandNode);mGhostHandNode=nullptr; }
+    if(mGhostCaptureGun!=nullptr)
+    {
+        // The cannon in the hand hangs on a bone of the creature entity, or on the fallback hand node.
+        const std::string body=getOgreNamePrefix()+getName();
+        if(mGhostCaptureGun->isAttached() && mGhostGunHandNode==nullptr && scene->hasEntity(body))
+            scene->getEntity(body)->detachObjectFromBone(mGhostCaptureGun);
+        else if(mGhostGunHandNode!=nullptr && mGhostCaptureGun->isAttached())
+            mGhostGunHandNode->detachObject(mGhostCaptureGun);
+        scene->destroyEntity(mGhostCaptureGun);mGhostCaptureGun=nullptr;
+    }
+    if(mGhostGunHandNode!=nullptr) { scene->destroySceneNode(mGhostGunHandNode);mGhostGunHandNode=nullptr; }
+    // The hunter's own weapons come back as its combat look wants them.
+    if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
     mGhostCaptureShown=0.0;
     if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
     if(mGhostBeamSparks!=nullptr) { scene->destroyParticleSystem(mGhostBeamSparks);mGhostBeamSparks=nullptr; }
@@ -12729,6 +12787,13 @@ void Creature::clearGhostHuntVisuals()
     if(mGhostBeamNode!=nullptr) { scene->destroySceneNode(mGhostBeamNode);mGhostBeamNode=nullptr; }
     if(mGhostBackpackNode!=nullptr)
     {
+        // The holstered cannon hangs on a child node of the pack.
+        if(mGhostPackGun!=nullptr)
+        {
+            if(mGhostPackGun->getParentSceneNode()!=nullptr) mGhostPackGun->getParentSceneNode()->detachObject(mGhostPackGun);
+            scene->destroyEntity(mGhostPackGun);mGhostPackGun=nullptr;
+        }
+        mGhostBackpackNode->removeAndDestroyAllChildren();
         while(mGhostBackpackNode->numAttachedObjects()>0)
         {
             Ogre::MovableObject* object=mGhostBackpackNode->getAttachedObject(static_cast<unsigned short>(0));
@@ -12738,7 +12803,8 @@ void Creature::clearGhostHuntVisuals()
     }
 }
 
-//! \brief Keeps hunter equipment creature-scaled and starts capture effects at its authored nozzle.
+//! \brief Keeps hunter equipment sized to the hunter, the backpack on the back, the box in the hand and the capture cannon
+//! in the hand while beaming (in its holster on the pack otherwise), and starts capture effects at the cannon's emitter tip.
 void Creature::updateGhostHuntVisuals(double seconds)
 {
     if(getIsOnServerMap() || getEntityNode()==nullptr) return;
@@ -12749,13 +12815,30 @@ void Creature::updateGhostHuntVisuals(double seconds)
         Ogre::Entity* pack=scene->createEntity(getName()+"_GhostBackpack","GhostBackpack.mesh");
         pack->setQueryFlags(0);pack->setCastShadows(true);
         Ogre::Entity* creatureEntity=scene->getEntity(getOgreNamePrefix()+getName());
-        const Ogre::Real creatureHeight=creatureEntity->getBoundingBox().getSize().z;
-        mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",Ogre::Vector3(0.0f,-0.3f,0.5f*creatureHeight));
+        const Ogre::AxisAlignedBox creatureBounds=creatureEntity->getBoundingBox();
+        const Ogre::Real creatureHeight=creatureBounds.getSize().z;
+        // Sized to the hunter (decision 791): the pack is 36 % of the hunter's height and sits between 38 % and 74 % of
+        // it, whatever the size of the creature mesh; the creature's level growth applies through the entity node.
+        const Ogre::Vector3 packSize=pack->getMesh()->getBounds().getSize();
+        const Ogre::Real fit=0.36f*creatureHeight/packSize.z;
+        // Worn on the back (decision 733): creatures face the negative y axis of their node, so the back is +y. The
+        // pack's straps sit on its +y side and turn half round to lie against the hunter's back. The back is the rear
+        // of the body bounds, but at most 12 % of the height behind the centre, so wings or tails do not push it away.
+        const Ogre::Real back=std::min(creatureBounds.getMaximum().y,0.12f*creatureHeight);
+        mGhostBackpackNode=getEntityNode()->createChildSceneNode(getName()+"_GhostPackNode",
+            Ogre::Vector3(0.0f,back+0.5f*fit*packSize.y,0.38f*creatureHeight),
+            Ogre::Quaternion(Ogre::Degree(180.0f),Ogre::Vector3::UNIT_Z));
+        mGhostBackpackNode->setScale(Ogre::Vector3(fit,fit,fit));
         mGhostBackpackNode->attachObject(pack);
+        // The capture cannon waits upright in its holster on the pack's side, at the end of the pack's hose.
+        mGhostPackGun=scene->createEntity(getName()+"_GhostPackGun","GhostCaptureGun.mesh");
+        mGhostPackGun->setQueryFlags(0);mGhostPackGun->setCastShadows(true);
+        const Ogre::Real holster=0.85f*packSize.z/mGhostPackGun->getMesh()->getBounds().getSize().z;
+        Ogre::SceneNode* holsterNode=mGhostBackpackNode->createChildSceneNode(getName()+"_GhostHolsterNode",
+            Ogre::Vector3(-0.5f*packSize.x-0.045f,0.0f,0.05f*packSize.z));
+        holsterNode->setScale(Ogre::Vector3(holster,holster,holster));
+        holsterNode->attachObject(mGhostPackGun);
     }
-    // The fitted Capture nozzle cap from the authored GhostBackpack mesh, in pack-local coordinates.
-    const Ogre::Vector3 nozzlePosition=mGhostBackpackNode->convertLocalToWorldPosition(
-        Ogre::Vector3(0.153606342f, 0.103960392f, 0.239335642f));
     if(!mGhostShrinkTarget.empty() && mGhostShrinkTarget!=mGhostThrowTarget)
     {
         GhostEntity* previous=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostShrinkTarget));
@@ -12794,9 +12877,44 @@ void Creature::updateGhostHuntVisuals(double seconds)
         }
     }
     mGhostHeldBox->setVisible(mGhostBoxMode==2);
+    // The capture cannon (GHOSTS-PLAN D20, decision 791): every hunter, also one without a weapon of its own, holds it
+    // while the beam is on; then it takes the place of the hunter's own weapons. Otherwise it waits in its holster.
+    GameEntity* target=mGhostBeamTarget.empty()?nullptr:getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostBeamTarget);
+    const bool beaming=target!=nullptr;
+    if(mGhostCaptureGun==nullptr)
+    {
+        mGhostCaptureGun=scene->createEntity(getName()+"_GhostCaptureGun","GhostCaptureGun.mesh");
+        mGhostCaptureGun->setQueryFlags(0);mGhostCaptureGun->setCastShadows(true);
+        // The cannon is 30 % of the hunter's height in every hand; only the creature's level growth applies.
+        const Ogre::Real height=body->getBoundingBox().getSize().z;
+        const Ogre::Real scale=0.30f*height/mGhostCaptureGun->getMesh()->getBounds().getSize().z;
+        const std::string bone=ghostCannonHandBone(body->hasSkeleton()?body->getSkeleton():nullptr);
+        if(!bone.empty())
+        {
+            // The weapon mount of the game (RenderManager::getWeaponMount): -90 degrees about x puts the barrel, authored
+            // along +z with the grip at the origin, along the hand bone like a sword blade.
+            Ogre::Quaternion mount;mount.FromAngleAxis(Ogre::Degree(-90.0),Ogre::Vector3::UNIT_X);
+            Ogre::TagPoint* grip=body->attachObjectToBone(bone,mGhostCaptureGun,mount,Ogre::Vector3::ZERO);
+            grip->setInheritScale(false);
+            grip->setScale(Ogre::Vector3(scale,scale,scale));
+        }
+        else
+        {
+            // A creature without hand bones holds the cannon in front of its body at chest height, aimed forward (-y).
+            mGhostGunHandNode=getEntityNode()->createChildSceneNode(getName()+"_GhostGunHandNode",
+                Ogre::Vector3(0.15f*height,-0.2f*height,0.45f*height),Ogre::Quaternion(Ogre::Degree(90.0f),Ogre::Vector3::UNIT_X));
+            mGhostGunHandNode->setScale(Ogre::Vector3(scale,scale,scale));
+            mGhostGunHandNode->attachObject(mGhostCaptureGun);
+        }
+    }
+    mGhostCaptureGun->setVisible(beaming);
+    if(mGhostPackGun!=nullptr) mGhostPackGun->setVisible(!beaming);
+    if(beaming) { setGhostHunterWeaponsVisible(scene,*this,false);mGhostOwnWeaponsHidden=true; }
+    else if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
     // The thrown box leaves from the hand it was held in.
     const Ogre::Vector3 hand=mGhostHeldBox->getWorldBoundingBox(true).getCenter();
-    if((mGhostBoxMode==1 || mGhostBoxMode==3) && mGhostBoxNode==nullptr)
+    const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4;
+    if(lyingBox && mGhostBoxNode==nullptr)
     {
         Ogre::Entity* box=scene->createEntity(getName()+"_ThrownGhostBox","GhostBox.mesh");
         box->setQueryFlags(0);box->setCastShadows(true);
@@ -12806,9 +12924,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
     if(mGhostBoxNode!=nullptr) mGhostBoxNode->setScale(getEntityNode()->getScale());
     if(mGhostBoxNode!=nullptr)
     {
-        mGhostBoxNode->setVisible(mGhostBoxMode==1 || mGhostBoxMode==3);
+        mGhostBoxNode->setVisible(lyingBox);
         GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostThrowTarget));
-        if(ghost!=nullptr && (mGhostBoxMode==1 || mGhostBoxMode==3))
+        if(ghost!=nullptr && lyingBox)
         {
             // The box lands on the floor under the ghost, never in the air.
             const Ogre::Vector3 floor(ghost->getPosition().x,ghost->getPosition().y,0.0f);
@@ -12822,16 +12940,33 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 position.z+=4.0f*progress*(1.0f-progress)*0.5f;
                 mGhostCaptureShown=0.0;
             }
+            else if(mGhostBoxMode==4)
+            {
+                // The box snaps shut over the fully pulled-in ghost for GhostBoxSnapSeconds: a hard jolt with the bang,
+                // then it rocks and settles until the catch is complete.
+                mGhostThrowClientTurns+=seconds*ODApplication::turnsPerSecond*getGameMap()->getGameSpeedFactor();
+                const double duration=ConfigManager::getSingleton().getRoomConfigDouble("GhostBoxSnapSeconds")*ODApplication::turnsPerSecond;
+                const float progress=static_cast<float>(std::min(1.0,mGhostThrowClientTurns/duration));
+                const float settle=(1.0f-progress)*(1.0f-progress);
+                const float rock=settle*std::sin(progress*6.0f*Ogre::Math::PI);
+                position.z+=0.08f*settle*std::fabs(std::sin(progress*4.0f*Ogre::Math::PI));
+                Ogre::Vector3 squash=getEntityNode()->getScale();
+                squash.z*=1.0f-0.3f*settle*std::fabs(rock);
+                mGhostBoxNode->setScale(squash);
+                mGhostBoxNode->setOrientation(Ogre::Quaternion(Ogre::Radian(0.25f*rock),Ogre::Vector3::UNIT_Y));
+                mGhostCaptureShown=1.0;
+            }
             else
             {
                 // The beam pulls the ghost down into the lying box: it shrinks smoothly towards the pulled-in share.
                 mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
             }
+            // Only the snap rocks the box; thrown and lying boxes stand upright.
+            if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(Ogre::Quaternion::IDENTITY);
             mGhostBoxNode->setPosition(position);
             ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
         }
     }
-    GameEntity* target=getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostBeamTarget);
     if(target==nullptr || mGhostBeamTarget.empty())
     {
         if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
@@ -12854,12 +12989,13 @@ void Creature::updateGhostHuntVisuals(double seconds)
         mGhostBeamSound=SoundEffectsManager::getSingleton().startSpatialLoop("Rooms/GhostRoom/Beam",getPosition().x,getPosition().y);
     }
     SoundEffectsManager::getSingleton().setSpatialLoopPosition(mGhostBeamSound,getPosition().x,getPosition().y);
-    if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(nozzlePosition);
+    // The beam and its sparks leave the emitter tip of the capture cannon in the hunter's hand (decision 791).
+    const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
+    const Ogre::Vector3 start=ghostCannonTip(*mGhostCaptureGun);
+    if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(start);
     mGhostBeamSample+=seconds;
     if(mGhostBeamSample<0.1) return;
     mGhostBeamSample=std::fmod(mGhostBeamSample,0.1);
-    const Ogre::Vector3 start=nozzlePosition;
-    const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
     for(size_t chain=0;chain<3;++chain)
     {
         mGhostBeamChain->clearChain(chain);

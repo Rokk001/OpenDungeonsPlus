@@ -54,6 +54,7 @@ PRELUDE = r'''
 #include <vector>
 #define OD_LOG_INF(x) ((void)0)
 #define OD_LOG_ERR(x) ((void)0)
+#define OD_LOG_WRN(x) ((void)0)
 #define OD_ASSERT_TRUE(x) check(bool(x),"packet read")
 const unsigned int MAX_LEVEL=30;
 //! \brief Rejects a failed independent expected result and names it before the probe aborts.
@@ -458,7 +459,7 @@ def hunt_fixture():
  //! \brief Takes exact revival mana only when available.
  bool takeMana(double amount){if(mana<amount)return false;mana-=amount;return true;}
  Player* getPlayer()''')
-    base = base.replace('{"GhostRiseSeconds",1.5}', '{"GhostBeamTurns",5.5},{"GhostBellSeconds",3},{"GhostEmptyTurns",5.5},{"GhostBoxCapacity",1},{"GhostRepathTurns",5},{"GhostBoxThrowSeconds",.5},{"GhostReviveHpShare",.35},{"GhostRiseSeconds",1.5}')
+    base = base.replace('{"GhostRiseSeconds",1.5}', '{"GhostBeamSeconds",16},{"GhostBoxSnapSeconds",2},{"GhostBellSeconds",3},{"GhostEmptyTurns",5.5},{"GhostBoxCapacity",1},{"GhostRepathTurns",5},{"GhostBoxThrowSeconds",2},{"GhostReviveHpShare",.35},{"GhostRiseSeconds",1.5}')
     code = r'''
 //! \brief Supplies declared hunter efficiency independently of timing code.
 struct CreatureRoomAffinity{double efficiency=3;
@@ -757,7 +758,7 @@ struct CreatureActionHuntGhost{Creature& mCreature;std::string mTarget,mBeamTarg
         'void CreatureActionHuntGhost::assignHunters(', 'void CreatureActionHuntGhost::upkeep(', 'bool CreatureActionHuntGhost::selectRevival('])
     code += function(room,'bool tileOrder(')+function(room,'double RoomGhostRoom::getLevelsPerEctoplasm(')+function(room,'Tile* RoomGhostRoom::findDropTile(')+function(room,'void RoomGhostRoom::emptyGhost(')
     code += function(room,'void RoomGhostRoom::produceEctoplasm(')+function(room,'void RoomGhostRoom::spawnItem(')
-    branches = ''.join(function(action, sig) for sig in ['    if(mState==2 || mState==3)', '    if(mState==4)',
+    branches = ''.join(function(action, sig) for sig in ['    if(mState==2 || mState==3 || mState==10)', '    if(mState==4)',
         '    if(mState==5)', '    if(mState==6)'])
     code += '\nbool CreatureActionHuntGhost::step(){GameMap& map=*mCreature.getGameMap();ConfigManager& config=ConfigManager::getSingleton();'+branches+'return false;}\n'
     return base+code
@@ -773,7 +774,15 @@ int main(){
  GhostEntity ghost;ghost.name="target";ghost.seat=&enemy;ghost.tile=map.getTile(3,2);map.entities.push_back(&ghost);
  check(eligible(ghost,seat),"own-territory ghost eligible");ghost.tile->owner=&enemy;check(!eligible(ghost,seat),"foreign territory not hunted");ghost.tile->owner=&seat;ghost.state=GhostState::rising;check(!eligible(ghost,seat),"rising ghost not assigned");ghost.state=GhostState::floating;ghost.assigned="other";check(!eligible(ghost,seat),"assigned ghost not stolen");ghost.assigned.clear();
  ghost.tile->reachable=false;check(targetEndpoint(map,hunter,hunter.tile,ghost)!=nullptr,"hunter reaches adjacent endpoint when ghost tile inaccessible");
- for(int tier=1;tier<=3;++tier){seat.tier=tier;for(double efficiency:{3.0,1.5,.5}){hunter.definition.jobs.front().efficiency=efficiency;ghost.state=GhostState::floating;ghost.assigned.clear();CreatureActionHuntGhost action(hunter,"target");action.equipment=&room;action.mState=2;const double factors[]={1,.8,.667};const double beam=5.5*factors[tier-1]/efficiency;const int ticks=int(std::ceil(beam+.7));for(int turn=0;turn<ticks;++turn){map.turn=turn;action.step();double before=action.mTurns;action.step();near(action.mTurns,before,"one timed tick per world turn");}check(ghost.state==GhostState::boxed&&action.mGhosts.size()==1,"beam and throw complete");near(action.mTurns,ticks-beam-.7,"beam and throw keep fractional remainder");}
+ for(int tier=1;tier<=3;++tier){seat.tier=tier;for(double efficiency:{3.0,1.5,.5}){hunter.definition.jobs.front().efficiency=efficiency;ghost.state=GhostState::floating;ghost.assigned.clear();CreatureActionHuntGhost action(hunter,"target");action.equipment=&room;action.mState=2;ghost.state=GhostState::beamed;ghost.assigned=hunter.name;
+   // Decision 726: every hunter at every research tier throws 2 s (2.8 turns), beams 16 s (22.4 turns) and snaps 2 s (2.8 turns).
+   for(int turn=0;turn<28;++turn){map.turn=turn;action.step();double before=action.mTurns;action.step();near(action.mTurns,before,"one timed tick per world turn");const int done=turn+1;
+    if(done==2)check(action.mState==2&&action.mBeamTarget.empty(),"the box flies for the full 2 s throw");
+    if(done==3)check(action.mState==3&&action.mBeamTarget=="target"&&hunter.animation=="Beam","the beam starts once the 2 s throw has landed");
+    if(done==25)check(action.mState==3&&action.mBeamTarget=="target"&&ghost.state==GhostState::beamed,"the beam pulls for the full 16 s, efficiency and research do not shorten it");
+    if(done==26)check(action.mState==10&&action.mBeamTarget.empty()&&hunter.animation=="Idle"&&ghost.state==GhostState::beamed&&action.mGhosts.empty(),"after 18 s the box snaps shut, the ghost is not caught yet");
+    if(done==27)check(action.mState==10&&ghost.state==GhostState::beamed&&action.mGhosts.empty(),"the snap lasts the full 2 s");}
+   check(ghost.state==GhostState::boxed&&action.mGhosts.size()==1&&action.mState==9,"the catch completes after exactly 20 s (28 turns) for every hunter");near(action.mTurns,0,"throw, beam and snap keep the exact clock");}
   hunter.definition.jobs.front().efficiency=1.5;CreatureActionHuntGhost action(hunter);action.equipment=&room;double before=hunter.xp;action.upkeep();near(hunter.xp-before,(tier==1?5:tier==2?6:7)/5.5,"XP follows actual training research without cap");
   action.mState=4;action.next=true;action.mGhosts.assign(tier-1,"held");check(action.step()&&action.mState==1,"research capacity permits next catch");action.mState=4;action.mGhosts.assign(tier,"held");action.step();check(action.mState==5,"research capacity stops additional catch");
  }
@@ -784,6 +793,10 @@ int main(){
  CreatureActionHuntGhost empty(hunter);empty.mState=6;empty.mDestination=hunter.tile;empty.mEmptyRoom="press";empty.mGhosts={"target","extra1","extra2"};room.mCauldrons={{room.floor.back(),&hunter}};
  for(int tick=0;tick<6;++tick){map.turn=100+tick;empty.step();double before=empty.mTurns;empty.step();near(empty.mTurns,before,"empty clock increments once per world turn");}
  check(empty.mGhosts.empty()&&empty.mState==7,"three ghosts emptied at efficiency three");near(empty.mTurns,.5,"emptying keeps fractional remainder");
+ // The CatchTime research shortens only the emptying: tier 2 empties a ghost in 5.5*0.8/3 turns, three in 4.4 turns.
+ seat.tier=2;CreatureActionHuntGhost researchedEmpty(hunter);researchedEmpty.mState=6;researchedEmpty.mDestination=hunter.tile;researchedEmpty.mEmptyRoom="press";researchedEmpty.mGhosts={"target","extra1","extra2"};
+ for(int tick=0;tick<4;++tick){map.turn=200+tick;researchedEmpty.step();}check(researchedEmpty.mGhosts.size()==1,"tier 2 research empties two ghosts within four turns");
+ map.turn=204;researchedEmpty.step();check(researchedEmpty.mGhosts.empty()&&researchedEmpty.mState==7,"tier 2 research empties three ghosts within five turns");near(researchedEmpty.mTurns,.6,"researched emptying keeps fractional remainder");seat.tier=1;
  empty.mState=6;empty.mDestination=map.getTile(0,0);empty.mGhosts={"extra1"};double bar=seat.bar;empty.step();near(seat.bar,bar,"saved hunter cannot empty remotely");check(empty.mDestination==nullptr,"remote standing destination re-reserved");
  map.entities.resize(1);
  seat.tier=1;hunter.definition.jobs.front().efficiency=3;hunter.actions.clear();ghost.state=GhostState::floating;ghost.assigned.clear();room.backpacks=0;CreatureActionHuntGhost::assignHunters(map,seat);check(hunter.assigned==0,"zero backpacks prevents assignment");room.backpacks=1;CreatureActionHuntGhost::assignHunters(map,seat);check(hunter.assigned==1&&ghost.assigned==hunter.name,"one backpack assigns one nearest hunter");int bells=room.bells;CreatureActionHuntGhost::assignHunters(map,seat);check(room.bells==bells,"target bell fires once");
@@ -803,7 +816,7 @@ int main(){
  seat.seen.insert(unseen);seat.product=GhostProduct::research;seat.bar=0;room.emptyGhost(hunter,ghost);check(SpellEyeEvil::reveals.back()==seen||SpellEyeEvil::reveals.back()==unseen,"seen territory fallback");size_t reveals=SpellEyeEvil::reveals.size();ghost.seat=&seat;room.emptyGhost(hunter,ghost);check(SpellEyeEvil::reveals.size()==reveals,"own ghost never reveals");
  CreatureActionHuntGhost interrupted(hunter,"target");interrupted.equipment=&room;interrupted.mState=1;interrupted.mGhosts={"extra1","extra2"};interrupted.mLastPosition=Ogre::Vector3(2.125f,3.875f,.5f);hunter.onMap=false;ghost.state=GhostState::beamed;ghost.assigned=hunter.name;int drops=GhostBoxEntity::dropped,pops=hunter.pops;interrupted.interrupt();interrupted.interrupt();check(GhostBoxEntity::dropped==drops+1&&interrupted.mGhosts.empty()&&!interrupted.mEquipped,"interruption drops full box exactly once");near(GhostBoxEntity::droppedPosition.x,2.125,"hand interruption uses saved last world X");near(GhostBoxEntity::droppedPosition.y,3.875,"hand interruption uses saved last world Y");check(hunter.pops==pops&&ghost.state==GhostState::floating&&ghost.assigned.empty(),"interruption releases target without queue reentrancy");
  CreatureActionHuntGhost incomplete(hunter);incomplete.mRegistered=false;incomplete.mGhosts={"extra1"};incomplete.interrupt();check(GhostBoxEntity::dropped==drops+1,"incomplete imported action cannot manufacture a dropped box");
- for(uint32_t lyingState:{2u,3u,9u}){CreatureActionHuntGhost lying(hunter,"target");lying.equipment=&room;lying.mState=lyingState;lying.mGhosts={"extra1"};lying.mLastPosition=Ogre::Vector3(2.125f,3.875f,.5f);ghost.state=lyingState==9?GhostState::boxed:GhostState::beamed;ghost.assigned=lyingState==9?std::string():hunter.name;int before=GhostBoxEntity::dropped;lying.interrupt();check(GhostBoxEntity::dropped==before+1&&lying.mGhosts.empty(),"interruption with a thrown box drops it exactly once");near(GhostBoxEntity::droppedPosition.x,3,"thrown box stays under its ghost (X)");near(GhostBoxEntity::droppedPosition.y,2,"thrown box stays under its ghost (Y)");check(ghost.state==(lyingState==9?GhostState::boxed:GhostState::floating)&&ghost.assigned.empty(),"thrown-box interruption releases a held target and keeps a caught one boxed");}
+ for(uint32_t lyingState:{2u,3u,10u,9u}){CreatureActionHuntGhost lying(hunter,"target");lying.equipment=&room;lying.mState=lyingState;lying.mGhosts={"extra1"};lying.mLastPosition=Ogre::Vector3(2.125f,3.875f,.5f);ghost.state=lyingState==9?GhostState::boxed:GhostState::beamed;ghost.assigned=lyingState==9?std::string():hunter.name;int before=GhostBoxEntity::dropped;lying.interrupt();check(GhostBoxEntity::dropped==before+1&&lying.mGhosts.empty(),"interruption with a thrown box drops it exactly once");near(GhostBoxEntity::droppedPosition.x,3,"thrown box stays under its ghost (X)");near(GhostBoxEntity::droppedPosition.y,2,"thrown box stays under its ghost (Y)");check(ghost.state==(lyingState==9?GhostState::boxed:GhostState::floating)&&ghost.assigned.empty(),"thrown-box interruption releases a held target and keeps a caught one boxed");}
  std::cout<<"hunt timing, assignment, revival, products and reveal: ok\n";
 }
 '''

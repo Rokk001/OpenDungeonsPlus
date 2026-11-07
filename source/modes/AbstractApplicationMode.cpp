@@ -31,6 +31,7 @@
 #include <CEGUI/widgets/FrameWindow.h>
 #include <CEGUI/widgets/Combobox.h>
 #include <CEGUI/widgets/PopupMenu.h>
+#include <CEGUI/widgets/Titlebar.h>
 
 #include <algorithm>
 
@@ -78,6 +79,7 @@ bool AbstractApplicationMode::isConnected()
     return (ODServer::getSingleton().isConnected() || ODClient::getSingleton().isConnected());
 }
 
+//! \brief Injects pointer input and records real movement separately from wheel events.
 bool AbstractApplicationMode::mouseMoved(const OIS::MouseEvent& arg)
 {
 
@@ -85,7 +87,22 @@ bool AbstractApplicationMode::mouseMoved(const OIS::MouseEvent& arg)
     {
         AbstractApplicationMode::wheelMovedN(toSFMLMouseWheel(arg));
     }
-    return mouseMovedN(toSFMLMouseMove(arg));
+    const bool handled = mouseMovedN(toSFMLMouseMove(arg));
+    if(arg.state.Z.rel == 0 || arg.state.X.rel != 0 || arg.state.Y.rel != 0)
+    {
+        FrameStatistics::PointerArea area = FrameStatistics::Outside;
+        if(mModeType >= ModeManager::MENU_MAIN && mModeType < ModeManager::GAME)
+            area = FrameStatistics::Menu;
+        else if(mModeType == ModeManager::GAME)
+        {
+            CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
+            CEGUI::Window* window = context.getWindowContainingMouse();
+            if(window != nullptr && window != context.getRootWindow())
+                area = FrameStatistics::GameWindow;
+        }
+        ODFrameListener::getSingleton().getFrameStatistics().pointerMoved(arg.state.X.abs, arg.state.Y.abs, area);
+    }
+    return handled;
 }
 
 bool AbstractApplicationMode::mouseMovedN(const MouseMoveEvent& arg)
@@ -101,14 +118,22 @@ bool AbstractApplicationMode::wheelMovedN(const MouseWheelEvent& arg)
               static_cast<float>(arg.delta) / 100.0f);
 }
 
+//! \brief Starts titlebar drag statistics at the press before GUI capture changes the hit window.
 bool AbstractApplicationMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
-    return CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(
-        Gui::convertButton(id));
+    CEGUI::Window* window = CEGUI::System::getSingleton().getDefaultGUIContext().getWindowContainingMouse();
+    CEGUI::Titlebar* titlebar = dynamic_cast<CEGUI::Titlebar*>(window);
+    const bool handled = CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(Gui::convertButton(id));
+    if(id == OIS::MB_Left && titlebar != nullptr && titlebar->isDragged())
+        ODFrameListener::getSingleton().getFrameStatistics().beginDrag();
+    return handled;
 }
 
+//! \brief Ends drag statistics on left release, including releases outside the originating window.
 bool AbstractApplicationMode::mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
+    if(id == OIS::MB_Left)
+        ODFrameListener::getSingleton().getFrameStatistics().endDrag();
     return CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(
         Gui::convertButton(id));
 }

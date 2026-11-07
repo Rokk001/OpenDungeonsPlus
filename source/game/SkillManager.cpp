@@ -998,7 +998,7 @@ static const ResearchBase RESEARCH_BASES[] =
     {SkillType::roomGhostRoom, "EctoplasmLevels", ResearchBaseSource::rooms, "GhostLevelsPerEctoplasm", ""},
     {SkillType::roomGhostRoom, "BoxCapacity", ResearchBaseSource::rooms, "GhostBoxCapacity", ""},
     {SkillType::roomGhostRoom, "BeamRange", ResearchBaseSource::rooms, "GhostBeamRange", ""},
-    {SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostBeamTurns", ""},
+    {SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostEmptyTurns", ""},
     {SkillType::roomGhostRoom, "RevivePrice", ResearchBaseSource::rooms, "GhostReviveMana", ""},
     {SkillType::roomCrypt, "LichCorpses", ResearchBaseSource::rooms, "CryptCorpsesPerLich", ""},
     {SkillType::roomCrypt, "LichLevel", ResearchBaseSource::rooms, "CryptLichLevelBonus", ""},
@@ -1103,7 +1103,7 @@ static std::string getResearchEffectText(const std::string& effect)
         texts[ResearchEffect::EctoplasmLevels] = "Ghost levels per ectoplasm";
         texts[ResearchEffect::BoxCapacity] = "Ghosts per box";
         texts[ResearchEffect::BeamRange] = "Beam range";
-        texts[ResearchEffect::CatchTime] = "Catch time";
+        texts[ResearchEffect::CatchTime] = "Box emptying time";
         texts[ResearchEffect::RevivePrice] = "Revival price";
         texts[ResearchEffect::LichCorpses] = "Corpses per lich";
         texts[ResearchEffect::LichLevel] = "Lich level bonus";

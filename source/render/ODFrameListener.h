@@ -26,6 +26,7 @@
 #include "camera/CameraManager.h"
 #include "eventsystem/Subject.h"
 #include "utils/FrameRateLimiter.h"
+#include "render/FrameStatistics.h"
 
 
 #include <OgreFrameListener.h>
@@ -132,7 +133,12 @@ public:
     //! \brief Triggered once a frame rendering has ended.
     bool frameEnded(const Ogre::FrameEvent& evt) override;
 
+    //! \brief Samples rendered-frame statistics once before the mode's frame callbacks.
     bool frameStarted(const Ogre::FrameEvent& evt) override;
+
+    //! \brief Gives input callbacks access to interval boundaries without adding frame samples.
+    FrameStatistics& getFrameStatistics()
+    { return mFrameStatistics; }
     
     //! \brief From Ogre::RenderQueueListener
     void renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& cameraName,
@@ -279,6 +285,8 @@ private:
     //! The cosmetic life in the rooms (client side only)
     std::unique_ptr<RoomAmbience>  mRoomAmbience;
     std::unique_ptr<ModeManager>   mModeManager;
+    //! Overlapping real-time statistics owned by the single render listener.
+    FrameStatistics mFrameStatistics;
     std::unique_ptr<RenderSceneMenu>   mMainScene;
 
     bool                 mShowDebugInfo;

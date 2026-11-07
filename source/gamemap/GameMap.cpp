@@ -375,6 +375,9 @@ bool GameMap::isInEditorMode() const
 //! \brief Loads a level with shared equipment and item definitions and rebuilt holder registrations.
 bool GameMap::loadLevel(const std::string& levelFilepath)
 {
+    // Relationship states of an earlier load that were never applied are dropped
+    mPendingRelationshipStates.clear();
+
     // We reset the creature definitions
     clearClasses();
     for(std::pair<const std::string, CreatureDefinition*> it : ConfigManager::getSingleton().getCreatureDefinitions())
@@ -1264,6 +1267,45 @@ const CreatureDefinition* GameMap::getClassDescription(int index)
         return def.first;
 }
 
+void GameMap::setPendingRelationshipStates(const std::vector<RelationshipCreatureState>& states)
+{
+    mPendingRelationshipStates = states;
+}
+
+void GameMap::applyPendingRelationshipStates()
+{
+    // Taken out of the member first, so that the states are applied once even if createAllEntities runs again
+    std::vector<RelationshipCreatureState> states;
+    states.swap(mPendingRelationshipStates);
+    for(size_t i = 0; i < states.size(); ++i)
+    {
+        Creature* creature = getCreature(states[i].mName);
+        if(creature == nullptr)
+        {
+            OD_LOG_WRN("Saved relationship state of unknown creature " + states[i].mName);
+            continue;
+        }
+
+        creature->setRelationshipState(states[i]);
+        // Read back what the creature holds now, so that the restored state can be verified in the log
+        RelationshipCreatureState restored;
+        creature->getRelationshipState(restored);
+        // The fields after captors are appended, so the earlier "rageTurns=N, captors=M" text stays the same
+        std::string captorNames;
+        for(size_t j = 0; j < restored.mCaptors.size(); ++j)
+        {
+            if(j > 0)
+                captorNames += "|";
+            captorNames += restored.mCaptors[j];
+        }
+        OD_LOG_INF("Restored relationship state of " + states[i].mName + ", rageTurns="
+            + std::to_string(restored.mRageTurnsLeft) + ", captors=" + std::to_string(restored.mCaptors.size())
+            + ", rageSeat=" + std::to_string(restored.mRageSeatId) + ", brawlOpponent=" + restored.mBrawlOpponent
+            + ", brawlTurns=" + std::to_string(restored.mBrawlTurnsLeft) + ", captorNames=" + captorNames
+            + ", grief=" + std::to_string(restored.mGriefMood));
+    }
+}
+
 //! \brief Creates loaded entities and restores closed boxes before room-owned action continuation.
 void GameMap::createAllEntities()
 {
@@ -1302,9 +1344,15 @@ void GameMap::createAllEntities()
             //Doesn't do anything currently.
             //creature->restoreInitialEntityState();
         }
+
+        // The definitions are set up now, so the saved relationship states of the creatures can be restored
+        applyPendingRelationshipStates();
     }
-    else 
+    else
     {
+        // Saved relationship states are only applied on the server
+        mPendingRelationshipStates.clear();
+
         // On client we create meshes
         // Create OGRE entities for map tiles
         for (int jj = 0; jj < getMapSizeY(); ++jj)
@@ -2300,6 +2348,10 @@ void GameMap::updateSeatHeartDefense(Seat* seat)
         if (creature->getSeat() == nullptr || seat->isAlliedSeat(creature->getSeat()))
             continue;
         if (!creature->isAlive() || !creature->getIsOnMap())
+            continue;
+        // An enemy knocked out to death (it only lies there until it dies or is carried off) or held in a prison is no
+        // threat: counting it kept every worker of the seat at the heart until it died (owner decision 791).
+        if (creature->isKoDeath() || creature->isInContainment())
             continue;
         Tile* creatureTile = creature->getPositionTile();
         if (creatureTile == nullptr)
