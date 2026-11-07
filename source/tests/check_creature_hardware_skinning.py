@@ -116,7 +116,7 @@ for skeleton in (repo / 'models').glob('*.skeleton'):
 # The contour pass of a highlighted creature skins like the creature, or it would show the bind pose
 enlarge = read('shaders/Enlarge.vert')
 assert 'blendIndices' in enlarge and 'boneMatrices[768]' in enlarge and 'worldViewProj' not in enlarge
-assert 'uniform    float width;' in enlarge and 'normalize(normal.xyz) * width' in enlarge
+assert 'uniform    float pixelWidth;' in enlarge and 'clip.xy += dir * pixelWidth' in enlarge and 'N += weights[i]' in enlarge
 assert 'vertex_program->setSkeletalAnimationIncluded(true);' in render
 assert 'setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4)' in render
 assert 'setNamedAutoConstant("worldViewProj"' not in render

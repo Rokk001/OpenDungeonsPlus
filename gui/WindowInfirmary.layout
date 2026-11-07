@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
     <Window type="OD/FrameWindow" name="InfirmaryWindow">
-        <Property name="Area" value="{{0.5,-280},{0.5,-210},{0.5,280},{0.5,210}}" />
+        <Property name="Area" value="{{0.5,-280},{0.5,-218},{0.5,280},{0.5,218}}" />
         <Property name="Text" value="Infirmary" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />

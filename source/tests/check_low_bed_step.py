@@ -32,7 +32,7 @@ struct GameMap {std::vector<RenderedMovableEntity*> objects;const auto& getRende
 struct Creature {
  Ogre::SceneNode* node;GameMap* map;std::string mesh="Kobold.mesh";int level=30;
  Ogre::Vector3 pos{2,5,0},direction{1,0,0};bool moving=true,onMap=true;
- auto* getEntityNode(){return node;}bool getIsOnMap(){return onMap;}bool isMoving(){return moving;}
+ Ogre::SceneNode* getEntityNode(){return node;}bool getIsOnMap(){return onMap;}bool isAlive(){return true;}bool isMoving(){return moving;}
  auto* getGameMap(){return map;}const auto& getPosition(){return pos;}const auto& getWalkDirection(){return direction;}
  const auto& getMeshName(){return mesh;}int getLevel(){return level;}double getLevelScale()const{return 1.0+.10*(level-1)/29.0;}
 };

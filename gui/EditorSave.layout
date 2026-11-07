@@ -12,7 +12,7 @@
             <Property name="BackgroundEnabled" value="False" />
         </Window>
         <Window type="OD/MenuFrameWindow" name="LevelWindowFrame" >
-            <Property name="Area" value="{{0.5,-250},{0.5,-180},{0.5,250},{0.5,240}}" />
+            <Property name="Area" value="{{0.5,-290},{0.5,-200},{0.5,290},{0.5,315}}" />
             <Property name="Text" value="Please choose a Level..." />
             <Property name="MaxSize" value="{{0,1000},{0,1000}}" />
             <Property name="MinSize" value="{{0,800},{0,600}}" />
@@ -34,7 +34,7 @@
                 <Property name="Text" value="Back" />
             </Window>
             <Window type="OD/Checkbox" name="OnlyLevel" >
-                <Property name="Area" value="{{0.5,-199},{0.75,85},{0.5,-35},{0.75,95}}" />      
+                <Property name="Area" value="{{0.5,-199},{0.75,85},{0.5,-5},{0.75,108}}" />      
                 <Property name="Text" value="Show Only Level Files" />
                 <Property name="TooltipText" value="Filter by the extension *.level" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
@@ -45,7 +45,7 @@
                 <Property name="Text" value="Save" />
             </Window>
             <Window type="OD/Checkbox" name="HiddenFiles" >
-                <Property name="Area" value="{{0.5,12},{0.75,85},{0.5,200},{0.75,95}}" />      
+                <Property name="Area" value="{{0.5,12},{0.75,85},{0.5,200},{0.75,108}}" />      
                 <Property name="Text" value="Show Hidden Files" />
                 <Property name="TooltipText" value="Whether to show hidden files" />
                 <Property name="MaxSize" value="{{1,0},{1,0}}" />
