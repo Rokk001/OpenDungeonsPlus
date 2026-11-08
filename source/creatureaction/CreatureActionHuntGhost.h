@@ -58,8 +58,10 @@ public:
     //! \brief Returns the time of one transfer from the trap socket into the cauldron in turns (GhostTransferSeconds,
     //! decision 845; the same for every hunter, only the CatchTime research of the keeper shortens it).
     double getTransferTurns() const;
-    //! \brief Returns the fixed beam pull duration in turns (GhostBeamSeconds, the same for every hunter) while the
-    //! beam pulls the ghost into the box, else 0.
+    //! \brief Returns the beam seconds of a hunter: GhostBeamSeconds times the CatchTime research factor of its keeper
+    //! divided by its ghost room efficiency (decisions 855 and 857). Server and client use it alike.
+    static double getBeamSeconds(const Creature& hunter);
+    //! \brief Returns the beam pull duration in turns (getBeamSeconds) while the beam pulls the ghost into the box, else 0.
     double getCaptureTurns() const;
     //! \brief Returns the current exact fractional phase clock.
     double getStepTurns() const { return mTurns; }
