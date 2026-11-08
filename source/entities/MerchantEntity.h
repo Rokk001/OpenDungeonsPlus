@@ -35,9 +35,9 @@ public:
 private:
     double mIdleTurns;
     double mDealTurns;
-    //! rief True once the figure has turned from the wall to the table or room for the current stop.
+    //! brief True once the figure has turned from the wall to the table or room for the current stop.
     bool mFacedRoom = false;
-    //! rief Returns the direction from a table tile into the room, with the back to any wall, or zero.
+    //! brief Returns the direction from a table tile into the room, with the back to any wall, or zero.
     Ogre::Vector3 getRoomFacing(Tile* tile, Room* room) const;
 };
 

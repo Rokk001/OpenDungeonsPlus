@@ -156,7 +156,7 @@ void MerchantEntity::doUpkeep()
     mIdleTurns = Random::Double(IDLE_SECONDS_MIN, IDLE_SECONDS_MAX) * ODApplication::turnsPerSecond;
 }
 
-//! rief Turns the back to the wall side of a tile and the face to the open room side.
+//! brief Turns the back to the wall side of a tile and the face to the open room side.
 Ogre::Vector3 MerchantEntity::getRoomFacing(Tile* tile, Room* room) const
 {
     static const int DIRECTIONS[][2] = {{0,1},{1,0},{0,-1},{-1,0}};
