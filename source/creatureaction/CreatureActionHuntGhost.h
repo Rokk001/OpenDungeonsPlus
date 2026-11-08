@@ -46,16 +46,17 @@ public:
     static void playSound(GameMap& map, Tile& tile, const std::string& family);
     //! \brief Returns whether this hunt currently wears its backpack.
     bool hasBackpack() const { return mEquipped && !mInterrupted; }
-    //! \brief Returns the visual box phase: 0 absent, 1 flying from the hand under the ghost, 2 held in the hunter's
-    //! hand (from the hook until it is hung back, also while still empty), 3 lying on the floor under the ghost while
-    //! the beam pulls the ghost in and until the hunter picks the closed box up again, 4 lying under the ghost while it
-    //! snaps shut with the bang, 5 standing open in the trap socket of the cauldron while the ghost flows out of it into
-    //! the cauldron (decision 845).
+    //! \brief Returns the visual box phase: 0 absent, 1 flying shut from the hand under the ghost, 2 held shut in the
+    //! hunter's hand (from the hook until it is hung back, also while still empty), 3 lying on the floor under the ghost
+    //! while it opens and the beam then pulls the ghost in, 4 lying under the ghost while it snaps shut with the bang,
+    //! 5 put by hand into the delivery device beside the hunter at the cauldron, shut, while the ghost flows out of the
+    //! device into the cauldron (decisions 845 and 865), 6 lying shut under the caught ghost until the hunter picks it
+    //! up (decision 865: once shut it stays shut).
     uint32_t getBoxVisualState() const;
     //! \brief Returns the ghost under a box being thrown, pulled in, snapping shut or waiting to be picked up, or the
-    //! ghost being transferred from the trap socket into the cauldron.
+    //! ghost being transferred from the delivery device into the cauldron.
     std::string getThrowGhostName() const;
-    //! \brief Returns the time of one transfer from the trap socket into the cauldron in turns (GhostTransferSeconds,
+    //! \brief Returns the time of one transfer from the delivery device into the cauldron in turns (GhostTransferSeconds,
     //! decision 845; the same for every hunter, only the CatchTime research of the keeper shortens it).
     double getTransferTurns() const;
     //! \brief Returns the beam seconds of a hunter: GhostBeamSeconds times the CatchTime research factor of its keeper
@@ -103,6 +104,9 @@ private:
     bool mInterrupted = false;
     bool mRestoring = false;
     bool mRegistered = false;
+    //! \brief True once the hunter has put the trap into the delivery device at the cauldron with the put-in motion
+    //! (decision 865); runtime only, a loaded delivery derives it from its saved clock (restore).
+    bool mPutIn = false;
     std::vector<Ogre::Vector2> mLoadedPath;
 };
 #endif

@@ -334,23 +334,29 @@ void GhostEntity::updateLook()
     const double transfer = std::max(0.0, std::min(1.0, mTransferProgress));
     if(mState == GhostState::boxed && transfer > 0.0)
     {
-        // The transfer into the cauldron (decision 845), visible for the whole GhostTransferSeconds: the boxed ghost
-        // waits in the trap socket (mPosition). Over the first tenth it rises out of the open trap at half size, then it
-        // spirals five times round the socket down to the ectoplasm surface while it shrinks, and over the last tenth it
-        // sinks into the ectoplasm and fades out.
+        // The transfer into the cauldron (decisions 845 and 865), visible for the whole flow: the boxed ghost waits in
+        // the delivery device beside the hunter (mPosition). Over the first tenth it rises out of the device at half size
+        // to TRANSFER_RISE over the ectoplasm in the cauldron's mouth (mTransferTarget); over the first quarter of the
+        // spiral it glides over the rim to the middle of the mouth, it spirals five times down to the ectoplasm surface
+        // while it shrinks, and over the last tenth it sinks into the ectoplasm and fades out.
+        const Ogre::Vector3 mouth = mHasTransferTarget ? mTransferTarget : mPosition;
         const double rise = std::min(1.0, transfer / 0.1);
         const double spiral = std::max(0.0, std::min(1.0, (transfer - 0.1) / 0.8));
         const double fade = std::max(0.0, std::min(1.0, (transfer - 0.9) / 0.1));
+        const double glide = std::min(1.0, spiral / 0.25);
         const double angle = spiral * 5.0 * 2.0 * Ogre::Math::PI;
         const double radius = 0.42 * std::sin(spiral * Ogre::Math::PI) + 0.1 * (1.0 - spiral);
-        // From TRANSFER_RISE over the socket down to the ectoplasm surface 0.40 below it, then 0.2 into it
+        // From the device up to TRANSFER_RISE over the ectoplasm surface, down to the surface, then 0.2 into it
         static const double TRANSFER_RISE = 0.45;
-        const double lift = TRANSFER_RISE * rise - (TRANSFER_RISE + 0.40) * spiral - 0.2 * fade;
+        const double top = std::max(mPosition.z, mouth.z) + TRANSFER_RISE;
+        const double lift = mPosition.z + (top - mPosition.z) * rise - (top - mouth.z) * spiral - 0.2 * fade;
+        const double centreX = mPosition.x + (mouth.x - mPosition.x) * glide;
+        const double centreY = mPosition.y + (mouth.y - mPosition.y) * glide;
         const double size = minScale * (1.0 - 0.6 * spiral);
         node->setScale(Ogre::Vector3::UNIT_SCALE*static_cast<Ogre::Real>(size));
         node->setVisible(true);
-        node->setPosition(mPosition + Ogre::Vector3(static_cast<Ogre::Real>(radius * std::cos(angle)),
-            static_cast<Ogre::Real>(radius * std::sin(angle)), static_cast<Ogre::Real>(lift)));
+        node->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(centreX + radius * std::cos(angle)),
+            static_cast<Ogre::Real>(centreY + radius * std::sin(angle)), static_cast<Ogre::Real>(lift)));
         alpha = 0.45f * static_cast<float>(rise * (1.0 - fade));
     }
     setMeshOpacity(alpha);
