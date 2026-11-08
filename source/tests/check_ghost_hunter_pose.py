@@ -93,12 +93,21 @@ code = code_only(action)
 assert 'getPosition()-mCreature.getPosition()' not in code and 'socket-mCreature.getPosition()' not in code, 'no 3D facing direction left'
 directions = re.findall(r'setAnimationState\(([^;]*?)\);', code)
 directed = [d for d in directions if 'idle_anim' not in d]
-assert len(directed) == 4, directed
+assert len(directed) == 3, directed
 for call in directed:
     assert 'facing(mCreature,' in call, ('every clip with a direction faces flat', call)
-has(code, 'the three clips', 'EntityAnimation::throw_anim,false,facing(mCreature,ghost->getPosition()),true)',
-    'EntityAnimation::beam_anim,true,facing(mCreature,ghost->getPosition()),false)',
-    'EntityAnimation::empty_anim,false,facing(mCreature,socket),true)')
+has(code, 'the two clips', 'EntityAnimation::throw_anim,false,facing(mCreature,ghost->getPosition()),true)',
+    'EntityAnimation::beam_anim,true,facing(mCreature,ghost->getPosition()),false)')
+# Decision 936: the put-in and the pick-up turn him flat to the seat and to the trap with his Idle clip (the client lays
+# its generated reach and bend pose over it); every Idle request with a direction faces flat as well
+idle_directed = [d for d in directions if 'idle_anim' in d and 'Ogre::Vector3::ZERO,false' not in d]
+# (put-in, pick-up step of states 9 and 8, restore of a pick-up saved while he bends down)
+assert len(idle_directed) == 3, idle_directed
+for call in idle_directed:
+    assert 'facing(mCreature,' in call, ('every Idle with a direction faces flat', call)
+has(code, 'put-in and pick-up', 'EntityAnimation::idle_anim,true,facing(mCreature,socket),false)',
+    'EntityAnimation::idle_anim,true,point==nullptr?Ogre::Vector3::ZERO:facing(mCreature,*point),false)',
+    'item==nullptr?Ogre::Vector3::ZERO:facing(mCreature,item->getPosition()),false)')
 # The client turn the flat direction is applied to: the shortest arc from the forward axis, no flattening of its own
 render = read('source/render/RenderManager.cpp')
 orient = body(render, 'void RenderManager::rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction)')
