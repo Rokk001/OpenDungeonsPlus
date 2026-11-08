@@ -6662,7 +6662,7 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
 //! against the full colour item picture of a filled slot (owner decision 918)
 static const char* const EMPTY_ITEM_SLOT_COLOURS = "tl:66A0A0A0 tr:66A0A0A0 bl:66A0A0A0 br:66A0A0A0";
 
-//! \brief Shows the 13 slots of the creature (or empty slots for a null creature) with pictures, tooltips and locks.
+//! \brief Shows actual worn items or permanent hand equipment, with pictures, quality, base values and private-slot locks.
 void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks)
 {
     const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
@@ -6674,6 +6674,7 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
     for(std::size_t slot = 0; (slot < 13) && (slot < slots.size()); ++slot)
     {
         std::unique_ptr<ItemInstance> spawnFallback;
+        const Weapon* heldWeapon = nullptr;
         const ItemInstance* item = nullptr;
         bool locked = false;
         if(creature != nullptr)
@@ -6695,19 +6696,20 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
                 {
                     spawnFallback = ItemDrops::poorWeapon(*weapon);
                     item = spawnFallback.get();
+                    heldWeapon = weapon;
                 }
             }
             // Every seat knows how many potion slots the creature has unlocked by its level
             locked = showLocks && slot >= 6 && slot < 9 && slot - 6 >= creature->mPotionSlots.size();
         }
         CEGUI::Window* image = slots[slot];
-        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
+        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName(heldWeapon);
         image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
             name : "OpenDungeonsIcons/ItemSlotEmpty");
         CEGUI::Window* slotType = image->getChild("SlotType");
         slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
         slotType->setVisible(item == nullptr);
-        image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap()));
+        image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap(), heldWeapon));
         CEGUI::Window* frame = image->getChild("QualityFrame");
         frame->setVisible(item != nullptr);
         if(item != nullptr)
