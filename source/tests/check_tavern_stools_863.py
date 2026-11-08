@@ -31,8 +31,9 @@ What is checked (python only, no compiler, no game; fixed values of this branch,
   finding 9    when a duel starts (code) and how often: a model of the upkeep of two guests at one table gives a game in
                59 percent of the visits and a slap duel in 20 when they sit down together, 29 and 9.5 percent when the
                second comes 0 to 120 turns later; a model of playDuelTurn gives slaps of 6 to 14
-               turns (4.3 to 10 s), pauses of 5 to 8 turns (3.6 to 5.7 s), a knock-out state of 41 turns after the turn the
-               duel ends (29.3 s: DuelKoTurns 42 is counted down once in that same turn) and a get-up of 9 turns (6.4 s)
+               turns (4.3 to 10 s), pauses of 5 to 8 turns (3.6 to 5.7 s), a knock-out state of 42 turns after the turn the
+               duel ends (30 s, decision 897: DuelKoTurns 42 plus the turn of the knock-out, which upkeepSpots counts
+               down in that same turn) and a get-up of 9 turns (6.4 s)
 
 Call from the repository root:
   python source/tests/check_tavern_stools_863.py
@@ -360,7 +361,8 @@ def check_duel():
                   'clock.mTurnsLeft <= clock.mSlapTurns / 2', 'getTavernValue("SlapDuelLoseBelowHp")'):
         assert token in duel, token
     knock = extract(room, 'void RoomTavern::knockOut(')
-    assert 'setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")));' in knock
+    assert 'setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")) + KNOCK_OUT_TURN);' in knock
+    assert re.search(r'^const int32_t KNOCK_OUT_TURN = 1;$', room, re.M)
     spots = extract(room, 'void RoomTavern::upkeepSpots(')
     assert 'setSpotState(spot, TavernGuestState::getUp, getUpTurns());' in spots
 
@@ -373,15 +375,15 @@ def check_duel():
     assert set(pauses) == set(range(5, 9)), sorted(set(pauses))
     assert 4.0 <= min(slaps) / TURNS_PER_SECOND and max(slaps) / TURNS_PER_SECOND <= 10.0
     assert 3.0 <= min(pauses) / TURNS_PER_SECOND and max(pauses) / TURNS_PER_SECOND <= 6.0
-    # The knock-out: set in upkeepGames, counted down by upkeepSpots in the same turn and every turn after it
-    # (the turns after the knock-out turn until the get-up starts)
-    ko_left, ko_turns = 42, 0
+    # The knock-out: set in upkeepGames to DuelKoTurns + KNOCK_OUT_TURN, counted down by upkeepSpots in the same turn and
+    # every turn after it (the turns after the knock-out turn until the get-up starts): 42 turns, 30 s (decision 897)
+    ko_left, ko_turns = 42 + 1, 0
     ko_left -= 1
     while ko_left > 0:
         ko_turns += 1
         ko_left -= 1
     get_up = math.ceil(6 * TURNS_PER_SECOND)
-    assert ko_turns == 41 and get_up == 9
+    assert ko_turns == 42 and abs(ko_turns / TURNS_PER_SECOND - 30.0) < 1e-9 and get_up == 9
     # How often: two guests of one keeper at one table, beer served and paid. Measured with these seeds on this branch:
     # seated in the same turn, a game in 59.4 percent of the visits and a slap duel in 19.8; the second guest 0 to 120 turns
     # later, a game in 28.5 and a duel in 9.5 percent (a guest that is done before its mate came does not wait for it)

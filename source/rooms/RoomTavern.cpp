@@ -179,6 +179,9 @@ int32_t randomDuelTurns(const std::string& minKey, const std::string& maxKey)
 }
 //! \brief Turns a guest stays done after its last drink while a game partner may be found.
 const int32_t DONE_WAIT_TURNS = 1;
+//! \brief The turn of the knock-out itself: upkeepSpots counts it down in the same upkeep as upkeepGames knocks the loser
+//! out, so the lying count starts this much above DuelKoTurns (decision 897: 42 turns lying, exactly 30 s)
+const int32_t KNOCK_OUT_TURN = 1;
 //! \brief The floor a knocked-out guest covers in its KnockedOut clip, in tiles at level scale 1, in the frame of the
 //! creature (it looks along -y): from mBehindMin to mBehindMax along +y (behind it) and mHalfWidth to either side. Measured
 //! on all 33 frames of the clip of every model that visits the tavern and is not large (decision 833: the lying body
@@ -2255,7 +2258,9 @@ void RoomTavern::abortGame(std::map<RoomTavernSeat, RoomTavernGame>::iterator it
 void RoomTavern::knockOut(RoomTavernSpot& spot)
 {
     spot.mSleepAfter = true;
-    setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")));
+    // Decision 897: the loser lies exactly DuelKoTurns turns (42 turns, 30 s). The knock-out comes from upkeepGames, and
+    // upkeepSpots counts the same turn down right after it, so the count starts one turn higher
+    setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")) + KNOCK_OUT_TURN);
     if(!fallNextToBench(spot))
         showSpotState(nullptr, spot);
 }
