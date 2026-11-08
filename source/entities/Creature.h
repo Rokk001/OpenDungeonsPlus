@@ -2274,8 +2274,18 @@ private:
     Ogre::BillboardChain* mGhostTrapCone = nullptr;
     //! \brief Open share of the lying box's lid shown on the client, 0 closed, 1 open (decision 801).
     double mGhostLidShown = 0.0;
-    //! \brief Client-smoothed share of the transfer of the ghost from the trap socket into the cauldron (decision 845).
+    //! \brief Client-smoothed share of the transfer of the ghost from the delivery device into the cauldron (decisions 845, 865).
     double mGhostTransferShown = 0.0;
+    //! \brief The delivery device on the cauldron rim directly beside the delivering hunter (decision 865): a brass cradle
+    //! on an iron arm, drawn while he delivers (mGhostDeliveryHinge on the rim, the device swinging out on it).
+    Ogre::SceneNode* mGhostDeliveryHinge = nullptr;
+    Ogre::SceneNode* mGhostDeliveryNode = nullptr;
+    Ogre::ManualObject* mGhostDeliveryDevice = nullptr;
+    //! \brief Client seconds since the delivery began (the put-in runs over its first GhostPutInSeconds), the ghost that
+    //! came first in the trap (only its transfer waits for the put-in) and the middle of the cauldron's mouth.
+    double mGhostDeliveryClock = 0.0;
+    std::string mGhostDeliveryGhost;
+    Ogre::Vector3 mGhostDeliveryMouth = Ogre::Vector3::ZERO;
     //! \brief The running mood effects (buffs and debuffs). Saved on the server, sent to the keeper for the effect line.
     //! Declared before mActions, so that it is still alive when the actions of the creature end a pleasure visit (the
     //! pleasure buff starts then).

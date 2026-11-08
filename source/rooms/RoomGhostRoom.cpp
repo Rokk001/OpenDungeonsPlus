@@ -1102,12 +1102,34 @@ Tile* RoomGhostRoom::getHunterCauldron(const Creature& hunter) const
     return nullptr;
 }
 
-Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(const Tile& anchor)
+Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(const Tile& anchor, const Tile& standing)
 {
-    // The cauldron stands centred on its 2x2 block (createCauldronObjects); the glowing intake ring of its trap socket
-    // tops out 1.574 above the floor (models/GhostCauldron.mesh, measured on the export)
-    static const float TRAP_SOCKET_HEIGHT=1.574f;
-    return Ogre::Vector3(anchor.getX()+0.5f,anchor.getY()+0.5f,TRAP_SOCKET_HEIGHT);
+    // Decision 865: the delivery device stands directly beside the hunter, within reach of his hand, not over the middle
+    // of the cauldron's top. The cauldron stands centred on its 2x2 block (createCauldronObjects); the device sits on the
+    // line from the middle of the hunter's tile to the middle of the cauldron, GhostDeliveryHandReach from the hunter
+    // (never past the middle), its top at the hand height GhostDeliveryHeight, where the trap is put in.
+    const ConfigManager& config=ConfigManager::getSingleton();
+    const float centreX=anchor.getX()+0.5f,centreY=anchor.getY()+0.5f;
+    const float towardsX=centreX-static_cast<float>(standing.getX()),towardsY=centreY-static_cast<float>(standing.getY());
+    // The middle of a tile is never the middle of a 2x2 block, so the distance is at least half a tile diagonal
+    const float distance=std::sqrt(towardsX*towardsX+towardsY*towardsY);
+    const float reach=std::min(static_cast<float>(config.getRoomConfigDouble("GhostDeliveryHandReach")),distance);
+    return Ogre::Vector3(static_cast<float>(standing.getX())+towardsX*reach/distance,
+        static_cast<float>(standing.getY())+towardsY*reach/distance,static_cast<float>(config.getRoomConfigDouble("GhostDeliveryHeight")));
+}
+
+Ogre::Vector3 RoomGhostRoom::getCauldronMouthPosition(const Ogre::Vector3& cauldron)
+{
+    // The glowing ectoplasm surface fills the mouth 1.17 above the floor (models/GhostCauldron.mesh, measured on the export)
+    static const float ECTOPLASM_SURFACE_HEIGHT=1.17f;
+    return Ogre::Vector3(cauldron.x,cauldron.y,ECTOPLASM_SURFACE_HEIGHT);
+}
+
+float RoomGhostRoom::getCauldronRimRadius()
+{
+    // The rolled rim reaches 0.66 out from the middle of the cauldron (models/GhostCauldron.mesh, measured on the export)
+    static const float RIM_RADIUS=0.66f;
+    return RIM_RADIUS;
 }
 
 void RoomGhostRoom::releaseCauldron(Creature& hunter)

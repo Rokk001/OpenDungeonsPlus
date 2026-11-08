@@ -82,9 +82,18 @@ public:
     size_t getHunterHookSlot(const Creature& hunter) const;
     //! \brief Returns the exact cauldron anchor reserved by a hunter.
     Tile* getHunterCauldron(const Creature& hunter) const;
-    //! \brief Returns the delivery point of a cauldron (decision 845): the top of the trap socket over the middle of the
-    //! cauldron's mouth, where the hunter sets the trap and the ghost waits while it flows into the cauldron.
-    static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor);
+    //! \brief Returns the delivery point of a cauldron for a hunter standing on a tile beside it (decision 865, replacing
+    //! the socket over the middle of the mouth of decision 845): the top of the delivery device on the cauldron's rim
+    //! directly beside the hunter, GhostDeliveryHandReach from the middle of his tile towards the cauldron at the hand
+    //! height GhostDeliveryHeight. The hunter puts the trap into it by hand and the ghost waits there while it flows
+    //! into the cauldron.
+    static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor, const Tile& standing);
+    //! \brief Returns the middle of the ectoplasm surface in the mouth of a cauldron object standing at the given
+    //! position (models/GhostCauldron.mesh): where a delivered ghost sinks into the cauldron.
+    static Ogre::Vector3 getCauldronMouthPosition(const Ogre::Vector3& cauldron);
+    //! \brief Returns the outer radius of the cauldron's rolled rim in tiles (models/GhostCauldron.mesh): the delivery
+    //! device hangs on the rim there.
+    static float getCauldronRimRadius();
     //! \brief Reserves the nearest free equipment hook for a hunter.
     Tile* reserveHook(Creature& hunter);
     //! \brief Changes a reserved hook between its equipped and empty appearance.
