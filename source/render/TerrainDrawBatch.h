@@ -50,8 +50,20 @@ private:
         bool canBatch();
         //! Queues either the region or its originals, never both.
         bool objectRendering(const Ogre::MovableObject* object, const Ogre::Camera* camera) override;
-        //! Overrides region-centre light selection with the identical per-tile list.
+        //! Overrides region-centre light selection with the identical per-tile list and gives every
+        //! member tile Ogre's lights in canonical order.
         const Ogre::LightList* objectQueryLights(const Ogre::MovableObject* object) override;
+        //! One member tile's lights in canonical order, refreshed whenever Ogre's light lists may change.
+        struct CanonicalLights
+        {
+            CanonicalLights() : mLightsDirtyCounter(0), mValid(false)
+            {
+            }
+            Ogre::LightList mLights;
+            unsigned long mLightsDirtyCounter;
+            bool mValid;
+        };
+        std::map<const Ogre::MovableObject*, CanonicalLights> mCanonicalLights;
         std::vector<Ogre::Entity*> mEntities;
         std::vector<Ogre::Affine3> mTransforms;
         Ogre::MaterialPtr mMaterial;
@@ -68,6 +80,9 @@ private:
         std::chrono::steady_clock::time_point mNextBuildProbe;
         Ogre::uint32 mVisibilityMask;
     };
+    //! Keeps the shadow light first and orders the other lights by identity when the tile shaders read
+    //! all of them, so tiles lit by the same lights get the same list.
+    static void canonicalizeLightOrder(Ogre::LightList& lights);
     //! Destroys a cell's geometry immediately, retaining the original entity draws.
     void invalidate(Cell& cell);
     //! Splits a rejected dirty cell by exact ordered lights without changing draw eligibility.

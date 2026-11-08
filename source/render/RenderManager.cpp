@@ -22,6 +22,7 @@
 #include "render/RenderManager.h"
 #include "ODApplication.h"
 #include "render/GroundShadowCameraSetup.h"
+#include "render/ShadowCasterSceneManager.h"
 
 #include "camera/CullingManager.h"
 #include "gamemap/RoomObjectBounds.h"
@@ -1684,7 +1685,9 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     // the nearest lights of each object, so the lights have to be sorted per object as in OGRE 13.
     Ogre::SceneManager::usePerRenderableLights(true);
 #endif
-    mSceneManager = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager", "SceneManager");
+    // Ogre's default scene manager whose shadow texture pass skips objects that cast no shadow
+    // (most of all the terrain tiles); the shadow texture and the image stay the same.
+    mSceneManager = Ogre::Root::getSingleton().createSceneManager(ShadowCasterSceneManager::registerFactory(), "SceneManager");
     mShaderGenerator = Ogre::RTShader::ShaderGenerator::getSingletonPtr();
 
     mShaderGenerator->setShaderCachePath(ResourceManager::getSingletonPtr()->getShaderCachePath());

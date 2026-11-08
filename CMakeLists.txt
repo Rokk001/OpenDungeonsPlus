@@ -554,6 +554,7 @@ set(OD_SOURCEFILES
     ${SRC}/render/RenderManagerChickens.cpp
     ${SRC}/render/TreasuryGoldBatch.cpp
     ${SRC}/render/TerrainDrawBatch.cpp
+    ${SRC}/render/ShadowCasterSceneManager.cpp
     ${SRC}/render/TreasuryGoldMesh.cpp
     ${SRC}/render/TextRenderer.cpp
 

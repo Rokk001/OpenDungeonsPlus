@@ -14,6 +14,7 @@
 #include <OgreGpuProgramParams.h>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <sstream>
 #include <utility>
 
@@ -147,12 +148,38 @@ bool TerrainDrawBatch::Cell::objectRendering(const Ogre::MovableObject* object, 
     return false;
 }
 
-//! Original entities use Ogre's finder, whereas the region reuses the common ordered list.
+//! Original entities use Ogre's finder in canonical order, whereas the region reuses the common ordered list.
+//! Ogre uploads all light parameters again whenever the ordered list differs from the previous draw's, so
+//! neighbouring tiles lit by the same lights now share one upload and can share one batch.
 const Ogre::LightList* TerrainDrawBatch::Cell::objectQueryLights(const Ogre::MovableObject* object)
 {
-    if(object->getMovableType() != "StaticGeometry")
+    if(object->getMovableType() == "StaticGeometry")
+        return &mLights;
+    Ogre::SceneNode* node = object->getParentSceneNode();
+    // Detached or bone-attached objects keep Ogre's own handling.
+    if(node == nullptr || object->isParentTagPoint() || node->getCreator() == nullptr)
         return nullptr;
-    return &mLights;
+    // Same refresh rule as MovableObject::queryLights: recompute when Ogre's light dirty counter changes.
+    const unsigned long counter = node->getCreator()->_getLightsDirtyCounter();
+    CanonicalLights& entry = mCanonicalLights[object];
+    if(!entry.mValid || entry.mLightsDirtyCounter != counter)
+    {
+        node->findLights(entry.mLights, object->getBoundingRadiusScaled(), object->getLightMask());
+        canonicalizeLightOrder(entry.mLights);
+        entry.mLightsDirtyCounter = counter;
+        entry.mValid = true;
+    }
+    return &entry.mLights;
+}
+
+//! The tile shaders apply the single shadow texture to light 0 only and add up every other light the
+//! same way, so only light 0 and the set of lights matter. Lists longer than the shader's light slots
+//! keep Ogre's order, because reordering them would change which lights the shader receives.
+void TerrainDrawBatch::canonicalizeLightOrder(Ogre::LightList& lights)
+{
+    if(lights.size() < 3 || lights.size() > TILE_SHADER_LIGHTS)
+        return;
+    std::sort(lights.begin() + 1, lights.end(), std::less<Ogre::Light*>());
 }
 
 //! Rejects other shaders, overlays, animation, LOD, scaling and pre-existing listeners. Earth, gold ground,
@@ -250,11 +277,13 @@ void TerrainDrawBatch::partitionByLights(Cell& cell)
     cell.mBuildAllowed = true;
 }
 
-//! Removes generated geometry and resets construction retry state before a source changes.
+//! Removes generated geometry, resets construction retry state and forgets cached member lights before a
+//! source changes, so a destroyed or re-added entity can never reuse an old light list.
 void TerrainDrawBatch::invalidate(Cell& cell)
 {
     if(cell.mGeometry != nullptr)
         mScene->destroyStaticGeometry(cell.mGeometry);
+    cell.mCanonicalLights.clear();
     cell.mGeometry = nullptr;
     cell.mDirty = true;
     cell.mBuildAllowed = false;
