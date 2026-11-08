@@ -12678,12 +12678,19 @@ void Creature::refreshGhostHuntVisuals()
                 const double transfer=hunt->getTransferTurns();
                 turns=transfer>0.0?std::min(1.0,turns/transfer):1.0;
             }
+            // While he lifts the box from the floor the clock is the share of the pick-up already done (decision 936):
+            // a loaded game or a keeper who looks on late starts the lift there
+            else if(boxMode==7)
+            {
+                const double pickUp=CreatureActionHuntGhost::getPickUpTurns();
+                turns=pickUp>0.0?std::min(1.0,turns/pickUp):1.0;
+            }
             break;
         }
     // The throw (1) and the snap (4) send their own step clock, the beam (3) the pulled-in share, the transfer (5) the
-    // transferred share.
+    // transferred share, the pick-up (7) the share of the lift.
     if(backpack!=mGhostBackpack || target!=mGhostBeamTarget || boxMode!=mGhostBoxMode || thrown!=mGhostThrowTarget ||
-       ((boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5) && turns!=mGhostThrowTurns))
+       ((boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5 || boxMode==7) && turns!=mGhostThrowTurns))
     {
         mGhostBackpack=backpack;mGhostBeamTarget=target;mGhostBoxMode=boxMode;
         mGhostThrowTarget=thrown;mGhostThrowTurns=turns;mNeedFireRefresh=true;
@@ -13020,10 +13027,19 @@ void Creature::stopGhostPose()
     mGhostPose=nullptr;mGhostPoseName.clear();
 }
 
+//! \brief Shows or hides the mesh of a lying box entity (GhostBoxEntity) by its name, if it still exists (decision 936).
+static void showGhostBoxEntity(GameMap& map, const std::string& name, bool shown)
+{
+    if(name.empty()) return;
+    GameEntity* box=map.getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,name);
+    if(box!=nullptr && box->getEntityNode()!=nullptr) box->getEntityNode()->setVisible(shown);
+}
+
 void Creature::clearGhostHuntVisuals()
 {
     if(getIsOnServerMap()) return;
     stopGhostPose();
+    showGhostBoxEntity(*getGameMap(),mGhostHiddenBox,true);mGhostHiddenBox.clear();
     Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
     if(!mGhostShrinkTarget.empty())
     {
@@ -13257,9 +13273,14 @@ void Creature::updateGhostHuntVisuals(double seconds)
         mGhostDeliveryGhost.clear();mGhostDeliveryClock=0.0;
         mGhostFlowGhost.clear();mGhostFlowClock=0.0;mGhostFlowCorrection=0.0;mGhostFlowSeen=-1.0;
     }
-    // The client clock of the pick-up, advanced every frame
-    if(mGhostBoxMode==7) mGhostPoseClock+=seconds*getGameMap()->getGameSpeedFactor();
-    else mGhostPoseClock=0.0;
+    // The client clock of the pick-up, advanced every frame; it starts at the share the server has already done (0 for
+    // a fresh pick-up, more after loading a game in the middle of it, decision 936)
+    if(mGhostBoxMode==7)
+    {
+        if(mGhostPoseClock<0.0) mGhostPoseClock=mGhostThrowTurns*ConfigManager::getSingleton().getRoomConfigDouble("GhostPickUpSeconds");
+        else mGhostPoseClock+=seconds*getGameMap()->getGameSpeedFactor();
+    }
+    else mGhostPoseClock=-1.0;
     if(lyingBox && mGhostBoxNode==nullptr)
     {
         Ogre::Entity* box=scene->createEntity(getName()+"_ThrownGhostBox","GhostBox.mesh");
@@ -13275,10 +13296,27 @@ void Creature::updateGhostHuntVisuals(double seconds)
     {
         mGhostBoxNode->setVisible(lyingBox);
         GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostThrowTarget));
-        if(ghost!=nullptr && lyingBox)
+        // Decision 936 point 2, state 8: the hunter lifts a previously dropped lying box (GhostBoxEntity) from the floor.
+        // Its own mesh is hidden while his trap shows the lift from the place where it lay; once the server has taken
+        // it away the lift goes on from that place, and an interrupted lift shows the lying box again.
+        bool droppedBox=false;
+        if(mGhostBoxMode==7 && ghost==nullptr)
         {
-            // The box lands on the floor under the ghost, never in the air.
-            const Ogre::Vector3 floor(ghost->getPosition().x,ghost->getPosition().y,0.0f);
+            GameEntity* dropped=getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,mGhostThrowTarget);
+            if(dropped!=nullptr)
+            {
+                if(mGhostHiddenBox!=dropped->getName()) { showGhostBoxEntity(*getGameMap(),mGhostHiddenBox,true);mGhostHiddenBox=dropped->getName(); }
+                mGhostPickFloor=dropped->getPosition();
+                if(dropped->getEntityNode()!=nullptr) dropped->getEntityNode()->setVisible(false);
+            }
+            droppedBox=!mGhostHiddenBox.empty();
+        }
+        else if(!mGhostHiddenBox.empty()) { showGhostBoxEntity(*getGameMap(),mGhostHiddenBox,true);mGhostHiddenBox.clear(); }
+        if(mGhostBoxMode==7 && ghost==nullptr && !droppedBox) mGhostBoxNode->setVisible(false);
+        if((ghost!=nullptr || droppedBox) && lyingBox)
+        {
+            // The box lands on the floor under the ghost, never in the air; a dropped box starts where it lies.
+            const Ogre::Vector3 floor=ghost==nullptr?mGhostPickFloor:Ogre::Vector3(ghost->getPosition().x,ghost->getPosition().y,0.0f);
             Ogre::Vector3 position=floor;
             if(mGhostBoxMode==1)
             {
@@ -13428,8 +13466,11 @@ void Creature::updateGhostHuntVisuals(double seconds)
             // Only the snap rocks the box; thrown, lying and delivered boxes stand upright (the seat takes the trap as it is).
             if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(boxTurn);
             mGhostBoxNode->setPosition(position);
-            ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
-            ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);
+            if(ghost!=nullptr)
+            {
+                ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
+                ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);
+            }
             // The hinged lid of the box mesh turns open on its "Open" clip: 0 shut, the clip end fully open.
             Ogre::Entity* trap=static_cast<Ogre::Entity*>(mGhostBoxNode->getAttachedObject(static_cast<unsigned short>(0)));
             if(trap->hasSkeleton() && trap->hasAnimationState("Open"))

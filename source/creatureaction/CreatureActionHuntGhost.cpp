@@ -139,7 +139,7 @@ uint32_t CreatureActionHuntGhost::getBoxVisualState() const
     if(mState==10) return 4u;
     // Once snapped shut the trap stays closed (decision 865): it lies shut under the caught ghost until picked up; while
     // the hunter bends down to it and lifts it into his hand it is mode 7 (decision 936 point 2)
-    if(mState==9 && mPickingUp) return 7u;
+    if((mState==9 || mState==8) && mPickingUp) return 7u;
     if(mState==9) return 6u;
     // At the cauldron the shut trap stands in the delivery device beside the hunter while its ghost flows in (decisions 845, 865)
     if(isTransferring()) return 5u;
@@ -149,6 +149,8 @@ uint32_t CreatureActionHuntGhost::getBoxVisualState() const
 std::string CreatureActionHuntGhost::getThrowGhostName() const
 {
     if(mState==2 || mState==3 || mState==10 || mState==9) return mTarget;
+    // A previously dropped lying box (state 8): its name while the hunter lifts it from the floor (decision 936)
+    if(mState==8 && mPickingUp) return mTarget;
     if(isTransferring()) return mGhosts.front();
     return std::string();
 }
@@ -230,6 +232,8 @@ bool CreatureActionHuntGhost::walkInFrontOf(const Ogre::Vector3& point)
     const bool onRoute=standTile==tile || standTile==mCreature.getPositionTile() ||
         std::find(route.begin(),route.end(),standTile)!=route.end();
     if(stand.distance(Ogre::Vector2(mCreature.getPosition().x,mCreature.getPosition().y))<0.02f) return false;
+    // Already within reach of it (no step before it on the path): he stays where he is instead of stepping back
+    if(path.size()<2 && target.distance(Ogre::Vector2(mCreature.getPosition().x,mCreature.getPosition().y))<=reach) return false;
     // A stand outside the route's tiles: the plain walk onto the tile of the box, as before decision 936
     if(!onRoute) return mCreature.getPositionTile()!=tile && moveTo(tile) && mCreature.isMoving();
     if(path.empty()) path.push_back(stand);
@@ -237,6 +241,35 @@ bool CreatureActionHuntGhost::walkInFrontOf(const Ogre::Vector3& point)
     mCreature.setWalkPath(EntityAnimation::walk_anim,EntityAnimation::idle_anim,true,true,path,true);
     mDestination=tile;
     return mCreature.isMoving();
+}
+
+bool CreatureActionHuntGhost::pickUpStep(const Ogre::Vector3* point)
+{
+    GameMap& map=*mCreature.getGameMap();
+    if(!mPickingUp)
+    {
+        if(!mPickUpWalked)
+        {
+            mPickUpWalked=true;
+            if(point!=nullptr && walkInFrontOf(*point)) return false;
+            // Already in front of it but still on the way to the middle of its tile (state 8): he stops here
+            if(mCreature.isMoving()) mCreature.clearDestinations(EntityAnimation::idle_anim,true,true);
+        }
+        if(mCreature.isMoving()) return false;
+        // On the spot: he turns to the box, flat on the floor (decision 894), and bends down to it
+        mCreature.setAnimationState(EntityAnimation::idle_anim,true,point==nullptr?Ogre::Vector3::ZERO:facing(mCreature,*point),false);
+        mPickingUp=true;mTurns=0.0;mLastTimedTurn=map.getTurnNumber();
+        mCreature.refreshGhostHuntVisuals();return false;
+    }
+    if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }
+    return mTurns>=getPickUpTurns();
+}
+
+void CreatureActionHuntGhost::endPickUp()
+{
+    mTarget.clear();mDestination=nullptr;mState=4;mTurns=0.0;mPickingUp=false;mPickUpWalked=false;
+    mCreature.setAnimationState(EntityAnimation::idle_anim,true,Ogre::Vector3::ZERO,false);
+    mCreature.refreshGhostHuntVisuals();
 }
 
 bool CreatureActionHuntGhost::moveTo(Tile* tile)
@@ -376,7 +409,9 @@ bool CreatureActionHuntGhost::handleHunt()
         }
         Tile* own=mCreature.getPositionTile();Tile* there=target->getPositionTile();
         const int range=static_cast<int>(researched("GhostBeamRange","BeamRange"));
-        if(box!=nullptr && own==there && !mCreature.isMoving()) { mState=8;mTurns=0.0;return false; }
+        // A previously dropped lying box: once he has reached its tile he walks on to just in front of it and picks it
+        // up there with the same visible motion as a box he has just snapped shut (state 8, decision 936)
+        if(box!=nullptr && own==there) { mState=8;mTurns=0.0;mPickingUp=false;mPickUpWalked=false;return true; }
         if(ghost!=nullptr && own!=nullptr && std::max(std::abs(own->getX()-there->getX()),std::abs(own->getY()-there->getY()))<=range)
         {
             // Within beam range the hunter first throws the box from his hand under the ghost (D17); the ghost is held.
@@ -455,46 +490,34 @@ bool CreatureActionHuntGhost::handleHunt()
         // visible motion over GhostPickUpSeconds (decision 936 point 2); from there it is carried in his hand (D17).
         GhostEntity* boxed=ghostNamed(map,mTarget);
         if(boxed==nullptr && !mPickingUp && !mCreature.isMoving()) { mTarget.clear();mDestination=nullptr;mState=4;mCreature.refreshGhostHuntVisuals();return true; }
-        if(!mPickingUp)
-        {
-            if(!mPickUpWalked)
-            {
-                mPickUpWalked=true;
-                if(boxed!=nullptr && walkInFrontOf(boxed->getPosition())) return false;
-            }
-            if(mCreature.isMoving()) return false;
-            // On the spot: he turns to the box, flat on the floor (decision 894), and bends down to it
-            mCreature.setAnimationState(EntityAnimation::idle_anim,true,boxed==nullptr?Ogre::Vector3::ZERO:facing(mCreature,boxed->getPosition()),false);
-            mPickingUp=true;mTurns=0.0;mLastTimedTurn=map.getTurnNumber();
-            mCreature.refreshGhostHuntVisuals();return false;
-        }
-        if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }
-        if(mTurns<getPickUpTurns()) return false;
-        mTarget.clear();mDestination=nullptr;mState=4;mTurns=0.0;mPickingUp=false;mPickUpWalked=false;
-        mCreature.setAnimationState(EntityAnimation::idle_anim,true,Ogre::Vector3::ZERO,false);
-        mCreature.refreshGhostHuntVisuals();return true;
+        const Ogre::Vector3 point=boxed==nullptr?Ogre::Vector3::ZERO:boxed->getPosition();
+        if(!pickUpStep(boxed==nullptr?nullptr:&point)) return false;
+        endPickUp();return true;
     }
     if(mState==8)
     {
+        // A previously dropped lying box (an interrupted hunt): the same visible pick-up as in state 9 (decision 936);
+        // the box stays on the floor until his hands have lifted it, then he takes over its ghosts. A box that is gone
+        // (opened by its timer) ends the pick-up empty-handed.
         GhostBoxEntity* box=static_cast<GhostBoxEntity*>(map.getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,mTarget));
-        if(box!=nullptr)
+        if(box==nullptr) { endPickUp();return true; }
+        const Ogre::Vector3 point=box->getPosition();
+        if(!pickUpStep(&point)) return false;
+        mGhosts=box->takeGhostNames();box->removeFromGameMap();box->deleteYourself();
+        // Picked-up boxes keep their full contents, independent of current capacity.
+        for(const std::string& name : mGhosts)
         {
-            mGhosts=box->takeGhostNames();box->removeFromGameMap();box->deleteYourself();
-            // Picked-up boxes keep their full contents, independent of current capacity.
-            for(const std::string& name : mGhosts)
+            GhostEntity* ghost=ghostNamed(map,name);
+            if(ghost!=nullptr && ghost->getSeat()==mCreature.getSeat() && mCreature.getSeat()->getGhostRevive() &&
+               mCreature.getSeat()->getMana()>=researched("GhostReviveMana","RevivePrice"))
             {
-                GhostEntity* ghost=ghostNamed(map,name);
-                if(ghost!=nullptr && ghost->getSeat()==mCreature.getSeat() && mCreature.getSeat()->getGhostRevive() &&
-                   mCreature.getSeat()->getMana()>=researched("GhostReviveMana","RevivePrice"))
-                {
-                    Creature* corpse=map.getCreature(ghost->getCreatureName());
-                    Room* crypt=corpse==nullptr || corpse->getPositionTile()==nullptr?nullptr:corpse->getPositionTile()->getCoveringRoom();
-                    if(corpse!=nullptr && !corpse->isAlive() && crypt!=nullptr && crypt->getType()==RoomType::crypt &&
-                       crypt->getSeat()==mCreature.getSeat() && static_cast<RoomCrypt*>(crypt)->getCorpseSpot(*corpse)!=nullptr) mReviveGhosts.push_back(name);
-                }
+                Creature* corpse=map.getCreature(ghost->getCreatureName());
+                Room* crypt=corpse==nullptr || corpse->getPositionTile()==nullptr?nullptr:corpse->getPositionTile()->getCoveringRoom();
+                if(corpse!=nullptr && !corpse->isAlive() && crypt!=nullptr && crypt->getType()==RoomType::crypt &&
+                   crypt->getSeat()==mCreature.getSeat() && static_cast<RoomCrypt*>(crypt)->getCorpseSpot(*corpse)!=nullptr) mReviveGhosts.push_back(name);
             }
         }
-        mTarget.clear();mState=4;return true;
+        endPickUp();return true;
     }
     if(mState==4)
     {
@@ -652,6 +675,9 @@ void CreatureActionHuntGhost::exportToStream(std::ostream& stream) const
         << ' ' << (mEmptyAnchor==nullptr?-1:mEmptyAnchor->getX()) << ' ' << (mEmptyAnchor==nullptr?-1:mEmptyAnchor->getY())
         << ' ' << mCreature.getWalkQueue().size();
     for(const Ogre::Vector2& point : mCreature.getWalkQueue()) stream << ' ' << point.x << ' ' << point.y;
+    // An in-progress pick-up (states 8 and 9, decision 936): walked in front of the box and bending down to it; mTurns
+    // above is its clock, so a loaded hunter only runs the remaining pick-up time
+    stream << " pickup " << mPickUpWalked << ' ' << mPickingUp;
     stream << " [/GhostHuntRuntime]";
 }
 
@@ -673,7 +699,10 @@ bool CreatureActionHuntGhost::importFromStream(std::istream& stream)
         mDestination=mCreature.getGameMap()->getTile(x,y);
         mEmptyAnchor=mCreature.getGameMap()->getTile(ax,ay);
         while(count-->0) { Ogre::Vector2 point;if(!(stream>>point.x>>point.y)) return false;mLoadedPath.push_back(point); }
-        if(!(stream>>close) || close!="[/GhostHuntRuntime]") return false;
+        if(!(stream>>close)) return false;
+        // Saves before decision 936 have no pick-up record: such a hunter repeats the walk and the whole pick-up
+        if(close=="pickup" && !(stream>>mPickUpWalked>>mPickingUp>>close)) return false;
+        if(close!="[/GhostHuntRuntime]") return false;
         if(mReviveTarget=="none") mReviveTarget.clear();if(mEmptyRoom=="none") mEmptyRoom.clear();
     }
     else stream.clear();
@@ -703,8 +732,22 @@ void CreatureActionHuntGhost::restore()
             ghost==nullptr?Ogre::Vector3::ZERO:facing(mCreature,ghost->getPosition()),mState!=3);
         if(mState==3) mBeamTarget=mTarget;
     }
-    // State 9 picks up the shut box: a loaded hunter walks in front of it again and does the whole pick-up (decision 936).
-    if(mState==9) { mPickingUp=false;mPickUpWalked=false; }
+    // States 9 and 8 pick up the shut box (decision 936). A hunter saved while bending down to it goes on bending from
+    // the saved clock, facing it; one saved on the way in front of it walks on along his saved path; any other walks in
+    // front of it again. Outside these states the pick-up record is empty.
+    if(mState==9 || mState==8)
+    {
+        if(mPickingUp)
+        {
+            mPickUpWalked=true;mLastTimedTurn=mCreature.getGameMap()->getTurnNumber();
+            GameEntity* item=mState==9?static_cast<GameEntity*>(ghostNamed(*mCreature.getGameMap(),mTarget)):
+                mCreature.getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,mTarget);
+            mCreature.setAnimationState(EntityAnimation::idle_anim,true,
+                item==nullptr?Ogre::Vector3::ZERO:facing(mCreature,item->getPosition()),false);
+        }
+        else if(mLoadedPath.empty()) mPickUpWalked=false;
+    }
+    else { mPickingUp=false;mPickUpWalked=false; }
     // State 10 snaps the box shut: the beam is already lowered, the remaining snap time follows from the saved clock.
     if(mState==10) mCreature.setAnimationState(EntityAnimation::idle_anim,true,Ogre::Vector3::ZERO,false);
     // A loaded delivery past its put-in: the trap already stands in the device, the hunter waits idle beside it

@@ -2304,9 +2304,13 @@ private:
     Ogre::AnimationState* mGhostPose = nullptr;
     std::string mGhostPoseName;
     uint32_t mGhostPoseMode = 0;
-    double mGhostPoseClock = 0.0;
+    double mGhostPoseClock = -1.0;
     Ogre::Quaternion mGhostPoseFacing = Ogre::Quaternion::IDENTITY;
     int mGhostPoseBlend = 0;
+    //! \brief Decision 936 point 2, state 8: the previously dropped lying box (GhostBoxEntity) this hunter lifts from the
+    //! floor, hidden while his own trap shows the lift in its place, and where it lay (the lift starts there).
+    std::string mGhostHiddenBox;
+    Ogre::Vector3 mGhostPickFloor = Ogre::Vector3::ZERO;
     //! \brief The running mood effects (buffs and debuffs). Saved on the server, sent to the keeper for the effect line.
     //! Declared before mActions, so that it is still alive when the actions of the creature end a pleasure visit (the
     //! pleasure buff starts then).

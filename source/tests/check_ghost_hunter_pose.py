@@ -101,11 +101,13 @@ has(code, 'the two clips', 'EntityAnimation::throw_anim,false,facing(mCreature,g
 # Decision 936: the put-in and the pick-up turn him flat to the seat and to the trap with his Idle clip (the client lays
 # its generated reach and bend pose over it); every Idle request with a direction faces flat as well
 idle_directed = [d for d in directions if 'idle_anim' in d and 'Ogre::Vector3::ZERO,false' not in d]
-assert len(idle_directed) == 2, idle_directed
+# (put-in, pick-up step of states 9 and 8, restore of a pick-up saved while he bends down)
+assert len(idle_directed) == 3, idle_directed
 for call in idle_directed:
     assert 'facing(mCreature,' in call, ('every Idle with a direction faces flat', call)
 has(code, 'put-in and pick-up', 'EntityAnimation::idle_anim,true,facing(mCreature,socket),false)',
-    'EntityAnimation::idle_anim,true,boxed==nullptr?Ogre::Vector3::ZERO:facing(mCreature,boxed->getPosition()),false)')
+    'EntityAnimation::idle_anim,true,point==nullptr?Ogre::Vector3::ZERO:facing(mCreature,*point),false)',
+    'item==nullptr?Ogre::Vector3::ZERO:facing(mCreature,item->getPosition()),false)')
 # The client turn the flat direction is applied to: the shortest arc from the forward axis, no flattening of its own
 render = read('source/render/RenderManager.cpp')
 orient = body(render, 'void RenderManager::rrOrientEntityToward(MovableGameEntity* gameEntity, const Ogre::Vector3& direction)')

@@ -165,7 +165,7 @@ assert b'GhostEctoplasm\n' in mesh
 creature = read('source/entities/Creature.cpp')
 refresh = body(creature, 'void Creature::refreshGhostHuntVisuals()')
 has(refresh, 'transferred share sent', 'else if(boxMode==5)', 'const double transfer=hunt->getTransferTurns();',
-    'turns=transfer>0.0?std::min(1.0,turns/transfer):1.0;', 'const double transfer=hunt->getTransferTurns();', '(boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5) && turns!=mGhostThrowTurns')
+    'turns=transfer>0.0?std::min(1.0,turns/transfer):1.0;', 'const double transfer=hunt->getTransferTurns();', '(boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5 || boxMode==7) && turns!=mGhostThrowTurns')
 visuals = body(creature, 'void Creature::updateGhostHuntVisuals(double seconds)')
 has(visuals, 'the shut trap put into the device beside the hunter',
     'const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6 || mGhostBoxMode==7;',

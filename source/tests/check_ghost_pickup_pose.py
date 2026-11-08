@@ -9,7 +9,11 @@ exactly at the trap in the hand (mode 2), so nothing jumps. Point 3: at the caul
 clip (no more one-second Empty clip); over GhostPutInSeconds (2 s) a reach pose (15 degree bow, the arm with the trap
 stretched to the seat) is laid over it and the trap leaves his hand on one eased curve over a point just above the
 seat down onto it (bottom of the trap on the seat). These parts fail on ceef28852 (no mode 7, the trap jumps into the
-hand, the Empty clip and a linear one-second put-in from the moving hand).
+hand, the Empty clip and a linear one-second put-in from the moving hand). A previously dropped lying box (GhostBoxEntity,
+state 8, an interrupted hunt) is picked up with the same walk, turn and bend instead of vanishing at once (fails on
+5391b3dce); its own mesh is hidden while the hunter's trap shows the lift from where it lay. A save taken while he
+bends down keeps the pick-up record (walked, bending) next to its clock mTurns, so a loaded hunter only runs the
+remaining time and the client starts the lift at the server's share; saves without the record repeat the pick-up.
 """
 from pathlib import Path
 import math
@@ -109,15 +113,83 @@ values = dict(re.findall(r'^(Ghost\w+)\s+([-\d.]+)\s*$', rooms, re.M))
 assert values['GhostPickUpSeconds'] == '2' and values['GhostPickUpReach'] == '0.3' and values['GhostPutInSeconds'] == '2'
 action = read('source/creatureaction/CreatureActionHuntGhost.cpp')
 header = read('source/creatureaction/CreatureActionHuntGhost.h')
-state9 = body(body(action, 'bool CreatureActionHuntGhost::handleHunt()'), '    if(mState==9)')
-ordered(state9, 'walk in front, turn flat to the trap, hold, then carry',
-        'if(boxed!=nullptr && walkInFrontOf(boxed->getPosition())) return false;', 'if(mCreature.isMoving()) return false;',
-        'EntityAnimation::idle_anim,true,boxed==nullptr?Ogre::Vector3::ZERO:facing(mCreature,boxed->getPosition()),false',
-        'mPickingUp=true;mTurns=0.0;', 'if(mTurns<getPickUpTurns()) return false;', 'mState=4;')
-has(body(action, 'uint32_t CreatureActionHuntGhost::getBoxVisualState() const'), 'mode 7 while bending',
-    'if(mState==9 && mPickingUp) return 7u;', 'if(mState==9) return 6u;')
+hunt = body(action, 'bool CreatureActionHuntGhost::handleHunt()')
+step = body(action, 'bool CreatureActionHuntGhost::pickUpStep(const Ogre::Vector3* point)')
+ordered(step, 'walk in front, turn flat to the trap, hold for the pick-up time',
+        'if(!mPickUpWalked)', 'mPickUpWalked=true;', 'if(point!=nullptr && walkInFrontOf(*point)) return false;',
+        'if(mCreature.isMoving()) mCreature.clearDestinations(EntityAnimation::idle_anim,true,true);',
+        'if(mCreature.isMoving()) return false;',
+        'EntityAnimation::idle_anim,true,point==nullptr?Ogre::Vector3::ZERO:facing(mCreature,*point),false',
+        'mPickingUp=true;mTurns=0.0;mLastTimedTurn=map.getTurnNumber();', 'mCreature.refreshGhostHuntVisuals();return false;',
+        'if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }',
+        'return mTurns>=getPickUpTurns();')
+has(body(action, 'void CreatureActionHuntGhost::endPickUp()'), 'then he carries it on to the next target',
+    'mTarget.clear();mDestination=nullptr;mState=4;mTurns=0.0;mPickingUp=false;mPickUpWalked=false;',
+    'mCreature.refreshGhostHuntVisuals();')
+state9 = hunt[hunt.index('    if(mState==9)'):hunt.index('    if(mState==8)')]
+ordered(state9, 'state 9: the trap under the caught ghost', 'GhostEntity* boxed=ghostNamed(map,mTarget);',
+        'const Ogre::Vector3 point=boxed==nullptr?Ogre::Vector3::ZERO:boxed->getPosition();',
+        'if(!pickUpStep(boxed==nullptr?nullptr:&point)) return false;', 'endPickUp();return true;')
+# State 8: a previously dropped lying box is picked up visibly too; it stays on the map until the lift is over, then the
+# hunter takes over its ghosts (fails on 5391b3dce, where takeGhostNames ran on the first turn of state 8)
+state8 = hunt[hunt.index('    if(mState==8)'):hunt.index('    if(mState==4)')]
+ordered(state8, 'state 8: the dropped box, same pick-up, contents only at its end',
+        'GhostBoxEntity* box=static_cast<GhostBoxEntity*>(map.getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,mTarget));',
+        'if(box==nullptr) { endPickUp();return true; }', 'const Ogre::Vector3 point=box->getPosition();',
+        'if(!pickUpStep(&point)) return false;',
+        'mGhosts=box->takeGhostNames();box->removeFromGameMap();box->deleteYourself();',
+        'mReviveGhosts.push_back(name);', 'endPickUp();return true;')
+state1 = hunt[hunt.index('    if(mState==1)'):hunt.index('    if(mState==2 || mState==3 || mState==10)')]
+has(state1, 'state 1 hands the dropped box over on its tile, also while still walking',
+    'if(box!=nullptr && own==there) { mState=8;mTurns=0.0;mPickingUp=false;mPickUpWalked=false;return true; }')
+assert 'own==there && !mCreature.isMoving()) { mState=8' not in state1, 'no stop on the middle of the box tile first'
+has(body(action, 'uint32_t CreatureActionHuntGhost::getBoxVisualState() const'), 'mode 7 while bending, also over a dropped box',
+    'if((mState==9 || mState==8) && mPickingUp) return 7u;', 'if(mState==9) return 6u;')
+has(body(action, 'std::string CreatureActionHuntGhost::getThrowGhostName() const'), 'the dropped box is named while lifted',
+    'if(mState==8 && mPickingUp) return mTarget;')
 has(header, 'members and declarations', 'bool mPickUpWalked = false;', 'bool mPickingUp = false;',
-    'static double getPickUpTurns();', 'bool walkInFrontOf(const Ogre::Vector3& point);')
+    'static double getPickUpTurns();', 'bool walkInFrontOf(const Ogre::Vector3& point);',
+    'bool pickUpStep(const Ogre::Vector3* point);', 'void endPickUp();')
+# Save and load of an in-progress pick-up: the record follows the saved walk, old saves without it still load
+export = body(action, 'void CreatureActionHuntGhost::exportToStream(std::ostream& stream) const')
+ordered(export, 'the pick-up record is saved at the end of the runtime block',
+        "for(const Ogre::Vector2& point : mCreature.getWalkQueue()) stream << ' ' << point.x << ' ' << point.y;",
+        'stream << " pickup " << mPickUpWalked << \' \' << mPickingUp;', 'stream << " [/GhostHuntRuntime]";')
+load = body(action, 'bool CreatureActionHuntGhost::importFromStream(std::istream& stream)')
+ordered(load, 'the record is optional and checked',
+        'mLoadedPath.push_back(point); }', 'if(!(stream>>close)) return false;',
+        'if(close=="pickup" && !(stream>>mPickUpWalked>>mPickingUp>>close)) return false;',
+        'if(close!="[/GhostHuntRuntime]") return false;')
+assert 'if(!(stream>>close) || close!="[/GhostHuntRuntime]") return false;' not in load
+restore = body(action, 'void CreatureActionHuntGhost::restore()')
+ordered(restore, 'a loaded hunter bending down goes on from the saved clock, facing the box',
+        'if(mState==9 || mState==8)', 'if(mPickingUp)', 'mPickUpWalked=true;mLastTimedTurn=mCreature.getGameMap()->getTurnNumber();',
+        'mCreature.getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,mTarget);',
+        'facing(mCreature,item->getPosition())', 'else if(mLoadedPath.empty()) mPickUpWalked=false;',
+        'else { mPickingUp=false;mPickUpWalked=false; }', 'mCreature.refreshGhostHuntVisuals();')
+assert 'mTurns=0.0' not in restore, 'the saved pick-up clock is kept'
+
+
+# Model of the record: the runtime block parsed like importFromStream, with and without the pick-up record
+def parse_runtime(tokens):
+    tokens = list(tokens)
+    walked = bending = False
+    close = tokens.pop(0)
+    if close == 'pickup':
+        walked, bending, close = tokens.pop(0) == '1', tokens.pop(0) == '1', tokens.pop(0)
+    assert close == '[/GhostHuntRuntime]', 'malformed record'
+    return walked, bending
+
+
+assert parse_runtime(['[/GhostHuntRuntime]']) == (False, False), 'an old save repeats the pick-up'
+assert parse_runtime(['pickup', '1', '1', '[/GhostHuntRuntime]']) == (True, True)
+for broken in (['pickup', '1', '[/GhostHuntRuntime]'], ['1', '[/GhostHuntRuntime]']):
+    try:
+        parse_runtime(broken)
+    except (AssertionError, IndexError):
+        pass
+    else:
+        raise AssertionError(('a broken record must not load', broken))
 walk = body(action, 'bool CreatureActionHuntGhost::walkInFrontOf(const Ogre::Vector3& point)')
 has(walk, 'the last step of the usual tile path ends in front of the trap', 'mCreature.getGameMap()->path(&mCreature,tile);',
     'const Ogre::Vector2 stand=target-approach*reach;', 'path.back()=stand;',
@@ -169,7 +241,8 @@ has(stop, 'the layer goes and the blend mode comes back', 'removeAnimationState(
     'shared.removeAnimation(mGhostPoseName);')
 assert body(creature, 'void Creature::clearGhostHuntVisuals()').index('stopGhostPose();') > 0
 has(read('source/entities/Creature.h'), 'members', 'Ogre::AnimationState* mGhostPose = nullptr;', 'void stopGhostPose();',
-    'double mGhostPoseClock = 0.0;', 'double mGhostFlowClock = 0.0;')
+    'double mGhostPoseClock = -1.0;', 'double mGhostFlowClock = 0.0;', 'std::string mGhostHiddenBox;',
+    'Ogre::Vector3 mGhostPickFloor = Ogre::Vector3::ZERO;')
 
 # Model of the clip keys: a local key B^-1 d B on a bone whose live pose is B turns the bone (and so its subtree) by d in
 # mesh space, whatever the axes of the bone; nested keys compose as the product of their mesh-space turns.
@@ -230,7 +303,30 @@ has(pick, 'the pick-up of the trap', 'const double lifted=pickUp>0.0?std::min(1.
     'const float grip=static_cast<float>(ghostEase(0.38,0.52,lifted));', 'position=floor+(heldOrigin-floor)*grip;',
     'boxTurn=Ogre::Quaternion::Slerp(grip,Ogre::Quaternion::IDENTITY,heldTurn,true);',
     'poseMode=7;poseWeight=ghostPoseWeight(lifted,0.4,0.6);')
-has(visuals, 'the pick-up clock runs every frame', 'if(mGhostBoxMode==7) mGhostPoseClock+=seconds*getGameMap()->getGameSpeedFactor();',
+ordered(visuals, 'the pick-up clock starts at the server share, then runs every frame', 'if(mGhostBoxMode==7)',
+        'if(mGhostPoseClock<0.0) mGhostPoseClock=mGhostThrowTurns*ConfigManager::getSingleton().getRoomConfigDouble("GhostPickUpSeconds");',
+        'else mGhostPoseClock+=seconds*getGameMap()->getGameSpeedFactor();', 'else mGhostPoseClock=-1.0;')
+refresh = body(creature, 'void Creature::refreshGhostHuntVisuals()')
+has(refresh, 'the pick-up share is sent', 'else if(boxMode==7)', 'const double pickUp=CreatureActionHuntGhost::getPickUpTurns();',
+    'turns=pickUp>0.0?std::min(1.0,turns/pickUp):1.0;', 'boxMode==5 || boxMode==7) && turns!=mGhostThrowTurns')
+# The dropped box on the client: hidden while lifted, the lift starts where it lay, shown again if the lift ends
+# without it (interrupted); the ghost-only calls are skipped for it
+ordered(visuals, 'the dropped box is lifted in place of its own mesh',
+        'if(mGhostBoxMode==7 && ghost==nullptr)',
+        'GameEntity* dropped=getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,mGhostThrowTarget);',
+        'mGhostPickFloor=dropped->getPosition();', 'dropped->getEntityNode()->setVisible(false);',
+        'droppedBox=!mGhostHiddenBox.empty();',
+        'else if(!mGhostHiddenBox.empty()) { showGhostBoxEntity(*getGameMap(),mGhostHiddenBox,true);mGhostHiddenBox.clear(); }',
+        'if(mGhostBoxMode==7 && ghost==nullptr && !droppedBox) mGhostBoxNode->setVisible(false);',
+        'if((ghost!=nullptr || droppedBox) && lyingBox)',
+        'const Ogre::Vector3 floor=ghost==nullptr?mGhostPickFloor:',
+        'if(ghost!=nullptr)', 'ghost->setCaptureProgress(mGhostCaptureShown);')
+has(body(creature, 'static void showGhostBoxEntity('), 'shown again by name if it still exists',
+    'GameEntity* box=map.getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,name);',
+    'if(box!=nullptr && box->getEntityNode()!=nullptr) box->getEntityNode()->setVisible(shown);')
+has(body(creature, 'void Creature::clearGhostHuntVisuals()'), 'a hunt that ends shows the box again',
+    'showGhostBoxEntity(*getGameMap(),mGhostHiddenBox,true);mGhostHiddenBox.clear();')
+has(visuals, 'the trap in the hand this frame',
     'const Ogre::Vector3 heldOrigin=mGhostHeldBox->_getParentNodeFullTransform()*Ogre::Vector3::ZERO;',
     'mGhostHeldBox->setVisible(mGhostBoxMode==2);', 'if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(boxTurn);')
 has(body(creature, 'static double ghostEase('), 'smoother step', 'return x*x*x*(x*(x*6.0-15.0)+10.0);')
