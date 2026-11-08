@@ -115,8 +115,28 @@ def cauldron_delivery(credits, chunks_module):
 
 
 # Check the assigned asset families and exact existing generator registration without running its writing path.
+# Inspect the shipped rigid hose fitting, whose unit dimensions are scaled by the live hose radius.
+def hose_coupling(credits):
+    credited('models/GhostHoseCoupling.mesh', credits)
+    spec = importlib.util.spec_from_file_location('ghost_mesh_reader', repo/'source/tests/check_ghost_apparatus_visible.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    mesh = module.read_mesh('GhostHoseCoupling')
+    assert mesh['skeleton'] is None, 'fitting is rigid and follows the endpoint scene node'
+    assert len(mesh['positions']) == 742, 'measured export vertex count'
+    assert len(mesh['submeshes']) == 1 and mesh['submeshes'][0][0] == 'GhostPackSteel'
+    assert [round(value, 2) for value in mesh['bounds'][:6]] == [-1.35, -1.35, -0.3, 1.35, 1.35, 2.0]
+    assert max(mesh['submeshes'][0][1]) < 742, 'every index addresses a shipped vertex'
+    assert all(0.77 < (x*x+y*y)**0.5 < 1.36 for x,y,z in mesh['positions']), 'open bore and stepped outer metal shell'
+    script = read('materials/scripts/Ghost.material')
+    steel = script.split('material GhostPackSteel', 1)[1].split('material GhostPackRubber', 1)[0]
+    assert 'texture GhostPackSteel.png' in steel, 'same metal as the backpack'
+
+
+# Check all original ghost assets and their runtime registrations.
 def main():
     credits = read('CREDITS')
+    hose_coupling(credits)
     models = ('GhostCauldron','GhostCauldronFill','CrystalBowl','GhostBell','GhostHook','GhostHookEmpty',
         'GhostWallGauges','GhostBackpack','GhostBox','SoulCrystal','GhostRack')
     for name in models:

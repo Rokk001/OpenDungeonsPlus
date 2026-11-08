@@ -10,7 +10,7 @@
    beam step (aimGhostCannon, every frame), whatever pose the Beam clip holds the hand in.
 3. A clearly visible textured hose connects the backpack with the cannon and follows the hunter and the cannon (hose
    shaping every frame, dynamic tube, material GhostHose with the ribbed rubber texture).
-Fixed values measured once on this branch: 4 setAnimationState calls with a direction in the hunt, 16 rings and 8 sides.
+Fixed values measured once on this branch: 4 setAnimationState calls with a direction in the hunt, 128 rings and 8 sides.
 """
 from pathlib import Path
 import importlib.util
@@ -209,10 +209,10 @@ texture = repo / 'materials/textures/GhostPackRubber.png'
 assert texture.is_file() and texture.stat().st_size > 1000, 'the hose texture exists'
 assert any('materials/textures/GhostPackRubber.png' in row and 'rubber' in row for row in read('CREDITS').splitlines()), 'credited texture'
 shape = body(creature_source, 'static void shapeGhostHose(')
-has(creature_source, 'fixed vertex count', 'static const size_t GHOST_HOSE_RINGS=16;', 'static const size_t GHOST_HOSE_SIDES=8;')
+has(creature_source, 'fixed vertex count', 'static const size_t GHOST_HOSE_RINGS=128;', 'static const size_t GHOST_HOSE_SIDES=8;')
 has(shape, 'a tube along a cubic curve with sag, rebuilt in place', 'hose.begin("GhostHose",Ogre::RenderOperation::OT_TRIANGLE_LIST);',
     'else hose.beginUpdate(0);', 'hose.textureCoord(', 'hose.normal(normal);', 'const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);',
-    'hose.position(centre+normal*radius);', 'hose.end();')
+    'hose.position(centre+normal*ribRadius);', 'hose.end();')
 has(visuals, 'the hose joins the pack port and the rear end of the cannon, in the holster or in the hand and follows both every frame',
     'Ogre::Entity* hoseGun=beaming?mGhostCaptureGun:mGhostPackGun;', 'mGhostHose->setDynamic(true);',
     'const Ogre::Vector3 port=mGhostBackpackNode->_getFullTransform()*Ogre::Vector3(packBounds.getMinimum().x,',
@@ -223,7 +223,7 @@ assert visuals.index('shapeGhostHose(') < visuals.index('if(mGhostBeamSample<fli
 clear = body(creature_source, 'void Creature::clearGhostHuntVisuals()')
 has(clear, 'the hose goes with the hunt', 'scene->destroyManualObject(mGhostHose)', 'scene->destroySceneNode(mGhostHoseNode)')
 has(read('source/entities/Creature.h'), 'members', 'Ogre::SceneNode* mGhostHoseNode = nullptr;', 'Ogre::ManualObject* mGhostHose = nullptr;')
-rings, sides = 16, 8
+rings, sides = 128, 8
 
 
 def hose_centres(port, port_out, rear, rear_out, radius):
@@ -265,5 +265,22 @@ for _ in range(500):
     assert mid[2] < straight[2], 'the hose hangs down between its ends'
     assert sum(steps) >= length(sub(rear, port)) - 1e-9, 'the hose is at least as long as the distance'
 # Vertex and index count are fixed, so the dynamic tube is rebuilt in place every frame
-assert (rings + 1) * (sides + 1) == 153 and rings * sides * 6 == 768
+assert (rings + 1) * (sides + 1) == 1161 and rings * sides * 6 == 6144
+# Physical ribs and their dark material remain distinct from the backpack's steel end fittings.
+has(shape, '32 physical corrugations and matching texture repeat',
+    'radius*(0.86f+0.14f*std::cos(2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(ring)/4.0f))',
+    'static_cast<Ogre::Real>(GHOST_HOSE_SIDES),t);')
+profile = [0.86 + 0.14 * math.cos(2 * math.pi * ring / 4) for ring in range(129)]
+assert sum(abs(value - 1) < 1e-12 for value in profile) == 33
+assert sum(abs(value - 0.72) < 1e-12 for value in profile) == 32
+has(read('materials/scripts/Ghost.material'), 'dark rubber tint', 'ambient 0.38 0.38 0.38', 'diffuse 0.38 0.38 0.38 1')
+has(visuals, 'steel fittings created once and transformed every frame',
+    'scene->createEntity(name,"GhostHoseCoupling.mesh")',
+    'coupling->setPosition(end==0?port:rear);',
+    'coupling->setOrientation(Ogre::Vector3::UNIT_Z.getRotationTo(direction));',
+    'coupling->setScale(Ogre::Vector3(radius,radius,radius));',
+    'const Ogre::Vector3 direction=(end==0?portOut:rearOut)*reach+sag;')
+assert visuals.index('coupling->setPosition(') < visuals.index('if(mGhostBeamSample<flickerSeconds) return;')
+has(clear, 'fittings and child nodes released with the hose', 'scene->destroyEntity(name);',
+    'mGhostHoseNode->removeAndDestroyAllChildren();')
 print('ghost hunter pose, cannon aim and hose: ok')

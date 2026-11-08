@@ -12787,13 +12787,13 @@ static void aimGhostCannon(Ogre::Entity& body, Ogre::Entity& cannon, Ogre::TagPo
         handNode->setOrientation(handNode->getParentSceneNode()->_getDerivedOrientation().Inverse()*wanted);
 }
 
-//! Number of rings along the hose and of sides round it (decision 894); the vertex count of the dynamic hose never changes.
-static const size_t GHOST_HOSE_RINGS=16;
+//! Four rings per corrugation (32 ribs, decision 936); the vertex count of the dynamic hose never changes.
+static const size_t GHOST_HOSE_RINGS=128;
 static const size_t GHOST_HOSE_SIDES=8;
 
 //! \brief Re-shapes the flexible hose (decision 894) as a tube along a cubic curve from the pack's port to the rear end of
 //! the cannon. Both ends leave along the given directions and the middle sags, so the hose follows every movement of the
-//! hunter and of the cannon; the textured tube has the given radius in world units.
+//! hunter and of the cannon; the textured corrugations reach the given radius in world units.
 static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, const Ogre::Vector3& portOut,
     const Ogre::Vector3& rear, const Ogre::Vector3& rearOut, Ogre::Real radius)
 {
@@ -12803,7 +12803,6 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
     const Ogre::Vector3 control1=port+portOut*reach+sag,control2=rear+rearOut*reach+sag;
     if(hose.getNumSections()==0) hose.begin("GhostHose",Ogre::RenderOperation::OT_TRIANGLE_LIST);
     else hose.beginUpdate(0);
-    Ogre::Real along=0.0f;Ogre::Vector3 previous=port;
     for(size_t ring=0;ring<=GHOST_HOSE_RINGS;++ring)
     {
         const Ogre::Real t=static_cast<Ogre::Real>(ring)/static_cast<Ogre::Real>(GHOST_HOSE_RINGS),u=1.0f-t;
@@ -12816,14 +12815,14 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
         if(side.squaredLength()<1.0e-6f) side=tangent.crossProduct(Ogre::Vector3::UNIT_X);
         side.normalise();
         const Ogre::Vector3 up=tangent.crossProduct(side);
-        along+=(centre-previous).length();previous=centre;
+        const Ogre::Real ribRadius=radius*(0.86f+0.14f*std::cos(2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(ring)/4.0f));
         for(size_t k=0;k<=GHOST_HOSE_SIDES;++k)
         {
             const Ogre::Real angle=2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_SIDES);
             const Ogre::Vector3 normal=side*std::cos(angle)+up*std::sin(angle);
-            hose.position(centre+normal*radius);
+            hose.position(centre+normal*ribRadius);
             hose.normal(normal);
-            hose.textureCoord(static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_SIDES),along/(4.0f*radius));
+            hose.textureCoord(static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_SIDES),t);
         }
     }
     for(size_t ring=0;ring<GHOST_HOSE_RINGS;++ring)
@@ -13086,7 +13085,16 @@ void Creature::clearGhostHuntVisuals()
     mGhostDeliveryGhost.clear();mGhostDeliveryClock=0.0;
     // The hose from the pack to the cannon goes with the hunt (decision 894)
     if(mGhostHose!=nullptr) { mGhostHose->detachFromParent();scene->destroyManualObject(mGhostHose);mGhostHose=nullptr; }
-    if(mGhostHoseNode!=nullptr) { scene->destroySceneNode(mGhostHoseNode);mGhostHoseNode=nullptr; }
+    if(mGhostHoseNode!=nullptr)
+    {
+        for(size_t end=0;end<2;++end)
+        {
+            const std::string name=getName()+"_GhostHoseCoupling"+std::to_string(end);
+            if(scene->hasEntity(name)) scene->destroyEntity(name);
+        }
+        mGhostHoseNode->removeAndDestroyAllChildren();
+        scene->destroySceneNode(mGhostHoseNode);mGhostHoseNode=nullptr;
+    }
     // The light of the open trap goes with the box
     if(mGhostTrapGlow!=nullptr) { scene->destroyBillboardSet(mGhostTrapGlow);mGhostTrapGlow=nullptr; }
     if(mGhostTrapCone!=nullptr) { scene->destroyBillboardChain(mGhostTrapCone);mGhostTrapCone=nullptr; }
@@ -13236,6 +13244,13 @@ void Creature::updateGhostHuntVisuals(double seconds)
             mGhostHose->setDynamic(true);mGhostHose->setCastShadows(false);mGhostHose->setQueryFlags(0);
             mGhostHoseNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_GhostHoseNode");
             mGhostHoseNode->attachObject(mGhostHose);
+            for(size_t end=0;end<2;++end)
+            {
+                const std::string name=getName()+"_GhostHoseCoupling"+std::to_string(end);
+                Ogre::Entity* coupling=scene->createEntity(name,"GhostHoseCoupling.mesh");
+                coupling->setCastShadows(false);coupling->setQueryFlags(0);
+                mGhostHoseNode->createChildSceneNode(name+"Node")->attachObject(coupling);
+            }
         }
         const Ogre::AxisAlignedBox packBounds=scene->getEntity(getName()+"_GhostBackpack")->getMesh()->getBounds();
         const Ogre::Vector3 port=mGhostBackpackNode->_getFullTransform()*Ogre::Vector3(packBounds.getMinimum().x,packBounds.getCenter().y,
@@ -13247,6 +13262,18 @@ void Creature::updateGhostHuntVisuals(double seconds)
         const Ogre::Vector3 barrel=gunTransform*Ogre::Vector3::UNIT_Z-gunTransform*Ogre::Vector3::ZERO;
         const Ogre::Real radius=0.025f*body->getBoundingBox().getSize().z*getEntityNode()->_getDerivedScale().z;
         shapeGhostHose(*mGhostHose,port,portOut,rear,barrel.squaredLength()>1.0e-8f?-barrel.normalisedCopy():Ogre::Vector3::NEGATIVE_UNIT_Z,radius);
+        // The steel fittings follow the actual endpoint tangents, including the hose's downward sag (decision 936).
+        const Ogre::Real span=(rear-port).length(),reach=0.4f*span+4.0f*radius;
+        const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);
+        const Ogre::Vector3 rearOut=barrel.squaredLength()>1.0e-8f?-barrel.normalisedCopy():Ogre::Vector3::NEGATIVE_UNIT_Z;
+        for(size_t end=0;end<2;++end)
+        {
+            Ogre::SceneNode* coupling=scene->getSceneNode(getName()+"_GhostHoseCoupling"+std::to_string(end)+"Node");
+            const Ogre::Vector3 direction=(end==0?portOut:rearOut)*reach+sag;
+            coupling->setPosition(end==0?port:rear);
+            coupling->setOrientation(Ogre::Vector3::UNIT_Z.getRotationTo(direction));
+            coupling->setScale(Ogre::Vector3(radius,radius,radius));
+        }
     }
     if(beaming) { setGhostHunterWeaponsVisible(scene,*this,false);mGhostOwnWeaponsHidden=true; }
     else if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
