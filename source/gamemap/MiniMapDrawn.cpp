@@ -157,18 +157,12 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
 
     Ogre::PixelBox output = mPixelBuffer->lock(mPixelBox, Ogre::HardwareBuffer::HBL_NORMAL);
 
-    size_t xx = 0;
-    size_t yy = 0;
-    for(const Color& color : mTiles)
-    {
-        // TODO: This is probably a bit inefficient at the moment.
-        output.setColourAt(Ogre::ColourValue(color.RR/255.0, color.GG/255.0, color.BB/255.0, color.AA/255.0), xx, yy, 0);
-        ++xx;
-        if(xx == mWidth) {
-            xx = 0;
-            ++yy;
-        }
-    }
+    // mTiles holds bytes in R, G, B, A order, which is Ogre's PF_BYTE_RGBA. One bulk conversion into
+    // the locked format writes the same bytes as the former per-pixel setColourAt(colour / 255) loop,
+    // without a float round trip per pixel (Tilda F1: that loop was 4.5% of the P1 game frame).
+    static_assert(sizeof(Color) == 4, "map pixels must be tightly packed RGBA bytes");
+    const Ogre::PixelBox source(mWidth, mHeight, 1, Ogre::PF_BYTE_RGBA, mTiles.data());
+    Ogre::PixelUtil::bulkPixelConversion(source, output);
 
     mPixelBuffer->unlock();
     updateMapOverlay(mMiniMapWindow, mGameMap, mCamera_2dPosition,
