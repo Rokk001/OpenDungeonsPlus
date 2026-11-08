@@ -102,5 +102,5 @@ assert abs((arena_counter - get_up_turns) / turns_per_second - 30.0) < 1e-9 and 
 # Innkeeper Pour lasts the whole serving time, the shaman and the attendant clips their configured time
 assert re.search(r'clip == InnkeeperPose::pour\)\s*return [^;]*DRINK_TURNS_KEY[^;]*/ ODApplication::turnsPerSecond', innkeeper)
 assert 'InfirmaryShamanAnimationSeconds' in shaman.split('InfirmaryShamanEntity::getClipSeconds')[1][:500]
-assert 'PoolAttendantClipSeconds' in pool and 'CHAIR_SEAT_HEIGHT = 1.13 + 0.04' in pool
+assert 'PoolAttendantClipSeconds' in pool and 'CHAIR_SEAT_HEIGHT = 1.13;' in pool  # chair seat plate height of the integrated pool attendant rework (decision 837)
 print('clip duration checks passed')
