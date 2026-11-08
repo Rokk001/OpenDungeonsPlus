@@ -103,11 +103,23 @@ RoomGhostRoom* CreatureActionHuntGhost::hookRoom() const
     return room!=nullptr && room->getSeat()==mCreature.getSeat()?room:nullptr;
 }
 
+double CreatureActionHuntGhost::getBeamSeconds(const Creature& hunter)
+{
+    // Decisions 855 and 857: GhostBeamSeconds (16 s at research level 1 and hunter efficiency 1) times the CatchTime
+    // research factor of the keeper (1.0, 0.8, 0.667) divided by the hunter efficiency (GHOSTS-PLAN D19).
+    const double beam=SkillManager::getResearchValue(hunter.getSeat(),SkillType::roomGhostRoom,
+        ConfigManager::getSingleton().getRoomConfigDouble("GhostBeamSeconds"),"CatchTime");
+    const double efficiency=hunter.getDefinition()==nullptr?1.0:
+        hunter.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency();
+    // A creature without a ghost room efficiency never hunts; it keeps the base beam instead of dividing by zero.
+    return efficiency>0.0?beam/efficiency:beam;
+}
+
 double CreatureActionHuntGhost::getCaptureTurns() const
 {
-    // The beam takes the same fixed time for every hunter (decision 726); efficiency and research only act on emptying.
+    // The share of the ghost already pulled in uses the same beam time as the beam step (getBeamSeconds).
     if(mState!=3) return 0.0;
-    return ConfigManager::getSingleton().getRoomConfigDouble("GhostBeamSeconds")*ODApplication::turnsPerSecond;
+    return getBeamSeconds(mCreature)*ODApplication::turnsPerSecond;
 }
 
 uint32_t CreatureActionHuntGhost::getBoxVisualState() const
@@ -345,8 +357,8 @@ bool CreatureActionHuntGhost::handleHunt()
     }
     if(mState==2 || mState==3 || mState==10)
     {
-        // The catch takes the same fixed time for every hunter (decision 726): throw, beam and snap each run their
-        // full configured seconds; hunter efficiency and research only shorten the emptying at the cauldron.
+        // Throw and snap take their fixed seconds for every hunter (decision 726); the beam is shortened by the CatchTime
+        // research of the keeper and by the hunter efficiency (decisions 855 and 857, getBeamSeconds).
         GhostEntity* ghost=ghostNamed(map,mTarget);
         if(ghost==nullptr || ghost->getState()==GhostState::dissolving)
         { releaseTarget();mTurns=0.0;mState=4;return true; }
@@ -362,8 +374,8 @@ bool CreatureActionHuntGhost::handleHunt()
         }
         if(mState==3)
         {
-            // State 3: the flickering beam with its lightning bolts pulls the ghost down into the lying box (GhostBeamSeconds).
-            const double duration=config.getRoomConfigDouble("GhostBeamSeconds")*ODApplication::turnsPerSecond;
+            // State 3: the flickering beam with its lightning bolts pulls the ghost down into the lying box (getBeamSeconds).
+            const double duration=getBeamSeconds(mCreature)*ODApplication::turnsPerSecond;
             if(mTurns<duration) return false;
             mTurns-=duration;mBeamTarget.clear();mState=10;
             // State 10: the box snaps shut with a bang over the pulled-in ghost; the hunter lowers the beam.

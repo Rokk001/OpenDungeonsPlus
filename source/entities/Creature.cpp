@@ -13019,8 +13019,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 // (GhostEntity::updateLook): the share follows the server's pulled-in share smoothly.
                 mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
                 // The lid opens at the start of the beam step within GhostLidOpenSeconds and stays open while the
-                // ghost is pulled in; the trap shines as far as it is open.
-                const double beamed=mGhostThrowTurns*config.getRoomConfigDouble("GhostBeamSeconds");
+                // ghost is pulled in; the trap shines as far as it is open. The beam lasts as long as on the server:
+                // GhostBeamSeconds times the CatchTime research divided by the hunter efficiency (decisions 855, 857).
+                const double beamed=mGhostThrowTurns*CreatureActionHuntGhost::getBeamSeconds(*this);
                 lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));
                 mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);
                 trapLight=mGhostLidShown;

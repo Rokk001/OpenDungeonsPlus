@@ -55,7 +55,10 @@ header = read('source/creatureaction/CreatureActionHuntGhost.h')
 has(body(action, 'double CreatureActionHuntGhost::getTransferTurns() const'), '20 s for every hunter, the research shortens it',
     'return researched("GhostTransferSeconds","CatchTime")*ODApplication::turnsPerSecond;')
 assert 'getEfficiency' not in body(action, 'double CreatureActionHuntGhost::getTransferTurns() const')
-has(read('source/game/SkillManager.cpp'), 'research base', '{SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostTransferSeconds", ""}')
+has(read('source/game/SkillManager.cpp'), 'research base: the transfer and the beam (decisions 855, 857)',
+    '{SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostTransferSeconds", "GhostBeamSeconds"}')
+# The hunter efficiency shortens only the beam (getBeamSeconds), never the transfer
+assert 'getBeamSeconds' not in body(action, 'double CreatureActionHuntGhost::getTransferTurns() const')
 assert 'GhostEmptyTurns' not in values, 'replaced by GhostTransferSeconds'
 state6 = action[action.index('    if(mState==6)\n'):action.index('    if(mState==7)\n')]
 has(state6, 'transfer at the delivery point', 'const Ogre::Vector3 socket=RoomGhostRoom::getTrapSocketPosition(*mEmptyAnchor);',
@@ -152,11 +155,12 @@ for word in ('fficiency', 'getAffinity', 'getLevel', 'Speed'):
     assert word not in transfer_body, ('the transfer time does not depend on the hunter', word)
 assert state6.count('mTurns+=') == 1 and 'if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }' in state6, \
     'the transfer clock gains exactly one turn per game turn'
-for word in ('fficiency', 'getAffinity', 'Speed'):
+for word in ('fficiency', 'getAffinity', 'Speed', 'getBeamSeconds'):
     assert word not in state6, ('the transfer phase does not read the hunter efficiency', word)
 transfer_share = refresh[refresh.index('else if(boxMode==5)'):]
 transfer_share = transfer_share[:transfer_share.index('break;')]
-assert 'fficiency' not in transfer_share, 'the client share of the transfer does not read the hunter efficiency'
+assert 'fficiency' not in transfer_share and 'getCaptureTurns' not in transfer_share, \
+    'the client share of the transfer does not read the hunter efficiency or the beam time'
 catch_time = re.search(r'^\s*roomGhostRoom\s+CatchTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', read('config/skills.cfg'), re.M)
 assert catch_time, 'CatchTime research line'
 seconds_by_level = [transfer_seconds * float(f) for f in catch_time.groups()]
