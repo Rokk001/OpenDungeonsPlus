@@ -2062,7 +2062,8 @@ materials/textures/GhostNoise.png    AI-generated with Codex    GPLv3+    Origin
 
 assets-src/rooms/ghostroom/create_models.py    AI-generated with Codex    GPLv3+    Original editable model authoring and baked-surface source, 2026-10-26
 assets-src/rooms/ghostroom/GhostCauldron.blend    AI-generated with Codex    GPLv3+    Original iron press cauldron on four clawed feet, brass pipes and a real glazed opening, 2026-10-26
-models/GhostCauldron.mesh    AI-generated with Codex    GPLv3+    Export of the original GhostCauldron Blender source; two-tile footprint, 2026-10-26
+models/GhostCauldron.mesh    AI-generated with Codex    GPLv3+    Original cauldron rebuilt with an open corner trap seat at hand height, no centre funnel, two-tile footprint and existing six materials; exported from independently authored GhostCauldron-A4-rework4.blend kept outside Git, 2026-11-08
+models/GhostCauldron.skeleton    AI-generated with Codex    GPLv3+    Original cauldron rig from GhostCauldron-A4-rework4.blend kept outside Git; fixed DeliverySocket marker, Idle and inset-glow Fill (20 s), Fill16 (16 s), Fill13_3 (13.3 s) clips; independent inspection-window fill retained, 2026-11-08
 materials/scripts/Ghost.material    AI-generated with Codex    GPLv3+    Original weathered room-object surfaces, flowing ghost glow, glass and warning-lamp pulse, 2026-10-26
 models/Ghost.mesh    AI-generated with Claude Code    GPLv3+    Original ragged hooded ghost in a torn shroud with bony clawed hands and wisps streaming back, the one figure of every ghost, built in Blender after the chosen design, 2026-11-05
 models/Ghost.skeleton    AI-generated with Claude Code    GPLv3+    Original ghost rig with the floating Idle and gliding Walk clips, 2026-11-05
