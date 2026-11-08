@@ -23,7 +23,7 @@ def verify(source, header):
     """Require full-byte comparison, reload invalidation and unconditional non-upload work."""
     source = re.sub(r'//[^\n]*|/\*.*?\*/', '', source, flags=re.S)
     body, _, _ = block(source, 'void MiniMapDrawn::update(')
-    gate = 'if(currentBuffer != mPixelBuffer'
+    gate = 'if(windowDrawn && (currentBuffer != mPixelBuffer'
     upload, opening, closing = block(body, gate)
     condition = body[body.index(gate):opening]
     assert 'if(!mMiniMapOgreTexture->isLoaded())\n        mMiniMapOgreTexture->createInternalResources();' in body[:opening]
@@ -86,7 +86,7 @@ def main():
     header = (ROOT / 'source/gamemap/MiniMapDrawn.h').read_text()
     verify(source, header)
     mutations = (
-        ('if(currentBuffer != mPixelBuffer', 'if(false'),
+        ('if(windowDrawn && (currentBuffer != mPixelBuffer', 'if(windowDrawn && (false'),
         ('mUploadedTextureState != mMiniMapOgreTexture->getStateCount()', 'false'),
         ('mUploadedTiles.size() != mTiles.size()', 'false'),
         ('mTiles.size() * sizeof(Color)) != 0', 'mTiles.size() * 3) != 0'),

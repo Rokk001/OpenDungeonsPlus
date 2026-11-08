@@ -33,6 +33,7 @@
 #include <cstring>
 
 #include <OgrePrerequisites.h>
+#include <OgreRenderWindow.h>
 #include <OgreSceneNode.h>
 #include <OgreTextureManager.h>
 
@@ -166,10 +167,16 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
     if(!mMiniMapOgreTexture->isLoaded())
         mMiniMapOgreTexture->createInternalResources();
     const Ogre::HardwarePixelBufferSharedPtr currentBuffer = mMiniMapOgreTexture->getBuffer();
-    if(currentBuffer != mPixelBuffer
+    // Ogre neither draws nor swaps an inactive (minimized or deactivated) render window, so an upload there
+    // only queues driver copies that no frame shows. Lena-13 P1 runs spent 0.8-1.5 s in glTexSubImage2D
+    // every 6.5-13 s while the window was not drawn (Vera-26 F1). The baseline stays the last uploaded
+    // bytes, so the first update in the active window uploads the current map before it is drawn again.
+    const Ogre::RenderWindow* window = ODFrameListener::getSingleton().getRenderWindow();
+    const bool windowDrawn = window == nullptr || window->isActive();
+    if(windowDrawn && (currentBuffer != mPixelBuffer
         || mUploadedTextureState != mMiniMapOgreTexture->getStateCount()
         || mUploadedTiles.size() != mTiles.size()
-        || std::memcmp(mUploadedTiles.data(), mTiles.data(), mTiles.size() * sizeof(Color)) != 0)
+        || std::memcmp(mUploadedTiles.data(), mTiles.data(), mTiles.size() * sizeof(Color)) != 0))
     {
         Ogre::PixelBox output = currentBuffer->lock(mPixelBox, Ogre::HardwareBuffer::HBL_NORMAL);
         const Ogre::PixelBox source(mWidth, mHeight, 1, Ogre::PF_BYTE_RGBA, mTiles.data());
