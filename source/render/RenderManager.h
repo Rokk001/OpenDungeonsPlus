@@ -1116,6 +1116,8 @@ private:
     void clearCreatureDecay(Creature* creature);
     //! Removes the mug of a drinking guest and the birds over a knocked-out guest of a tavern, if the creature has them
     void removeCreatureTavernProps(Creature* creature);
+    //! Removes only the mug of a guest of a tavern, if the creature has one (the end of a seat blend out of a drink clip)
+    void removeCreatureTavernMug(Creature* creature);
     //! Gives the creature the props of the clip it plays (mug in the right hand for Drink, circling birds for
     //! KnockedOut) and removes the props of the clip before
     void updateCreatureTavernProps(Creature* creature, const std::string& anim);

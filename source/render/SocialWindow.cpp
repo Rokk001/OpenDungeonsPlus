@@ -1304,6 +1304,11 @@ void SocialWindow::refreshInventory(const social::DungeonbookEntry& entry)
         slots.push_back(page->getChild("SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)));
     Creature* creature = mGameMap.getCreature(entry.name);
     Creature::fillItemSlotWindows(creature, slots, true);
+    // The framed box with its name is the slot the player sees, but the item picture with the tooltip covers only its
+    // middle and the name passes the mouse to the box (decision 863, finding 3). The box repeats the tooltip of its
+    // picture (item values, or the lock text), so hovering anywhere on a filled slot shows the item as on the card.
+    for(CEGUI::Window* slot : slots)
+        slot->getParent()->setTooltipText(slot->getTooltipText());
 
     std::string hint;
     if(creature == nullptr)

@@ -107,7 +107,7 @@ void MerchantEntity::doUpkeep()
             Room* stopRoom = stop == nullptr ? nullptr : stop->getCoveringRoom();
             const Ogre::Vector3 facing = stopRoom == nullptr ? Ogre::Vector3::ZERO : getRoomFacing(stop, stopRoom);
             if(facing != Ogre::Vector3::ZERO)
-                setAnimationState("CountGold", true, facing);
+                setAnimationState(mAtShelf ? "Idle" : "CountGold", true, facing);
             mFacedRoom = true;
         }
         return;
@@ -122,9 +122,16 @@ void MerchantEntity::doUpkeep()
             setPosition(home->getCentralTile()->getPosition());
         return;
     }
+    // Decision 866: he also walks to the wall shelves of his room, so he moves with a single table too
     const std::vector<Tile*>& tables = static_cast<RoomMerchant*>(room)->getSalesTables();
-    if(tables.empty()) { setAnimationState("Idle"); return; }
-    Tile* destination = tables[Random::Uint(0, static_cast<uint32_t>(tables.size() - 1))];
+    const std::vector<Tile*> shelves = static_cast<RoomMerchant*>(room)->getShelfTiles();
+    std::vector<Tile*> stops(tables);
+    stops.insert(stops.end(), shelves.begin(), shelves.end());
+    if(stops.size() > 1)
+        stops.erase(std::remove(stops.begin(), stops.end(), start), stops.end());
+    if(stops.empty()) { setAnimationState("Idle"); return; }
+    Tile* destination = stops[Random::Uint(0, static_cast<uint32_t>(stops.size() - 1))];
+    mAtShelf = std::find(shelves.begin(), shelves.end(), destination) != shelves.end();
     std::queue<Tile*> pending;
     std::map<Tile*, Tile*> previous;
     pending.push(start);
@@ -149,7 +156,7 @@ void MerchantEntity::doUpkeep()
         for(Tile* cursor = destination; cursor != nullptr && cursor != start; cursor = previous[cursor])
             path.push_back(cursor->getPosition2d());
         std::reverse(path.begin(), path.end());
-        setWalkPath("Walk", "CountGold", true, false, path, false);
+        setWalkPath("Walk", mAtShelf ? "Idle" : "CountGold", true, false, path, false);
     }
     static const double IDLE_SECONDS_MIN = 10.0;
     static const double IDLE_SECONDS_MAX = 20.0;

@@ -73,7 +73,7 @@ skills_cfg = read('config/skills.cfg')
 # 1. Every key of the [Tavern] block with the value of the design (sections 4 and 5 of the design)
 TAVERN = {
     'ThirstSeek': '80', 'UrgeFromBeer': '15', 'UrgeFromWater': '5', 'BeerPrice': '5', 'BeerMood': '25',
-    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'BeerDrinkTurns': '42', 'NextDrinkPercent': '50',
+    'NoCoinMood': '-8.33', 'DrinkTurns': '4', 'WaterDrinkTurns': '14', 'BeerDrinkTurns': '42', 'NextDrinkPercent': '50',
     'MaxDrinksPerVisit': '5', 'DrunkPerBeer': '25', 'DrunkDecayPerTurn': '0.5', 'StaggerAt': '50',
     'StaggerSpeedFactor': '0.5', 'VomitAt': '75', 'HangoverAt': '50', 'HangoverTurns': '252',
     'HangoverWorkFactor': '0.5', 'HangoverMood': '-16.67', 'GameChancePercent': '50', 'GameTurns': '8',
@@ -97,8 +97,8 @@ turns_per_second_line = re.search(r'^double ODApplication::turnsPerSecond = ([\d
 assert turns_per_second_line is not None, 'ODApplication::turnsPerSecond is missing'
 turns_per_second = float(turns_per_second_line.group(1))
 assert turns_per_second == 1.4, 'the design times assume 1.4 turns per second'
-# Decision 835: one beer lasts 30 seconds; the water keeps DrinkTurns (not decided)
-for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30), ('BeerDrinkTurns', 30)):
+# Decisions 835 and 866: one beer lasts 30 seconds and one water lasts 10 seconds
+for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30), ('BeerDrinkTurns', 30), ('WaterDrinkTurns', 10)):
     assert round(seconds * turns_per_second) == float(tavern[key]), key + ' must be ' + str(seconds) + ' s x turnsPerSecond'
 # The loser of a slap duel lies 30 real seconds (TAVERN-PLAN D18, decision 854): DuelKoTurns turns of the room upkeep, one
 # upkeep per game turn, then the get-up of CreatureGetUpSeconds follows

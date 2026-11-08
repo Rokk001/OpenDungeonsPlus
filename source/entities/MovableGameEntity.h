@@ -104,6 +104,17 @@ namespace EntityAnimation
     {
         return clip.compare(0, sit_anim.size(), sit_anim) == 0;
     }
+    //! \brief True for the two clips in which a tavern guest drinks from its mug (Drink and SitDrink).
+    inline bool isDrinkClip(const std::string& clip)
+    {
+        return (clip == drink_anim) || (clip == sit_drink_anim);
+    }
+    //! \brief True for the clips that show no attached weapon: the seated tavern clips (a sword or a staff would reach
+    //! through the table) and the standing Drink (the mug sits on the same hand bone as the weapon, decision 863).
+    inline bool hidesWeapons(const std::string& clip)
+    {
+        return isSeatClip(clip) || (clip == drink_anim);
+    }
     //! A frightened creature flinches and hops back; the client falls back to Idle when absent.
     static const std::string scared_anim = "Scared";
     //! A hunter holds the capture nozzle forward; the client falls back to Attack when absent.
