@@ -1,4 +1,8 @@
 """Compile the actual joined-room and deterministic cauldron placement bodies."""
+from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_ghost_rules import PRELUDE, GHOST_WORLD, function, read, run_probe
 
 # Supply room storage and retain complete production geometry functions.
