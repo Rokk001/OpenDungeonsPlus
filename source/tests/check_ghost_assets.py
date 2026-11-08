@@ -9,14 +9,18 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import assets_src_dir, resolve  # noqa: E402
 
 # Read one shipped text asset.
 def read(path):
-    return (repo / path).read_text(encoding='utf-8')
+    return resolve(repo, path).read_text(encoding='utf-8')
 
 # Require a concrete asset and its own source/licence credit.
 def credited(path, credits):
-    asset = repo / path
+    asset = resolve(repo, path)
     assert asset.is_file() and asset.stat().st_size, path
     rows = [row for row in credits.splitlines() if path in row]
     assert any(any(licence in row for licence in ('GPL','CC0','CC-BY','public domain')) for row in rows), path
@@ -331,7 +335,7 @@ def main():
     imageset = ET.parse(repo/'gui/ODIcons.imageset').getroot()
     icon = imageset.find("Image[@name='GhostRoomButton']")
     assert icon is not None
-    with Image.open(repo/'gui'/imageset.get('imagefile')) as atlas, Image.open(repo/'assets-src/gui/icons/tiles/GhostRoomButton.png') as source:
+    with Image.open(repo/'gui'/imageset.get('imagefile')) as atlas, Image.open(assets_src_dir(repo) / 'gui/icons/tiles/GhostRoomButton.png') as source:
         x,y,w,h = (int(icon.get(key)) for key in ('xPos','yPos','width','height'))
         assert (w,h)==(128,128) and source.size==(256,256), 'native painted source and logical icon size'
         assert atlas.crop((x,y,x+w,y+h)).convert('RGBA').getbbox() is not None, 'painted icon atlas binding'

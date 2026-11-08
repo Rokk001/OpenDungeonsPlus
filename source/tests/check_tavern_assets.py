@@ -31,6 +31,9 @@ import sys
 import zlib
 
 root = Path(__file__).resolve().parents[2]
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(root / 'scripts'))
+from assets_src import assets_src_dir, resolve  # noqa: E402
 
 # The nine clips every creature skeleton gets, in the order of the design
 TAVERN_CLIPS = ['Drink', 'Slap', 'ArmWrestle', 'Dice', 'KnockedOut', 'GetUp', 'Stagger', 'Vomit', 'Hangover']
@@ -50,19 +53,19 @@ SOUND_RATE = 22050
 
 # Returns the text of a repository file.
 def read(path):
-    return (root / path).read_text(encoding='utf-8', errors='replace')
+    return resolve(root, path).read_text(encoding='utf-8', errors='replace')
 
 
 # Returns (width, height) of a PNG file from its header.
 def png_size(path):
-    data = (root / path).read_bytes()
+    data = resolve(root, path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     return struct.unpack('>II', data[16:24])
 
 
 # Returns the mean luminance (0..255) of an 8-bit grey, RGB or RGBA PNG without interlacing.
 def png_mean_luminance(path):
-    data = (root / path).read_bytes()
+    data = resolve(root, path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     at, idat, head = 8, b'', None
     while at < len(data):
@@ -106,7 +109,7 @@ def png_mean_luminance(path):
 
 # Returns (channels, rate) of an Ogg Vorbis file from its identification header.
 def vorbis_format(path):
-    data = (root / path).read_bytes()
+    data = resolve(root, path).read_bytes()
     assert data[:4] == b'OggS', path + ' is not an Ogg file'
     at = data.index(b'\x01vorbis')
     channels = data[at + 11]
@@ -138,7 +141,7 @@ MODELS = {'TavernCounter': 'assets-src/rooms/tavern/TavernCounter.blend', 'Innke
 for name, source in MODELS.items():
     mesh = root / 'models' / (name + '.mesh')
     assert mesh.is_file() and mesh.stat().st_size > 0, 'models/' + name + '.mesh missing'
-    assert (root / source).is_file(), source + ' missing'
+    assert resolve(root, source).is_file(), source + ' missing'
 mesh_material_names = {'TavernCounter': ('TavernCounterWood', 'TavernRail', 'TavernSign'), 'TavernKeg': ('TavernWood', 'TavernIron', 'TavernBrass'),
                        'TavernTable': ('TavernStone', 'TavernWood'), 'TavernMug': ('TavernWood', 'TavernFoam'),
                        'Innkeeper': ('TavernCloth', 'TavernHood', 'TavernSkin'), 'Vomit': ('TavernVomit',)}
@@ -183,7 +186,7 @@ for name in ('TavernFloor', 'TavernWall'):
         assert png_size('materials/textures/tavern/' + name + suffix + '.png')[0] > 0, name + suffix + '.png missing'
 assert re.search(r'^material TavernDuelBirds\b', materials, re.M), 'material TavernDuelBirds missing'
 assert png_size('materials/textures/tavern/DuelBird.png') == (BIRD_ATLAS_SIZE, BIRD_ATLAS_SIZE), 'bird atlas size'
-assert (root / 'assets-src' / 'rooms' / 'tavern' / 'DuelBird.png').is_file(), 'bird source missing'
+assert (assets_src_dir(root) / 'rooms' / 'tavern' / 'DuelBird.png').is_file(), 'bird source missing'
 
 # 3. Icons: the painted sources of the two buttons
 for icon in ('TavernButton', 'BeerButton'):

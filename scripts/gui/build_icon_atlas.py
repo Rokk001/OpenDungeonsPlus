@@ -10,8 +10,12 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "assets-src/gui/icons"
-SKIN = ROOT / "assets-src/gui/skin"
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(ROOT / 'scripts'))
+from assets_src import assets_src_dir  # noqa: E402
+SOURCE = assets_src_dir(ROOT) / "gui/icons"
+SKIN = assets_src_dir(ROOT) / "gui/skin"
 NAVIGATION_RECTS = {
     "MiniMapRim": (0, 0, 768, 768),
     "ManaBadge": (768, 0, 256, 256),

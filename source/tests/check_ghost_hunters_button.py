@@ -17,12 +17,16 @@ import xml.etree.ElementTree as ET
 from PIL import Image
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import assets_src_dir, resolve  # noqa: E402
 DESIGN_W, DESIGN_H = 1024.0, 768.0
 
 
 # Read a tracked source using the repository root rather than the caller's directory.
 def read(path):
-    return (repo / path).read_text(encoding="utf-8")
+    return resolve(repo, path).read_text(encoding="utf-8")
 
 
 # Return a complete brace-delimited body that starts at the signature.
@@ -131,7 +135,7 @@ def icon():
     assert entry and entry.groups() == ("256", "256", "1280", "4352"), entry and entry.groups()
     assert re.search(r'name="MerchantButton" width="256"', imageset), "same size as the merchant button"
     x, y = 1280, 4352
-    tile = Image.open(repo / "assets-src/gui/icons/tiles/GhostHuntersButton.png").convert("RGBA")
+    tile = Image.open(assets_src_dir(repo) / "gui/icons/tiles/GhostHuntersButton.png").convert("RGBA")
     assert tile.size == (256, 256)
     atlas = Image.open(repo / "gui/ODIcons.png").convert("RGBA")
     assert atlas.crop((x, y, x + 256, y + 256)).tobytes() == tile.tobytes(), "the atlas cell is the painted tile"
@@ -142,7 +146,7 @@ def icon():
         if name != "GhostHuntersButton":
             assert ox + w <= x or x + 256 <= ox or oy + h <= y or y + 256 <= oy, ("atlas cell shared with", name)
     # The reskin frame of the row: the outer 13 pixels are the painted iron frame of the merchant tile
-    frame = Image.open(repo / "assets-src/gui/icons/tiles/MerchantButton.png").convert("RGBA")
+    frame = Image.open(assets_src_dir(repo) / "gui/icons/tiles/MerchantButton.png").convert("RGBA")
     same = total = 0
     for py in range(256):
         for px in range(256):
@@ -157,7 +161,7 @@ def icon():
     # Decision 825: painted in the row style, not a render. The free top corners of the inset are the painted cracked
     # stone of the row tiles (tiles/ItemSlotEmpty.png, the stone without a motif), and the trap carries the warm bronze
     # of the row's painted metal. The Blender render of decision 800 fails both (correlation below 0.3, bronze 0.4 %).
-    stone = Image.open(repo / "assets-src/gui/icons/tiles/ItemSlotEmpty.png").convert("L")
+    stone = Image.open(assets_src_dir(repo) / "gui/icons/tiles/ItemSlotEmpty.png").convert("L")
     grey = tile.convert("L")
 
     def correlation(x0, y0, size=38):

@@ -25,6 +25,9 @@ from forged_emblem import Canvas  # noqa: E402
 import forged_motifs as fm  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+from assets_src import assets_src_dir  # noqa: E402
 ATLAS = os.path.join(ROOT, "gui", "ODIcons.png")
 IMAGESET = os.path.join(ROOT, "gui", "ODIcons.imageset")
 
@@ -89,7 +92,7 @@ def read_swatches():
 
 # Rebuild legacy icons only when no painted icon source manifest is installed.
 def build_atlas():
-    if os.path.isfile(os.path.join(ROOT, "assets-src", "gui", "icons", "slots.json")):
+    if os.path.isfile(os.path.join(assets_src_dir(ROOT), "gui", "icons", "slots.json")):
         raise SystemExit("Painted icon sources are installed; use scripts/gui/build_icon_atlas.py. --sheet remains available.")
     swatches = read_swatches()
     names = list(fm.ICONS)

@@ -22,11 +22,15 @@ from pathlib import Path
 import re
 
 root = Path(__file__).resolve().parents[2]
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(root / 'scripts'))
+from assets_src import assets_src_dir, resolve  # noqa: E402
 
 
 # Returns the text of a repository file.
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return resolve(root, path).read_text(encoding='utf-8')
 
 
 # Returns the identifiers of an enum (comments and "= value" skipped), in order.
@@ -104,7 +108,7 @@ for layout, names in ((rooms_layout, ('TavernButton',)), (skill_layout, ('Tavern
         assert layout.count('name="' + name + '"') == 1, name + ' must exist once per layout'
 # The painted sources of the two icons exist (the atlas entries are pinned by check_forged_icons.py)
 for icon in ('TavernButton', 'BeerButton'):
-    assert (root / 'assets-src' / 'gui' / 'icons' / 'tiles' / (icon + '.png')).exists(), 'icon source ' + icon + ' missing'
+    assert (assets_src_dir(root) / 'gui' / 'icons' / 'tiles' / (icon + '.png')).exists(), 'icon source ' + icon + ' missing'
 gui_cpp = read('source/render/Gui.cpp')
 arrange = extract(gui_cpp, 'void Gui::arrangeRoomButtons(')
 assert '"HatcheryButton", "TavernButton"' in arrange, 'the tavern button follows the hatchery in the action bar'

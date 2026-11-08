@@ -16,8 +16,12 @@ import re
 import struct
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import assets_src_dir  # noqa: E402
 
-generator = (repo / 'assets-src/rooms/ghostroom/create_models.py').read_text(encoding='utf-8')
+generator = (assets_src_dir(repo) / 'rooms/ghostroom/create_models.py').read_text(encoding='utf-8')
 start = generator.index('def cauldron():')
 body = generator[start:generator.index('\ndef ', start + 1)]
 for removed in ('Press upright', 'press crossbar', 'press spindle', 'Screw thread', 'Press wheel', 'guide shoe'):
