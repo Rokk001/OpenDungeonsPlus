@@ -1,7 +1,11 @@
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
+. (Join-Path $PSScriptRoot 'ogre-prereq-provenance.ps1')
 $taskRoot = $taskDependencyRoot
 $taskCmake = $taskCmakeExe
+$taskReceiptPath = Join-Path $taskRoot 'install\share\opendungeons-plus\ogre-prereq.json'
+# An interrupted or failed install must never leave an earlier success receipt valid.
+if (Test-Path -LiteralPath $taskReceiptPath) { Remove-Item -LiteralPath $taskReceiptPath }
 $taskOgreCommit = 'f906880885f6014ca9b5bd8aaa09b399394d5676'
 $taskOgreHead = (& git -C "$taskRoot\src\ogre" rev-parse HEAD)
 if ($taskOgreHead -ne $taskOgreCommit) { throw "OGRE source at $taskRoot\src\ogre is $taskOgreHead, expected $taskOgreCommit (OGRE 14.6.1)" }
@@ -35,6 +39,13 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) { throw 'OGRE discard lock patch failed' }
 }
 $ErrorActionPreference = 'Stop'
+$taskPatchHashes = Get-OgrePrereqPatchHashes
+$taskParallel = if ($env:BUILD_PARALLEL) { [int]$env:BUILD_PARALLEL } else { 1 }
+if ($taskParallel -lt 1) { throw 'BUILD_PARALLEL must be positive' }
+$taskMinimumFreeRam = if ($env:BUILD_MIN_FREE_RAM_GB) { [double]$env:BUILD_MIN_FREE_RAM_GB } else { 2 }
+if ($taskMinimumFreeRam -lt 2) { $taskMinimumFreeRam = 2 }
+$taskCompilerFlags = '/DWIN32 /D_WINDOWS /W3 /GR /EHsc'
+if ($taskMpJobs -gt 1) { $taskCompilerFlags += " /MP$taskMpJobs" }
 $taskOptions = @('-S', "$taskRoot\src\ogre", '-B', "$taskRoot\build\ogre",
     '-G', 'Visual Studio 18 2026', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$taskRoot\install",
     "-DCMAKE_PREFIX_PATH=$taskRoot\install", '-DOGRE_BUILD_DEPENDENCIES=OFF',
@@ -50,17 +61,31 @@ $taskOptions = @('-S', "$taskRoot\src\ogre", '-B', "$taskRoot\build\ogre",
     '-DOGRE_BUILD_COMPONENT_PROPERTY=OFF', '-DOGRE_BUILD_COMPONENT_MESHLODGENERATOR=OFF',
     '-DOGRE_BUILD_COMPONENT_OVERLAY_IMGUI=OFF',
     '-DOGRE_BUILD_SAMPLES=OFF', '-DOGRE_BUILD_TOOLS=ON', '-DOGRE_BUILD_TESTS=OFF',
-    '-DOGRE_ENABLE_PRECOMPILED_HEADERS=ON', '-DOGRE_BUILD_MSVC_MP=OFF', '-DCMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /W3 /GR /EHsc /MP4')
+    '-DOGRE_ENABLE_PRECOMPILED_HEADERS=ON', '-DOGRE_BUILD_MSVC_MP=OFF', "-DCMAKE_CXX_FLAGS=$taskCompilerFlags")
 Write-Output 'Configuring OGRE'
 $ErrorActionPreference = 'Continue'
 & $taskCmake @taskOptions *> "$taskRoot\logs\ogre-configure.log"
 $ErrorActionPreference = 'Stop'
 if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\ogre-configure.log" -Tail 55; throw 'OGRE configuration failed' }
 foreach ($taskConfiguration in @('Release', 'Debug')) {
+    $taskFreeRam = (Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB
+    if ($taskFreeRam -lt $taskMinimumFreeRam) { throw "Insufficient free RAM for OGRE build: $taskFreeRam GB; need $taskMinimumFreeRam GB" }
     Write-Output "Building and installing OGRE ($taskConfiguration)"
     $ErrorActionPreference = 'Continue'
-    & $taskCmake --build "$taskRoot\build\ogre" --config $taskConfiguration --target INSTALL --parallel 1 *> "$taskRoot\logs\ogre-$taskConfiguration.log"
+    & $taskCmake --build "$taskRoot\build\ogre" --config $taskConfiguration --target INSTALL --parallel $taskParallel *> "$taskRoot\logs\ogre-$taskConfiguration.log"
+    $taskBuildExit = $LASTEXITCODE
+    $taskBuildExit | Out-File -Encoding ascii "$taskRoot\logs\ogre-$taskConfiguration-exit.txt"
     $ErrorActionPreference = 'Stop'
-    if ($LASTEXITCODE -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\ogre-$taskConfiguration.log" -Tail 55; throw "OGRE $taskConfiguration build failed" }
+    if ($taskBuildExit -ne 0) { Get-Content -LiteralPath "$taskRoot\logs\ogre-$taskConfiguration.log" -Tail 55; throw "OGRE $taskConfiguration build failed" }
 }
+# Refuse a receipt if the patch inputs changed during installation.
+$taskFinalPatchHashes = Get-OgrePrereqPatchHashes
+foreach ($taskName in $taskPatchHashes.Keys) {
+    if ($taskPatchHashes[$taskName] -ne $taskFinalPatchHashes[$taskName]) { throw "OGRE patch changed during installation: $taskName" }
+}
+$taskReceipt = [ordered]@{ schema = 1; commit = $taskOgreCommit; patches = $taskPatchHashes
+    binaries = (Get-OgrePrereqBinaryHashes -DependencyRoot $taskRoot) }
+New-Item -ItemType Directory -Path (Split-Path -Parent $taskReceiptPath) -Force | Out-Null
+$taskReceipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $taskReceiptPath -Encoding UTF8
+Assert-OgrePrereqProvenance -DependencyRoot $taskRoot
 Write-Output 'OGRE installed'

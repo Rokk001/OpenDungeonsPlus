@@ -2486,6 +2486,7 @@ static const Ogre::String SHADER_SKINNING_INFIX = "_RtssSkin_";
 //! Skeletons with more bones than this are left to the CPU. The array of bone matrices is 3 vec4 per bone.
 static const Ogre::ushort SHADER_SKINNING_MAX_BONES = 128;
 
+//! Adds skinning to copies of authored fixed-function materials, including materials already rendered by RTSS.
 bool RenderManager::useShaderSkinning(Ogre::Entity* entity)
 {
 #if OGRE_VERSION_MAJOR >= 13
@@ -2504,6 +2505,12 @@ bool RenderManager::useShaderSkinning(Ogre::Entity* entity)
         for(unsigned short t = 0; t < material->getNumTechniques(); ++t)
         {
             const Ogre::Technique* technique = material->getTechnique(t);
+            // RTSS adds programmable techniques after first use. They are regenerated on the copy,
+            // so only authored programs should prevent adding skinning to a later entity.
+            if(technique->getSchemeName() == Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME &&
+                technique->getNumPasses() > 0 && technique->getPass(0)->getUserObjectBindings().getUserAny(
+                    Ogre::RTShader::TargetRenderState::UserKey).has_value())
+                continue;
             for(unsigned short p = 0; p < technique->getNumPasses(); ++p)
             {
                 const Ogre::Pass* pass = technique->getPass(p);

@@ -66,6 +66,8 @@ private:
     };
     //! Destroys a cell's geometry immediately, retaining the original entity draws.
     void invalidate(Cell& cell);
+    //! Splits a rejected dirty cell by exact ordered lights without changing draw eligibility.
+    void partitionByLights(Cell& cell);
     Ogre::SceneManager* mScene;
     std::map<std::string, std::unique_ptr<Cell> > mCells;
     std::map<std::string, Cell*> mMembers;

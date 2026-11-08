@@ -1,6 +1,9 @@
 # BuildNumber is the fourth version digit; only integrator release builds pass N > 0, all others keep 0.
 param([int]$BuildNumber = 0)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'windows-paths.ps1')
+. (Join-Path $PSScriptRoot 'ogre-prereq-provenance.ps1')
+Assert-OgrePrereqProvenance -DependencyRoot $taskDependencyRoot
 . (Join-Path $PSScriptRoot 'Enter-OpenDungeonsPlus.ps1')
 $taskRepo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $taskRoot = $taskDependencyRoot

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <sstream>
+#include <utility>
 
 //! Creates a cell with no generated scene object.
 TerrainDrawBatch::Cell::Cell() : mGeometry(nullptr), mSuppressed(0), mDirty(true), mDecided(false),
@@ -117,6 +118,62 @@ void TerrainDrawBatch::add(Ogre::SceneManager* scene, Ogre::Entity* entity)
     cell->mBounds.merge(entity->getWorldBoundingBox(true));
     entity->setListener(cell.get());
     mMembers[entity->getName()] = cell.get();
+}
+
+//! Retains compatible subsets instead of abandoning a whole cell at its first different light list.
+void TerrainDrawBatch::partitionByLights(Cell& cell)
+{
+    if(!cell.mDirty || cell.mGeometry != nullptr)
+        return;
+    std::vector<Ogre::LightList> lights;
+    std::vector<std::vector<Ogre::Entity*> > groups;
+    for(Ogre::Entity* entity : cell.mEntities)
+    {
+        if(!entity->isAttached())
+            return;
+        const Ogre::LightList& current = entity->queryLights();
+        size_t group = 0;
+        while(group < lights.size() && lights[group] != current)
+            ++group;
+        if(group == lights.size())
+        {
+            lights.push_back(current);
+            groups.push_back(std::vector<Ogre::Entity*>());
+        }
+        groups[group].push_back(entity);
+    }
+    if(groups.size() < 2)
+        return;
+    size_t largest = 0;
+    for(size_t group = 1; group < groups.size(); ++group)
+    {
+        if(groups[group].size() > groups[largest].size())
+            largest = group;
+    }
+    // Unique light lists cannot save a submission, so keep the throttled original cell.
+    if(groups[largest].size() < 2)
+        return;
+    for(size_t group = 0; group < groups.size(); ++group)
+    {
+        if(group == largest)
+            continue;
+        std::unique_ptr<Cell> subset(new Cell());
+        subset->mMaterial = cell.mMaterial;
+        subset->mEntities.swap(groups[group]);
+        subset->mBuildAllowed = subset->mEntities.size() >= 2;
+        for(Ogre::Entity* entity : subset->mEntities)
+        {
+            subset->mBounds.merge(entity->getWorldBoundingBox(true));
+            entity->setListener(subset.get());
+            mMembers[entity->getName()] = subset.get();
+        }
+        std::ostringstream key;
+        key << "LightGroup_" << ++mNumber;
+        mCells[key.str()] = std::move(subset);
+    }
+    cell.mEntities.swap(groups[largest]);
+    // This is only a construction hint; every group still uses canBatch in each current view.
+    cell.mBuildAllowed = true;
 }
 
 //! Removes generated geometry and resets construction retry state before a source changes.
@@ -251,6 +308,8 @@ void TerrainDrawBatch::preFindVisibleObjects(Ogre::SceneManager* source,
             }
             if(!cell.mBuildAllowed)
                 cell.mNextBuildProbe = now + std::chrono::milliseconds(250);
+            if(!cell.mBuildAllowed)
+                partitionByLights(cell);
         }
         const bool enabled = cell.canBatch();
         if(cell.mGeometry != nullptr)

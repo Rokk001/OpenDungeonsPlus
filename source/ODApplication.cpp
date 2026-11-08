@@ -161,7 +161,7 @@ bool menuTestElapsed(const std::chrono::steady_clock::time_point& start, int32_t
 }
 }
 
-//! \brief Runs the client and releases visual owners before the shader generator and native window.
+//! \brief Releases visual owners before RTSS and leaves the primary window alive for Ogre resource teardown.
 void ODApplication::startClient()
 {
     ResourceManager& resMgr = ResourceManager::getSingleton();
@@ -412,7 +412,8 @@ void ODApplication::startClient()
     Ogre::MaterialManager::getSingleton().removeListener(sgListener);
     delete sgListener;
     Ogre::RTShader::ShaderGenerator::destroy();
-    ogreRoot.destroyRenderTarget(renderWindow);
+    // Ogre's primary window owns the context needed to unload meshes, buffers and textures.
+    // Root must release those resources before it destroys the primary window during shutdown.
 }
 
 //TODO: find some better places for some of these

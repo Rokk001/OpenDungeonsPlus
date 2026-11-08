@@ -9,7 +9,8 @@ renderer = (repo / 'source/render/RenderManager.cpp').read_text(encoding='utf-8'
 
 
 def check_shutdown(source):
-    """Require visual owners in a completed scope before shader or context teardown."""
+    """Release visual owners before RTSS and preserve the primary context for Root's resource teardown."""
+    source = source.split('void ODApplication::startClient()', 1)[1]
     start = source.index('// Keep the GL context and shader generator alive')
     opening = source.index('{', start)
     depth = 0
@@ -29,8 +30,13 @@ def check_shutdown(source):
         assert declaration in owners
     assert owners.index('client.disconnect();') < owners.index('server.stopServer();')
     assert owners.index('ogreRoot.removeFrameListener(&frameListener);') < owners.index('frameListener.prepareRenderWindowShutdown();')
-    for teardown in ('Ogre::RTShader::ShaderGenerator::destroy();', 'ogreRoot.destroyRenderTarget(renderWindow);'):
-        assert source.index(teardown, opening) > closing
+    assert source.index('Ogre::Root ogreRoot(') < opening
+    assert source.index('Ogre::RTShader::ShaderGenerator::destroy();', opening) > closing
+    # A completed owner scope is insufficient: Root still has mesh/texture hardware resources.
+    # Ogre documents that the primary window's context must survive until its own shutdown.
+    assert not re.search(r'ogreRoot\s*\.\s*destroyRenderTarget\s*\(\s*renderWindow\s*\)', source)
+    assert not re.search(r'renderWindow\s*->\s*destroy\s*\(', source)
+    assert not re.search(r'ogreRoot\s*\.\s*shutdown\s*\(', source)
 
 
 def check_gui(source):
@@ -55,7 +61,10 @@ assert 'mRenderManager->mRenderTarget->update();' in listener
 # Independent regressions must be rejected rather than merely checking function existence.
 mutations = [
     (check_shutdown, application.replace('    Ogre::RTShader::ShaderGenerator::destroy();', '', 1).replace('    frameListener.prepareRenderWindowShutdown();', '    Ogre::RTShader::ShaderGenerator::destroy();\n    frameListener.prepareRenderWindowShutdown();', 1)),
-    (check_shutdown, application.replace('    ogreRoot.destroyRenderTarget(renderWindow);', '', 1).replace('    frameListener.prepareRenderWindowShutdown();', '    ogreRoot.destroyRenderTarget(renderWindow);\n    frameListener.prepareRenderWindowShutdown();', 1)),
+    (check_shutdown, application.replace('    frameListener.prepareRenderWindowShutdown();', '    ogreRoot.destroyRenderTarget(renderWindow);\n    frameListener.prepareRenderWindowShutdown();', 1)),
+    (check_shutdown, application.replace('    Ogre::RTShader::ShaderGenerator::destroy();', '    Ogre::RTShader::ShaderGenerator::destroy();\n    ogreRoot.destroyRenderTarget(renderWindow);', 1)),
+    (check_shutdown, application.replace('    Ogre::RTShader::ShaderGenerator::destroy();', '    Ogre::RTShader::ShaderGenerator::destroy();\n    renderWindow->destroy();', 1)),
+    (check_shutdown, application.replace('    frameListener.prepareRenderWindowShutdown();', '    ogreRoot.shutdown();\n    frameListener.prepareRenderWindowShutdown();', 1)),
     (check_gui, listener.replace('viewport != nullptr && viewport->getOverlaysEnabled()', 'viewport != nullptr', 1)),
     (check_gui, listener.replace('scene->_getCurrentRenderStage() != Ogre::SceneManager::IRS_RENDER_TO_TEXTURE', 'true', 1)),
 ]
@@ -65,4 +74,4 @@ for check, mutated in mutations:
     except (AssertionError, ValueError):
         continue
     raise AssertionError('unsafe lifetime or GUI mutation was accepted')
-print('ok: visual owners outlive neither shader generator nor GL context; scene-only views skip GUI; four mutations rejected')
+print('ok: visual owners released before RTSS; primary context retained for Root; scene-only views skip GUI; seven mutations rejected')
