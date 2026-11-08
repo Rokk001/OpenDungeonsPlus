@@ -186,8 +186,10 @@ void ODFrameListener::windowClosed(Ogre::RenderWindow*)
     mModeManager = nullptr;
 }
 
+//! \brief Detaches scene callbacks before releasing the frame listener and its game map.
 ODFrameListener::~ODFrameListener()
 {
+    mRenderManager->getSceneManager()->removeRenderQueueListener(this);
     OD_LOG_INF("destructor of ODFrameListener");
     if (mInitialized)
         exitApplication();

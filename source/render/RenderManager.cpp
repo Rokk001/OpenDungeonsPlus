@@ -1817,9 +1817,12 @@ void RenderManager::setDynamicShadowsEnabled(bool enabled)
     setShadowingEnabledParameters(enabled);
 }
 
-//! \brief Releases the renderer's visual resources.
+//! \brief Unregisters callbacks before releasing the renderer's visual resources.
 RenderManager::~RenderManager()
 {
+    mSceneManager->removeListener(&ddd);
+    if(mRenderTarget != nullptr)
+        mRenderTarget->removeListener(this);
     while(!mCreatureDecayMaterials.empty())
         clearCreatureDecay(mCreatureDecayMaterials.begin()->first);
     cancelCreatureStep();

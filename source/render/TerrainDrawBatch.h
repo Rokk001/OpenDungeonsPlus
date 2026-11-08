@@ -58,6 +58,8 @@ private:
         bool mDirty;
         bool mDecided;
         bool mEnabled;
+        //! Previous post-transform light compatibility permits construction, never source suppression.
+        bool mBuildAllowed;
         Ogre::uint32 mVisibilityMask;
     };
     //! Destroys a cell's geometry immediately, retaining the original entity draws.

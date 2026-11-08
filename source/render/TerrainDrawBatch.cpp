@@ -15,7 +15,7 @@
 
 //! Creates a cell with no generated scene object.
 TerrainDrawBatch::Cell::Cell() : mGeometry(nullptr), mSuppressed(0), mDirty(true), mDecided(false),
-    mEnabled(false), mVisibilityMask(0)
+    mEnabled(false), mBuildAllowed(false), mVisibilityMask(0)
 {
 }
 
@@ -126,11 +126,12 @@ void TerrainDrawBatch::invalidate(Cell& cell)
         mScene->destroyStaticGeometry(cell.mGeometry);
     cell.mGeometry = nullptr;
     cell.mDirty = true;
+    cell.mBuildAllowed = false;
     cell.mDecided = false;
     cell.mEnabled = false;
 }
 
-//! Detaches the callback before the caller destroys or recolours the original.
+//! Detaches the callback before source changes and drops exhausted cells from per-view traversal.
 void TerrainDrawBatch::remove(const std::string& name)
 {
     std::map<std::string, Cell*>::iterator member = mMembers.find(name);
@@ -147,9 +148,19 @@ void TerrainDrawBatch::remove(const std::string& name)
         break;
     }
     mMembers.erase(member);
+    if(cell.mEntities.empty())
+    {
+        for(std::map<std::string, std::unique_ptr<Cell> >::iterator it = mCells.begin(); it != mCells.end(); ++it)
+        {
+            if(it->second.get() != &cell)
+                continue;
+            mCells.erase(it);
+            break;
+        }
+    }
 }
 
-//! Builds visible dirty cells only; offscreen originals remain available without allocating batch buffers.
+//! Builds visible dirty cells after a light-compatible view; current-view validation keeps rejected originals.
 void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Camera* camera)
 {
     (void)source;
@@ -160,9 +171,13 @@ void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Cam
             continue;
         if(!camera->isVisible(cell.mBounds))
             continue;
-        cell.mDirty = false;
         if(cell.mEntities.size() < 2)
             continue;
+        // preFindVisibleObjects records this hint after scene transforms have been updated.
+        // A previous compatible view only permits construction; canBatch validates the current view.
+        if(!cell.mBuildAllowed)
+            continue;
+        cell.mDirty = false;
         std::ostringstream name;
         name << "TerrainDrawBatch_" << ++mNumber;
         cell.mGeometry = mScene->createStaticGeometry(name.str());
@@ -188,7 +203,7 @@ void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Cam
     }
 }
 
-//! Culls whole cells before checking per-source inputs; shadow passes always keep originals.
+//! Culls cells, records post-transform build eligibility and validates draws; shadows keep originals.
 void TerrainDrawBatch::preFindVisibleObjects(Ogre::SceneManager* source,
     Ogre::SceneManager::IlluminationRenderStage stage, Ogre::Viewport* viewport)
 {
@@ -205,6 +220,30 @@ void TerrainDrawBatch::preFindVisibleObjects(Ogre::SceneManager* source,
         // Rejecting a batch here never culls its originals: their normal Ogre traversal remains active.
         if(!cell.mDecided && !viewport->getCamera()->isVisible(cell.mBounds))
             cell.mDecided = true;
+        // Do not query lights during preUpdateSceneGraph: Ogre has not updated transforms yet.
+        // Dirty cells keep ordinary draws while learning whether construction could help next frame.
+        if(!cell.mDecided && cell.mDirty && cell.mEntities.size() >= 2)
+        {
+            cell.mBuildAllowed = true;
+            Ogre::LightList firstLights;
+            for(size_t i = 0; i < cell.mEntities.size(); ++i)
+            {
+                Ogre::Entity* entity = cell.mEntities[i];
+                if(!entity->isAttached())
+                {
+                    cell.mBuildAllowed = false;
+                    break;
+                }
+                const Ogre::LightList& lights = entity->queryLights();
+                if(i == 0)
+                    firstLights = lights;
+                else if(lights != firstLights)
+                {
+                    cell.mBuildAllowed = false;
+                    break;
+                }
+            }
+        }
         const bool enabled = cell.canBatch();
         if(cell.mGeometry != nullptr)
             cell.mGeometry->setVisible(enabled);
