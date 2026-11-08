@@ -21,8 +21,8 @@ What is run (the function bodies are taken from the source files, not copied by 
                                      bath" (the creature is not accepted, nothing is paid), workers, other seats and a full
                                      pool are refused, so nobody queues
   RoomSpa::startBath / upkeepBathers / finishBath / getRelaxTurns / finishBrokenVisit / isBatherDisturbed / abortDisturbedBathers
-                                     the bath gives SpaMoodJump 50 when it starts and lasts 15 turns (the counted turns reach 14.2857)
-                                     of +10.5 stored mood, cut at the 200 of PleasureVisitMax (50 + 147 after 14 turns, 200 after 15),
+                                     the bath gives SpaMoodJump 50 when it starts and lasts 42 seated turns (30 seconds)
+                                     of +150/42 stored mood, reaching the unchanged 200 of PleasureVisitMax,
                                      at the end the buff Relaxed (100 over the relaxation) starts and the relaxation (the lock of the
                                      spa) is 252 / 302.4 / 352.8 by research level, the hangover is 0,
                                      the post is sent once, the creature dirt is untouched, the mud counter is 3; a fight, a
@@ -39,6 +39,7 @@ The probe needs the MSVC compiler on the path (run it in a Visual Studio develop
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
@@ -163,6 +164,9 @@ probe = r'''
 #include "RoomSpaLayout.h"
 #include "CreatureMoodEffect.h"
 #include "CreatureMoodPleasure.h"
+
+namespace ODApplication { const double turnsPerSecond = 1.4; }
+namespace Random { double Double(double minimum, double maximum) { return (minimum + maximum) * 0.5; } }
 
 #define OD_LOG_WRN(x) do { } while(0)
 #define OD_LOG_ERR(x) do { } while(0)
@@ -300,6 +304,7 @@ struct Creature
     bool isJumping() const { return mJumping; }
     void cancelJump() { ++cancelJumpCalls; mJumping = false; }
     void setSpaBathing(bool bathing) { mSpaBathing = bathing; }
+    void setTimedAnimationState(const std::string&, double, bool, const Ogre::Vector3&, bool) {}
     // The one-time mood event of the real creature, reduced to its effect on the stored mood: 0 .. CreatureBaseMood
     void applyMoodEvent(double points, bool sensitive)
     { mStoredMood = std::max(0.0, std::min(@@BASE_MOOD@@, mStoredMood + points)); }
@@ -378,6 +383,7 @@ public:
     bool payForBath(Creature& creature);
     bool canAccept(const Creature& creature) const;
     void startBath(RoomSpaBather& bather);
+    void sitDown(RoomSpaBather& bather);
     bool landJump(RoomSpaBather& bather);
     void finishBath(RoomSpaBather& bather);
     double getRelaxTurns() const;
@@ -519,15 +525,21 @@ static void checkBath(uint32_t level, double expectedRelax)
     expectNear(c.mStoredMood, 550.0, "the jump when the bath starts: SpaMoodJump 50");
     expect(c.mPleasureVisitKind == static_cast<int32_t>(PleasureRoomKind::spa), "the bath is a spa visit");
     int turns = 0; double moodAfter14 = 0.0;
-    while(!f.room->mBathers.empty() && !f.room->mBathers.back().mDone && turns < 500)
+    while(f.room->mBathers.back().mState == SpaBatherState::bathing && turns < 500)
     {
         c.upkeepSpaState(); f.room->upkeepBathers(); ++turns;
         if(turns == 14) moodAfter14 = c.mStoredMood;
-        if(turns < 15) expectNear(c.mStoredMood, 550.0 + 10.5 * turns, "stored mood +10.5 per turn after the jump, turn " + std::to_string(turns));
+        if(turns < 15) expectNear(c.mStoredMood, 550.0 + (150.0 / 42.0) * turns, "stored mood +150/42 per turn after the jump, turn " + std::to_string(turns));
     }
-    expect(turns == 15, "the bath lasts 15 turns (14.2857 counted), took " + std::to_string(turns));
-    expectNear(moodAfter14, 697.0, "stored mood after 14 turns: 50 + 147");
-    expectNear(c.mStoredMood, 700.0, "stored mood after the bath: the 15th turn is cut at the 200 of PleasureVisitMax, the end of the bath adds nothing");
+    expect(turns == 42, "the seated bath lasts 42 turns, took " + std::to_string(turns));
+    expectNear(moodAfter14, 600.0, "stored mood after 14 turns: 50 + 50");
+    expect(f.room->mBathers.back().mState == SpaBatherState::standing, "the full bath starts standing");
+    expect(f.room->mBathers.back().mTransitionTurns >= 4.2 && f.room->mBathers.back().mTransitionTurns <= 7.0, "standing lasts 3-5 seconds");
+    for(int i = 0; i < 6; ++i) f.room->upkeepBathers();
+    expect(f.room->mBathers.back().mState == SpaBatherState::leaving, "standing ends in walking exit");
+    expect(f.room->posts == 0 && c.mRelaxTurns == 0.0, "effects wait for the completed exit");
+    f.room->finishBath(f.room->mBathers.back());
+    expectNear(c.mStoredMood, 700.0, "stored mood after the bath: 42 seated turns reach PleasureVisitMax without transition mood");
     expectNear(c.mSpaMood, 0.0, "the old-save spa mood carrier stays 0");
     expectNear(c.mRelaxTurns, expectedRelax, "relaxation (the lock of the spa) at research level " + std::to_string(level));
     expect(c.mPleasureVisitKind == -1 && c.mPleasureVisitGain == 0.0, "the visit is over");
@@ -598,7 +610,7 @@ static void checkBrokenOff()
         f.room->payForBath(c);
         RoomSpaBather& bather = f.startBathFor(c);
         for(int i = 0; i < 10; ++i) { c.upkeepSpaState(); f.room->upkeepBathers(); }
-        expectNear(c.mStoredMood, 655.0, "mood so far: the jump and ten turns");
+        expectNear(c.mStoredMood, 550.0 + 150.0 / 42.0 * 10.0, "mood so far: the jump and ten turns");
         if(cause == 0) c.mFighting = true;
         if(cause == 1) c.mFriendlyFight = true;
         if(cause == 2) c.mFleeing = true;
@@ -608,7 +620,7 @@ static void checkBrokenOff()
         (void)bather;
         f.room->abortDisturbedBathers();
         expect(f.room->mBathers.empty(), "the place is released, cause " + std::to_string(cause));
-        expectNear(c.mStoredMood, 655.0, "the mood gained so far stays, cause " + std::to_string(cause));
+        expectNear(c.mStoredMood, 550.0 + 150.0 / 42.0 * 10.0, "the mood gained so far stays, cause " + std::to_string(cause));
         expectNear(c.mRelaxTurns, 252.0, "the spa is closed as after any visit that gained mood, cause " + std::to_string(cause));
         expect(c.mMoodEffects.size() == 1 && c.mMoodEffects[0].mName == "Relaxed", "the buff starts, cause " + std::to_string(cause));
         expect(c.mPleasureVisitKind == -1, "the visit is over, cause " + std::to_string(cause));
@@ -629,7 +641,7 @@ static void checkBrokenOff()
     Fixture g; Creature k("k", &g.small, &g.seat); RoomSpaBather jb(&k); jb.mState = SpaBatherState::jumping; jb.mBlock.mX = 1; jb.mBlock.mY = 1;
     g.room->mBathers.push_back(jb); k.mJumping = false;
     g.room->upkeepBathers();
-    expect(g.room->mBathers.back().mState == SpaBatherState::bathing && k.mSpaBathing, "the landing starts the bath");
+    expect(g.room->mBathers.back().mState == SpaBatherState::sitting && k.mSpaBathing, "the landing starts the paid sitting transition");
     expect(g.seat.gold == 95 && k.splashes == 1 && k.clearCalls == 0, "the landing pays the bath once");
     for(int i = 0; i < 5; ++i) g.room->upkeepBathers();
     expect(g.seat.gold == 95, "a running bath is never paid again");
@@ -689,7 +701,7 @@ helpers = extract(room_cpp, 'double getTavernValue(')
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
     'SpaTileSet RoomSpa::getCoveredSet(', 'SpaTileSet RoomSpa::getPoolSet(', 'SpaTileSet RoomSpa::getTakenSet(',
     'std::vector<RoomSpaBather>::iterator RoomSpa::findBatherOf(', 'bool RoomSpa::canPay(', 'bool RoomSpa::payForBath(',
-    'bool RoomSpa::canAccept(', 'void RoomSpa::startBath(', 'bool RoomSpa::landJump(', 'void RoomSpa::finishBath(', 'double RoomSpa::getRelaxTurns(',
+    'bool RoomSpa::canAccept(', 'void RoomSpa::sitDown(', 'void RoomSpa::startBath(', 'bool RoomSpa::landJump(', 'void RoomSpa::finishBath(', 'double RoomSpa::getRelaxTurns(',
     'void RoomSpa::finishBrokenVisit(', 'void RoomSpa::upkeepBathers(',
     'bool RoomSpa::isBatherDisturbed(', 'void RoomSpa::abortDisturbedBathers('])
 assert 'mCreatureDirt' not in room_functions and 'washed' not in room_functions, 'the cut-out room code never touches the creature dirt'
@@ -715,6 +727,13 @@ replacements = {
 for token, text in replacements.items():
     assert token in probe, token
     probe = probe.replace(token, text)
+
+if '--source-only' in sys.argv:
+    output = root / 'out' / 'spa-rules-904.cpp'
+    output.parent.mkdir(exist_ok=True)
+    output.write_text(probe, encoding='utf-8')
+    print('spa rules source wiring checked; production probe generated, compilation pending')
+    sys.exit(0)
 
 with tempfile.TemporaryDirectory(prefix='odp-spa-rules-') as directory:
     work = Path(directory)

@@ -12,8 +12,9 @@ What is checked (fixed values of this branch, counted once)
              also between its keys, on every seat the guest can take, at the smallest and the largest creature scale of the
              level; the bench counts below the 0.015 tiles a body presses into it; the mug counts in SitDrink
   resting    the bodies that do not sit on legs lie on the bench: the lowest part above the seat rests on it
-  mug        every skeleton has the mount Weapon_R for the mug except the listed ones; on Kreatur and Scarab a limb brings the rim of
-             the mug to within 0.03 tiles of the mouth in SitDrink
+  mug        every skeleton has the mount Weapon_R for the mug except the listed ones; SitDrink is the calm sip of 5 s of
+             tools/author_tavern_drink.py (decision 901; the rim at the mouth is checked by check_tavern_drink_834.py); a
+             guest of a stool is measured in SitDrink against the furniture as it sits at the end of the table
   weapons    attached weapon models are hidden during a seated clip (read from the source, not run)
   bench      the pelvis of a walking body stays on the bench in Sit, except for the listed large bodies, whose limit is their own
   floor      the feet of a sitting body stand on the floor in Sit
@@ -32,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
 import author_tavern_seats as seats
+import author_tavern_drink as drink
 import author_rest_poses as rest
 import fix_walk_feet as feet
 from check_animation_assets import export
@@ -53,10 +55,14 @@ MAX_ROOT_SCALE = 0.01
 MAX_REST_GAP = 0.03
 # Mesh below the floor in Sit, in tiles: the foot of a rig stands in the floor by this little in its own rest pose
 MIN_FLOOR = -0.1
-# The rim of the mug of a body that drinks on a limb comes this close to its mouth in SitDrink, in tiles
-MAX_MUG_REACH = 0.03
 # First and last frame of a clip may differ by this share of the height of the body
 MAX_SEAM = 1e-3
+
+
+# Returns the meshes of the guests of a stool (TAVERN_STOOL_BODIES of RoomTavern.cpp).
+def stool_meshes():
+    room = (ROOT / 'source' / 'rooms' / 'RoomTavern.cpp').read_text(encoding='utf-8')
+    return set(re.findall(r'\{ "([^"]+)", [0-9]+, ', room.split('TAVERN_STOOL_BODIES[] =')[1].split('};')[0]))
 
 
 # Returns the skeleton names of the creature types with a tavern line other than 0 0, and their mesh names.
@@ -100,13 +106,22 @@ def check_skeleton(name, mesh_name, out):
                 assert np.abs(locals_fine[index][2] / idle[index][2][0] - 1.0).max() < MAX_ROOT_SCALE, (name, clip, 'a root is scaled', skeleton.names[index])
         clip_vertices, clip_weights = (seats.with_mug(skeleton, vertices, weights, out / (mesh_name + '.xml')) if clip == 'SitDrink' else (vertices, weights))
         points = rest.skin_vertices(skeleton, locals_fine, clip_vertices, clip_weights)
-        depth = seats.level_depth(points)
+        if clip == 'SitDrink' and mesh_name in stool_meshes():
+            # Decision 901: a guest of a stool (decision 863) drinks at the end of the table, on its stool; the mug of a
+            # limb mount counts too
+            mug = drink.Mug(skeleton, name, rest.mesh_data(out / (seats.MUG_MESH + '.xml'))[0], drink.read_limb_mounts())
+            _, _, mug_points = mug.world(skeleton.fk(locals_fine), skeleton)
+            both = np.concatenate((points, mug_points), axis=1)
+            depth = max(drink.stool_depth(both[frame] * level) for frame in range(len(fine))
+                        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
+        else:
+            depth = seats.level_depth(points)
         assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the furniture', depth)
     has_mount = seats.MUG_BONE in skeleton.idx
     assert has_mount == (name not in seats.NO_MUG_MOUNT), (name, 'mug mount', has_mount)
-    drink = seats.PLAY_MUGS.get((name, 'SitDrink'))
-    if drink is not None:
-        assert seats.mug_rim_distance(skeleton, 'SitDrink', drink) <= MAX_MUG_REACH, (name, 'the mug does not reach the mouth')
+    # Decision 901: SitDrink is one calm sip of tools/author_tavern_drink.py for every skeleton; the rim at the mouth of every
+    # body (Kreatur and Scarab included, which had their own limb drink here) is checked by check_tavern_drink_834.py
+    assert abs(skeleton.clips['SitDrink'].length - drink.CYCLE) < 1e-6, (name, 'SitDrink is not the sip of 5 s')
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     points = rest.skin_vertices(skeleton, sit, vertices, weights)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')

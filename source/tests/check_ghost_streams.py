@@ -110,7 +110,7 @@ struct CreatureActionHuntGhost{Creature& mCreature;uint32_t mState=0;std::string
         code += function(box,sig)
     hunter = read('source/creatureaction/CreatureActionHuntGhost.cpp')
     code += function(hunter,'void CreatureActionHuntGhost::exportToStream(')+function(hunter,'bool CreatureActionHuntGhost::importFromStream(')
-    code += function(hunter,'GhostEntity* ghostNamed(')+function(hunter,'RoomGhostRoom* roomNamed(')+function(hunter,'void CreatureActionHuntGhost::restore(')
+    code += function(hunter,'Ogre::Vector3 facing(')+function(hunter,'GhostEntity* ghostNamed(')+function(hunter,'RoomGhostRoom* roomNamed(')+function(hunter,'void CreatureActionHuntGhost::restore(')
     code += function(hunter,'bool CreatureActionHuntGhost::isTransferring(')
     seat = read('source/game/Seat.cpp')
     # A new game and a seat saved before the ghost room both start on the ghost press, the research apparatus

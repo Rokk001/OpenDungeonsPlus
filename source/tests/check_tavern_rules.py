@@ -1060,7 +1060,7 @@ static void checkDuel()
         if(cases[i].crit)
         {
             expect(f.room.mGames.empty() && b->mHp == 100.0, std::string(cases[i].what) + ": the duel is decided when the slap is over, no damage");
-            expect(f.stateOf(b) == TavernGuestState::ko && f.room.findSpotOf(b)->second.mTurnsLeft == 42 && f.room.findSpotOf(b)->second.mSleepAfter, "a critical slap knocks the loser out for 42 turns and sends it to bed");
+            expect(f.stateOf(b) == TavernGuestState::ko && f.room.findSpotOf(b)->second.mTurnsLeft == 43 && f.room.findSpotOf(b)->second.mSleepAfter, "a critical slap knocks the loser out for 42 turns plus the turn of the knock-out and sends it to bed");
         }
         else expect(f.room.mGames.size() == 1 && b->mHp == 90.0, std::string(cases[i].what) + ": a normal slap takes 10 HP");
     }
@@ -1144,8 +1144,13 @@ static void checkKnockOutAndAbort()
     // to whole turns), then done (the room sends the loser to bed in useRoom)
     expect(std::fabs(ConfigManager::getSingleton().values["DuelKoTurns"] / ODApplication::turnsPerSecond - 30.0) < 1e-9, "the loser lies 30 real seconds");
     expect(getUpTurns() == 9 && getUpTurns() / ODApplication::turnsPerSecond >= 6.0, "the get-up lasts 6 s, 9 turns");
+    // Decision 897: the knock-out comes from upkeepGames and upkeepSpots counts that same turn down right after it (doUpkeep);
+    // after it the loser lies exactly 42 turns
     { Fixture f; f.seat.beerLevel = 1; Creature* b = f.guest("B", 3, 10, TavernGuestState::done, 0);
       f.room.knockOut(f.room.findSpotOf(b)->second);
+      expect(f.room.findSpotOf(b)->second.mTurnsLeft == 43, "the knock-out counts DuelKoTurns plus its own turn");
+      f.room.upkeepSpots();
+      expect(f.stateOf(b) == TavernGuestState::ko && f.room.findSpotOf(b)->second.mTurnsLeft == 42, "the turn of the knock-out is counted in the same upkeep");
       for(int i = 0; i < 41; ++i) f.room.upkeepSpots();
       expect(f.stateOf(b) == TavernGuestState::ko, "still lying after 41 turns");
       f.room.upkeepSpots(); expect(f.stateOf(b) == TavernGuestState::getUp && f.room.findSpotOf(b)->second.mTurnsLeft == 9, "after 42 turns (30 s) the loser gets up for CreatureGetUpSeconds (6 s, 9 turns)");

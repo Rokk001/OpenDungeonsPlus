@@ -706,7 +706,7 @@ def decision_865_beam_and_trap_order():
         "return Ogre::Vector3(bounds.getCenter().x,bounds.getCenter().y,bounds.getMinimum().z+share*bounds.getSize().z);")
     code = code_only(update)
     assert "target->getPosition()+" not in code and "0.0f,0.0f,0.4f" not in code, "the beam no longer ends at a fixed point over the trap"
-    assert code.count("ghostBeamAimPoint(scene,*target)") == 1
+    assert code.count("ghostBeamAimPoint(scene,*target)") == 2, "the cannon aim (decision 894) and the beam end share the one aim point"
     for chain in ("Ogre::Vector3 point=start+(end-start)*fraction;", "points[i]=start+(end-start)*fraction;",
                   "mGhostBeamImpact->getBillboard(0)->setPosition(end);"):
         assert chain in code, ("core, bolts and impact glow end on the ghost", chain)
