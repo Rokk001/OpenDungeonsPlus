@@ -87,6 +87,10 @@ public:
     Tile* getFreeTable(const ItemInstance* item = nullptr) const;
     //! \brief Returns the current sales table tiles for the merchant's room-only wandering.
     const std::vector<Tile*>& getSalesTables() const { return mCentralActiveSpotTiles; }
+    //! \brief True when a table or a wall shelf stands on the tile: the merchant never stands or walks there (decision 901).
+    bool isFurnitureTile(const Tile* tile) const;
+    //! \brief Returns a free tile of this room next to the stop (a table or shelf tile) where the merchant can stand, or null.
+    Tile* getStandTileBeside(const Tile* stop) const;
     //! \brief Returns the tiles of the wall shelves, which the merchant also visits to arrange goods.
     std::vector<Tile*> getShelfTiles() const
     {

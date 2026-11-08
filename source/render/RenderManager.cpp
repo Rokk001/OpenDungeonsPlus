@@ -3921,6 +3921,10 @@ void RenderManager::rrAttachEntity(GameEntity* entity)
     parentNode->addChild(entityNode);
 }
 
+//! Offset in tiles of the figure in Merchant.mesh from the origin of the mesh (the front corner of the sales table, STAND 0.64, -0.76)
+static const Ogre::Real MERCHANT_RIG_OFFSET_X = 0.64f;
+static const Ogre::Real MERCHANT_RIG_OFFSET_Y = -0.76f;
+
 //! \brief Builds movable visuals with explicit decorative scales and the existing furniture defaults.
 //! \brief Creates an object mesh, including untouchable translucent ghost shapes.
 void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* renderedMovableEntity, NodeType nt)
@@ -4047,7 +4051,17 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
 
         ent = mSceneManager->createEntity(tempString, meshPtr);
-        node->attachObject(ent); 
+        if(meshName == "Merchant")
+        {
+            // The Merchant mesh is modelled standing at the front corner of a sales table, MERCHANT_RIG_OFFSET from its
+            // origin. The offset turns with the node and put him into walls and shelves; the figure hangs on a child
+            // node that cancels it, so the figure stands at the tile centre the server walks (decision 901)
+            Ogre::SceneNode* figure = node->createChildSceneNode(tempString + "_figure");
+            figure->setPosition(-MERCHANT_RIG_OFFSET_X, -MERCHANT_RIG_OFFSET_Y, 0.0f);
+            figure->attachObject(ent);
+        }
+        else
+            node->attachObject(ent); 
         if(renderedMovableEntity->getObjectType() == GameEntityType::ghostEntity)
         {
             ent->setMaterialName("GhostGlow");
@@ -4149,9 +4163,11 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
             ent->detachObjectFromBone(fire);
             mSceneManager->destroyParticleSystem(fire);
         }
-        node->detachObject(ent);
+        ent->detachFromParent();
         mSceneManager->destroyEntity(ent);
     }
+    if(mSceneManager->hasSceneNode(tempString + "_figure"))
+        mSceneManager->destroySceneNode(tempString + "_figure");
     // The sack shown while a worker carries gold
     if(mSceneManager->hasEntity(tempString + "_sack"))
     {

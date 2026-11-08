@@ -20,7 +20,7 @@ for wall in ("Left", "Right", "Top", "Bottom"):
         fails.append("shelf tiles: %s wall shelves are not collected" % wall)
 if "getShelfTiles()" not in ent or "stops.insert" not in ent:
     fails.append("walk targets: shelves are not added to the table stops")
-if not re.search(r"stops\.size\(\)\s*>\s*1", ent):
+if not re.search(r"next != start", ent):
     fails.append("walk targets: the current tile is not skipped, a single table would not move him")
 if not re.search(r'mAtShelf \? "Idle" : "CountGold"', ent):
     fails.append("animation: shelf stops use Idle, table stops CountGold (no new clip)")
