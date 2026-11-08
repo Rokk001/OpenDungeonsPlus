@@ -37,6 +37,8 @@ private:
     double mDealTurns;
     //! brief True once the figure has turned from the wall to the table or room for the current stop.
     bool mFacedRoom = false;
+    //! brief True while the current stop is a wall shelf (arranging goods) instead of a sales table.
+    bool mAtShelf = false;
     //! brief Returns the direction from a table tile into the room, with the back to any wall, or zero.
     Ogre::Vector3 getRoomFacing(Tile* tile, Room* room) const;
 };

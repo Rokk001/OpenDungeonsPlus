@@ -87,6 +87,15 @@ public:
     Tile* getFreeTable(const ItemInstance* item = nullptr) const;
     //! \brief Returns the current sales table tiles for the merchant's room-only wandering.
     const std::vector<Tile*>& getSalesTables() const { return mCentralActiveSpotTiles; }
+    //! \brief Returns the tiles of the wall shelves, which the merchant also visits to arrange goods.
+    std::vector<Tile*> getShelfTiles() const
+    {
+        std::vector<Tile*> shelves(mLeftWallsActiveSpotTiles);
+        shelves.insert(shelves.end(), mRightWallsActiveSpotTiles.begin(), mRightWallsActiveSpotTiles.end());
+        shelves.insert(shelves.end(), mTopWallsActiveSpotTiles.begin(), mTopWallsActiveSpotTiles.end());
+        shelves.insert(shelves.end(), mBottomWallsActiveSpotTiles.begin(), mBottomWallsActiveSpotTiles.end());
+        return shelves;
+    }
     //! \brief Uses the existing furniture-aware work approach for a sales table.
     MerchantApproach approachTable(Creature& creature, Tile* table);
     //! \brief Stores ordinary goods at the supplied table and crystals at the first actual table.
