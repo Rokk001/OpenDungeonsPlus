@@ -605,7 +605,9 @@ def check_models(out):
     mug = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
     wide = mug.copy()
     wide[:, 1:] *= MUG_GIRTH
-    turned = wide @ seats.MUG_TURN.T
+    # Decision 901: Weapon_R holds the mug at its middle (TAVERN_MUG_GRIP_SHIFT along the x axis of the bone)
+    turned = wide @ seats.MUG_TURN.T + np.array([seats.MUG_GRIP_SHIFT, 0.0, 0.0])
+    assert re.search(r'^const Ogre::Real TAVERN_MUG_GRIP_SHIFT = 0\.1f;$', read('source/render/RenderManager.cpp'), re.M) and seats.MUG_GRIP_SHIFT == 0.1
     names = sorted({re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (ROOT / 'models' / m).read_bytes())[0].decode('ascii') for m in meshes})
     worst = 0.0
     for name in names:

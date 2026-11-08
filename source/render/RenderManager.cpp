@@ -181,11 +181,17 @@ const std::string TAVERN_MUG_PREFIX = "TavernMug_";
 //! instead of 0.13 tiles across). Its length, from the grip to the rim, stays, so the drink clips still bring the rim to
 //! the mouth; checked against the table in SitDrink by source/tests/check_tavern_stools_863.py.
 const Ogre::Real TAVERN_MUG_GIRTH_SCALE = 1.8f;
+//! Decision 901: a hand holds the mug at its middle, not at its foot. On Weapon_R the mug is shifted this far along the x
+//! axis of the bone (its foot side), so the hand grips the tankard, the mug can stand on the table with the hand above the
+//! table top, and the drink clips (tools/author_tavern_drink.py) bring its rim, not the hand, to the mouth. The hand of the
+//! Defender (a limb mount) has the same shift in its offset.
+const Ogre::Real TAVERN_MUG_GRIP_SHIFT = 0.1f;
 
 //! \brief Where a guest whose skeleton has no Weapon_R bone holds its mug: on the paw, claw, feeler or front tentacle that
 //! its drink clips raise (decision 834: every guest holds a mug in every drink). The turn stands the mug upright in the
 //! rest pose of the bone (its rim along the -x axis of the mesh points up), the offset puts its foot on the middle of the
-//! limb (in the frame of the bone) and the scale is at least 0.67, so that even the mug of a small body is 0.12 tiles
+//! limb (in the frame of the bone; the hand of the Defender holds the middle of the mug, TAVERN_MUG_GRIP_SHIFT lower) and
+//! the scale is at least 0.67, so that even the mug of a small body is 0.12 tiles
 //! tall and readable from the game camera (decision 863; decision 834 had kept it at 0.3 of the height of a small body,
 //! 0.06 tiles on the spider). Values from the rest poses of the models (decision 834); checked against them by
 //! source/tests/check_tavern_drink_834.py.
@@ -206,7 +212,7 @@ struct TavernMugLimbMount
 const TavernMugLimbMount TAVERN_MUG_LIMB_MOUNTS[] =
 {
     { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0000f, 0.0810f, 0.8172f, -0.0012f, 0.0104f, -0.0002f, 0.67f },
-    { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, 0.0000f, 0.0000f, 0.0000f, 1.00f },
+    { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, -0.0998f, 0.0000f, 0.0069f, 1.00f },
     { "Rat.skeleton", "FrontLeg_R.003", 0.7071f, 0.0000f, -0.7071f, 0.0000f, 0.0011f, 0.0260f, 0.0028f, 0.67f },
     { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0000f, -0.0561f, 0.4743f, -0.0002f, 0.0557f, -0.0080f, 0.90f },
     { "Slime.skeleton", "slime_head", 0.7071f, 0.0000f, -0.3376f, -0.6213f, 0.0000f, 0.1018f, 0.0001f, 0.67f },
@@ -8178,6 +8184,9 @@ void RenderManager::updateCreatureTavernProps(Creature* creature, const std::str
         WeaponMount mount;
         Ogre::Real mugScale = 1.0f;
         bool hasMount = getWeaponMount(skeleton, "R", TAVERN_MUG_MESH, mount);
+        // The hand grips the middle of the mug (decision 901)
+        if(hasMount)
+            mount.mOffset = mount.mRotation * Ogre::Vector3(TAVERN_MUG_GRIP_SHIFT, 0.0f, 0.0f);
         if(!hasMount)
         {
             const TavernMugLimbMount* limb = nullptr;
