@@ -74,7 +74,7 @@ const float TAVERN_STOOL_DISTANCE = 0.8f;
 //! table along it and across it, at the largest creature scale (1.1); a stool guest of another table keeps its footprint
 //! outside. Measured on all visiting models that sit on benches; checked by check_tavern_stools_863.py.
 const float TAVERN_BENCH_REACH_ALONG = 1.48f;
-const float TAVERN_BENCH_REACH_ACROSS = 1.51f;
+const float TAVERN_BENCH_REACH_ACROSS = 1.50f;
 //! \brief The footprint of a stool guest is tested on points this far apart (and on its edges), in tiles.
 const float FOOTPRINT_SAMPLE_STEP = 0.25f;
 //! \brief A creature that sits on a stool and the floor its seated clips cover there (decision 863). The models are those
@@ -102,8 +102,8 @@ const TavernStoolBody TAVERN_STOOL_BODIES[] =
     { "Scarab.mesh", 2, 0.23f, 0.86f, 0.43f },
     { "Slime.mesh", 1, 0.14f, 0.30f, 0.23f },
     { "Spider.mesh", 1, 0.20f, 0.56f, 0.42f },
-    { "TentacleAlbine.mesh", 2, 0.35f, 0.24f, 0.33f },
-    { "TentacleGreen.mesh", 2, 0.35f, 0.24f, 0.33f },
+    { "TentacleAlbine.mesh", 2, 0.35f, 0.24f, 0.31f },
+    { "TentacleGreen.mesh", 2, 0.35f, 0.24f, 0.31f },
     { "Wyvern.mesh", 2, 0.38f, 0.69f, 0.49f }
 };
 //! \brief Scale of the table mesh: across, the table with its two benches is 1.19 tiles wide unscaled and so ends at the

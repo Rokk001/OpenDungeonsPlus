@@ -11,7 +11,7 @@ What is checked (python only, no compiler, no game; fixed values of this branch,
                a stool guest takes only a stool, every other guest only bench places; the bench places at the end of an
                occupied stool that its body reaches stay free (and a stool stays free while one of them is taken); the
                footprint of the body lies on tiles of the room without other furniture, outside the reach of the guests
-               of every other table (1.48 tiles along, 1.51 across) and of every other stool guest; the stools are
+               of every other table (1.48 tiles along, 1.50 across) and of every other stool guest; the stools are
                created with the tables, removed with them and with the room, and are furniture for the navigation; the
                own stool and table are left out of the obstacles of the walk onto the seat and of the fall of a duel loser
   stool models (need OgreXMLConverter) the stool mesh: seat top at the bench height 0.2575, radius 0.16, inside its
@@ -19,7 +19,7 @@ What is checked (python only, no compiler, no game; fixed values of this branch,
                inside the footprint of its table row, no part deeper than 0.025 in the seat or in the post of the stool,
                no part deeper than 0.04 in the table or the benches, no overlap with a bench guest of any model beyond
                its blocked places (and an overlap at the last blocked place, so no place is blocked for nothing), no
-               overlap with any stool guest on the other stool; the bench guests of a table stay within 1.48 / 1.51; the
+               overlap with any stool guest on the other stool; the bench guests of a table stay within 1.48 / 1.50; the
                legs and belly of Troll, Dragon and PitDemon hang through any stool seat, which is why they keep the bench
   mug          the mug is 1.8 times as wide as its mesh and as long; a limb mug is at least 0.67 of the mesh; no weapon is
                shown in Drink (it sits on the same hand bone); a drink clip that fades out keeps its mug until the blend
@@ -58,12 +58,12 @@ TURNS_PER_SECOND = 1.4
 EXPECTED_BODIES = {
     'CaveHornet.mesh': (1, 0.13, 0.12, 0.26), 'Kreatur.mesh': (4, 0.66, 1.23, 0.70), 'LavaSpawn.mesh': (4, 0.42, 0.96, 0.98),
     'Rat.mesh': (1, 0.12, 0.47, 0.37), 'Roach.mesh': (2, 0.15, 0.57, 0.39), 'Scarab.mesh': (2, 0.23, 0.86, 0.43),
-    'Slime.mesh': (1, 0.14, 0.30, 0.23), 'Spider.mesh': (1, 0.20, 0.56, 0.42), 'TentacleAlbine.mesh': (2, 0.35, 0.24, 0.33),
-    'TentacleGreen.mesh': (2, 0.35, 0.24, 0.33), 'Wyvern.mesh': (2, 0.38, 0.69, 0.49)}
+    'Slime.mesh': (1, 0.14, 0.30, 0.23), 'Spider.mesh': (1, 0.20, 0.56, 0.42), 'TentacleAlbine.mesh': (2, 0.35, 0.24, 0.31),
+    'TentacleGreen.mesh': (2, 0.35, 0.24, 0.31), 'Wyvern.mesh': (2, 0.38, 0.69, 0.49)}
 BENCH_MODELS_ON_LEGS = ('Troll.mesh', 'Dragon.mesh', 'PitDemon.mesh')
 STOOL_DISTANCE = 0.8
 REACH_ALONG = 1.48
-REACH_ACROSS = 1.51
+REACH_ACROSS = 1.50
 STOOL_TOP = 0.2575
 STOOL_RADIUS = 0.16
 STOOL_POST_RADIUS = 0.034

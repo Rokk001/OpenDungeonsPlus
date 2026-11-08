@@ -88,10 +88,44 @@ MAX_RIM_TO_MOUTH = 0.06
 MAX_STAND_GAP = 0.015
 # Bodies whose limb is too short for the table: the mug stands on the seat of the bench beside them, or the limb holds it
 # low over the bench; bodies whose limb and head do not bring the rim to the mouth without the table or the head in the way
+# Each entry has its measured reason (tools/author_tavern_drink.py, first frame of the clip, level scale 1, in tiles):
+# HELD_GUESTS hold the mug upright above their seat in SitDrink instead of setting it on the table top.
+#   Defender: the spear in the mesh of its drinking hand reaches from 0.10 to 1.41 above the floor; with the mug on the
+#     table the spear would stand in the table top.
+#   CaveHornet, Rat, Slime, Spider, Tentacle (stool guests): the nearest place of the mug on the end of the table is 0.29,
+#     0.35, 0.37, 0.51 and 0.39 from the root of the limb, which reaches 0.10, 0.23, 0.26, 0.24 and 0.27.
+#   Roach, Scarab, LavaSpawn (stool guests): the limb reaches the end of the table, but the body that sets the mug there
+#     stands 0.44, 0.43 and 0.47 in front of the stool at level scale 1.1, beyond its footprint (TAVERN_STOOL_BODIES front
+#     0.15, 0.23 and 0.42, times 1.1), where it would reach into the places the stool leaves free.
+#   Kreatur (stool guest): its Weapon_R is a passive mount (check_rest_animation_assets.py), so the tip of the tentacle
+#     itself stands the mug upright; on the end of the table the tentacle then lies 0.025 deep in the table top (the
+#     pause allows 0.02).
+# SHORT_REACH stop the rim before the mouth, where the mug would go into the head or the table.
+#   CaveHornet: the leg reaches 0.10 and the wide mug is 0.17 across; seated the rim stops 0.19 from the mouth, where the
+#     mug comes into the head (standing it reaches the mouth).
+#   Rat, Spider: the front leg (0.23) and the palp (0.24) hold the mug beside the head; the rim stops 0.26 (seated 0.14)
+#     and 0.11 (seated 0.13) from the mouth, where the mug comes into the head.
+#   Slime: the mug rides on its head (the limb mount slime_head) and the limb is its whole body; tipped further towards
+#     the mouth the mug comes into the head, 0.18 from the mouth.
+#   Tentacle: seated the arm (0.27) and the mug (0.18) reach 0.45 against 0.44 from the root of the arm to the mouth; at
+#     full stretch the rim stops 0.08 from the mouth.
+#   Lizardman (SitDrink): every way from the table to the mouth either brings the forearm 0.0401 into the table top
+#     between two steps or the mug 0.05 into the face; the way ends before, the rim 0.24 from the mouth.
+#   Dragon: the arm (0.49) and the mug (0.18) reach 0.67 against 0.72 from the shoulder to the mouth; standing the head
+#     bows to the mug, seated the snout is 0.10 above the table top and the wide mug at it would stand in the table: the
+#     rim stops 0.40 from the mouth.
+# LOW_LIFT lift the mug less than MIN_LIFT of their height.
+#   Roach (Drink): its mouth is 0.24 above the floor and the upright mug 0.16 tall, so held low in front of the body the
+#     rim rests just below the mouth (the lift is 0.07 of a body 0.62 tall).
+#   Dragon (SitDrink): the mug stands on the table under the snout; past 0.55 of its way the wide mug would reach 0.22
+#     into the table top, so the way ends there (the lift is 0.05 of a body 0.86 tall).
 BENCH_GUESTS = ()
-HELD_GUESTS = ()
-SHORT_REACH = ()
-LOW_LIFT = ()
+HELD_GUESTS = ('Defender', 'CaveHornet', 'Rat', 'Slime', 'Spider', 'Tentacle', 'Roach', 'Scarab', 'LavaSpawn', 'Kreatur')
+# SHORT_REACH and LOW_LIFT name the clip too: the other clip of the body keeps the full check
+SHORT_REACH = (('CaveHornet', 'SitDrink'), ('Rat', 'Drink'), ('Rat', 'SitDrink'), ('Spider', 'Drink'), ('Spider', 'SitDrink'),
+               ('Slime', 'Drink'), ('Slime', 'SitDrink'), ('Tentacle', 'SitDrink'), ('Dragon', 'SitDrink'),
+               ('Lizardman', 'SitDrink'))
+LOW_LIFT = (('Roach', 'Drink'), ('Dragon', 'SitDrink'))
 
 
 def read(path):
@@ -314,7 +348,7 @@ def check_drink_cycle(out):
             # One lift: the rim leaves its place once and comes back once
             lifted = away >= 0.5 * float(away.max())
             assert int(np.sum(lifted[1:] & ~lifted[:-1])) == 1, (name, clip, 'lifts the mug more than once')
-            assert float(away.max()) >= MIN_LIFT * height or name in LOW_LIFT, (name, clip, 'hardly lifts the mug', float(away.max()))
+            assert float(away.max()) >= MIN_LIFT * height or (name, clip) in LOW_LIFT, (name, clip, 'hardly lifts the mug', float(away.max()))
             # The drink: the rim holds its place at the mouth for at least MIN_DRINK
             top = int(np.argmax(away))
             held = np.linalg.norm(rim - rim[top], axis=1) < HOLD
@@ -332,7 +366,7 @@ def check_drink_cycle(out):
             assert in_face <= MAX_MUG_IN_FACE, (name, clip, 'the mug goes through the head', in_face)
             mouth = drink.Face(heads[top]).mouth()
             reach = float(np.linalg.norm(rim[top] - mouth))
-            if name not in SHORT_REACH:
+            if (name, clip) not in SHORT_REACH:
                 worst['mouth'] = max(worst['mouth'], reach)
                 assert reach <= MAX_RIM_TO_MOUTH, (name, clip, 'the rim does not come to the mouth', reach)
             # Seated: the mug stands on the table top (at the smallest creature scale), or on the seat of the bench for the

@@ -37,8 +37,8 @@ REST_END = 1.0
 LIFT_END = 2.1
 DRINK_END = 3.5
 LOWER_END = 4.6
-# Seconds between two keys while the mug moves; the rest and the drink hold their pose between few keys
-MOVE_STEP = 1.0 / 15.0
+# While the mug moves, a key lies at every solved step of the way (WAY_STEPS), so that the limb between two keys follows
+# the way and does not cut through the edge of the table; the rest and the drink hold their pose between few keys
 DRINK_KEYS = 5
 # The mug leans this far from upright while the creature drinks, its rim towards the face (the first that keeps the mug
 # out of the face and the table); the sip in the middle of the drink tips it this much further
@@ -49,6 +49,13 @@ SIP_TIP = 10.0
 # Steps along the way the limb is solved for, and rounds of the solver per step
 WAY_STEPS = 41
 SOLVE_ROUNDS = 4
+# Bodies whose limb passes the edge of the table or the seat of the stool so closely that between two of the 41 steps
+# it reaches through (the forearm of the lizardman 0.0401 into the table top, a tentacle tip of the kreatur into the seat
+# of its stool): their way has twice as many steps, checked half way between two steps (MAX_HALF_DEPTH); with steps
+# that fine the mug may come closer into the face before the way ends (MAX_CLEAR_FACE, check_tavern_drink_834 allows
+# 0.05). The lizardman still ends its way before the mouth when seated (SHORT_REACH of check_tavern_drink_834)
+FINE_WAYS = {'Lizardman': {'WAY_STEPS': 81, 'MAX_CLEAR_FACE': 0.045, 'MAX_HALF_DEPTH': 0.038},
+             'Kreatur': {'WAY_STEPS': 81, 'MAX_CLEAR_FACE': 0.045, 'MAX_HALF_DEPTH': 0.038}}
 # The mesh of the mug: its foot lies 0.009 below the origin, its rim 0.171 above it along the -x axis of the mesh. The
 # render manager makes it 1.8 times as wide (TAVERN_MUG_GIRTH_SCALE). On Weapon_R it is held at its middle: it is shifted
 # this far along the x axis of the bone (TAVERN_MUG_GRIP_SHIFT), so the hand grips the tankard and not its foot.
@@ -90,7 +97,7 @@ LEAN_PIVOT_HEIGHT = 0.05
 # way), tried in this order
 WAY_BULGES = (0.0, 0.04, 0.08, 0.12)
 WAY_ARCS = (0.0, 0.25, 0.5, 0.75, 1.0)
-# The rim may come this much further from its rest than at the mouth on the way (HOLD of check_tavern_drink_834 is 0.04)
+# On the way the rim never comes back towards its rest by more than this (HOLD of check_tavern_drink_834 is 0.04)
 MAX_OVERSHOOT = 0.01
 # Where the limb reaches into the table in the pause, the mug stands this much further out (-y) and to the side (outwards
 # first), and the inner joints of the limb swing about the line from its root to the grip by these degrees
@@ -110,10 +117,18 @@ HELD_PLACES = 10
 SWINGS = (0.0, 30.0, -30.0, 60.0, -60.0, 90.0, -90.0)
 # A way is cut short before the first step that reaches further than this into the furniture or the head
 MAX_CLEAR_DEPTH = 0.035
-MAX_CLEAR_FACE = 0.045
+MAX_CLEAR_FACE = 0.03
+# The clip blends two steps of the way between their keys: half way between them a limb may reach this deep before the
+# way ends (see FINE_WAYS; MAX_TABLE_DEPTH of check_tavern_seat_clips is 0.04); the other bodies only
+# prefer the way that stays clearest there
+MAX_HALF_DEPTH = float('inf')
 # Where the guest sits: on a stool at the end of the table (TAVERN_STOOL_DISTANCE from its middle, TAVERN_STOOL_BODIES of
 # RoomTavern.cpp) or on a bench; and the room its seated clips took before, which the drink keeps to within this margin
-SEAT = {'stool': False, 'envelope': None}
+SEAT = {'stool': False, 'envelope': None, 'side': None}
+# A bench guest whose arm would swing further to the side than this (tiles at level scale 1) reaches the second place
+# beside a stool guest (check_tavern_stools_863 blocked places: the slime blocks one place): the lich keeps to the room
+# its SitDrink took before decision 901 (0.501)
+SIDE_LIMITS = {'lich': 0.505}
 STOOL_DISTANCE = 0.8
 ENVELOPE_SAMPLES = 41
 ENVELOPE_MARGIN = 0.0
@@ -125,11 +140,14 @@ STOOL_TOP = 0.2575
 STOOL_RADIUS = 0.16
 STOOL_POST_RADIUS = 0.034
 MAX_STOOL_SINK = 0.025
-BENCH_REACH_ACROSS = 1.51
+BENCH_REACH_ACROSS = 1.50
 BENCH_REACH_ALONG = 1.48
 BENCH_OFFSET = 0.4116
 # Bench places a large body takes (LARGE_BENCH_PLACES of check_tavern_stools_863.py)
 BENCH_PLACES = {'Troll': 4, 'PitDemon': 4, 'Dragon': 3}
+# The bodies whose mug rests where their first pose carries it: the slime carries it on its head (its limb mount), and
+# its limb is its whole body, which would bend down to the floor or the seat to set the mug there
+REST_IN_PLACE = ('Slime',)
 # A standing body holds the mug at least this high above the floor (its foot)
 STANDING_FLOOR_CLEARANCE = 0.03
 # The pause may reach this far into the furniture and miss the place of the mug by this much; the way this far (tiles)
@@ -147,12 +165,13 @@ LIMBS = {
     'Roach': ('ArmRootR', 'ArmR', 'ForearmFrontR', 'ClawFrontR'),
 }
 # The bones whose vertices make the head, where it is not the bone named Head or head with the most vertices, and the
-# height above the root of the limb from which they count (for a head that shares its bone with the chest)
+# height above the root of the limb from which they count (for a head that shares its bone with the chest); a third value
+# False takes only the vertices of these bones and not of their children (the body bone of the spider carries all legs)
 HEADS = {
     'Cultist': (('neck',), 0.0),
     'Goblin': (('Spine1',), 0.06),
     'Scarab': (('Bone.004',), None),
-    'Spider': (('Zahn_R', 'Zahn_L', 'Body'), None),
+    'Spider': (('Zahn_R', 'Zahn_L', 'Body'), None, False),
     'lich': (('spine3', 'crown'), 0.05),
     'Kreatur': (('head',), None),
     'RunelordDwarf': (('head.cr',), None),
@@ -177,11 +196,17 @@ def quaternion_matrix(q):
                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
+# The skeletons whose Weapon_R is a passive mount that no clip animates (check_rest_animation_assets.py): the mug hangs on
+# Weapon_R as the render manager attaches it, and the limb moves its parent bone, which carries Weapon_R in its rest pose
+PASSIVE_MOUNTS = ('skeleton', 'lich', 'PitDemon', 'Kreatur', 'Scarab')
+
+
 class Mug(object):
     """The mug as the render manager attaches it: the bone, the mesh points, its foot and its axis in the frame of the bone."""
 
     def __init__(self, skeleton, name, mesh_points, limb_mounts):
         self.on_weapon = seats.MUG_BONE in skeleton.idx
+        self.passive = self.on_weapon and name in PASSIVE_MOUNTS
         if self.on_weapon:
             self.bone = seats.MUG_BONE
             turn, offset, scale = seats.MUG_TURN, np.array([MUG_GRIP_SHIFT, 0.0, 0.0]), 1.0
@@ -201,6 +226,15 @@ class Mug(object):
         self.scale = scale
         # From the foot of the mug to the origin of the bone along its axis (Weapon_R holds the mug at its middle)
         self.grip = (MUG_FOOT + MUG_GRIP_SHIFT) * scale
+        if self.passive:
+            # The mug in the frame of the parent of Weapon_R, through the rest pose of Weapon_R, which no clip moves
+            index = skeleton.idx[seats.MUG_BONE]
+            position, turn, size = skeleton.rest_pos[index], quaternion_matrix(skeleton.rest_q[index]), skeleton.rest_s[index]
+            self.points = (self.points * size) @ turn.T + position
+            self.foot = turn @ (self.foot * size) + position
+            self.axis = turn @ self.axis
+            self.bone = skeleton.names[skeleton.parent[index]]
+            self.on_weapon = False
 
     def world(self, frames, skeleton):
         """Foot, axis (foot to rim) and points of the mug in every frame."""
@@ -215,7 +249,14 @@ class Mug(object):
 
 def limb_of(skeleton, name, mug):
     if name in LIMBS:
-        return list(LIMBS[name])
+        limb = list(LIMBS[name])
+        # The limb ends in the bone that carries the mug (the item bone of the hand of the lich)
+        tail = []
+        walk = skeleton.idx[mug.bone]
+        while skeleton.names[walk] not in limb and walk >= 0:
+            tail.append(skeleton.names[walk])
+            walk = skeleton.parent[walk]
+        return limb + list(reversed(tail)) if walk >= 0 else limb
     carrier = skeleton.idx[mug.bone]
     if mug.bone == seats.MUG_BONE:
         carrier = skeleton.parent[carrier]
@@ -225,17 +266,20 @@ def limb_of(skeleton, name, mug):
     return [skeleton.names[index] for index in reversed(chain)]
 
 
-def head_vertices(skeleton, name, weights, limb_root_z, posed):
-    """Indices of the vertices of the head."""
+def head_vertices(skeleton, name, weights, limb_root_z, posed, limb=()):
+    """Indices of the vertices of the head. The limb that holds the mug is never part of it (a head bone that also carries
+    the arm, like the spine of the lich, would count the raised hand as head)."""
+    children = True
     if name in HEADS:
-        bones, above = HEADS[name]
+        bones, above = HEADS[name][:2]
+        children = HEADS[name][2] if len(HEADS[name]) > 2 else True
     else:
         candidates = [bone for bone in skeleton.names if bone.lower() == 'head']
         counts = {bone: sum(1 for row in weights if any(b == skeleton.idx[bone] and w >= 0.5 for b, w in row)) for bone in candidates}
         bones, above = ((max(counts, key=counts.get),) if counts else ()), None
     selected = {skeleton.idx[bone] for bone in bones if bone in skeleton.idx}
-    for index in skeleton.topo:
-        if skeleton.parent[index] in selected and skeleton.names[index] != seats.MUG_BONE:
+    for index in (skeleton.topo if children else ()):
+        if skeleton.parent[index] in selected and skeleton.names[index] != seats.MUG_BONE and skeleton.names[index] not in limb:
             selected.add(index)
     found = [index for index, row in enumerate(weights) if sum(w for b, w in row if b in selected) >= 0.5]
     if above is not None:
@@ -422,9 +466,12 @@ def smooth(share):
 
 def key_times():
     times = [0.0]
-    times += list(np.arange(REST_END, LIFT_END, MOVE_STEP))
+    # The time share u at which smooth(u) reaches each step of the way
+    fine = np.linspace(0.0, 1.0, 20001)
+    steps = np.interp(np.linspace(0.0, 1.0, WAY_STEPS), smooth(fine), fine)
+    times += list(REST_END + steps * (LIFT_END - REST_END))
     times += list(np.linspace(LIFT_END, DRINK_END, DRINK_KEYS))
-    times += list(np.arange(DRINK_END + MOVE_STEP, LOWER_END, MOVE_STEP))
+    times += list(DRINK_END + steps * (LOWER_END - DRINK_END))
     times += [LOWER_END, CYCLE]
     return np.array(sorted(set(round(t, 6) for t in times)))
 
@@ -467,9 +514,31 @@ def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
         found.sort(key=lambda item: item[0])
         return [(point, kind) for _, point, kind in found[:PLACES_PER_SUPPORT]]
 
+    # Held places lie above the seat (seated) or the floor (standing), on a grid that is finer for a short limb
+    lowest = (seats.BENCH_TOP / SCALE + BENCH_CLEARANCE + lift) if seated else (STANDING_FLOOR_CLEARANCE + lift)
+    step = min(HELD_STEP, MAX_REACH * reach / 3.0)
+    span = min(HELD_SPAN, MAX_REACH * reach)
+    grid = []
+    for dx in np.arange(-span, span + 1e-9, step):
+        for dy in np.arange(-span, span + 1e-9, step):
+            for dz in np.arange(-span, 0.0 + 1e-9, step):
+                point = root + np.array([dx, dy, dz])
+                # above the seat, never down beside the bench or the stool
+                if point[2] >= lowest and np.linalg.norm(point - root) <= MAX_REACH * reach:
+                    grid.append((not clear(point), round(float(point[2]), 6), float(np.linalg.norm(point[:2] - root[:2])), point))
+    grid.sort(key=lambda item: item[:3])
+    # The places clear of the body first; a limb so short that the mug touches the body wherever it holds it (the cave
+    # hornet) takes the lowest of the others, which the rest pose then keeps out of the head
+    grid = [(point, 'held') for _, _, _, point in [g for g in grid if not g[0]][:HELD_PLACES] + [g for g in grid if g[0]][:HELD_PLACES]]
     if not seated:
-        # Standing: low in front of the belly
-        return [(np.array([root[0], root[1] - 0.35 * reach, max(root[2] - 0.7 * reach, STANDING_FLOOR_CLEARANCE + lift)]), 'held')]
+        # Standing: low in front of the belly, else anywhere in reach where the mug is clear of the body. A body whose
+        # mouth is so low that the floor stops the mug (the roach) holds it out to the side of its limb by as much, so the
+        # mug still travels to the mouth
+        low = root[2] - 0.7 * reach
+        carried = skeleton.fk(start)
+        out = 1.0 if mug.world(carried, skeleton)[0][0][0] >= root[0] else -1.0
+        aside = out * max(0.0, lowest - low)
+        return [(np.array([root[0] + aside, root[1] - 0.35 * reach, max(low, lowest)]), 'held')] + grid
     edge = -(STOOL_DISTANCE - seats.LONG_TABLE_HALF_LENGTH) if SEAT['stool'] else seats.TABLE_NEAR_EDGE
     near_edge = (edge - TABLE_INSET) / SCALE - mug.base_radius
     across = root[0] + np.arange(-PLACE_SPAN, PLACE_SPAN + 1e-9, PLACE_STEP)
@@ -479,19 +548,11 @@ def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
     bench = [] if SEAT['stool'] else places(bench_across, np.array(BENCH_PLACES_Y), seats.BENCH_TOP / SCALE + BENCH_CLEARANCE + lift, 'bench')
     # A limb too short for both holds it as low as it reaches, outwards
     outward = np.array([1.0 if root[0] >= 0.0 else -1.0, 0.0, -1.0]) / math.sqrt(2.0)
-    held = [(root + outward * MAX_REACH * reach, 'held')]
+    held = root + outward * MAX_REACH * reach
+    held = [(np.array([held[0], held[1], max(held[2], lowest)]), 'held')]
     # or anywhere in reach where the mug is clear of the body, lowest first (a limb whose mesh carries a long weapon, or
     # whose mug cannot stand on the table or the bench, holds it where the furniture lets it)
-    grid = []
-    for dx in np.arange(-HELD_SPAN, HELD_SPAN + 1e-9, HELD_STEP):
-        for dy in np.arange(-HELD_SPAN, HELD_SPAN + 1e-9, HELD_STEP):
-            for dz in np.arange(-HELD_SPAN, 0.0 + 1e-9, HELD_STEP):
-                point = root + np.array([dx, dy, dz])
-                # above the seat, never down beside the bench or the stool
-                if point[2] >= seats.BENCH_TOP / SCALE + BENCH_CLEARANCE + lift and np.linalg.norm(point - root) <= MAX_REACH * reach and clear(point):
-                    grid.append((round(float(point[2]), 6), float(np.linalg.norm(point[:2] - root[:2])), point))
-    grid.sort(key=lambda item: item[:2])
-    held += [(point, 'held') for _, _, point in grid[:HELD_PLACES]]
+    held += grid
     return table + bench + held
 
 
@@ -535,6 +596,8 @@ def pose_depth(skeleton, local, mug, vertices, weights):
             scaled = body[0] * level
             excess = max(excess, -float(scaled[:, 1].min()) - front * level, float(scaled[:, 1].max()) - back * level,
                          float(np.abs(scaled[:, 0]).max()) - half * level)
+    if SEAT['side'] is not None:
+        excess = max(excess, float(np.abs(body[0][:, 0]).max()) - SEAT['side'])
     if SEAT['stool']:
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
             scaled = body[0] * level
@@ -595,7 +658,7 @@ class Head(object):
     def __init__(self, skeleton, name, vertices, weights, limb, start):
         world = skeleton.fk(start)
         posed = rest.skin_vertices(skeleton, start, vertices, weights)[0]
-        self.indices = head_vertices(skeleton, name, weights, world[skeleton.idx[limb[0]]][0][0][2], posed)
+        self.indices = head_vertices(skeleton, name, weights, world[skeleton.idx[limb[0]]][0][0][2], posed, limb)
         self.vertices = np.asarray(vertices)[self.indices]
         self.weights = [weights[index] for index in self.indices]
         totals = {}
@@ -667,7 +730,8 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     start = skeleton.locals_at(old, np.zeros(1))
     # The mug shows at its own size: a clip that shrank the weapon bone to hide a weapon (Troll) does not shrink the mug
     index = skeleton.idx[mug.bone]
-    start[index] = (start[index][0], start[index][1], skeleton.rest_s[index][None].copy())
+    if not mug.passive:
+        start[index] = (start[index][0], start[index][1], skeleton.rest_s[index][None].copy())
     limb = limb_of(skeleton, name, mug)
     reach = limb_reach(skeleton, start, limb, mug)
     posed = rest.skin_vertices(skeleton, start, vertices, weights)[0]
@@ -705,17 +769,23 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     up = np.array([0.0, 0.0, 1.0])
     side = 1.0 if skeleton.fk(start)[skeleton.idx[limb[0]]][0][0][0] >= float(np.median(posed[:, 0])) else -1.0
     found = None
-    for order, (point, kind) in enumerate(rest_targets(skeleton, start, limb, mug, seated, reach, still)):
+    rest_limit = MAX_REST_DEPTH
+    targets = rest_targets(skeleton, start, limb, mug, seated, reach, still)
+    if name in REST_IN_PLACE:
+        targets = [(mug.world(skeleton.fk(start), skeleton)[0][0], 'held')] + targets
+    for order, (point, kind) in enumerate(targets):
         for swing in SWINGS:
             trial = copy_pose(start)
             error = solve(skeleton, trial, limb, mug, point, up, swing)
             depth = pose_depth(skeleton, trial, mug, vertices, weights) if seated else 0.0
-            score = (max(depth, MAX_REST_DEPTH) + 10.0 * max(error, MAX_REST_ERROR), order, abs(swing))
+            # A resting mug in the head counts like one deep in the furniture
+            depth = max(depth, head.face(skeleton, trial).inside(mug_rim(skeleton, trial, mug)[1]) - MAX_MUG_IN_FACE + rest_limit)
+            score = (max(depth, rest_limit) + 10.0 * max(error, MAX_REST_ERROR), order, abs(swing))
             if found is None or score < found[0]:
                 found = (score, trial, point, error, depth, swing, kind)
-            if score[0] <= MAX_REST_DEPTH + 10.0 * MAX_REST_ERROR:
+            if score[0] <= rest_limit + 10.0 * MAX_REST_ERROR:
                 break
-        if found[0][0] <= MAX_REST_DEPTH + 10.0 * MAX_REST_ERROR:
+        if found[0][0] <= rest_limit + 10.0 * MAX_REST_ERROR:
             break
     _, resting, support, rest_error, rest_depth, swing, carrier = found
 
@@ -777,39 +847,57 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
             foot = rim - axis * mug.length
             solve(skeleton, pose, limb, mug, foot, axis)
             poses.append(pose)
-        # The last step of the way is the drink itself, reached from the way so that the limb does not jump
-        sip_end = sipped(skeleton, poses[-1], limb, 1.0, towards, mug)
-        in_face_way = max(head.face(skeleton, pose).inside(mug_rim(skeleton, pose, mug)[1]) for pose in poses[1:] + [sip_end])
-        depth_way = max(pose_depth(skeleton, pose, mug, vertices, weights) for pose in poses[1:] + [sip_end]) if seated else 0.0
-        # The rim comes ever further from its place on the support until it is at the mouth: it does not rise past the
-        # mouth and come back down to it
-        rims = [mug_rim(skeleton, pose, mug)[0] for pose in poses]
-        overshoot = max(float(np.linalg.norm(rim - rims[0])) for rim in rims) - float(np.linalg.norm(rims[-1] - rims[0]))
-        score = (max(in_face_way - MAX_MUG_IN_FACE, 0.0) + max(depth_way - MAX_WAY_DEPTH, 0.0) + max(overshoot - MAX_OVERSHOOT, 0.0),
-                 arc, bulge)
+        # The clip blends two steps between their keys: the half way between them counts too. A way that reaches into the
+        # table or the face ends at the last step that is still clear: the mug comes as close to the mouth as the table and
+        # the head let it (a body whose mouth is below or beyond the reach of its limb)
+        moved_bones = sorted({skeleton.idx[bone] for bone in limb + [mug.bone]} | set(pivot))
+        clear, cut, strict = len(poses) - 1, None, 0.0
+        for index in range(1, len(poses)):
+            depth = pose_depth(skeleton, poses[index], mug, vertices, weights) if seated else 0.0
+            face_share = head.face(skeleton, poses[index]).inside(mug_rim(skeleton, poses[index], mug)[1])
+            if depth > MAX_CLEAR_DEPTH or face_share > MAX_CLEAR_FACE:
+                clear, cut = index - 1, (('depth', depth) if depth > MAX_CLEAR_DEPTH else ('face', face_share))
+                break
+            half = pose_depth(skeleton, blend(poses[index - 1], poses[index], 0.5, moved_bones), mug, vertices, weights) if seated else 0.0
+            if half > MAX_HALF_DEPTH:
+                clear, cut = index - 1, ('half', half)
+                break
+            strict = max(strict, max(face_share - MAX_MUG_IN_FACE, 0.0) + max(max(depth, half) - MAX_WAY_DEPTH, 0.0))
+        clear = max(clear, 1)
+        # The rim comes ever further from its place on the support until the end of the way: it does not rise past the
+        # mouth (or past the end of a way cut short) and come back towards its place
+        away = [float(np.linalg.norm(mug_rim(skeleton, pose, mug)[0] - mug_rim(skeleton, poses[0], mug)[0])) for pose in poses[:clear + 1]]
+        overshoot = max(max(away[:index + 1]) - away[index] for index in range(len(away)))
+        score = (max(overshoot - MAX_OVERSHOOT, 0.0), -clear, strict, arc, bulge)
         if best_way is None or score < best_way[0]:
-            best_way = (score, poses, arc, bulge)
-        if score[0] <= 0.0:
+            best_way = (score, poses, arc, bulge, clear, cut)
+        if score[0] <= 0.0 and cut is None and strict <= 0.0:
             break
-    _, poses, arc, bulge = best_way
-    # A way that still reaches into the table or the face ends where it is still clear: the mug comes as close to the mouth
-    # as the table and the head let it (a body whose mouth is below or beyond the reach of its limb)
+    _, poses, arc, bulge, clear, cut_by = best_way
     shortened = 1.0
-    clear = len(poses) - 1
-    for index, pose in enumerate(poses[1:], 1):
-        depth = pose_depth(skeleton, pose, mug, vertices, weights) if seated else 0.0
-        if depth > MAX_CLEAR_DEPTH or head.face(skeleton, pose).inside(mug_rim(skeleton, pose, mug)[1]) > MAX_CLEAR_FACE:
-            clear = index - 1
-            break
     if clear < len(poses) - 1:
         clear = max(clear, 1)
         shortened = shares[clear]
-        poses = [blend(poses[0], poses[0], 0.0, [])] + [poses[min(clear, int(round(share * clear)))] for share in shares[1:]]
+        # The shortened way keeps its steps evenly spread: each step blends the two solved steps around it
+        moved_bones = sorted({skeleton.idx[bone] for bone in limb + [mug.bone]} | set(pivot))
+        kept = poses[:clear + 1]
+        poses = []
+        for share in shares:
+            place = share * clear
+            low = int(min(clear - 1, math.floor(place)))
+            poses.append(blend(kept[low], kept[low + 1], place - low, moved_bones))
     drinking = poses[-1]
+    # The sip tips the mug only as far as the furniture, the stool and the head let it (a slime tips its whole body)
+    sip_share = 1.0
+    for sip_share in (1.0, 0.5, 0.25, 0.0):
+        tipped_pose = sipped(skeleton, drinking, limb, sip_share, towards, mug)
+        if ((pose_depth(skeleton, tipped_pose, mug, vertices, weights) if seated else 0.0) <= MAX_CLEAR_DEPTH and
+                head.face(skeleton, tipped_pose).inside(mug_rim(skeleton, tipped_pose, mug)[1]) <= MAX_CLEAR_FACE):
+            break
     reached, points = mug_rim(skeleton, drinking, mug)
     face = head.face(skeleton, drinking)
     rim_distance = float(np.linalg.norm(reached - face.mouth()))
-    in_face = max(face.inside(points), face.inside(mug_rim(skeleton, sipped(skeleton, drinking, limb, 1.0, towards, mug), mug)[1]))
+    in_face = max(face.inside(points), face.inside(mug_rim(skeleton, sipped(skeleton, drinking, limb, sip_share, towards, mug), mug)[1]))
     drink_depth = pose_depth(skeleton, drinking, mug, vertices, weights) if seated else 0.0
 
     times = key_times()
@@ -821,8 +909,8 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
         low = int(min(WAY_STEPS - 2, math.floor(place)))
         weight = place - low
         pose = blend(poses[low], poses[low + 1], weight, bones)
-        if extra > 0.0:
-            pose = sipped(skeleton, pose, limb, extra, towards, mug)
+        if extra * sip_share > 0.0:
+            pose = sipped(skeleton, pose, limb, extra * sip_share, towards, mug)
         for index in bones:
             p, q, s = local[index]
             p[frame], q[frame], s[frame] = pose[index][0][0], pose[index][1][0], pose[index][2][0]
@@ -835,12 +923,17 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     seats.SCENE['whole_bench'] = name in seats.LARGE_MODELS
     furniture = max(pose_depth(skeleton, [(p[i:i + 1], q[i:i + 1], c[i:i + 1]) for p, q, c in local], mug, vertices, weights)
                     for i in range(len(times))) if seated else 0.0
-    report = {'shortened': shortened, 'tip': tip, 'approach': approach, 'drink_depth': drink_depth, 'swing': swing, 'arc': arc, 'rest_depth': rest_depth, 'table_depth': furniture, 'mug_lowest': float(points[:, :, 2].min()),'limb': limb, 'head_pivot': head.pivot if head.movable else None, 'lean': lean, 'support': carrier,
+    report = {'shortened': shortened, 'cut_by': cut_by, 'sip_share': sip_share, 'tip': tip, 'approach': approach, 'drink_depth': drink_depth, 'swing': swing, 'arc': arc, 'rest_depth': rest_depth, 'table_depth': furniture, 'mug_lowest': float(points[:, :, 2].min()),'limb': limb, 'head_pivot': head.pivot if head.movable else None, 'lean': lean, 'support': carrier,
               'support_point': support.tolist(), 'rest_error': rest_error, 'rim_to_mouth': rim_distance, 'gap': gap,
               'bulge': bulge, 'mug_in_face': in_face, 'reach': reach,
               'most_in_face': max(face.inside(frame_points) for face, frame_points in zip(faces, points)),
               'fastest': float((np.linalg.norm(np.diff(rims, axis=0), axis=1) / np.diff(times)).max())}
-    return seats.clip_xml(skeleton, local, times, clip, CYCLE), local, times, report
+    block = seats.clip_xml(skeleton, local, times, clip, CYCLE)
+    if mug.passive:
+        # A passive Weapon_R gets no track (it keeps its rest pose under its parent)
+        block = re.sub(r'<track bone="' + seats.MUG_BONE + r'"><keyframes>.*?</keyframes></track>\s*', '', block, flags=re.S)
+        assert seats.MUG_BONE + '"' not in block
+    return block, local, times, report
 
 
 def blend(first, second, weight, bones):
@@ -864,9 +957,14 @@ def sipped(skeleton, pose, limb, share, towards, mug):
     return tilted
 
 
+NORMAL_WAY = {'WAY_STEPS': WAY_STEPS, 'MAX_CLEAR_FACE': MAX_CLEAR_FACE, 'MAX_HALF_DEPTH': MAX_HALF_DEPTH}
+
+
 def author(source, mesh, mug_mesh, destination):
     skeleton = feet.Skel(str(source))
     name = source.name.removesuffix('.skeleton.xml')
+    globals().update(NORMAL_WAY)
+    globals().update(FINE_WAYS.get(name, {}))
     vertices, _, weights = rest.mesh_data(mesh)
     mug_points = rest.mesh_data(mug_mesh)[0]
     mug = Mug(skeleton, name, mug_points, read_limb_mounts())
@@ -884,6 +982,7 @@ def author(source, mesh, mug_mesh, destination):
     SEAT['envelope'] = bodies[mesh.name.removesuffix('.xml')] if SEAT['stool'] else (
         float('inf'), (BENCH_REACH_ACROSS - BENCH_OFFSET) / seats.LEVEL_SCALE_HIGH,
         (BENCH_REACH_ALONG - (2.0 - 0.5 * places) * seats.SEAT_SPACING) / seats.LEVEL_SCALE_HIGH)
+    SEAT['side'] = SIDE_LIMITS.get(name)
     report['stool'] = SEAT['stool']
     for clip in ('Drink', 'SitDrink'):
         if clip == 'Drink':
