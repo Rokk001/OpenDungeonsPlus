@@ -169,6 +169,11 @@ void RoomGhostRoom::layoutCauldrons()
     std::sort(mCauldrons.begin(),mCauldrons.end(),cauldronOrder);
 }
 
+//! Where the trap seat of the cauldron lies from the middle of the cauldron (models/GhostCauldron.mesh, bone DeliverySocket)
+static const float TRAP_SOCKET_OFFSET_X=0.5f;
+static const float TRAP_SOCKET_OFFSET_Y=0.82f;
+static const float TRAP_SOCKET_OFFSET_Z=1.1f;
+
 void RoomGhostRoom::createCauldronObjects()
 {
     std::vector<BuildingObject*> oldCauldrons;
@@ -367,18 +372,14 @@ Tile* RoomGhostRoom::reserveCauldron(Creature& hunter)
     for(Cauldron& cauldron : mCauldrons)
     {
         if(cauldron.hunter!=nullptr && cauldron.hunter!=&hunter) continue;
-        Tile* best=nullptr;size_t distance=std::numeric_limits<size_t>::max();
-        for(int y=-1;y<=2;++y) for(int x=-1;x<=2;++x)
+        // Decision 894: the hunter walks to the one place beside the trap seat of the cauldron (getTrapStandingTile)
+        Tile* best=getTrapStandingTile(*getGameMap(),*cauldron.anchor);
+        if(best!=nullptr && best->getCoveringRoom()!=this) best=nullptr;
+        if(best!=nullptr)
         {
-            if(x>=0 && x<2 && y>=0 && y<2) continue;
-            Tile* tile=getGameMap()->getTile(cauldron.anchor->getX()+x,cauldron.anchor->getY()+y);
-            if(tile==nullptr || tile->getCoveringRoom()!=this) continue;
-            bool used=false;
             for(const std::pair<Creature* const,InteractionPosition>& spot : mInteractionPositions)
-                if(spot.first!=&hunter && spot.second.position==Ogre::Vector2(tile->getX(),tile->getY())) used=true;
-            if(used) continue;
-            std::list<Tile*> path=getGameMap()->path(&hunter,tile);
-            if(!path.empty() && path.size()<distance) { best=tile;distance=path.size(); }
+                if(spot.first!=&hunter && spot.second.position==Ogre::Vector2(best->getX(),best->getY())) best=nullptr;
+            if(best!=nullptr && getGameMap()->path(&hunter,best).empty()) best=nullptr;
         }
         if(best==nullptr) continue;
         cauldron.hunter=&hunter;
@@ -1102,33 +1103,33 @@ Tile* RoomGhostRoom::getHunterCauldron(const Creature& hunter) const
     return nullptr;
 }
 
-Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(const Tile& anchor, const Tile& standing)
+Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(const Tile& anchor)
 {
-    // Decision 865: the delivery device stands directly beside the hunter, within reach of his hand, not over the middle
-    // of the cauldron's top. The cauldron stands centred on its 2x2 block (createCauldronObjects); the device sits on the
-    // line from the middle of the hunter's tile to the middle of the cauldron, GhostDeliveryHandReach from the hunter
-    // (never past the middle), its top at the hand height GhostDeliveryHeight, where the trap is put in.
-    const ConfigManager& config=ConfigManager::getSingleton();
-    const float centreX=anchor.getX()+0.5f,centreY=anchor.getY()+0.5f;
-    const float towardsX=centreX-static_cast<float>(standing.getX()),towardsY=centreY-static_cast<float>(standing.getY());
-    // The middle of a tile is never the middle of a 2x2 block, so the distance is at least half a tile diagonal
-    const float distance=std::sqrt(towardsX*towardsX+towardsY*towardsY);
-    const float reach=std::min(static_cast<float>(config.getRoomConfigDouble("GhostDeliveryHandReach")),distance);
-    return Ogre::Vector3(static_cast<float>(standing.getX())+towardsX*reach/distance,
-        static_cast<float>(standing.getY())+towardsY*reach/distance,static_cast<float>(config.getRoomConfigDouble("GhostDeliveryHeight")));
+    // Decision 894: the cauldron has a permanent trap seat on its rim (models/GhostCauldron.mesh, bone DeliverySocket,
+    // measured on the export): the offset below from the middle of the 2x2 block, where the cauldron stands
+    // (createCauldronObjects). The cauldron is never turned, so the offset needs no rotation.
+    return Ogre::Vector3(static_cast<float>(anchor.getX())+0.5f+TRAP_SOCKET_OFFSET_X,
+        static_cast<float>(anchor.getY())+0.5f+TRAP_SOCKET_OFFSET_Y,TRAP_SOCKET_OFFSET_Z);
+}
+
+Tile* RoomGhostRoom::getTrapStandingTile(GameMap& map, const Tile& anchor)
+{
+    // The seat is open on the +Y side: the hunter stands on the tile of the ring round the block that lies there, one
+    // tile right of the block's left edge, and faces -Y. That tile is 0.68 from the seat, within reach of his hand.
+    return map.getTile(anchor.getX()+1,anchor.getY()+2);
 }
 
 Ogre::Vector3 RoomGhostRoom::getCauldronMouthPosition(const Ogre::Vector3& cauldron)
 {
-    // The glowing ectoplasm surface fills the mouth 1.17 above the floor (models/GhostCauldron.mesh, measured on the export)
-    static const float ECTOPLASM_SURFACE_HEIGHT=1.17f;
+    // The glowing ectoplasm surface fills the mouth 1.049 above the floor (models/GhostCauldron.mesh, measured on the export)
+    static const float ECTOPLASM_SURFACE_HEIGHT=1.049f;
     return Ogre::Vector3(cauldron.x,cauldron.y,ECTOPLASM_SURFACE_HEIGHT);
 }
 
 float RoomGhostRoom::getCauldronRimRadius()
 {
-    // The rolled rim reaches 0.66 out from the middle of the cauldron (models/GhostCauldron.mesh, measured on the export)
-    static const float RIM_RADIUS=0.66f;
+    // The rolled rim reaches 0.68 out from the middle of the cauldron (models/GhostCauldron.mesh, measured on the export)
+    static const float RIM_RADIUS=0.68f;
     return RIM_RADIUS;
 }
 
