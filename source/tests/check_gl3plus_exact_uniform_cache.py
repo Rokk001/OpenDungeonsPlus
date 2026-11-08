@@ -1,8 +1,8 @@
 """Check selective uniform caching without compiling Ogre or claiming runtime savings."""
 from pathlib import Path
+import argparse
 import re
 import subprocess
-import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -10,7 +10,7 @@ PATCH = ROOT / 'scripts/win32/patches/ogre14-gl3plus-exact-uniform-cache.patch'
 
 
 def preimages(patch):
-    """Reconstruct text fixtures with the old hunk positions for plain git apply."""
+    """Reconstruct text fixtures with the old hunk positions for both apply modes."""
     files = {}
     lines = None
     remaining = 0
@@ -157,8 +157,65 @@ int main()
     print('exact uniform native probe: 13 fixed assertions passed')
 
 
+def pinned_source_check(source):
+    """Apply all six installer patches to isolated pinned source files, then reverse them."""
+    pinned = 'f906880885f6014ca9b5bd8aaa09b399394d5676'
+    subprocess.run(['git', '-C', str(source), 'cat-file', '-e', pinned + '^{commit}'], check=True)
+    names = (
+        'ogre14-multiwindow-settings.patch', 'ogre14-short-emitter.patch',
+        'ogre14-light-position-cache.patch', 'ogre14-discard-lock-unsynchronized.patch',
+        'ogre14-gl3plus-program-shutdown.patch', 'ogre14-gl3plus-exact-uniform-cache.patch',
+    )
+    patches = [PATCH.parent / name for name in names]
+    install = (ROOT / 'scripts/win32/install-ogre-prereq.ps1').read_text()
+    assert [install.index("'patches/" + name + "'") for name in names] == sorted(
+        install.index("'patches/" + name + "'") for name in names)
+    paths = set()
+    for patch in patches:
+        paths.update(re.findall(r'^--- a/(.+)$', patch.read_text(), re.MULTILINE))
+    with tempfile.TemporaryDirectory(prefix='pinned-ogre-patches-') as temporary:
+        directory = Path(temporary) / 'src/ogre'
+        directory.mkdir(parents=True)
+        subprocess.run(['git', 'init', '--quiet'], cwd=directory, check=True)
+        subprocess.run(['git', 'config', 'core.autocrlf', 'false'], cwd=directory, check=True)
+        before = {}
+        for name in paths:
+            before[name] = subprocess.check_output(['git', '-C', str(source), 'show', pinned + ':' + name])
+            target = directory / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(before[name])
+        # Execute the actual patch phase, excluding receipt removal and all build commands.
+        phase = install.split("$taskPatch = Join-Path", 1)[1]
+        phase = '$taskPatch = Join-Path' + phase.split("$ErrorActionPreference = 'Stop'", 1)[0]
+        script = Path(temporary) / 'patch-phase.ps1'
+        script.write_text('param($taskRoot, $taskPatchDirectory)\n' +
+                          phase.replace('$PSScriptRoot', '$taskPatchDirectory'))
+        for repeat in range(2):
+            result = subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+                                     '-File', str(script), temporary, str(PATCH.parent.parent)],
+                                    capture_output=True, text=True, check=True)
+            assert result.stdout.count('Applying OGRE') == (6 if repeat == 0 else 0), result.stdout
+            for patch in patches:
+                subprocess.run(['git', 'apply', '--recount', '--reverse', '--check', str(patch)],
+                               cwd=directory, check=True)
+        verify({name: (directory / name).read_text() for name in preimages(PATCH.read_text())})
+        for patch in reversed(patches):
+            subprocess.run(['git', 'apply', '--recount', '--reverse', '--check', str(patch)],
+                           cwd=directory, check=True)
+            subprocess.run(['git', 'apply', '--recount', '--reverse', str(patch)], cwd=directory, check=True)
+        assert all((directory / name).read_bytes() == data for name, data in before.items())
+    print('pinned Ogre: six patches applied, second install skipped all six, all reversed byte-for-byte')
+
+
 def main():
-    """Apply/reverse the patch and reject thirteen source mutations plus old dependency receipts."""
+    """Check actual installer apply modes and reject thirteen source mutations and old receipts."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--probe', action='store_true')
+    parser.add_argument('--ogre-source', type=Path, help='read pinned files from this Git repository without modifying it')
+    args = parser.parse_args()
+    assert b'\r' not in PATCH.read_bytes(), 'exact uniform patch must retain LF on Windows checkouts'
+    attributes = subprocess.check_output(['git', 'check-attr', 'eol', '--', str(PATCH)], cwd=ROOT, text=True)
+    assert attributes.strip().endswith(': eol: lf'), 'patch requires an explicit LF checkout attribute'
     patch = PATCH.read_text()
     before = preimages(patch)
     assert len(before) == 4
@@ -168,11 +225,14 @@ def main():
             target = directory / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, encoding='utf-8')
-        applied = subprocess.run(['git', 'apply', str(PATCH)], cwd=directory, capture_output=True, text=True)
+        applied = subprocess.run(['git', 'apply', '--recount', '--check', str(PATCH)], cwd=directory,
+                                 capture_output=True, text=True)
+        assert applied.returncode == 0, applied.stderr
+        applied = subprocess.run(['git', 'apply', '--recount', str(PATCH)], cwd=directory, capture_output=True, text=True)
         assert applied.returncode == 0, applied.stderr
         after = {name: (directory / name).read_text() for name in before}
         verify(after)
-        if '--probe' in sys.argv:
+        if args.probe:
             native_probe(after)
         mutations = [
             ('cached.second.size() == length', 'true'),
@@ -206,10 +266,19 @@ def main():
             except (AssertionError, ValueError):
                 continue
             raise AssertionError('accepted missing lifecycle clear: ' + signature)
-        reversed_patch = subprocess.run(['git', 'apply', '--reverse', str(PATCH)], cwd=directory,
+        reversed_patch = subprocess.run(['git', 'apply', '--recount', '--reverse', '--check', str(PATCH)], cwd=directory,
+                                        capture_output=True, text=True)
+        assert reversed_patch.returncode == 0, reversed_patch.stderr
+        reversed_patch = subprocess.run(['git', 'apply', '--recount', '--reverse', str(PATCH)], cwd=directory,
                                         capture_output=True, text=True)
         assert reversed_patch.returncode == 0, reversed_patch.stderr
         assert all((directory / name).read_text() == text for name, text in before.items())
+        # Retain the predecessor's plain-apply coverage alongside the installer path.
+        subprocess.run(['git', 'apply', str(PATCH)], cwd=directory, check=True)
+        subprocess.run(['git', 'apply', '--reverse', str(PATCH)], cwd=directory, check=True)
+        assert all((directory / name).read_text() == text for name, text in before.items())
+    if args.ogre_source:
+        pinned_source_check(args.ogre_source)
     fixtures()
     install = (ROOT / 'scripts/win32/install-ogre-prereq.ps1').read_text()
     assert PATCH.name in (ROOT / 'scripts/win32/ogre-prereq-provenance.ps1').read_text()

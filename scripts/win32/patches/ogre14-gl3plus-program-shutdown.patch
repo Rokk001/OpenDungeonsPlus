@@ -1,3 +1,5 @@
+OGRE 14 prerequisite patch. Preserve LF line endings for git apply --recount.
+
 Fix: release cached GL3Plus programs before their manager and context are destroyed.
 
 The program manager owns separable programs whose destructors consult its singleton.

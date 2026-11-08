@@ -1,3 +1,5 @@
+OGRE 14 prerequisite patch. Preserve LF line endings for git apply --recount.
+
 Fix: locking a dynamic vertex buffer with HBL_DISCARD makes the CPU wait for the GPU in every frame.
 
 Description

@@ -1,3 +1,5 @@
+OGRE 14 prerequisite patch. Preserve LF line endings for git apply --recount.
+
 Cache exact separable-program uniforms independently of the optional GL render-state cache.
 
 diff --git a/RenderSystems/GLSupport/include/OgreGLUniformCache.h b/RenderSystems/GLSupport/include/OgreGLUniformCache.h
@@ -160,10 +162,10 @@ diff --git a/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLSeparableProgram.cpp b/R
          mGLProgramPipelineHandles.erase(pipeline);
      }
 
-+    //! Reuses exact per-shader uniform values across draws, including shadow and main passes.
      void GLSLSeparableProgram::updateUniforms(GpuProgramParametersSharedPtr params,
                                                uint16 mask, GpuProgramType fromProgType)
      {
++        //! Reuses exact per-shader uniform values across draws, including shadow and main passes.
          // determine if we need to transpose matrices when binding
          bool transpose = !mShaders[fromProgType] || mShaders[fromProgType]->getColumnMajorMatrices();
 

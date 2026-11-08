@@ -1,3 +1,5 @@
+OGRE 14 prerequisite patch. Preserve LF line endings for git apply --recount.
+
 Fix: the view space light positions are reused after the view changed, so objects are lit from wrong light positions.
 
 Description
