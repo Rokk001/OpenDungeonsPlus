@@ -226,6 +226,10 @@ public:
     static const double WOUNDED_DRAG_MAX_DISTANCE_DEFAULT;
     //! Distance in tiles the pulled creature keeps behind the worker (DormitoryWoundedDragGap)
     static const double WOUNDED_DRAG_GAP_DEFAULT;
+
+    //! Distance in tiles the pulled creature lies behind the worker (centre to centre): the configured gap, but never less
+    //! than the two bodies need. Server and clients use it (decision 892).
+    static double getDragGap(const Creature& worker, const Creature& dragged);
     //! Speed factor of the pulled creature against a worker, so that it can follow (DormitoryWoundedDragFollowSpeedFactor)
     static const double WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT;
     //! Speed factor of a worker that pulls a creature (DormitoryWoundedDragWorkerSpeedFactor)
@@ -1030,6 +1034,9 @@ public:
 
     //! \brief Clients only: blends the tile speed ratio of the walk clips (see mClientTileSpeedRatio)
     virtual void updateClientPose(double timeSinceLastFrame) override;
+
+    //! Client: a dead body that a worker pulls is tied to the way of the worker every frame (decision 892)
+    void updateDragTether();
 
     //! \brief Speed of the tile under the creature divided by its ground speed (1 when unknown), client side, no tired or hurt factor
     double getTileSpeedRatio() const;
@@ -2221,6 +2228,9 @@ private:
     uint32_t        mJumpTurns;
     //! \brief Runtime only (not saved): turns of the running jump that are left (0 = no jump).
     uint32_t        mJumpTurnsLeft;
+    //! Client: way of the worker that pulls this dead body and the length of it (see updateDragTether)
+    std::vector<Ogre::Vector2> mDragTetherTrail;
+    std::vector<double> mDragTetherArc;
     //! \brief Runtime only (not saved): turns of the running jump that have passed (fractions on a client).
     Ogre::Real      mJumpElapsed;
 
