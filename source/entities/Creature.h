@@ -940,7 +940,7 @@ public:
     void interruptGhostHunt();
     //! \brief Decision 658: a creature never stands on a wall. Server only. When the creature is found on a full tile (a
     //! wall) it is put on the nearest floor tile it can walk on, its path is dropped and the clients are told.
-    //! eturn true when the creature was moved
+    //! \return true when the creature was moved
     bool keepOffWalls();
     //! \brief Rebinds a hunt when its equipment or occupied cauldron moves to another room.
     void transferGhostHuntRoom(const std::string& previous, const std::string& current, bool hook, bool empty);
@@ -1381,7 +1381,7 @@ public:
     //! \brief Server side. A worker starts pulling this creature by the legs: it stops what it did, stays on the
     //! map and lies on the ground (clip dragged_anim). It moves with the paths the worker gives it.
     //! \param pullerDirtFactor DirtFactor of the pulling worker, used for the trail dirt of the pulled creature
-    void notifyDragStart(double pullerDirtFactor);
+    void notifyDragStart(const Creature& worker, double pullerDirtFactor);
 
     //! \brief Server side. The worker stopped pulling (arrived, gave up, the creature died or was picked up):
     //! starts the pause before it can be pulled again
@@ -2228,6 +2228,8 @@ private:
     uint32_t        mJumpTurns;
     //! \brief Runtime only (not saved): turns of the running jump that are left (0 = no jump).
     uint32_t        mJumpTurnsLeft;
+    //! Live ground-drag worker identity, independent of saved corpse reservations.
+    std::string mDragWorkerName;
     //! Client: way of the worker that pulls this dead body and the length of it (see updateDragTether)
     std::vector<Ogre::Vector2> mDragTetherTrail;
     std::vector<double> mDragTetherArc;
