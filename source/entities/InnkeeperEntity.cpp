@@ -23,6 +23,7 @@
 #include "network/ODPacket.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
+#include "ODApplication.h"
 
 const std::string InnkeeperEntity::MESH_NAME = "Innkeeper";
 const uint32_t InnkeeperEntity::CHEER_TURNS = 2;
@@ -54,6 +55,13 @@ InnkeeperEntity::InnkeeperEntity(GameMap* gameMap) :
 GameEntityType InnkeeperEntity::getObjectType() const
 {
     return GameEntityType::innkeeperEntity;
+}
+
+double InnkeeperEntity::getClipSeconds(const std::string& clip) const
+{
+    if(clip == InnkeeperPose::pour)
+        return ConfigManager::getSingleton().getTavernConfigDouble(DRINK_TURNS_KEY) / ODApplication::turnsPerSecond;
+    return RenderedMovableEntity::getClipSeconds(clip);
 }
 
 void InnkeeperEntity::doUpkeep()

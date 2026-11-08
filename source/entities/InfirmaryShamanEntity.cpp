@@ -91,6 +91,19 @@ bool InfirmaryShamanEntity::walkToCot(RoomInfirmary& room)
     return true;
 }
 
+//! \brief Gives the six pose clips the configured duration; Walk and Idle keep the normal rate.
+double InfirmaryShamanEntity::getClipSeconds(const std::string& clip) const
+{
+    static const char* const poses[] = {
+        "Chant", "RattleShake", "HerbSniff", "PotionTaste", "TripOverBucket", "Dance"};
+    for(size_t i = 0; i < sizeof(poses) / sizeof(poses[0]); ++i)
+    {
+        if(clip == poses[i])
+            return ConfigManager::getSingleton().getRoomConfigDouble("InfirmaryShamanAnimationSeconds");
+    }
+    return 0.0;
+}
+
 //! \brief Entertains the keeper without changing health, mana, movement blockers or targeting.
 void InfirmaryShamanEntity::doUpkeep()
 {

@@ -1,26 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
     <Window type="OD/FrameWindow" name="GhostRoomWindow">
-        <Property name="Area" value="{{0.5,-170},{0.5,-100},{0.5,170},{0.5,100}}" />
+        <!-- Game look (decision 845): the shared game window frame and title of every room window (only the
+             Dungeonbook has its own), MedievalSharp texts in game colours on a dark framed panel. Sizes are 1024x768 design pixels; Gui scales them with the resolution and the UI scale and
+             shrinks the window to the screen. Every text wraps inside its panel so nothing sticks out. -->
+        <Property name="Area" value="{{0.5,-280},{0.5,-210},{0.5,280},{0.5,210}}" />
         <Property name="Text" value="Ghost room" />
         <Property name="SizingEnabled" value="False" />
         <Property name="AlwaysOnTop" value="True" />
+        <Window type="OD/StaticText" name="GhostInfoPanel">
+            <Property name="Area" value="{{0.03,0},{0.03,0},{0.97,0},{0.56,0}}" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
+            <Property name="BackgroundColours" value="tl:70000000 tr:70000000 bl:70000000 br:70000000" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
         <Window type="OD/StaticText" name="GhostBarText">
-            <Property name="Area" value="{{0,20},{0,35},{1,-20},{0,60}}" />
+            <Property name="Area" value="{{0.06,0},{0.05,0},{0.94,0},{0.2,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="TextColours" value="FFF2C860" />
             <Property name="Text" value="" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="MousePassThroughEnabled" value="True" />
+        </Window>
+        <Window type="OD/StaticText" name="GhostExplainText">
+            <Property name="Area" value="{{0.06,0},{0.21,0},{0.94,0},{0.54,0}}" />
+            <Property name="Font" value="MedievalSharp-8" />
+            <Property name="TextColours" value="FFD8CCB8" />
+            <Property name="Text" value="Ghost hunters catch ghosts in traps and pour them into the cauldron. Each ghost level fills the ectoplasm bar; a full bar becomes one ectoplasm, which workers carry to the chosen apparatus. Research unlocks the ghost press and the soul forge." />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+            <Property name="VertFormatting" value="TopAligned" />
+            <Property name="MousePassThroughEnabled" value="True" />
         </Window>
         <Window type="OD/Button" name="GhostProductButton">
-            <Property name="Area" value="{{0.5,-150},{0,70},{0.5,150},{0,100}}" />
+            <Property name="Area" value="{{0.08,0},{0.6,0},{0.92,0},{0.71,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="Apparatus: Mana still" />
-            <Property name="TooltipText" value="The apparatus workers carry the next ectoplasm to (room research unlocks the ghost press and the soul forge)" />
+            <Property name="TooltipText" value="Choose the apparatus for the next ectoplasm" />
         </Window>
         <Window type="OD/Button" name="GhostReviveButton">
-            <Property name="Area" value="{{0.5,-150},{0,110},{0.5,150},{0,140}}" />
+            <Property name="Area" value="{{0.08,0},{0.74,0},{0.92,0},{0.85,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="Revive own: On" />
-            <Property name="TooltipText" value="Hunters bring own ghosts to their corpse in the crypt (mana)" />
+            <Property name="TooltipText" value="Hunters bring own ghosts to their corpse in the crypt" />
+        </Window>
+        <Window type="OD/Button" name="CloseButton">
+            <Property name="Area" value="{{0.5,-64},{0.88,0},{0.5,64},{0.98,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Close" />
         </Window>
     </Window>
 </GUILayout>

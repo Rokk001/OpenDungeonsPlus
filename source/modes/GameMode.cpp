@@ -583,6 +583,9 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleGhostRoomWindow, this)));
     addEventConnection(guiSheet->getChild("GhostRoomWindow")->subscribeEvent(
         CEGUI::FrameWindow::EventCloseClicked, CEGUI::Event::Subscriber(&GameMode::hideGhostRoomWindow, this)));
+    // The Close button of the game look, like the other room windows (decision 845)
+    addEventConnection(guiSheet->getChild("GhostRoomWindow/CloseButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::hideGhostRoomWindow, this)));
     addEventConnection(guiSheet->getChild("GhostRoomWindow/GhostProductButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleGhostProduct, this)));
     addEventConnection(guiSheet->getChild("GhostRoomWindow/GhostReviveButton")->subscribeEvent(

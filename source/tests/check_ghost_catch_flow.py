@@ -16,9 +16,14 @@ trap of D17: hand-sized (no larger than the tavern mug, at most a fifth of the s
 texture with visible grain, opaque green glowing windows on front and back, and the hand and the throw keep that size.
 This part fails on the GhostBox mesh, textures and code of build 41 (base 94b29d74a).
 Owner decision 726 wants the whole catch to take about 20 s so the player can follow it: 2 s throw, 16 s beam and 2 s
-snap, the same for every hunter; efficiency and the CatchTime research only act on emptying the box (GhostEmptyTurns).
+snap, the same for every hunter; efficiency and the CatchTime research only act on emptying the box (GhostEmptyTurns;
+since decision 845 the emptying is the fixed 20 s transfer at the cauldron's trap socket, see check_ghost_transfer.py).
 Each visual step stays visible for its full time. This part fails on the code and config of base e877bfe66 (0.5 s
 throw, 5.5 beam turns divided by efficiency and research, no snap step).
+Owner decisions 855 and 857 (newer than 726): better ghost hunters are faster at catching and the CatchTime research
+shortens the catch too. The beam lasts GhostBeamSeconds (16 s at research level 1 and efficiency 1) times the CatchTime
+factor of the keeper divided by the hunter efficiency; throw and snap stay 2 s each for every hunter, and the 20 s
+transfer is shortened only by CatchTime, never by the efficiency. The beam part fails on base b8dac69e3 (fixed 16 s).
 Owner decision 733: the hunter wears the capture-beam backpack on his back (taken from and hung back on its hook), only
 the small box is in the hand on the way back to the cauldron, the box is thrown under the ghost and the beam comes from
 the weapon. This part fails on base 0c9e8c329 (pack in front of the hunter, beam from the backpack nozzle).
@@ -96,19 +101,25 @@ def box_in_hand():
 
 # Visual box phase of the hunt header, evaluated for every state with and without backpack.
 def visual_states():
-    header = read("source/creatureaction/CreatureActionHuntGhost.h")
-    line = re.search(r"uint32_t getBoxVisualState\(\) const \{ return (.*?); \}", header).group(1)
-    expression = line.replace("!hasBackpack()", "not backpack").replace("||", " or ")
-    expression = re.sub(r"([^?:]+)\?([^:]+):", r"(\2) if (\1) else ", expression)
-    expression = expression.replace("u", "")
+    # Since decision 845 the phases live in the source file and add 5, the open trap in the cauldron's trap socket
+    action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
+    phases = body(action, "uint32_t CreatureActionHuntGhost::getBoxVisualState() const")
+    rules = re.findall(r"if\((.*?)\) return (\d)u;", phases)
+    assert rules == [("!hasBackpack()", "0"), ("mState==2", "1"), ("mState==3 || mState==9", "3"), ("mState==10", "4"),
+                     ("isTransferring()", "5")], rules
+    assert phases.rstrip("}\n ").endswith("return 2u;"), "held in the hand otherwise"
     for state in range(11):
         for backpack in (False, True):
-            mode = eval(expression, {}, {"mState": state, "backpack": backpack})  # noqa: S307 - own source
-            expected = 0 if not backpack else 1 if state == 2 else 3 if state in (3, 9) else 4 if state == 10 else 2
-            assert mode == expected, (state, backpack, mode, expected)
-    throw = re.search(r"std::string getThrowGhostName\(\) const \{ return (.*?); \}", header).group(1)
-    has(throw, "the lying box stays under its ghost while thrown, pulled, snapping and shut", "mState==2", "mState==3",
-        "mState==10", "mState==9")
+            for transferring in ((False, True) if state == 6 else (False,)):
+                values = {"!hasBackpack()": not backpack, "mState==2": state == 2, "mState==3 || mState==9": state in (3, 9),
+                          "mState==10": state == 10, "isTransferring()": transferring}
+                mode = next((int(m) for condition, m in rules if values[condition]), 2)
+                expected = 0 if not backpack else 1 if state == 2 else 3 if state in (3, 9) else 4 if state == 10 else \
+                    5 if transferring else 2
+                assert mode == expected, (state, backpack, transferring, mode, expected)
+    throw = body(action, "std::string CreatureActionHuntGhost::getThrowGhostName() const")
+    has(throw, "the lying box stays under its ghost while thrown, pulled, snapping and shut",
+        "if(mState==2 || mState==3 || mState==10 || mState==9) return mTarget;", "if(isTransferring()) return mGhosts.front();")
     print("box phases (hand, throw, lying under the ghost, snapping shut): ok")
 
 
@@ -124,7 +135,7 @@ def catch_order():
     ordered(capture, "throw, then beam, then snap with the bang, then caught",
         'config.getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond',
         "mState=3;mBeamTarget=mTarget;", "EntityAnimation::beam_anim",
-        'config.getRoomConfigDouble("GhostBeamSeconds")*ODApplication::turnsPerSecond', "mBeamTarget.clear();mState=10;",
+        "const double duration=getBeamSeconds(mCreature)*ODApplication::turnsPerSecond;", "mBeamTarget.clear();mState=10;",
         '"Rooms/GhostRoom/BoxSnap"', 'config.getRoomConfigDouble("GhostBoxSnapSeconds")*ODApplication::turnsPerSecond',
         "ghost->setState(GhostState::boxed);", "mState=9;")
     assert "mTarget.clear();mState=4;" not in capture, "after the snap the hunter first fetches the box"
@@ -140,7 +151,7 @@ def catch_order():
     creature = read("source/entities/Creature.cpp")
     refresh = body(creature, "void Creature::refreshGhostHuntVisuals()")
     has(refresh, "the pulled-in share reaches the client", "hunt->getCaptureTurns()",
-        "(boxMode==1 || boxMode==3 || boxMode==4) && turns!=mGhostThrowTurns")
+        "(boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5) && turns!=mGhostThrowTurns")
     print("catch order throw -> beam -> snap -> fetch -> carry: ok")
 
 
@@ -162,7 +173,8 @@ def code_only(text):
     return "\n".join(line.split("//", 1)[0] for line in text.splitlines())
 
 
-# Owner decision 726: the catch takes 2 s throw + 16 s beam + 2 s snap for every hunter, each step visible to its end.
+# Owner decision 726: the catch takes 2 s throw + 16 s beam + 2 s snap, each step visible to its end; decisions 855 and
+# 857: the beam (only the beam) is shortened by the CatchTime research of the keeper and by the hunter efficiency.
 def catch_timing():
     room = room_config()
     durations = (room.get("GhostBoxThrowSeconds"), room.get("GhostBeamSeconds"), room.get("GhostBoxSnapSeconds"))
@@ -172,23 +184,47 @@ def catch_timing():
     for key in ("GhostBoxThrowSeconds", "GhostBeamSeconds", "GhostBoxSnapSeconds"):
         index = next(i for i, row in enumerate(rows) if row.split()[:1] == [key])
         assert rows[index - 1].lstrip().startswith("#"), (key, "documentation line")
+    beam_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ["GhostBeamSeconds"])
+    beam_doc = " ".join(row.lstrip("# ") for row in rows[beam_row - 4:beam_row])
+    has(beam_doc, "the beam doc line explains the 16 s base and what shortens it",
+        "16 s at research level 1 and hunter efficiency 1", "CatchTime research factor", "divided by the")
+    catch_time = re.search(r"^\s*roomGhostRoom\s+CatchTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$", read("config/skills.cfg"), re.M)
+    assert catch_time and [float(value) for value in catch_time.groups()] == [1.0, 0.8, 0.667], "CatchTime 1.0/0.8/0.667"
     action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
     hunt = body(action, "bool CreatureActionHuntGhost::handleHunt()")
     capture = code_only(body(hunt, "    if(mState==2 || mState==3 || mState==10)"))
-    # Base e877bfe66: researched("GhostBeamTurns","CatchTime")/efficiency made a strong hunter beam a sixth as long.
+    # Throw and snap stay fixed for every hunter: nothing in the capture branch reads efficiency or research itself.
     for fragment in ("efficiency", "getEfficiency", "CatchTime", "GhostBeamTurns"):
-        assert fragment not in capture, ("catch time must not depend on the hunter or research", fragment)
+        assert fragment not in capture, ("throw and snap must not depend on the hunter or research", fragment)
+    has(capture, "throw and snap keep their configured seconds",
+        'config.getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond',
+        'config.getRoomConfigDouble("GhostBoxSnapSeconds")*ODApplication::turnsPerSecond')
+    beam_state = capture[capture.index("if(mState==3)"):capture.index("mBeamTarget.clear();mState=10;")]
+    has(beam_state, "the beam step uses the beam time of the hunter",
+        "const double duration=getBeamSeconds(mCreature)*ODApplication::turnsPerSecond;")
+    assert 'getRoomConfigDouble("GhostBeamSeconds")' not in beam_state, "the beam step no longer uses the fixed 16 s"
+    beam = code_only(body(action, "double CreatureActionHuntGhost::getBeamSeconds(const Creature& hunter)"))
+    ordered(beam, "beam = GhostBeamSeconds x CatchTime research / hunter efficiency (guarded)",
+        "SkillManager::getResearchValue(hunter.getSeat(),SkillType::roomGhostRoom,",
+        'getRoomConfigDouble("GhostBeamSeconds"),"CatchTime")',
+        "getRoomAffinity(RoomType::ghostRoom).getEfficiency()", "efficiency>0.0?beam/efficiency:beam")
     capture_turns = code_only(body(action, "double CreatureActionHuntGhost::getCaptureTurns() const"))
-    has(capture_turns, "the client share uses the fixed beam time", 'getRoomConfigDouble("GhostBeamSeconds")*ODApplication::turnsPerSecond')
-    assert "getEfficiency" not in capture_turns and "researched(" not in capture_turns, "beam share independent of the hunter"
+    has(capture_turns, "the pulled-in share uses the same beam time", "getBeamSeconds(mCreature)*ODApplication::turnsPerSecond")
+    assert "GhostBeamSeconds" not in capture_turns, "the share must not use the fixed 16 s"
+    header = read("source/creatureaction/CreatureActionHuntGhost.h")
+    has(header, "the beam time is shared by server and client", "static double getBeamSeconds(const Creature& hunter);")
+    # Decision 845: the emptying is the 20 s transfer at the trap socket (check_ghost_transfer.py); decision 857: hunter
+    # efficiency does not shorten it, only the CatchTime research of the keeper does
     empty = body(hunt, "    if(mState==6)")
-    has(empty, "efficiency and research act on emptying only",
-        'researched("GhostEmptyTurns","CatchTime")/mCreature.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency()')
-    assert code_only(action).count('"CatchTime"') == 1, "CatchTime acts only on emptying"
+    has(empty, "the transfer takes the fixed time", "const double duration=getTransferTurns();")
+    transfer = code_only(body(action, "double CreatureActionHuntGhost::getTransferTurns() const"))
+    assert "fficiency" not in transfer and "getBeamSeconds" not in transfer, "the transfer stays independent of the hunter"
+    assert code_only(action).count('"CatchTime"') == 2, "CatchTime acts on the beam and on the transfer, nowhere else"
+    assert "getEfficiency" not in code_only(hunt), "the hunt steps read the hunter efficiency only through getBeamSeconds"
     manager = read("source/game/SkillManager.cpp")
-    has(manager, "CatchTime research is based on the emptying turns",
-        '{SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostEmptyTurns", ""}',
-        'texts[ResearchEffect::CatchTime] = "Box emptying time";')
+    has(manager, "CatchTime research is based on the transfer and the beam seconds",
+        '{SkillType::roomGhostRoom, "CatchTime", ResearchBaseSource::rooms, "GhostTransferSeconds", "GhostBeamSeconds"}',
+        'texts[ResearchEffect::CatchTime] = "Beam and transfer time";')
     restore = body(action, "void CreatureActionHuntGhost::restore()")
     has(restore, "a loaded snap resumes with the beam lowered", "if(mState==10) mCreature.setAnimationState(EntityAnimation::idle_anim,")
     creature = read("source/entities/Creature.cpp")
@@ -196,7 +232,7 @@ def catch_timing():
     has(update, "the throw arc runs the full throw time",
         'getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond', "position.z+=4.0f*progress*(1.0f-progress)*0.5f;")
     has(update, "the lying box is shown during throw, beam and snap",
-        "const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4;", "mGhostBoxNode->setVisible(lyingBox);")
+        "const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5;", "mGhostBoxNode->setVisible(lyingBox);")
     snap = update[update.index("else if(mGhostBoxMode==4)"):]
     snap = snap[:snap.index("            else\n")]
     has(snap, "the snap jolts the box over the full snap time with the ghost fully inside",
@@ -204,9 +240,12 @@ def catch_timing():
         "mGhostBoxNode->setOrientation(", "mGhostCaptureShown=1.0;")
     has(update, "the beam still shrinks the ghost towards the pulled-in share",
         "mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")
+    has(update, "the client lid uses the beam time of the hunter, as the server does",
+        "const double beamed=mGhostThrowTurns*CreatureActionHuntGhost::getBeamSeconds(*this);")
+    assert 'mGhostThrowTurns*config.getRoomConfigDouble("GhostBeamSeconds")' not in update, "the client must not assume 16 s"
     header = read("source/creatureaction/CreatureActionHuntGhost.h")
     has(header, "the hunt documents the snap state", "10 the lying box snaps shut over the pulled-in ghost")
-    print("catch timing 2 s throw + 16 s beam + 2 s snap = 20 s for every hunter: ok")
+    print("catch timing 2 s throw + 16 s x CatchTime / efficiency beam + 2 s snap: ok")
 
 
 # The bell rings and the alarm lamps beside it blink for GhostBellSeconds without a panel behind them.
@@ -532,8 +571,7 @@ def beam_from_capture_cannon():
     # The box is in the hand on the way out and on the whole way back to the cauldron and the hook (mode 2), it is
     # thrown under the ghost (mode 1) and lies there (3, 4); the held box is shown only in mode 2.
     header = read("source/creatureaction/CreatureActionHuntGhost.h")
-    has(header, "box phases", "uint32_t getBoxVisualState() const { return !hasBackpack()?0u:mState==2?1u:mState==3 || mState==9?3u:mState==10?4u:2u; }",
-        "bool hasBackpack() const { return mEquipped && !mInterrupted; }")
+    has(header, "box phases", "uint32_t getBoxVisualState() const;", "bool hasBackpack() const { return mEquipped && !mInterrupted; }")
     has(update, "only the small box is in the hand", "mGhostHeldBox->setVisible(mGhostBoxMode==2);", '"_HeldGhostBox","GhostBox.mesh"',
         "position=hand+(floor-hand)*progress;")
     has(update, "no backpack, no hunter equipment", "if(!mGhostBackpack) { clearGhostHuntVisuals();return; }")

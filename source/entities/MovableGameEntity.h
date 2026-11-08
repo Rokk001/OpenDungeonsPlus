@@ -165,8 +165,18 @@ public:
     //! \brief Requests an animation and identifies it so delayed cosmetic hits cannot follow a later action.
     virtual void setAnimationState(const std::string& state, bool loop = true, const Ogre::Vector3& direction = Ogre::Vector3::ZERO, bool playIdleWhenAnimationEnds = true);
 
+    //! \brief Like setAnimationState, but the whole clip takes clipSeconds game seconds on screen: a length chosen
+    //! while the game runs (a slap of the tavern slap duel, 4 to 10 s). The server sends the length to the clients.
+    //! The timing holds until another clip is requested; 0 plays the clip at its normal or configured rate.
+    void setTimedAnimationState(const std::string& state, double clipSeconds, bool loop, const Ogre::Vector3& direction,
+        bool playIdleWhenAnimationEnds);
+
     virtual double getAnimationSpeedFactor() const
     { return 1.0; }
+
+    //! \brief Game seconds the whole clip takes on screen (the plans give clip lengths in seconds), 0 for the normal
+    //! rate of one clip unit per game turn. The default reads the room configuration key ClipSeconds<clip>.
+    virtual double getClipSeconds(const std::string& clip) const;
 
     //! \brief True once the current strike reaches the contact fraction, or its animation was interrupted.
     //! A strike queued behind movement or waiting for its facing turn has not reached contact yet.
@@ -243,7 +253,8 @@ protected:
 private:
     //! Client: starts the clip of mPrevAnimationState on the model and tells the reactions
     void startAnimationClip();
-    void fireObjectAnimationState(const std::string& state, bool loop, const Ogre::Vector3& direction, bool playIdleWhenAnimationEnds);
+    void fireObjectAnimationState(const std::string& state, bool loop, const Ogre::Vector3& direction, bool playIdleWhenAnimationEnds,
+        double clipSeconds);
     Ogre::AnimationState* mAnimationState;
     std::string mDestinationAnimationState;
     bool mDestinationAnimationLoop;
@@ -251,6 +262,18 @@ private:
     Ogre::Vector3 mDestinationAnimationDirection;
     Ogre::Vector3 mWalkDirection;
     double mAnimationTime;
+    //! The clip name for which mClipSeconds was looked up in the room configuration.
+    std::string mClipSecondsFor;
+    //! Playing time in seconds that the room configuration (ClipSeconds<Clip>) gives the clip
+    //! mClipSecondsFor, 0 when the clip plays at the normal rate of one clip unit per game turn.
+    double mClipSeconds;
+    //! The clip that setTimedAnimationState gave a playing time chosen at run time (empty: none).
+    std::string mTimedClip;
+    //! Game seconds the clip mTimedClip takes on screen; it wins over ClipSeconds<Clip>. Not saved: the tavern starts
+    //! the next slap of a loaded duel with its own timing.
+    double mTimedClipSeconds;
+    //! The playing time setTimedAnimationState hands to the next setAnimationState call (0 = an untimed request).
+    double mPendingTimedClipSeconds;
     //! Client: seconds the strike clip still waits for the turn to the target (0 = nothing waits). Not saved.
     double mBlowStartDelay;
     //! Local-only request identity for pending impacts; never serialized or sent to the server.

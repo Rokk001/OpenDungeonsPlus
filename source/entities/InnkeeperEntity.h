@@ -62,6 +62,9 @@ public:
     //! \brief Server side. Counts down the pour and cheer clips and goes back to the idle clip when they are over.
     virtual void doUpkeep() override;
 
+    //! \brief The Pour clip takes the whole serving time (DrinkTurns turns), the other clips keep the configured time.
+    virtual double getClipSeconds(const std::string& clip) const override;
+
     //! \brief Server side. Puts a new innkeeper on the middle of the tile.
     //! \param gameMap The map to put the figure on.
     //! \param roomName The name of the tavern (see the constructor).

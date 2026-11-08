@@ -18,6 +18,8 @@ public:
     GameEntityType getObjectType() const override;
     //! \brief Walks between cots and occasionally performs a harmless pose beside a patient.
     void doUpkeep() override;
+    //! \brief Every shaman clip takes InfirmaryShamanAnimationSeconds on screen, as long as the pose lasts.
+    double getClipSeconds(const std::string& clip) const override;
     //! \brief Returns the owning room name for clicking the figure.
     const std::string& getRoomName() const { return mRoomName; }
     //! \brief Retains the figure when two infirmaries join.

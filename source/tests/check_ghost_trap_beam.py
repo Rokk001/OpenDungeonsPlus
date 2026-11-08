@@ -121,7 +121,7 @@ def trap_source():
     beam = update[update.index("            else\n            {\n                // The beam weakens"):update.index("// Only the snap rocks the box")]
     has(throw, "shut in flight", "mGhostLidShown=0.0;")
     has(beam, "opens at the start of the beam step and stays open",
-        'const double beamed=mGhostThrowTurns*config.getRoomConfigDouble("GhostBeamSeconds");',
+        'const double beamed=mGhostThrowTurns*CreatureActionHuntGhost::getBeamSeconds(*this);',
         'lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));',
         "mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);", "trapLight=mGhostLidShown;",
         "mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")

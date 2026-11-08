@@ -49,18 +49,27 @@ public:
     //! \brief Returns the visual box phase: 0 absent, 1 flying from the hand under the ghost, 2 held in the hunter's
     //! hand (from the hook until it is hung back, also while still empty), 3 lying on the floor under the ghost while
     //! the beam pulls the ghost in and until the hunter picks the closed box up again, 4 lying under the ghost while it
-    //! snaps shut with the bang.
-    uint32_t getBoxVisualState() const { return !hasBackpack()?0u:mState==2?1u:mState==3 || mState==9?3u:mState==10?4u:2u; }
-    //! \brief Returns the ghost under a box being thrown, pulled in, snapping shut or waiting to be picked up.
-    std::string getThrowGhostName() const { return mState==2 || mState==3 || mState==10 || mState==9?mTarget:std::string(); }
-    //! \brief Returns the fixed beam pull duration in turns (GhostBeamSeconds, the same for every hunter) while the
-    //! beam pulls the ghost into the box, else 0.
+    //! snaps shut with the bang, 5 standing open in the trap socket of the cauldron while the ghost flows out of it into
+    //! the cauldron (decision 845).
+    uint32_t getBoxVisualState() const;
+    //! \brief Returns the ghost under a box being thrown, pulled in, snapping shut or waiting to be picked up, or the
+    //! ghost being transferred from the trap socket into the cauldron.
+    std::string getThrowGhostName() const;
+    //! \brief Returns the time of one transfer from the trap socket into the cauldron in turns (GhostTransferSeconds,
+    //! decision 845; the same for every hunter, only the CatchTime research of the keeper shortens it).
+    double getTransferTurns() const;
+    //! \brief Returns the beam seconds of a hunter: GhostBeamSeconds times the CatchTime research factor of its keeper
+    //! divided by its ghost room efficiency (decisions 855 and 857). Server and client use it alike.
+    static double getBeamSeconds(const Creature& hunter);
+    //! \brief Returns the beam pull duration in turns (getBeamSeconds) while the beam pulls the ghost into the box, else 0.
     double getCaptureTurns() const;
     //! \brief Returns the current exact fractional phase clock.
     double getStepTurns() const { return mTurns; }
     //! \brief Returns the active beam target name for the client presentation.
     const std::string& getBeamTarget() const { return mBeamTarget; }
 private:
+    //! \brief Returns whether the hunter stands at its reserved cauldron and transfers its ghosts (state 6 arrived).
+    bool isTransferring() const;
     //! \brief Finds this hunt's still-owned equipment room by saved identity.
     RoomGhostRoom* hookRoom() const;
     //! \brief Walks an exact normal path without pushing a second creature action.

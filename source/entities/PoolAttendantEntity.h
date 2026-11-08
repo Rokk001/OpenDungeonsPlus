@@ -70,6 +70,10 @@ public:
     //! \brief Server side, once per turn. Counts down the acts and the jump of the attendant and moves him on.
     virtual void doUpkeep() override;
 
+    //! \brief The act clips and the climb take the clip length of the attendant (PoolAttendantClipSeconds), the length
+    //! the acts and the climb last; Sit, Walk and Jump keep their own timing.
+    virtual double getClipSeconds(const std::string& clip) const override;
+
     //! \brief Client side, every frame. Moves the attendant along the arc of a jump the server told.
     //! \param timeSinceLastFrame The elapsed time since the last frame in seconds.
     virtual void update(Ogre::Real timeSinceLastFrame) override;
