@@ -10,10 +10,85 @@
 #include <OgreViewport.h>
 #include <OgreCamera.h>
 #include <OgreRoot.h>
+#include <OgreGpuProgram.h>
+#include <OgreGpuProgramParams.h>
 #include <algorithm>
 #include <cmath>
 #include <sstream>
 #include <utility>
+
+namespace
+{
+//! One tile shader family whose output is unchanged when StaticGeometry bakes the world transform into vertices.
+struct WorldSpaceTileShader
+{
+    const char* mVertexSource;
+    const char* mFragmentSource;
+    //! The shadow projection the vertex shader expects: DirtTile.vert projects the world position with
+    //! texture_viewproj_matrix; Room.vert and ClaimedTile.vert multiply texture_worldviewproj_matrix by
+    //! inverse(worldMatrix), so the world matrix cancels out in both cases.
+    Ogre::GpuProgramParameters::AutoConstantType mShadowMatrix;
+};
+
+//! The tile shaders that compute position, normals, deformation and lighting in world space only.
+const WorldSpaceTileShader WORLD_SPACE_TILE_SHADERS[] = {
+    {"DirtTile.vert", "DirtTile.frag", Ogre::GpuProgramParameters::ACT_TEXTURE_VIEWPROJ_MATRIX},
+    {"Room.vert", "Room.frag", Ogre::GpuProgramParameters::ACT_TEXTURE_WORLDVIEWPROJ_MATRIX},
+    {"ClaimedTile.vert", "ClaimedTile.frag", Ogre::GpuProgramParameters::ACT_TEXTURE_WORLDVIEWPROJ_MATRIX}
+};
+
+//! Accepts only automatic constants that do not depend on the object beyond its light list, plus the
+//! family's own shadow projection, so a batch cannot change any value the shader reads.
+bool hasWorldSpaceAutoConstants(const Ogre::GpuProgramParametersPtr& parameters,
+    Ogre::GpuProgramParameters::AutoConstantType shadowMatrix)
+{
+    if(!parameters)
+        return false;
+    const Ogre::GpuProgramParameters::AutoConstantList& constants = parameters->getAutoConstants();
+    for(const Ogre::GpuProgramParameters::AutoConstantEntry& constant : constants)
+    {
+        switch(constant.paramType)
+        {
+            case Ogre::GpuProgramParameters::ACT_WORLD_MATRIX:
+            case Ogre::GpuProgramParameters::ACT_VIEW_MATRIX:
+            case Ogre::GpuProgramParameters::ACT_PROJECTION_MATRIX:
+            case Ogre::GpuProgramParameters::ACT_AMBIENT_LIGHT_COLOUR:
+            case Ogre::GpuProgramParameters::ACT_LIGHT_DIFFUSE_COLOUR_ARRAY:
+            case Ogre::GpuProgramParameters::ACT_LIGHT_SPECULAR_COLOUR_ARRAY:
+            case Ogre::GpuProgramParameters::ACT_LIGHT_POSITION_ARRAY:
+            case Ogre::GpuProgramParameters::ACT_LIGHT_ATTENUATION_ARRAY:
+            case Ogre::GpuProgramParameters::ACT_LIGHT_COUNT:
+            case Ogre::GpuProgramParameters::ACT_LIGHT_CASTS_SHADOWS:
+            case Ogre::GpuProgramParameters::ACT_CAMERA_POSITION:
+            case Ogre::GpuProgramParameters::ACT_SURFACE_DIFFUSE_COLOUR:
+                break;
+            default:
+                if(constant.paramType != shadowMatrix)
+                    return false;
+                break;
+        }
+    }
+    return true;
+}
+
+//! Returns whether a pass uses one complete world-space tile shader family with batch-safe parameters.
+bool isWorldSpaceTilePass(const Ogre::Pass& pass)
+{
+    if(!pass.hasVertexProgram() || !pass.hasFragmentProgram() ||
+        pass.getMaxSimultaneousLights() < TerrainDrawBatch::TILE_SHADER_LIGHTS)
+        return false;
+    const Ogre::String& vertexSource = pass.getVertexProgram()->getSourceFile();
+    const Ogre::String& fragmentSource = pass.getFragmentProgram()->getSourceFile();
+    for(const WorldSpaceTileShader& shader : WORLD_SPACE_TILE_SHADERS)
+    {
+        if(vertexSource != shader.mVertexSource || fragmentSource != shader.mFragmentSource)
+            continue;
+        return hasWorldSpaceAutoConstants(pass.getVertexProgramParameters(), shader.mShadowMatrix) &&
+            hasWorldSpaceAutoConstants(pass.getFragmentProgramParameters(), shader.mShadowMatrix);
+    }
+    return false;
+}
+}
 
 //! Creates a cell with no generated scene object.
 TerrainDrawBatch::Cell::Cell() : mGeometry(nullptr), mSuppressed(0), mDirty(true), mDecided(false),
@@ -80,7 +155,8 @@ const Ogre::LightList* TerrainDrawBatch::Cell::objectQueryLights(const Ogre::Mov
     return &mLights;
 }
 
-//! Rejects shader variants, overlays, animation, LOD, scaling and pre-existing listeners.
+//! Rejects other shaders, overlays, animation, LOD, scaling and pre-existing listeners. Earth, gold ground,
+//! rock, claimed ground, bridges and room floors qualify through their world-space tile shaders.
 void TerrainDrawBatch::add(Ogre::SceneManager* scene, Ogre::Entity* entity)
 {
     if(mMembers.count(entity->getName()) != 0 || entity->getListener() != nullptr ||
@@ -91,13 +167,10 @@ void TerrainDrawBatch::add(Ogre::SceneManager* scene, Ogre::Entity* entity)
         entity->getParentSceneNode()->_getDerivedScale() != Ogre::Vector3::UNIT_SCALE)
         return;
     Ogre::MaterialPtr material = entity->getSubEntity(0)->getMaterial();
-    if(!material || (material->getName() != "Dirt" && material->getName().find("Dirt@@") != 0) ||
-        material->getNumTechniques() != 1 || material->getTechnique(0)->getNumPasses() != 1)
+    if(!material || material->getNumTechniques() != 1 || material->getTechnique(0)->getNumPasses() != 1)
         return;
     Ogre::Pass* pass = material->getTechnique(0)->getPass(0);
-    if(pass->getVertexProgramName() != "myDirtTileVertexShader" ||
-        pass->getFragmentProgramName() != "myDirtTileFragmentShader" ||
-        pass->isTransparent() || !pass->getDepthWriteEnabled())
+    if(!isWorldSpaceTilePass(*pass) || pass->isTransparent() || !pass->getDepthWriteEnabled())
         return;
     if(mScene == nullptr)
     {

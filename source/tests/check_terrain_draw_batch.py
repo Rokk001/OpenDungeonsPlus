@@ -41,8 +41,8 @@ def verify(source, render):
                      'hasSkeleton()', 'hasVertexAnimation()', 'getNumLodLevels() != 1',
                      'getRenderingDistance() != 0', 'getRenderingMinPixelSize() != 0',
                      'Ogre::Vector3::UNIT_SCALE', 'material->getNumTechniques() != 1',
-                     'getNumPasses() != 1', '"myDirtTileVertexShader"',
-                     '"myDirtTileFragmentShader"', 'pass->isTransparent()',
+                     # The shader family and its parameters are checked by check_world_space_tile_batching.py.
+                     'getNumPasses() != 1', '!isWorldSpaceTilePass(*pass)', 'pass->isTransparent()',
                      '!pass->getDepthWriteEnabled()', 'std::floor(position.x / 4.0f)',
                      'std::floor(position.y / 4.0f)']:
         assert required in registration, required

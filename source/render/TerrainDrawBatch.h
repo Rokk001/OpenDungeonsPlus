@@ -13,15 +13,19 @@
 #include <vector>
 #include <chrono>
 
-//! Batches opaque earth within small cells, falling back when per-object inputs differ.
+//! Batches opaque world-space tiles (earth, rock, claimed ground, room floors) within small cells,
+//! falling back when per-object inputs differ.
 class TerrainDrawBatch : public Ogre::SceneManager::Listener
 {
 public:
+    //! Light slots of the tile shaders (MAX_LOCAL_LIGHTS in LocalLighting.glsl and the "... 8" light
+    //! arrays of the tile materials); a tile pass must accept at least this many lights.
+    static const unsigned short TILE_SHADER_LIGHTS = 8;
     //! Starts without a scene; the first eligible entity attaches the listener.
     TerrainDrawBatch();
     //! Removes callbacks and geometry while the scene and original entities still exist.
     ~TerrainDrawBatch();
-    //! Registers a finished earth tile or border entity without changing its material.
+    //! Registers a finished tile or border entity of a world-space tile shader without changing its material.
     void add(Ogre::SceneManager* scene, Ogre::Entity* entity);
     //! Invalidates the old batch before a tile's entity, material or transform changes.
     void remove(const std::string& name);
