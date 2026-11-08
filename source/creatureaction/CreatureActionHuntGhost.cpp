@@ -126,9 +126,11 @@ uint32_t CreatureActionHuntGhost::getBoxVisualState() const
 {
     if(!hasBackpack()) return 0u;
     if(mState==2) return 1u;
-    if(mState==3 || mState==9) return 3u;
+    if(mState==3) return 3u;
     if(mState==10) return 4u;
-    // At the cauldron the trap stands open in the trap socket while its ghost flows into the cauldron (decision 845)
+    // Once snapped shut the trap stays closed (decision 865): it lies shut under the caught ghost until picked up
+    if(mState==9) return 6u;
+    // At the cauldron the shut trap stands in the delivery device beside the hunter while its ghost flows in (decisions 845, 865)
     if(isTransferring()) return 5u;
     return 2u;
 }
@@ -142,7 +144,7 @@ std::string CreatureActionHuntGhost::getThrowGhostName() const
 
 double CreatureActionHuntGhost::getTransferTurns() const
 {
-    // One ghost flows from the trap socket into the cauldron in GhostTransferSeconds (decision 845); it replaces the
+    // One ghost flows from the delivery device into the cauldron in GhostTransferSeconds (decision 845); it replaces the
     // GhostEmptyTurns emptying with its one-second Empty clip. Hunter efficiency no longer shortens it; the CatchTime
     // research of the room, which shortened the emptying, now shortens the transfer
     return researched("GhostTransferSeconds","CatchTime")*ODApplication::turnsPerSecond;
@@ -497,14 +499,17 @@ bool CreatureActionHuntGhost::handleHunt()
         }
         RoomGhostRoom* empty=roomNamed(map,mEmptyRoom);
         if(empty==nullptr || empty->getSeat()!=mCreature.getSeat()) { interrupt();return false; }
-        if(mCreature.getAnimationStateName()!=EntityAnimation::empty_anim) mCreature.setAnimationState(EntityAnimation::empty_anim,true,Ogre::Vector3::ZERO,false);
-        // The hunter sets the trap into the trap socket over the cauldron's mouth, the delivery point (decision 845): the
-        // ghost waits there, the client shows it flowing out of the open trap down into the cauldron, and it reaches the
-        // cauldron after GhostTransferSeconds. mTurns is saved, so a loaded game resumes the remaining time.
+        // The hunter takes the shut trap in his hand and puts it into the delivery device on the rim directly beside him,
+        // the delivery point (decisions 845 and 865): the ghost waits there, the client shows the put-in and then the
+        // ghost flowing out of the device into the cauldron, and it reaches the cauldron after GhostTransferSeconds.
+        // mTurns is saved, so a loaded game resumes the remaining time.
         if(mEmptyAnchor==nullptr) mEmptyAnchor=empty->getHunterCauldron(mCreature);
         if(mEmptyAnchor==nullptr) { interrupt();return false; }
         GhostEntity* poured=ghostNamed(map,mGhosts.front());
-        const Ogre::Vector3 socket=RoomGhostRoom::getTrapSocketPosition(*mEmptyAnchor);
+        const Ogre::Vector3 socket=RoomGhostRoom::getTrapSocketPosition(*mEmptyAnchor,*mDestination);
+        // The visible put-in motion (decision 865): once, on arrival, the hunter turns to the device and puts the trap in
+        // with the one-second Empty clip, then stands idle beside it while the ghost flows into the cauldron.
+        if(!mPutIn) { mCreature.setAnimationState(EntityAnimation::empty_anim,false,socket-mCreature.getPosition(),true);mPutIn=true; }
         if(poured!=nullptr && poured->getPosition()!=socket) poured->teleport(socket);
         if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }
         const double duration=getTransferTurns();
@@ -640,7 +645,14 @@ void CreatureActionHuntGhost::restore()
     }
     // State 10 snaps the box shut: the beam is already lowered, the remaining snap time follows from the saved clock.
     if(mState==10) mCreature.setAnimationState(EntityAnimation::idle_anim,true,Ogre::Vector3::ZERO,false);
-    if(mState==6) mCreature.setAnimationState(EntityAnimation::empty_anim,true,Ogre::Vector3::ZERO,false);
+    // A loaded delivery past its put-in: the trap already stands in the device, the hunter waits idle beside it
+    // (decision 865). Still walking, or saved right at the start, he puts the trap in on arrival.
+    if(mState==6 && isTransferring() &&
+       mTurns>=ConfigManager::getSingleton().getRoomConfigDouble("GhostPutInSeconds")*ODApplication::turnsPerSecond)
+    {
+        mPutIn=true;
+        mCreature.setAnimationState(EntityAnimation::idle_anim,true,Ogre::Vector3::ZERO,false);
+    }
     mCreature.refreshGhostHuntVisuals();
 }
 

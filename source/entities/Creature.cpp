@@ -141,6 +141,7 @@
 #include "social/SocialProfileCache.h"
 #include "social/SocialRng.h"
 #include "rooms/RoomCrypt.h"
+#include "rooms/RoomGhostRoom.h"
 #include "rooms/RoomDormitory.h"
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomPrison.h"
@@ -12671,7 +12672,7 @@ void Creature::refreshGhostHuntVisuals()
                 const double capture=hunt->getCaptureTurns();
                 turns=capture>0.0?std::min(1.0,turns/capture):1.0;
             }
-            // In the trap socket of the cauldron the clock is the share of the ghost already transferred (decision 845)
+            // In the delivery device beside the hunter the clock is the share of the ghost already transferred (decisions 845, 865)
             else if(boxMode==5)
             {
                 const double transfer=hunt->getTransferTurns();
@@ -12741,6 +12742,109 @@ static Ogre::Vector3 ghostCannonTip(const Ogre::Entity& cannon)
     return cannon._getParentNodeFullTransform()*tip;
 }
 
+//! \brief Returns the point on the ghost's own body the capture beam hits (owner decision 865): its chest below the head,
+//! GhostBeamAimShare of the height of the ghost's current world bounds above their bottom. The bounds follow the ghost
+//! while the beam shrinks it and the open trap pulls it down, so the beam always ends on the ghost, never on the trap.
+static Ogre::Vector3 ghostBeamAimPoint(Ogre::SceneManager* scene, const GameEntity& ghost)
+{
+    const std::string name=ghost.getOgreNamePrefix()+ghost.getName();
+    if(scene->hasEntity(name))
+    {
+        const Ogre::AxisAlignedBox bounds=scene->getEntity(name)->getWorldBoundingBox(true);
+        if(bounds.isFinite())
+        {
+            const Ogre::Real share=static_cast<Ogre::Real>(ConfigManager::getSingleton().getRoomConfigDouble("GhostBeamAimShare"));
+            return Ogre::Vector3(bounds.getCenter().x,bounds.getCenter().y,bounds.getMinimum().z+share*bounds.getSize().z);
+        }
+    }
+    // A ghost without a drawn body yet: its own position, the trap lies below it on the floor
+    return ghost.getPosition();
+}
+
+// Size of the delivery device (decision 865) in tiles: the inner half width and half depth of its open brass cradle,
+// the depth the trap sinks into it, the wall thickness and the half width of the iron arm to the cauldron rim. The
+// trap (models/GhostBox.mesh, 0.13 x 0.11 x 0.12) fits into the cradle and its top stays visible.
+static const Ogre::Real GHOST_DEVICE_HALF_X=0.10f;
+static const Ogre::Real GHOST_DEVICE_HALF_Y=0.09f;
+static const Ogre::Real GHOST_DEVICE_DEPTH=0.09f;
+static const Ogre::Real GHOST_DEVICE_WALL=0.012f;
+static const Ogre::Real GHOST_DEVICE_ARM=0.025f;
+
+//! \brief Adds a closed axis-aligned box from low to high, with outward normals, to the open section of a manual object.
+static void addGhostDeviceBox(Ogre::ManualObject& object, const Ogre::Vector3& low, const Ogre::Vector3& high)
+{
+    // Every face: its normal and its four corners counter-clockwise seen from outside
+    const Ogre::Vector3 normals[6]={Ogre::Vector3::UNIT_X,Ogre::Vector3::NEGATIVE_UNIT_X,Ogre::Vector3::UNIT_Y,
+        Ogre::Vector3::NEGATIVE_UNIT_Y,Ogre::Vector3::UNIT_Z,Ogre::Vector3::NEGATIVE_UNIT_Z};
+    const Ogre::Vector3 corners[6][4]={
+        {Ogre::Vector3(high.x,low.y,low.z),Ogre::Vector3(high.x,high.y,low.z),Ogre::Vector3(high.x,high.y,high.z),Ogre::Vector3(high.x,low.y,high.z)},
+        {Ogre::Vector3(low.x,high.y,low.z),Ogre::Vector3(low.x,low.y,low.z),Ogre::Vector3(low.x,low.y,high.z),Ogre::Vector3(low.x,high.y,high.z)},
+        {Ogre::Vector3(high.x,high.y,low.z),Ogre::Vector3(low.x,high.y,low.z),Ogre::Vector3(low.x,high.y,high.z),Ogre::Vector3(high.x,high.y,high.z)},
+        {Ogre::Vector3(low.x,low.y,low.z),Ogre::Vector3(high.x,low.y,low.z),Ogre::Vector3(high.x,low.y,high.z),Ogre::Vector3(low.x,low.y,high.z)},
+        {Ogre::Vector3(low.x,low.y,high.z),Ogre::Vector3(high.x,low.y,high.z),Ogre::Vector3(high.x,high.y,high.z),Ogre::Vector3(low.x,high.y,high.z)},
+        {Ogre::Vector3(low.x,high.y,low.z),Ogre::Vector3(high.x,high.y,low.z),Ogre::Vector3(high.x,low.y,low.z),Ogre::Vector3(low.x,low.y,low.z)}};
+    const Ogre::Real uv[4][2]={{0.0f,1.0f},{1.0f,1.0f},{1.0f,0.0f},{0.0f,0.0f}};
+    for(int face=0;face<6;++face)
+    {
+        const Ogre::uint32 first=static_cast<Ogre::uint32>(object.getCurrentVertexCount());
+        for(int corner=0;corner<4;++corner)
+        {
+            object.position(corners[face][corner]);
+            object.normal(normals[face]);
+            object.textureCoord(uv[corner][0],uv[corner][1]);
+        }
+        object.quad(first,first+1,first+2,first+3);
+    }
+}
+
+//! \brief Builds the delivery device of decision 865 in its own frame: the origin is the middle of the cradle's top,
+//! where the trap is put in, +x points to the cauldron. An open brass cradle with a glowing ectoplasm intake in its floor
+//! hangs on an iron arm that reaches the rim armLength tiles away.
+static void buildGhostDeliveryDevice(Ogre::ManualObject& object, Ogre::Real armLength)
+{
+    const Ogre::Real hx=GHOST_DEVICE_HALF_X,hy=GHOST_DEVICE_HALF_Y,depth=GHOST_DEVICE_DEPTH,wall=GHOST_DEVICE_WALL;
+    const std::string& group=Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME;
+    object.begin("GhostBrass",Ogre::RenderOperation::OT_TRIANGLE_LIST,group);
+    // The floor and the four walls of the open cradle
+    addGhostDeviceBox(object,Ogre::Vector3(-hx-wall,-hy-wall,-depth-wall),Ogre::Vector3(hx+wall,hy+wall,-depth));
+    addGhostDeviceBox(object,Ogre::Vector3(-hx-wall,-hy-wall,-depth),Ogre::Vector3(-hx,hy+wall,0.0f));
+    addGhostDeviceBox(object,Ogre::Vector3(hx,-hy-wall,-depth),Ogre::Vector3(hx+wall,hy+wall,0.0f));
+    addGhostDeviceBox(object,Ogre::Vector3(-hx,-hy-wall,-depth),Ogre::Vector3(hx,-hy,0.0f));
+    addGhostDeviceBox(object,Ogre::Vector3(-hx,hy,-depth),Ogre::Vector3(hx,hy+wall,0.0f));
+    object.end();
+    // The iron arm from the cradle's inner wall to the hinge on the rim
+    object.begin("GhostIron",Ogre::RenderOperation::OT_TRIANGLE_LIST,group);
+    addGhostDeviceBox(object,Ogre::Vector3(hx+wall,-GHOST_DEVICE_ARM,-0.5f*depth),
+        Ogre::Vector3(std::max(armLength,hx+2.0f*wall),GHOST_DEVICE_ARM,-0.5f*depth+2.0f*GHOST_DEVICE_ARM));
+    object.end();
+    // The glowing intake in the cradle's floor through which the ghost leaves the trap
+    object.begin("GhostEctoplasm",Ogre::RenderOperation::OT_TRIANGLE_LIST,group);
+    addGhostDeviceBox(object,Ogre::Vector3(-hx+0.01f,-hy+0.01f,-depth),Ogre::Vector3(hx-0.01f,hy-0.01f,-depth+0.004f));
+    object.end();
+}
+
+//! \brief Returns the middle of the ectoplasm in the mouth of the client cauldron nearest to a delivery device, or the
+//! device itself when no cauldron is drawn.
+static Ogre::Vector3 ghostCauldronMouthNear(const GameMap& map, const Ogre::Vector3& device)
+{
+    const RenderedMovableEntity* best=nullptr;Ogre::Real distance=std::numeric_limits<Ogre::Real>::max();
+    for(RenderedMovableEntity* entity : map.getRenderedMovableEntities())
+    {
+        if(entity->getObjectType()!=GameEntityType::buildingObject || entity->getMeshName()!="GhostCauldron") continue;
+        const Ogre::Real dx=entity->getPosition().x-device.x,dy=entity->getPosition().y-device.y;
+        if(dx*dx+dy*dy<distance) { best=entity;distance=dx*dx+dy*dy; }
+    }
+    return best==nullptr?device:RoomGhostRoom::getCauldronMouthPosition(best->getPosition());
+}
+
+//! \brief Removes the drawn delivery device of a hunter.
+static void destroyGhostDelivery(Ogre::SceneManager* scene, Ogre::SceneNode*& hinge, Ogre::SceneNode*& node, Ogre::ManualObject*& device)
+{
+    if(device!=nullptr) { device->detachFromParent();scene->destroyManualObject(device);device=nullptr; }
+    if(node!=nullptr) { scene->destroySceneNode(node);node=nullptr; }
+    if(hinge!=nullptr) { scene->destroySceneNode(hinge);hinge=nullptr; }
+}
+
 //! \brief Shows or hides the hunter's own weapon meshes by the names RenderManager::rrCreateWeapon gives them.
 static void setGhostHunterWeaponsVisible(Ogre::SceneManager* scene, const Creature& hunter, bool visible)
 {
@@ -12800,6 +12904,9 @@ void Creature::clearGhostHuntVisuals()
     mGhostCaptureShown=0.0;
     mGhostLidShown=0.0;
     mGhostTransferShown=0.0;
+    // The delivery device beside the hunter at the cauldron goes with the hunt (decision 865)
+    destroyGhostDelivery(scene,mGhostDeliveryHinge,mGhostDeliveryNode,mGhostDeliveryDevice);
+    mGhostDeliveryGhost.clear();mGhostDeliveryClock=0.0;
     // The light of the open trap goes with the box
     if(mGhostTrapGlow!=nullptr) { scene->destroyBillboardSet(mGhostTrapGlow);mGhostTrapGlow=nullptr; }
     if(mGhostTrapCone!=nullptr) { scene->destroyBillboardChain(mGhostTrapCone);mGhostTrapCone=nullptr; }
@@ -12938,9 +13045,16 @@ void Creature::updateGhostHuntVisuals(double seconds)
     else if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
     // The thrown box leaves from the hand it was held in.
     const Ogre::Vector3 hand=mGhostHeldBox->getWorldBoundingBox(true).getCenter();
-    // The box also stands open in the trap socket of the cauldron during the transfer (5, decision 845)
-    const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5;
-    if(mGhostBoxMode!=5) mGhostTransferShown=0.0;
+    // The box also stands shut in the delivery device beside the hunter at the cauldron during the transfer (5,
+    // decisions 845 and 865) and lies shut under the caught ghost until it is picked up (6, decision 865).
+    const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6;
+    if(mGhostBoxMode!=5)
+    {
+        // The delivery is over (or not begun): the device beside the hunter goes, the next delivery starts with its put-in
+        mGhostTransferShown=0.0;
+        destroyGhostDelivery(scene,mGhostDeliveryHinge,mGhostDeliveryNode,mGhostDeliveryDevice);
+        mGhostDeliveryGhost.clear();mGhostDeliveryClock=0.0;
+    }
     if(lyingBox && mGhostBoxNode==nullptr)
     {
         Ogre::Entity* box=scene->createEntity(getName()+"_ThrownGhostBox","GhostBox.mesh");
@@ -12995,33 +13109,91 @@ void Creature::updateGhostHuntVisuals(double seconds)
             }
             else if(mGhostBoxMode==5)
             {
-                // The hunter has set the trap into the trap socket over the cauldron's mouth (decision 845): it stands
-                // open on the socket where the ghost waits, shines, and the ghost flows out of it down into the cauldron
-                // over GhostTransferSeconds (GhostEntity::updateLook). A new ghost of the pack starts again at 0.
-                position=ghost->getPosition();
-                if(mGhostThrowTurns<mGhostTransferShown-0.5) mGhostTransferShown=mGhostThrowTurns;
-                mGhostTransferShown+=(mGhostThrowTurns-mGhostTransferShown)*std::min(1.0,seconds*6.0);
-                const double poured=mGhostTransferShown*config.getRoomConfigDouble("GhostTransferSeconds");
-                lidTarget=std::min(1.0,poured/config.getRoomConfigDouble("GhostLidOpenSeconds"));
-                mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);
-                trapLight=mGhostLidShown;
+                // Decision 865: the hunter stands at his place at the cauldron. The delivery device hangs on the rim
+                // directly beside him at hand height, where the server keeps the ghost (RoomGhostRoom::
+                // getTrapSocketPosition). Over the first GhostPutInSeconds it swings out from the rim and the hunter puts
+                // the shut trap from his hand into it (his one-second Empty clip); then the ghost flows out of the device
+                // over the rim into the cauldron (GhostEntity::updateLook). The trap stays shut, the device's intake
+                // shines. The whole delivery of one ghost is the transfer time, GhostTransferSeconds times the CatchTime
+                // research (20, 16, 13.3 s). Further ghosts of the pack follow without a new put-in.
+                const Ogre::Vector3 device=ghost->getPosition();
+                const double putIn=config.getRoomConfigDouble("GhostPutInSeconds");
+                const double transferSeconds=SkillManager::getResearchValue(getSeat(),SkillType::roomGhostRoom,
+                    config.getRoomConfigDouble("GhostTransferSeconds"),"CatchTime");
+                if(mGhostDeliveryGhost.empty())
+                {
+                    // A new delivery. One that is already past its put-in (a loaded game, a keeper who looks on late)
+                    // finds the trap in the device.
+                    mGhostDeliveryGhost=mGhostThrowTarget;
+                    mGhostDeliveryClock=mGhostThrowTurns*transferSeconds>=putIn?putIn:0.0;
+                    mGhostDeliveryMouth=ghostCauldronMouthNear(*getGameMap(),device);
+                    const Ogre::Real towardsX=mGhostDeliveryMouth.x-device.x,towardsY=mGhostDeliveryMouth.y-device.y;
+                    const Ogre::Real apart=std::sqrt(towardsX*towardsX+towardsY*towardsY);
+                    const Ogre::Real arm=std::max(apart-RoomGhostRoom::getCauldronRimRadius(),GHOST_DEVICE_HALF_X+2.0f*GHOST_DEVICE_WALL);
+                    // The hinge sits on the rim on the hunter's side; the device hangs arm tiles out from it, +x to the cauldron
+                    const Ogre::Vector3 out=apart>0.0f?Ogre::Vector3(-towardsX/apart,-towardsY/apart,0.0f):Ogre::Vector3::NEGATIVE_UNIT_X;
+                    mGhostDeliveryHinge=scene->getRootSceneNode()->createChildSceneNode(getName()+"_GhostDeliveryHinge",
+                        device-out*arm);
+                    mGhostDeliveryNode=mGhostDeliveryHinge->createChildSceneNode(getName()+"_GhostDeliveryNode",Ogre::Vector3(-arm,0.0f,0.0f));
+                    mGhostDeliveryDevice=scene->createManualObject(getName()+"_GhostDeliveryDevice");
+                    mGhostDeliveryDevice->setCastShadows(true);mGhostDeliveryDevice->setQueryFlags(0);
+                    buildGhostDeliveryDevice(*mGhostDeliveryDevice,arm);
+                    mGhostDeliveryNode->attachObject(mGhostDeliveryDevice);
+                }
+                else mGhostDeliveryClock+=seconds*getGameMap()->getGameSpeedFactor();
+                // The device first swings down from upright on its hinge into place (the first 40 % of the put-in), then
+                // the trap goes from the hand down into it in a short arc (the rest).
+                const double swing=putIn>0.0?std::min(1.0,mGhostDeliveryClock/(0.4*putIn)):1.0;
+                const float inserted=static_cast<float>(putIn>0.0?std::max(0.0,std::min(1.0,(mGhostDeliveryClock-0.4*putIn)/(0.6*putIn))):1.0);
+                const Ogre::Vector3 towards(mGhostDeliveryMouth.x-device.x,mGhostDeliveryMouth.y-device.y,0.0f);
+                const Ogre::Quaternion yaw(Ogre::Radian(std::atan2(towards.y,towards.x)),Ogre::Vector3::UNIT_Z);
+                mGhostDeliveryHinge->setOrientation(yaw*Ogre::Quaternion(Ogre::Degree(static_cast<Ogre::Real>(90.0*(1.0-swing))),Ogre::Vector3::UNIT_Y));
+                const Ogre::Vector3 seat=device-Ogre::Vector3(0.0f,0.0f,GHOST_DEVICE_DEPTH);
+                position=hand+(seat-hand)*inserted;
+                position.z+=0.12f*4.0f*inserted*(1.0f-inserted);
+                mGhostBoxNode->setOrientation(yaw);
+                // Only the ghost that came first waits for the put-in; its flow takes the rest of the transfer time. A
+                // new ghost of the pack starts again at 0.
+                double share=mGhostThrowTurns;
+                if(mGhostThrowTarget==mGhostDeliveryGhost && transferSeconds>putIn)
+                    share=std::max(0.0,(mGhostThrowTurns*transferSeconds-putIn)/(transferSeconds-putIn));
+                if(inserted<1.0f) share=0.0;
+                if(share<mGhostTransferShown-0.5) mGhostTransferShown=share;
+                mGhostTransferShown+=(share-mGhostTransferShown)*std::min(1.0,seconds*6.0);
+                // Once shut the trap stays shut (decision 865); the intake of the device shines while the ghost flows
+                mGhostLidShown=0.0;
+                trapLight=inserted>=1.0f?1.0:0.0;
                 mGhostCaptureShown=0.0;
+                ghost->setTransferTarget(mGhostDeliveryMouth);
+            }
+            else if(mGhostBoxMode==6)
+            {
+                // The trap snapped shut over the caught ghost lies shut under it until the hunter picks it up and stays
+                // shut from now on (decision 865): no lid opening, no light, the ghost is inside.
+                mGhostLidShown=0.0;
+                mGhostCaptureShown=1.0;
             }
             else
             {
                 // The beam weakens the ghost to half its size, then the open trap pulls it down into its opening
-                // (GhostEntity::updateLook): the share follows the server's pulled-in share smoothly.
-                mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
-                // The lid opens at the start of the beam step within GhostLidOpenSeconds and stays open while the
-                // ghost is pulled in; the trap shines as far as it is open. The beam lasts as long as on the server:
-                // GhostBeamSeconds times the CatchTime research divided by the hunter efficiency (decisions 855, 857).
+                // (GhostEntity::updateLook). The lid opens at the start of the beam step within GhostLidOpenSeconds and
+                // stays open while the ghost is pulled in; the trap shines as far as it is open. The beam lasts as long
+                // as on the server: GhostBeamSeconds times the CatchTime research divided by the hunter efficiency
+                // (decisions 855, 857).
                 const double beamed=mGhostThrowTurns*CreatureActionHuntGhost::getBeamSeconds(*this);
+                const double beamSeconds=CreatureActionHuntGhost::getBeamSeconds(*this);
+                const double lidOpen=config.getRoomConfigDouble("GhostLidOpenSeconds");
                 lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));
                 mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);
                 trapLight=mGhostLidShown;
+                // Decision 865: the trap opens first, only then is the ghost pulled in. Until the lid is fully open the
+                // ghost keeps its size and height; the shrink and the pull take the rest of the beam step, so the ghost
+                // is fully inside when the step ends and the lid snaps shut. The share follows smoothly.
+                const double pulled=beamSeconds>lidOpen?std::max(0.0,(beamed-lidOpen)/(beamSeconds-lidOpen)):mGhostThrowTurns;
+                mGhostCaptureShown+=(pulled-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
             }
-            // Only the snap rocks the box; thrown and lying boxes stand upright.
-            if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(Ogre::Quaternion::IDENTITY);
+            // Only the snap rocks the box; thrown and lying boxes stand upright, the delivered box turned with its device.
+            if(mGhostBoxMode!=4 && mGhostBoxMode!=5) mGhostBoxNode->setOrientation(Ogre::Quaternion::IDENTITY);
             mGhostBoxNode->setPosition(position);
             ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
             ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);
@@ -13117,8 +13289,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
         mGhostBeamSound=SoundEffectsManager::getSingleton().startSpatialLoop("Rooms/GhostRoom/Beam",getPosition().x,getPosition().y);
     }
     SoundEffectsManager::getSingleton().setSpatialLoopPosition(mGhostBeamSound,getPosition().x,getPosition().y);
-    // The beam and its sparks leave the emitter tip of the capture cannon in the hunter's hand (decision 791).
-    const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);
+    // The beam and its sparks leave the emitter tip of the capture cannon in the hunter's hand (decision 791) and hit
+    // the ghost itself, its chest below the head, never the trap under it (decision 865).
+    const Ogre::Vector3 end=ghostBeamAimPoint(scene,*target);
     const Ogre::Vector3 start=ghostCannonTip(*mGhostCaptureGun);
     if(mGhostSparkNode!=nullptr) mGhostSparkNode->setPosition(start);
     const double flickerSeconds=config.getRoomConfigDouble("GhostBeamFlickerSeconds");

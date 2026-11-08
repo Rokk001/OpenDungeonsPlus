@@ -51,10 +51,14 @@ public:
     //! \brief Applies the hunter's client-only capture share (0 to 1 over the beam): the shrink to half size, then the
     //! pull down into the open thrown capture box.
     void setCaptureProgress(double progress) { mCaptureProgress = progress; }
-    //! \brief Applies the hunter's client-only transfer share (0 to 1 over GhostTransferSeconds, decision 845): the boxed
-    //! ghost rises out of the open trap in the cauldron's trap socket, spirals down round it and sinks into the
-    //! ectoplasm; 0 keeps a boxed ghost hidden.
+    //! \brief Applies the hunter's client-only transfer share (0 to 1 over GhostTransferSeconds, decisions 845 and 865):
+    //! the boxed ghost rises out of the delivery device beside the hunter (its position), glides over the rim to the
+    //! middle of the cauldron's mouth (setTransferTarget), spirals down there and sinks into the ectoplasm; 0 keeps a
+    //! boxed ghost hidden.
     void setTransferProgress(double progress) { mTransferProgress = progress; }
+    //! \brief Sets the client-only middle of the ectoplasm in the cauldron's mouth the transferred ghost flows into
+    //! (decision 865); without it the ghost spirals down at its own position.
+    void setTransferTarget(const Ogre::Vector3& mouth) { mTransferTarget = mouth; mHasTransferTarget = true; }
     //! \brief Returns the name of the hunter that reserved this ghost.
     const std::string& getAssignedHunter() const { return mAssignedHunter; }
     //! \brief Stores or releases the hunter reservation.
@@ -98,5 +102,7 @@ private:
     double mHowlTurns;
     double mCaptureProgress = 0.0;
     double mTransferProgress = 0.0;
+    Ogre::Vector3 mTransferTarget = Ogre::Vector3::ZERO;
+    bool mHasTransferTarget = false;
 };
 #endif
