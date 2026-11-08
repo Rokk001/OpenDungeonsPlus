@@ -89,7 +89,9 @@ LEAN_PIVOT_HEIGHT = 0.05
 # How far the way of the mug may bow forward, away from the face, and how high it rises over the table (share of the
 # way), tried in this order
 WAY_BULGES = (0.0, 0.04, 0.08, 0.12)
-WAY_ARCS = (0.25, 0.5, 0.75, 1.0)
+WAY_ARCS = (0.0, 0.25, 0.5, 0.75, 1.0)
+# The rim may come this much further from its rest than at the mouth on the way (HOLD of check_tavern_drink_834 is 0.04)
+MAX_OVERSHOOT = 0.01
 # Where the limb reaches into the table in the pause, the mug stands this much further out (-y) and to the side (outwards
 # first), and the inner joints of the limb swing about the line from its root to the grip by these degrees
 # The places of the mug on the table are tried on a grid of this step, this far to either side of the root of the limb
@@ -101,6 +103,10 @@ PLACE_DEPTH = 0.2
 BENCH_PLACES_Y = (0.0, -0.03, 0.03, -0.06, 0.06)
 PLACES_PER_SUPPORT = 6
 BODY_CLEARANCE = 0.01
+# Held places on a grid of this step this far around the root of the limb, this many lowest ones
+HELD_STEP = 0.08
+HELD_SPAN = 0.32
+HELD_PLACES = 10
 SWINGS = (0.0, 30.0, -30.0, 60.0, -60.0, 90.0, -90.0)
 # A way is cut short before the first step that reaches further than this into the furniture or the head
 MAX_CLEAR_DEPTH = 0.035
@@ -111,9 +117,19 @@ SEAT = {'stool': False, 'envelope': None}
 STOOL_DISTANCE = 0.8
 ENVELOPE_SAMPLES = 41
 ENVELOPE_MARGIN = 0.0
+# A body may leave its room by this little (check_tavern_stools_863 allows 1e-6); a pose beyond it, or one that reaches
+# into the seat or the post of the stool (TAVERN_STOOL_* below), counts as HARD_LIMIT deep in the furniture
+ENVELOPE_TOLERANCE = 1e-6
+HARD_LIMIT = 1.0
+STOOL_TOP = 0.2575
+STOOL_RADIUS = 0.16
+STOOL_POST_RADIUS = 0.034
+MAX_STOOL_SINK = 0.025
 BENCH_REACH_ACROSS = 1.51
 BENCH_REACH_ALONG = 1.48
 BENCH_OFFSET = 0.4116
+# Bench places a large body takes (LARGE_BENCH_PLACES of check_tavern_stools_863.py)
+BENCH_PLACES = {'Troll': 4, 'PitDemon': 4, 'Dragon': 3}
 # A standing body holds the mug at least this high above the floor (its foot)
 STANDING_FLOOR_CLEARANCE = 0.03
 # The pause may reach this far into the furniture and miss the place of the mug by this much; the way this far (tiles)
@@ -296,6 +312,8 @@ def solve(skeleton, local, limb, mug, foot, axis, swing=0.0):
     to its place and Weapon_R turns the mug about it. A mug on a limb mount can only roll about the line from the end of the
     limb to its foot. The swing turns the inner joints of the limb about the line from its root to the grip first (degrees),
     which lifts an elbow off the table."""
+    if not mug.on_weapon:
+        return solve_mount(skeleton, local, limb, mug, foot, axis, swing)
     grip_target = foot + axis * mug.grip if mug.on_weapon else foot
     for round_index in range(SOLVE_ROUNDS):
         world = skeleton.fk(local)
@@ -329,6 +347,63 @@ def solve(skeleton, local, limb, mug, foot, axis, swing=0.0):
         if np.linalg.norm(have) > 1e-6 and np.linalg.norm(want) > 1e-6:
             turn_axis, angle = turn_between(unit(have), unit(want))
             rest.rotate_joint(skeleton, local, limb[-1], line if np.dot(turn_axis, line) >= 0.0 else -line, np.array([angle]))
+    world = skeleton.fk(local)
+    return float(np.linalg.norm(mug.world(world, skeleton)[0][0] - foot))
+
+
+def rotation_vector(matrix):
+    """Axis and angle of a rotation matrix."""
+    angle = math.acos(max(-1.0, min(1.0, 0.5 * (float(np.trace(matrix)) - 1.0))))
+    if angle < 1e-9:
+        return np.array([0.0, 0.0, 1.0]), 0.0
+    axis = np.array([matrix[2, 1] - matrix[1, 2], matrix[0, 2] - matrix[2, 0], matrix[1, 0] - matrix[0, 1]])
+    if np.linalg.norm(axis) < 1e-9:
+        # A half turn: the axis is the column of matrix + 1 with the largest size
+        columns = matrix + np.eye(3)
+        axis = columns[:, int(np.argmax(np.linalg.norm(columns, axis=0)))]
+    return unit(axis), angle
+
+
+MOUNT_ROLL_STEP = 15
+
+
+def solve_mount(skeleton, local, limb, mug, foot, axis, swing=0.0):
+    """Move the limb so that the foot of a mug on a limb mount stands at foot and the mug points along axis.
+
+    The mug is fixed to the last bone of the limb (the carrier), so the carrier takes the turn that brings the axis of the
+    mug onto the wanted one by the shortest way from its current turn; the joints before it bring the origin of the carrier
+    to where that turn puts the foot of the mug onto its place."""
+    carrier = skeleton.idx[limb[-1]]
+    world = skeleton.fk(local)
+    have = world[carrier][1][0]
+    scale = world[carrier][2][0]
+    turn_axis, angle = turn_between(unit(have @ mug.axis), unit(axis))
+    shortest = rotation_matrix(turn_axis, angle) @ have
+    # The carrier may also roll about the axis of the mug: the shortest turn while the limb reaches the origin it needs, else
+    # the roll that brings that origin closest into reach
+    joints = [world[skeleton.idx[bone]][0][0] for bone in limb]
+    length = MAX_REACH * sum(float(np.linalg.norm(joints[i + 1] - joints[i])) for i in range(len(joints) - 1))
+    best = None
+    for degrees in sorted(range(-180, 181, MOUNT_ROLL_STEP), key=abs):
+        trial = rotation_matrix(unit(axis), math.radians(degrees)) @ shortest
+        target = foot - trial @ (mug.foot * scale)
+        score = (max(0.0, float(np.linalg.norm(target - joints[0])) - length), abs(degrees))
+        if best is None or score < best[0]:
+            best = (score, trial, target)
+    _, wanted, origin_target = best
+    for round_index in range(SOLVE_ROUNDS):
+        world = skeleton.fk(local)
+        joints = [world[skeleton.idx[bone]][0][0] for bone in limb]
+        solved = seats.reach_chain(joints, origin_target)
+        if round_index == 0 and swing != 0.0:
+            line = unit(solved[-1] - solved[0])
+            turn = rotation_matrix(line, math.radians(swing))
+            solved = [solved[0]] + [solved[0] + turn @ (point - solved[0]) for point in solved[1:-1]] + [solved[-1]]
+        for index in range(len(limb) - 1):
+            seats.aim_bone(skeleton, local, limb[index], limb[index + 1], (solved[index + 1] - solved[index])[None])
+    world = skeleton.fk(local)
+    turn_axis, angle = rotation_vector(wanted @ world[carrier][1][0].T)
+    rest.rotate_joint(skeleton, local, limb[-1], turn_axis, np.array([angle]))
     world = skeleton.fk(local)
     return float(np.linalg.norm(mug.world(world, skeleton)[0][0] - foot))
 
@@ -394,7 +469,7 @@ def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
 
     if not seated:
         # Standing: low in front of the belly
-        return [(np.array([root[0], root[1] - 0.4 * reach, max(root[2] - 0.55 * reach, STANDING_FLOOR_CLEARANCE + lift)]), 'held')]
+        return [(np.array([root[0], root[1] - 0.35 * reach, max(root[2] - 0.7 * reach, STANDING_FLOOR_CLEARANCE + lift)]), 'held')]
     edge = -(STOOL_DISTANCE - seats.LONG_TABLE_HALF_LENGTH) if SEAT['stool'] else seats.TABLE_NEAR_EDGE
     near_edge = (edge - TABLE_INSET) / SCALE - mug.base_radius
     across = root[0] + np.arange(-PLACE_SPAN, PLACE_SPAN + 1e-9, PLACE_STEP)
@@ -404,18 +479,33 @@ def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
     bench = [] if SEAT['stool'] else places(bench_across, np.array(BENCH_PLACES_Y), seats.BENCH_TOP / SCALE + BENCH_CLEARANCE + lift, 'bench')
     # A limb too short for both holds it as low as it reaches, outwards
     outward = np.array([1.0 if root[0] >= 0.0 else -1.0, 0.0, -1.0]) / math.sqrt(2.0)
-    return table + bench + [(root + outward * MAX_REACH * reach, 'held')]
+    held = [(root + outward * MAX_REACH * reach, 'held')]
+    # or anywhere in reach where the mug is clear of the body, lowest first (a limb whose mesh carries a long weapon, or
+    # whose mug cannot stand on the table or the bench, holds it where the furniture lets it)
+    grid = []
+    for dx in np.arange(-HELD_SPAN, HELD_SPAN + 1e-9, HELD_STEP):
+        for dy in np.arange(-HELD_SPAN, HELD_SPAN + 1e-9, HELD_STEP):
+            for dz in np.arange(-HELD_SPAN, 0.0 + 1e-9, HELD_STEP):
+                point = root + np.array([dx, dy, dz])
+                # above the seat, never down beside the bench or the stool
+                if point[2] >= seats.BENCH_TOP / SCALE + BENCH_CLEARANCE + lift and np.linalg.norm(point - root) <= MAX_REACH * reach and clear(point):
+                    grid.append((round(float(point[2]), 6), float(np.linalg.norm(point[:2] - root[:2])), point))
+    grid.sort(key=lambda item: item[:2])
+    held += [(point, 'held') for _, _, point in grid[:HELD_PLACES]]
+    return table + bench + held
 
 
 def stool_depth(points):
-    """How far points of a guest on a stool reach into the furniture: the table and the benches, seen from the stool
-    (TAVERN_STOOL_DISTANCE along the table from its middle; the guest looks along -y to the end of the table)."""
+    """How far points of a guest on a stool reach into the furniture: the table top, its pedestals, the benches and their
+    legs, seen from the stool (TAVERN_STOOL_DISTANCE along the table from its middle; the guest looks along -y to the end of
+    the table). The boxes are those of furniture_depth in check_tavern_stools_863.py."""
     table = np.stack([points[:, 0], STOOL_DISTANCE + points[:, 1], points[:, 2]], axis=1)
-    half_across = 0.5 * (seats.TABLE_FAR_EDGE - seats.TABLE_NEAR_EDGE)
-    boxes = [((-half_across, half_across), (-seats.LONG_TABLE_HALF_LENGTH, seats.LONG_TABLE_HALF_LENGTH), (seats.TABLE_UNDERSIDE, seats.TABLE_TOP))]
-    for side in (1.0, -1.0):
-        low, high = sorted((side * half_across, side * (half_across + seats.BENCH[2] - seats.BENCH[1])))
-        boxes.append(((low, high), (-seats.LONG_BENCH_HALF_LENGTH, seats.LONG_BENCH_HALF_LENGTH), (seats.BENCH[3], seats.BENCH_TOP - seats.BENCH_SINK)))
+    boxes = [((-0.323, 0.323), (-0.588, 0.588), (0.37, 0.4425))]
+    for s in (1, -1):
+        boxes.append(((-0.193, 0.193), (0.135, 0.521) if s > 0 else (-0.521, -0.135), (0.0, 0.38)))
+        boxes.append(((0.3236, 0.4986) if s > 0 else (-0.4986, -0.3236), (-0.656, 0.656), (0.202, 0.2575)))
+        for e in (1, -1):
+            boxes.append(((s * BENCH_OFFSET - 0.042, s * BENCH_OFFSET + 0.042), (0.515, 0.588) if e > 0 else (-0.588, -0.515), (0.0, 0.21)))
     worst = 0.0
     for (x0, x1), (y0, y1), (z0, z1) in boxes:
         low, high = np.array([x0, y0, z0]), np.array([x1, y1, z1])
@@ -436,13 +526,25 @@ def pose_depth(skeleton, local, mug, vertices, weights):
         depth = max(stool_depth(np.concatenate((body[0], points[0])) * level) * 1.0 for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
     else:
         depth = seats.level_depth(np.concatenate((body, points), axis=1))
+    # The room of the body (the footprint of a stool guest, the reach of a bench guest) and the seat of the stool are hard
+    # limits: a pose that leaves them counts as far deeper than any furniture depth that is allowed
+    excess = 0.0
     if SEAT['envelope'] is not None:
         front, back, half = SEAT['envelope']
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
             scaled = body[0] * level
-            depth = max(depth, -float(scaled[:, 1].min()) - front, float(scaled[:, 1].max()) - back,
-                        float(np.abs(scaled[:, 0]).max()) - half)
-    return depth
+            excess = max(excess, -float(scaled[:, 1].min()) - front * level, float(scaled[:, 1].max()) - back * level,
+                         float(np.abs(scaled[:, 0]).max()) - half * level)
+    if SEAT['stool']:
+        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
+            scaled = body[0] * level
+            r = np.hypot(scaled[:, 0], scaled[:, 1])
+            z = scaled[:, 2]
+            seat = (r < STOOL_RADIUS) & (z < STOOL_TOP - MAX_STOOL_SINK) & (z > STOOL_TOP - 0.035)
+            post = (r < STOOL_POST_RADIUS) & (z < STOOL_TOP - 0.035)
+            if seat.any() or post.any():
+                excess = max(excess, 0.01)
+    return depth if excess <= ENVELOPE_TOLERANCE else max(depth, HARD_LIMIT + excess)
 
 
 def seat_envelope(skeleton, vertices, weights):
@@ -554,7 +656,7 @@ def drink_pose(skeleton, resting, limb, mug, head, gap, towards, tip, depth_of=N
     mouth = head.face(skeleton, drinking).mouth()
     reached, points = mug_rim(skeleton, drinking, mug)
     face = head.face(skeleton, drinking)
-    _, sip_points = mug_rim(skeleton, sipped(skeleton, drinking, limb, 1.0, towards), mug)
+    _, sip_points = mug_rim(skeleton, sipped(skeleton, drinking, limb, 1.0, towards, mug), mug)
     in_face = max(face.inside(points), face.inside(sip_points))
     return drinking, float(np.linalg.norm(reached - mouth)), in_face
 
@@ -589,7 +691,9 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     if seated and spine:
         for degrees in LEANS:
             trial = lean_forward(skeleton, start, spine, degrees)
-            if rest_targets(skeleton, trial, limb, mug, True, reach, still)[0][1] == 'table':
+            point, kind = rest_targets(skeleton, trial, limb, mug, True, reach, still)[0]
+            # The limb really brings the upright mug onto the table (a hand mount holds the mug above the hand)
+            if kind == 'table' and solve(skeleton, copy_pose(trial), limb, mug, point, np.array([0.0, 0.0, 1.0])) <= MAX_REST_ERROR:
                 start, lean = trial, degrees
                 break
     head = Head(skeleton, name, vertices, weights, limb, start)
@@ -661,18 +765,28 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
             moved = blend(resting, drinking, smooth(share), pivot)
             for index in pivot:
                 pose[index] = moved[index]
-            rise = np.array([0.0, 0.0, arc * float(np.linalg.norm(drink_foot[0] - support))])
-            foot = support + (drink_foot[0] - support) * share + (rise + np.array([0.0, -bulge, 0.0])) * 4.0 * share * (1.0 - share)
+            # The rim goes from its place over the support to the mouth (so that it comes ever closer to the mouth and does
+            # not rise past it while the mug still stands upright); the foot follows from the tip of the mug
+            rim_rest = support + up * mug.length
+            rim_drink = drink_foot[0] + drink_axis[0] * mug.length
+            rise = np.array([0.0, 0.0, arc * float(np.linalg.norm(rim_drink - rim_rest))])
             leaning = smooth((share - 0.3) / 0.7)
             axis = up + (drink_axis[0] - up) * leaning
             axis /= np.linalg.norm(axis)
+            rim = rim_rest + (rim_drink - rim_rest) * share + (rise + np.array([0.0, -bulge, 0.0])) * 6.75 * share * (1.0 - share) ** 2
+            foot = rim - axis * mug.length
             solve(skeleton, pose, limb, mug, foot, axis)
             poses.append(pose)
         # The last step of the way is the drink itself, reached from the way so that the limb does not jump
-        sip_end = sipped(skeleton, poses[-1], limb, 1.0, towards)
+        sip_end = sipped(skeleton, poses[-1], limb, 1.0, towards, mug)
         in_face_way = max(head.face(skeleton, pose).inside(mug_rim(skeleton, pose, mug)[1]) for pose in poses[1:] + [sip_end])
         depth_way = max(pose_depth(skeleton, pose, mug, vertices, weights) for pose in poses[1:] + [sip_end]) if seated else 0.0
-        score = (max(in_face_way - MAX_MUG_IN_FACE, 0.0) + max(depth_way - MAX_WAY_DEPTH, 0.0), arc, bulge)
+        # The rim comes ever further from its place on the support until it is at the mouth: it does not rise past the
+        # mouth and come back down to it
+        rims = [mug_rim(skeleton, pose, mug)[0] for pose in poses]
+        overshoot = max(float(np.linalg.norm(rim - rims[0])) for rim in rims) - float(np.linalg.norm(rims[-1] - rims[0]))
+        score = (max(in_face_way - MAX_MUG_IN_FACE, 0.0) + max(depth_way - MAX_WAY_DEPTH, 0.0) + max(overshoot - MAX_OVERSHOOT, 0.0),
+                 arc, bulge)
         if best_way is None or score < best_way[0]:
             best_way = (score, poses, arc, bulge)
         if score[0] <= 0.0:
@@ -695,7 +809,7 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     reached, points = mug_rim(skeleton, drinking, mug)
     face = head.face(skeleton, drinking)
     rim_distance = float(np.linalg.norm(reached - face.mouth()))
-    in_face = max(face.inside(points), face.inside(mug_rim(skeleton, sipped(skeleton, drinking, limb, 1.0, towards), mug)[1]))
+    in_face = max(face.inside(points), face.inside(mug_rim(skeleton, sipped(skeleton, drinking, limb, 1.0, towards, mug), mug)[1]))
     drink_depth = pose_depth(skeleton, drinking, mug, vertices, weights) if seated else 0.0
 
     times = key_times()
@@ -708,7 +822,7 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
         weight = place - low
         pose = blend(poses[low], poses[low + 1], weight, bones)
         if extra > 0.0:
-            pose = sipped(skeleton, pose, limb, extra, towards)
+            pose = sipped(skeleton, pose, limb, extra, towards, mug)
         for index in bones:
             p, q, s = local[index]
             p[frame], q[frame], s[frame] = pose[index][0][0], pose[index][1][0], pose[index][2][0]
@@ -737,11 +851,16 @@ def blend(first, second, weight, bones):
     return pose
 
 
-def sipped(skeleton, pose, limb, share, towards):
-    """The pose with the mug tipped a little further towards the face, about the bone that carries it."""
+def sipped(skeleton, pose, limb, share, towards, mug):
+    """The pose with the mug tipped a little further towards the face about its rim, which stays at the mouth: the limb
+    lifts the bottom of the mug."""
     tilted = copy_pose(pose)
-    rest.rotate_joint(skeleton, tilted, limb[-1], np.cross(np.array([0.0, 0.0, 1.0]), towards),
-                      np.array([math.radians(SIP_TIP) * share]))
+    if share <= 0.0:
+        return tilted
+    foot, axis, _ = mug.world(skeleton.fk(tilted), skeleton)
+    rim = foot[0] + axis[0] * mug.length
+    turned = rotation_matrix(unit(np.cross(np.array([0.0, 0.0, 1.0]), towards)), math.radians(SIP_TIP) * share) @ axis[0]
+    solve(skeleton, tilted, limb, mug, rim - turned * mug.length, turned)
     return tilted
 
 
@@ -754,12 +873,17 @@ def author(source, mesh, mug_mesh, destination):
     blocks = []
     report = {'model': name}
     body_rig = seats.rig.config(name, seats.rig.Skeleton(str(source)))
-    meshes = re.findall(r'\{ "([^"]+)", [0-9]+, ', (ROOT / 'source' / 'rooms' / 'RoomTavern.cpp').read_text(encoding='utf-8').split('TAVERN_STOOL_BODIES[] =')[1].split('};')[0])
-    SEAT['stool'] = mesh.name.removesuffix('.xml') in meshes
-    # A guest of a stool keeps the footprint of its body (TAVERN_STOOL_BODIES); a guest of a bench the reach of all bench
-    # guests around their table (TAVERN_BENCH_REACH_ACROSS behind the bench, TAVERN_BENCH_REACH_ALONG beside the outer place)
-    SEAT['envelope'] = seat_envelope(skeleton, vertices, weights) if SEAT['stool'] else (
-        float('inf'), BENCH_REACH_ACROSS - BENCH_OFFSET, BENCH_REACH_ALONG - 1.5 * seats.SEAT_SPACING)
+    table = (ROOT / 'source' / 'rooms' / 'RoomTavern.cpp').read_text(encoding='utf-8').split('TAVERN_STOOL_BODIES[] =')[1].split('};')[0]
+    bodies = {mesh_name: tuple(float(v) for v in values)
+              for mesh_name, values in ((row[0], row[1:]) for row in re.findall(r'\{ "([^"]+)", [0-9]+, ([0-9.]+)f, ([0-9.]+)f, ([0-9.]+)f \}', table))}
+    SEAT['stool'] = mesh.name.removesuffix('.xml') in bodies
+    # A guest of a stool keeps the footprint of its body (TAVERN_STOOL_BODIES: front, back, half width at level scale 1); a
+    # guest of a bench the reach of all bench guests around their table at the largest level scale
+    # (TAVERN_BENCH_REACH_ACROSS behind the bench, TAVERN_BENCH_REACH_ALONG beside its outermost place)
+    places = BENCH_PLACES.get(name, 1)
+    SEAT['envelope'] = bodies[mesh.name.removesuffix('.xml')] if SEAT['stool'] else (
+        float('inf'), (BENCH_REACH_ACROSS - BENCH_OFFSET) / seats.LEVEL_SCALE_HIGH,
+        (BENCH_REACH_ALONG - (2.0 - 0.5 * places) * seats.SEAT_SPACING) / seats.LEVEL_SCALE_HIGH)
     report['stool'] = SEAT['stool']
     for clip in ('Drink', 'SitDrink'):
         if clip == 'Drink':

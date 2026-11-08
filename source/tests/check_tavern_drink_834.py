@@ -283,7 +283,7 @@ def check_drink_cycle(out):
     tavern = block_values(read('config/global.cfg'), 'Tavern')
     for clip in ('Drink', 'SitDrink'):
         assert float(rooms['ClipSeconds' + clip]) == SIP_SECONDS, clip
-    sips = [float(tavern[key]) / TURNS_PER_SECOND / SIP_SECONDS for key in ('WaterDrinkTurns', 'BeerDrinkTurns')]
+    sips = [round(float(tavern[key]) / TURNS_PER_SECOND / SIP_SECONDS, 6) for key in ('WaterDrinkTurns', 'BeerDrinkTurns')]
     assert sips == [2.0, 6.0], sips
     export('TavernMug.mesh', out)
     mug_points = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
