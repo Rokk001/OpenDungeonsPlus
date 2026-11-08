@@ -18,6 +18,7 @@
 #ifndef ROOMTAVERN_H
 #define ROOMTAVERN_H
 
+#include "gamemap/RoomObjectPath.h"
 #include "rooms/Room.h"
 #include "rooms/RoomType.h"
 
@@ -29,6 +30,7 @@
 #include <string>
 #include <vector>
 
+class BuildingObject;
 class Creature;
 class InnkeeperEntity;
 class Tile;
@@ -101,10 +103,16 @@ enum class TavernSlapResult
 const uint32_t TAVERN_SEATS_PER_BENCH = 4;
 //! \brief Number of places of a tavern table: two benches with four places each.
 const uint32_t TAVERN_SEATS_PER_TABLE = 2 * TAVERN_SEATS_PER_BENCH;
+//! \brief Number of round stools of a tavern table, one at each of its two ends (decision 863). The stools carry the guests
+//! whose seated clips rest the body on the seat instead of sitting on legs (many legs, wings, tails, large bodies).
+const uint32_t TAVERN_STOOLS_PER_TABLE = 2;
+//! \brief Number of places of a tavern table: the eight places of the benches (0 to 7), then the stool at the end of its
+//! second tile (8) and the stool at the end of the tile of its object (9).
+const uint32_t TAVERN_PLACES_PER_TABLE = TAVERN_SEATS_PER_TABLE + TAVERN_STOOLS_PER_TABLE;
 
 //! \brief One seat of a tavern: the tile of the table (the tile its object belongs to) and the number of the place at
-//! that table (0 to 3 on the first bench, 4 to 7 on the second). A large guest takes several neighbouring places of one
-//! bench and is kept under the first of them.
+//! that table (0 to 3 on the first bench, 4 to 7 on the second, 8 and 9 the stools at the two ends). A large guest takes
+//! several neighbouring places of one bench and is kept under the first of them.
 struct RoomTavernSeat
 {
     //! \brief Creates an empty seat without a table.
@@ -170,7 +178,7 @@ struct RoomTavernSpot
     bool mSleepAfter;
     //! True while the guest, done with its drinks, waits for a guest of its table to play a game with.
     bool mWantsGame;
-    //! Number of neighbouring places the guest takes on its bench: 1, or more for a large guest.
+    //! Number of neighbouring places the guest takes on its bench: 1, or more for a large guest; 1 on a stool.
     uint32_t mPlaces;
     //! True once the guest has stepped away from its bench at the end of the visit.
     bool mLeftSeat;
@@ -450,6 +458,16 @@ public:
     //! \param opponent The other creature of a slap duel, null for the other kinds.
     static void sendTavernEvent(Creature& creature, int32_t kind, const Creature* opponent);
 
+    //! \brief The round stools at the ends of the tables (two per table), by their seat; the navigation treats them as
+    //! furniture like the objects of the room (RoomObjectNavigation::collect).
+    inline const std::map<RoomTavernSeat, BuildingObject*>& getStoolObjects() const
+    { return mStoolObjects; }
+
+    //! \brief True for the creatures that sit on a stool at the end of a table instead of on a bench: the models whose
+    //! seated clips rest the body on the seat (TAVERN_STOOL_BODIES of RoomTavern.cpp, decision 863).
+    //! \param creature The creature to test.
+    static bool usesStool(const Creature& creature);
+
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
 
@@ -476,6 +494,51 @@ private:
     //! \param bench 0 for the first bench of the table, 1 for the second.
     bool isBenchBlocked(const Tile* table, uint32_t bench) const;
 
+    //! \brief True for the two stool places of a table (8 and 9).
+    //! \param seat The seat to test.
+    static bool isStoolSeat(const RoomTavernSeat& seat);
+
+    //! \brief True when the creature can take the seat: a stool guest only a free stool (isFreeStool), every other guest
+    //! only free bench places (isFreeSeat with the places its width needs).
+    //! \param creature The guest.
+    //! \param seat The seat; for a large guest the first of its places.
+    bool isFreeSeatFor(const Creature& creature, const RoomTavernSeat& seat) const;
+
+    //! \brief True when the stool guest can sit on the stool of the seat without touching anybody (decision 863): the
+    //! stool is free, the bench places at its end that its seated body reaches are free, and the floor its body covers
+    //! (its footprint) lies on tiles of this room without other furniture, away from the guests of the other tables and
+    //! of the other stools.
+    //! \param creature The guest; it must use a stool.
+    //! \param seat The stool place (8 or 9).
+    bool isFreeStool(const Creature& creature, const RoomTavernSeat& seat) const;
+
+    //! \brief True when a guest on a stool of the table of the seat reaches one of the bench places from the seat on.
+    //! \param seat The first bench place.
+    //! \param places The number of places from there.
+    bool isPlaceBlockedByStool(const RoomTavernSeat& seat, uint32_t places) const;
+
+    //! \brief The floor a stool guest covers on the stool of the seat with all its seated clips, as a rectangle along the
+    //! axes of the map (the tables stand at 0 or 90 degrees), scaled by the level of the creature.
+    //! \param creature The guest.
+    //! \param seat The stool place.
+    //! \param minimum Set to the lower corner.
+    //! \param maximum Set to the upper corner.
+    //! \return False when the creature does not use a stool.
+    bool getStoolFootprint(const Creature& creature, const RoomTavernSeat& seat, Ogre::Vector2& minimum,
+        Ogre::Vector2& maximum) const;
+
+    //! \brief The furniture a guest walks around on its way to its seat: everything but its own table and its own stool.
+    //! \param creature The guest.
+    //! \param seat The seat of the guest.
+    std::vector<RoomObjectPath::Obstacle> seatObstacles(Creature& creature, const RoomTavernSeat& seat) const;
+
+    //! \brief Server side. Puts a round stool at both ends of every table and removes the stools of tables that are gone.
+    //! \param gameMap The map of the room.
+    void updateStools(GameMap* gameMap);
+
+    //! \brief Server side. Takes all stools of the room off the map.
+    void removeStools();
+
     //! \brief Picks a free seat for the creature; a table with a guest comes first, then the nearest table.
     //! \param creature The guest.
     //! \param seat Set to the seat that was picked.
@@ -487,7 +550,7 @@ private:
     static bool isLargeGuest(const Creature& creature);
 
     //! \brief The number of neighbouring places on a bench the creature needs: 1, or for a large creature as many as its
-    //! seated width covers (the places are 0.328 tiles wide).
+    //! seated width covers (the places are 0.328 tiles wide); 1 for a creature that sits on a stool.
     //! \param creature The creature.
     static uint32_t getPlacesOf(const Creature& creature);
 
@@ -496,7 +559,8 @@ private:
     //! \param places The number of places the guest takes (it sits in the middle of them).
     Ogre::Vector2 getSeatPosition(const RoomTavernSeat& seat, uint32_t places) const;
 
-    //! \brief Returns the direction on the ground in which a guest on the seat looks across its table.
+    //! \brief Returns the direction on the ground in which a guest on the seat looks: across its table from a bench, along
+    //! it towards its middle from a stool.
     //! \param seat The seat.
     Ogre::Vector3 getAcrossTableDirection(const RoomTavernSeat& seat) const;
 
@@ -697,6 +761,8 @@ private:
     std::vector<RoomTavernPendingGame> mPendingGames;
     //! \brief The kegs and tables read from a saved room until updateActiveSpots has placed them again.
     std::vector<RoomTavernSavedFurniture> mSavedFurniture;
+    //! \brief The round stools at the ends of the tables, by their seat (server side; created and removed with the tables).
+    std::map<RoomTavernSeat, BuildingObject*> mStoolObjects;
     //! \brief The tiles in coordinate order the furniture was last placed for; empty until it was placed once.
     std::vector<Tile*> mLayoutTiles;
     //! \brief The counter tile the furniture was last placed for.

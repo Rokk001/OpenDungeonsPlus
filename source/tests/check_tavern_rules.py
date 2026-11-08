@@ -573,6 +573,13 @@ public:
     bool pickFreeSeat(const Creature& creature, RoomTavernSeat& seat) const;
     static bool isLargeGuest(const Creature& creature);
     static uint32_t getPlacesOf(const Creature& creature);
+    static bool usesStool(const Creature& creature);
+    static bool isStoolSeat(const RoomTavernSeat& seat);
+    bool isFreeSeatFor(const Creature& creature, const RoomTavernSeat& seat) const;
+    // The stools of decision 863 need the furniture and the floor of the room; they are worked out in
+    // check_tavern_stools_863.py, the guests of this probe all sit on benches
+    bool isFreeStool(const Creature& creature, const RoomTavernSeat& seat) const { return false; }
+    bool isPlaceBlockedByStool(const RoomTavernSeat& seat, uint32_t places) const;
     void tryStartGame(const RoomTavernSeat& seat);
     void startGame(const RoomTavernSeat& seatA, const RoomTavernSeat& seatB);
     void playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
@@ -1230,8 +1237,15 @@ constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) '
 constants += '\n' + find_line(room_cpp, r'^const float TAVERN_SEAT_SPACING = [^;]+;$')
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
 helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'int32_t getUpTurns(', 'int32_t randomDuelTurns(', 'Ogre::Vector3 directionTo('])
+# The stool guests of decision 863: their body table (the struct and the table up to its closing brace) and the place
+# rules of the stools
+stool_start = room_cpp.index('struct TavernStoolBody')
+stool_end = room_cpp.index('\n};\n', room_cpp.index('const TavernStoolBody TAVERN_STOOL_BODIES[] =')) + 4
+helpers += '\n' + room_cpp[stool_start:stool_end] + '\n'.join(extract(room_cpp, h) for h in [
+    'const TavernStoolBody* findStoolBody(', 'bool stoolReachesPlace(', 'uint32_t seatSide('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
-    'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
+    'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'bool RoomTavern::usesStool(',
+    'bool RoomTavern::isStoolSeat(', 'bool RoomTavern::isFreeSeatFor(', 'bool RoomTavern::isPlaceBlockedByStool(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
     'void RoomTavern::setSpotState(', 'void RoomTavern::setSpotDone(', 'bool RoomTavern::isGuestDisturbed(', 'void RoomTavern::upkeepSpots(',
     'void RoomTavern::abortDisturbedGuests(', 'bool RoomTavern::payForBeer(', 'int32_t RoomTavern::nextDrinkTurns(', 'bool RoomTavern::hasDrinkingTableMate(', 'void RoomTavern::finishDrink(', 'void RoomTavern::tryStartGame(',
     'void RoomTavern::startGame(', 'void RoomTavern::playContestTurn(', 'void RoomTavern::playDuelTurn(', 'void RoomTavern::cheerSpectators(',

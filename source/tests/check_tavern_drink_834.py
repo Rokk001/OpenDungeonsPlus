@@ -6,10 +6,12 @@ What is checked (python only, no compiler, no game)
   mug        every skeleton of a visiting type holds the mug during Drink and SitDrink: on Weapon_R, or else on the limb
              mount of RenderManager (TAVERN_MUG_LIMB_MOUNTS) that the lookup of findTavernMugLimbMount finds for it; a
              limb mount stands the mug upright in the rest pose of its bone, puts its foot on the limb, keeps the mug
-             above the floor in every frame of Drink and SitDrink and its size within 0.35 to 1; the mug is attached for
+             above the floor in every frame of Drink and SitDrink and its size within 0.67 to 1 (decision 863: at least
+             0.12 tiles tall, readable from the game camera; decision 834 had 0.35 to 1 and at most 0.35 of the height of
+             a small body); every mug is 1.8 times as wide as its mesh, its length stays; the mug is attached for
              the requested clip before the clip fallback, so a skeleton without the clip still shows it; it is taken
-             away only when the clip changes, the creature is picked up or destroyed; the seated weapon hiding never
-             touches it
+             away only when the clip changes (a drink clip that fades out in a seat blend keeps it to the end of the
+             blend, decision 863), the creature is picked up or destroyed; the seated weapon hiding never touches it
   duration   [Tavern] BeerDrinkTurns = 30 s x 1.4 turns per second = 42, DrinkTurns (water) stays 4; every drink starts
              with nextDrinkTurns, which reads BeerDrinkTurns for a beer the payer can pay and DrinkTurns otherwise; the
              drink clips are set looping and nothing sets another clip while a guest drinks; Drink of every visiting
@@ -54,6 +56,8 @@ MIN_MUG_FLOOR = -0.03
 # First and last frame of Drink differ by at most this share of the height of the body
 MAX_SEAM = 1e-3
 MUG_HEIGHT = 0.18
+# Decision 863: the mug of a limb mount is at least this share of the mesh, 0.12 tiles tall (0.06 on the spider before)
+MIN_LIMB_MUG_SCALE = 0.67
 
 
 def read(path):
@@ -133,10 +137,13 @@ def quaternion_matrix(q):
 def check_mug_code():
     render = read('source/render/RenderManager.cpp')
     props = extract(render, 'void RenderManager::updateCreatureTavernProps(')
-    assert '(anim == EntityAnimation::drink_anim) || (anim == EntityAnimation::sit_drink_anim)' in props
+    assert 'EntityAnimation::isDrinkClip(anim) || fadingDrink' in props
+    entity = read('source/entities/MovableGameEntity.h')
+    assert 'return (clip == drink_anim) || (clip == sit_drink_anim);' in extract(entity, 'inline bool isDrinkClip(')
     assert props.index('getWeaponMount(skeleton, "R", TAVERN_MUG_MESH, mount)') < props.index('findTavernMugLimbMount(skeleton, limb)')
     for token in ('mount.mBoneName = limb->mBone;', 'Ogre::Quaternion(limb->mW, limb->mX, limb->mY, limb->mZ)',
-                  'Ogre::Vector3(limb->mOffsetX, limb->mOffsetY, limb->mOffsetZ)', 'mugPoint->setScale(mugScale, mugScale, mugScale);'):
+                  'Ogre::Vector3(limb->mOffsetX, limb->mOffsetY, limb->mOffsetZ)',
+                  'mugPoint->setScale(mugScale, mugScale * TAVERN_MUG_GIRTH_SCALE, mugScale * TAVERN_MUG_GIRTH_SCALE);'):
         assert token in props, token
     lookup = extract(render, 'static bool findTavernMugLimbMount(')
     assert 'skeleton->hasBone(mount.mBone)' in lookup and 'skeleton->getName() == mount.mSkeleton' in lookup
@@ -145,6 +152,10 @@ def check_mug_code():
     assert state.index('updateCreatureTavernProps(dropCreature, anim);') < state.index('while (!objectEntity->getSkeleton()->hasAnimation(anim))')
     # Only a new clip, a pick-up or the end of the creature take the mug away
     assert render.count('removeCreatureTavernProps(') == 4, 'the mug is taken away somewhere else'
+    # The mug alone goes only at the end of a seat blend out of a drink clip (decision 863)
+    assert render.count('removeCreatureTavernMug(') == 4, 'the mug alone is taken away somewhere else'
+    assert render.count('removeCreatureTavernMug(it->mCreature);') == 2
+    assert 'removeCreatureTavernMug(it->mCreature);' in extract(render, 'void RenderManager::updateCreatureSeatBlends(')
     for head in ('void RenderManager::rrDestroyCreature(', 'void RenderManager::rrPickUpEntity(', 'void RenderManager::updateCreatureTavernProps('):
         assert 'removeCreatureTavernProps(' in extract(render, head), head
     assert 'TavernMug' not in read('source/render/CreatureCombatReactions.cpp'), 'the weapon hiding touches the mug'
@@ -194,7 +205,7 @@ def check_mug_models(out):
         middle = vertices[limb].mean(axis=0) if limb else rest_world[0][0]
         assert np.linalg.norm(foot - middle) <= MAX_MUG_FOOT_GAP, (name, 'the foot of the mug is off the limb', foot, middle)
         height = float(np.ptp(vertices[:, 2]))
-        assert 0.35 <= mount[4] <= 1.0 and mount[4] * MUG_HEIGHT <= max(0.35 * height, MUG_HEIGHT * 0.35 + 1e-6), (name, 'mug size', mount[4])
+        assert MIN_LIMB_MUG_SCALE <= mount[4] <= 1.0, (name, 'mug size', mount[4])
         lowest = []
         for clip in ('Drink', 'SitDrink'):
             played = skeleton.clips[clip]
