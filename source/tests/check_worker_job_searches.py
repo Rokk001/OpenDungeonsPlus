@@ -78,7 +78,7 @@ assert 'mDelivered = true' in transport and 'notifyCarryingStateChanged(nullptr'
 assert 'hasReservedDelivery(*dragged, mTileDest)' in transport
 assert 'mBuildingDest->getSeat() != mCreature.getSeat()' in transport
 assert 'if(!reserved)' in transport
-assert 'startLaying(*dragged)' in transport and 'dragged->getPositionTile() != mTileDest' in transport
+assert 'startLaying(*dragged)' in transport and 'dragged->getPositionTile() != (graveTile != nullptr ? graveTile : mTileDest)' in transport
 assert 'dragged->setPosition(mCreature.getPosition())' not in transport
 assert 'carrier->getPositionTile() != getGateTile()' in read('source/rooms/RoomPrison.cpp')
 crypt = read('source/rooms/RoomCrypt.cpp')

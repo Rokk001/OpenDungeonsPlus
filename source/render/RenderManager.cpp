@@ -177,6 +177,58 @@ const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
 const std::string TAVERN_MUG_MESH = "TavernMug.mesh";
 //! Prefix of the name of the mug entity of a creature
 const std::string TAVERN_MUG_PREFIX = "TavernMug_";
+
+//! \brief Where a guest whose skeleton has no Weapon_R bone holds its mug: on the paw, claw, feeler or front tentacle that
+//! its drink clips raise (decision 834: every guest holds a mug in every drink). The turn stands the mug upright in the
+//! rest pose of the bone (its rim along the -x axis of the mesh points up), the offset puts its foot on the middle of the
+//! limb (in the frame of the bone) and the scale keeps it at most about 0.3 of the height of a small body. Values from
+//! the rest poses of the models (decision 834); checked against them by source/tests/check_tavern_drink_834.py.
+struct TavernMugLimbMount
+{
+    const char* mSkeleton;
+    const char* mBone;
+    Ogre::Real mW;
+    Ogre::Real mX;
+    Ogre::Real mY;
+    Ogre::Real mZ;
+    Ogre::Real mOffsetX;
+    Ogre::Real mOffsetY;
+    Ogre::Real mOffsetZ;
+    Ogre::Real mScale;
+};
+
+const TavernMugLimbMount TAVERN_MUG_LIMB_MOUNTS[] =
+{
+    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0000f, 0.0810f, 0.8172f, -0.0012f, 0.0104f, -0.0002f, 0.35f },
+    { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, 0.0000f, 0.0000f, 0.0000f, 1.00f },
+    { "Rat.skeleton", "FrontLeg_R.003", 0.7071f, 0.0000f, -0.7071f, 0.0000f, 0.0011f, 0.0260f, 0.0028f, 0.47f },
+    { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0000f, -0.0561f, 0.4743f, -0.0002f, 0.0557f, -0.0080f, 0.90f },
+    { "Slime.skeleton", "slime_head", 0.7071f, 0.0000f, -0.3376f, -0.6213f, 0.0000f, 0.1018f, 0.0001f, 0.67f },
+    { "Spider.skeleton", "FU_3_R", 0.7487f, 0.0000f, -0.5237f, 0.4064f, -0.0201f, -0.0652f, -0.1277f, 0.35f },
+    { "Tentacle.skeleton", "ForeTentacle3_R", 0.5427f, 0.0000f, -0.7964f, 0.2670f, 0.0074f, 0.1346f, -0.0365f, 1.00f }
+};
+
+//! \brief Finds the limb mount of the mug for a skeleton without a Weapon_R bone: the entry of the skeleton, or else the
+//! first entry whose bone the skeleton has.
+//! \return False when the skeleton has none of the bones.
+static bool findTavernMugLimbMount(const Ogre::Skeleton* skeleton, const TavernMugLimbMount*& found)
+{
+    found = nullptr;
+    for(const TavernMugLimbMount& mount : TAVERN_MUG_LIMB_MOUNTS)
+    {
+        if(!skeleton->hasBone(mount.mBone))
+            continue;
+
+        if(skeleton->getName() == mount.mSkeleton)
+        {
+            found = &mount;
+            return true;
+        }
+        if(found == nullptr)
+            found = &mount;
+    }
+    return found != nullptr;
+}
 //! Name of the particle template of the little birds that circle over a knocked-out creature
 const std::string DUEL_BIRDS_TEMPLATE = "DuelBirds";
 //! Prefix of the name of the bird particle system (and its node, with the suffix _node) of a creature
@@ -6453,7 +6505,7 @@ static const float TreasuryCoinEffectHeightOffset = 0.02f;
 //! Centre of the tile in dent texture space, subtracted from a dent position to get the offset on the tile.
 static const float TreasuryDentTileCentre = 0.5f;
 //! Scale of the gold sack a treasure thief carries.
-static const float TreasuryThiefSackScale = 0.7f;
+static const float TreasuryThiefSackScale = 0.35f;
 //! Height of the carried gold sack (at the belt) as a factor of the creature's bounding box height.
 static const float TreasuryThiefSackHeightFactor = 0.45f;
 //! Sideways offset of the carried gold sack as a factor of the creature's bounding box half width. The box includes
@@ -6461,8 +6513,9 @@ static const float TreasuryThiefSackHeightFactor = 0.45f;
 static const float TreasuryThiefSackSideFactor = 0.3f;
 //! The sideways offset of the sack never exceeds this factor of the bounding box height (wide wings, long arms).
 static const float TreasuryThiefSackSideMaxHeightFactor = 0.12f;
-//! The sack sits slightly in front of the body (creatures face the negative y axis of the mesh), as a factor of the box depth.
-static const float TreasuryThiefSackFrontFactor = 0.15f;
+//! The sack hangs at the side of the belt, not in front of the body (0 = no offset along the facing axis).
+//! (The sack sits at the side because creatures face the negative y axis of the mesh.)
+static const float TreasuryThiefSackFrontFactor = 0.0f;
 
 void RenderManager::refreshCreaturesOnTile(Tile* tile)
 {
@@ -8095,12 +8148,27 @@ void RenderManager::updateCreatureTavernProps(Creature* creature, const std::str
         if((skeleton == nullptr) || !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(TAVERN_MUG_MESH))
             return;
 
+        // The right hand holds the mug; a skeleton without a hand bone holds it on the limb its drink clips raise
         WeaponMount mount;
+        Ogre::Real mugScale = 1.0f;
         if(!getWeaponMount(skeleton, "R", TAVERN_MUG_MESH, mount))
-            return;
+        {
+            const TavernMugLimbMount* limb = nullptr;
+            if(!findTavernMugLimbMount(skeleton, limb))
+            {
+                OD_LOG_WRN("No bone for the tavern mug of creature=" + creature->getName() + ", skeleton=" + skeleton->getName());
+                return;
+            }
+            mount.mBoneName = limb->mBone;
+            mount.mRotation = Ogre::Quaternion(limb->mW, limb->mX, limb->mY, limb->mZ);
+            mount.mOffset = Ogre::Vector3(limb->mOffsetX, limb->mOffsetY, limb->mOffsetZ);
+            mugScale = limb->mScale;
+        }
 
         Ogre::Entity* mugEntity = mSceneManager->createEntity(TAVERN_MUG_PREFIX + creature->getName(), TAVERN_MUG_MESH);
-        objectEntity->attachObjectToBone(mount.mBoneName, mugEntity, mount.mRotation, mount.mOffset);
+        Ogre::TagPoint* mugPoint = objectEntity->attachObjectToBone(mount.mBoneName, mugEntity, mount.mRotation, mount.mOffset);
+        if((mugPoint != nullptr) && (mugScale != 1.0f))
+            mugPoint->setScale(mugScale, mugScale, mugScale);
     }
     else if(anim == EntityAnimation::knockedout_anim)
     {

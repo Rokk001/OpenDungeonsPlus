@@ -1399,9 +1399,9 @@ gui/Items.png	OpenDungeonsPlus contributors	GPLv3+	Atlas assembled from the orig
 materials/textures/MerchantFloor*.png	OpenDungeonsPlus contributors	CC0	Original procedural planks and carpet remnants from tools/room-floors/generate_room_floors.py.
 materials/textures/MerchantHide.png    AI-generated with Claude Code    GPLv3+    Original sallow old skin texture of the merchant with fine wrinkles and liver spots, procedurally painted, 2026-11-05
 materials/textures/MerchantLeather.png    AI-generated with Claude Code    GPLv3+    Original worn leather texture of the merchant's belt, pouch and boots, procedurally painted, 2026-11-05
-materials/textures/MerchantRobe.png    AI-generated with Claude Code    GPLv3+    Original ragged dark wool texture of the merchant's robe with patches and grime, procedurally painted, 2026-11-05, repainted 2026-11-06
-materials/textures/MerchantHood.png    AI-generated with Claude Code    GPLv3+    Original worn grey-brown wool texture of the merchant's hood and mantle with frayed threads, procedurally painted, 2026-11-06, lighter 2026-11-06
-materials/textures/MerchantCloak.png    AI-generated with Claude Code    GPLv3+    Original frayed plum-brown wool texture of the merchant's ragged over-cloak with darned patches, procedurally painted, 2026-11-06
+materials/textures/MerchantRobe.png    AI-generated with Claude Code    GPLv3+    Original ragged dark wool texture of the merchant's robe with patches and grime, procedurally painted, 2026-11-05, repainted 2026-11-06, dark brown with deep folds 2026-11-07 (rework 3)
+materials/textures/MerchantHood.png    AI-generated with Claude Code    GPLv3+    Original worn grey-brown wool texture of the merchant's hood and mantle with frayed threads, procedurally painted, 2026-11-06, lighter 2026-11-06, dark brown with deep folds 2026-11-07 (rework 3)
+materials/textures/MerchantCloak.png    AI-generated with Claude Code    GPLv3+    Original frayed dark brown wool texture of the merchant's ragged over-cloak with darned patches, procedurally painted, 2026-11-06, dark brown instead of plum 2026-11-07 (rework 3)
 materials/textures/MerchantBrass.png    AI-generated with Claude Code    GPLv3+    Original tarnished brass texture of the merchant's scales, buckle, ring and lantern, procedurally painted, 2026-11-06
 materials/textures/MerchantTableWood.png    AI-generated with Claude Code    GPLv3+    Original atlas of four dark worn plank variants for the sales table and the merchant shelf, procedurally painted, 2026-11-06
 materials/textures/MerchantTableCloth.png    AI-generated with Claude Code    GPLv3+    Original dirty linen texture with dried blood stains for the sales table cloth, procedurally painted, 2026-11-06
@@ -1429,7 +1429,7 @@ models/SalesTable.mesh    AI-generated with Claude Code    GPLv3+    Original sa
 assets-src/items/SalesTable.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 models/MerchantShelf.mesh    AI-generated with Claude Code    GPLv3+    Original dark plank shelf with books, clay jars, skulls and an iron lantern, rebuilt in Blender after the chosen merchant design, 2026-11-06
 assets-src/items/MerchantShelf.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
-models/Merchant.mesh    AI-generated with Claude Code    GPLv3+    Original hunchbacked merchant in a ragged hooded robe with brass scales, pouch and a gold tooth, rebuilt in Blender after the chosen design 2026-11-05, hood, hump and scales reworked 2026-11-06, layered over-cloak, held scales and smaller hood 2026-11-06 (rework 2)
+models/Merchant.mesh    AI-generated with Claude Code    GPLv3+    Original hunchbacked merchant in a ragged hooded robe with brass scales, pouch and a gold tooth, rebuilt in Blender after the chosen design 2026-11-05, hood, hump and scales reworked 2026-11-06, layered over-cloak, held scales and smaller hood 2026-11-06 (rework 2), folded torn hood, larger raised face, double belt with pouch and scales hanging at the belt 2026-11-07 (rework 3)
 assets-src/items/Merchant.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 models/Cauldron.mesh    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 assets-src/items/Cauldron.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
@@ -1467,7 +1467,7 @@ models/SunthornSapling.mesh    OD Team    GPLv3+    Original project model made 
 assets-src/items/SunthornSapling.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 models/SunthornRipe.mesh    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
 assets-src/items/SunthornRipe.blend    OD Team    GPLv3+    Original project model made in Blender and exported with the project Ogre exporter.
-models/Merchant.skeleton    AI-generated with Claude Code    GPLv3+    Original Merchant rig and Idle, Walk, CountGold and RubHands animation clips, rebuilt 2026-11-05, rig moved behind the origin 2026-11-06, beside the table and scales in the hands 2026-11-06 (rework 2)
+models/Merchant.skeleton    AI-generated with Claude Code    GPLv3+    Original Merchant rig and Idle, Walk, CountGold and RubHands animation clips, rebuilt 2026-11-05, rig moved behind the origin 2026-11-06, beside the table and scales in the hands 2026-11-06 (rework 2), scales on the pelvis at the belt and CountGold with tapping 2026-11-07 (rework 3)
 models/Cauldron.skeleton    OD Team    GPLv3+    Original project skeleton and native animation clips, exported from assets-src/items/Cauldron.blend.
 materials/scripts/ItemProps.material    OD Team    GPLv3+    Original prop surfaces and quality materials; quality surfaces retain the existing source textures and their existing credits.
 materials/scripts/ItemQualityWeapons.material    OD Team    GPLv3+    Original prop surfaces and quality materials; quality surfaces retain the existing source textures and their existing credits.
@@ -1967,7 +1967,7 @@ models/SpaMudPool.mesh OD Team CC0 Original hot mud bath model exported with the
 assets-src/rooms/spa/SpaPoolRim.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
 models/SpaPoolRim.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
 assets-src/rooms/spa/SpaChair.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
-models/SpaChair.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
+models/SpaChair.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex; red and white lifebuoy on an iron peg added by tools/spa-meshes/add_chair_lifebuoy.py (decision 837, 2026-11-07, AI-generated with Claude Code, CC0)
 assets-src/rooms/spa/SpaSpringboard.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
 models/SpaSpringboard.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
 assets-src/rooms/spa/PoolAttendant.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
@@ -1976,6 +1976,7 @@ models/PoolAttendant.skeleton AI-generated with Claude Code GPLv3+ Original pool
 materials/textures/SpaAttendantSkin.png AI-generated with Claude Code GPLv3+ Original ruddy skin texture of the pool attendant with body hair and two faint scratches, procedurally painted, 2026-11-05
 materials/textures/SpaAttendantSuit.png AI-generated with Claude Code GPLv3+ Original worn cream and navy striped knitted bathing suit texture, procedurally painted, 2026-11-05
 materials/textures/SpaAttendantTowel.png AI-generated with Claude Code GPLv3+ Original grubby terry towel texture with red end stripes, procedurally painted, 2026-11-05
+materials/textures/SpaMud.png AI-generated with Claude Code GPLv3+ Original seamless hot liquid mud surface with flow swirls, wet gloss streaks, bubble rings and a faint lava warmth, procedurally painted by tools/spa-textures/generate_spa_mud.py, 2026-11-07
 
 == Real hot mud bath recordings ==
 

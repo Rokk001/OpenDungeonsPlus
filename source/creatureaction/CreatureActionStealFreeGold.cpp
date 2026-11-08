@@ -24,6 +24,7 @@
 #include "game/Seat.h"
 #include "gamemap/GameMap.h"
 #include "gamemap/LevelScript.h"
+#include "rooms/Room.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
 
@@ -56,6 +57,14 @@ bool CreatureActionStealFreeGold::handleStealFreeGold(Creature& creature)
     for(Tile* tile : creature.getVisibleTiles())
     {
         if(!creature.getGameMap()->pathExists(&creature, myTile, tile))
+            continue;
+
+        // Gold in the own dungeon (claimed tiles or rooms of the own seat) is never stolen: a thief that trains,
+        // sleeps or eats in its own dungeon must not walk around with a stolen gold sack
+        if(tile->isClaimedForSeat(creature.getSeat()))
+            continue;
+        Room* tileRoom = tile->getCoveringRoom();
+        if((tileRoom != nullptr) && (tileRoom->getSeat() == creature.getSeat()))
             continue;
 
         std::vector<GameEntity*> treasuryObjects;

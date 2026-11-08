@@ -27,6 +27,7 @@
 #include "network/ServerNotification.h"
 #include "rooms/RoomSpa.h"
 #include "utils/ConfigManager.h"
+#include "utils/Helper.h"
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 #include "ODApplication.h"
@@ -44,16 +45,20 @@ const std::string ATTENDANT_FALLBACK_NAME = "PoolAttendant";
 const std::string SOUND_WHISTLE = "Rooms/Spa/Whistle";
 //! \brief Length in seconds of the jump clip of the attendant, as authored; the other clips take PoolAttendantClipSeconds.
 const double CLIP_SECONDS = 2.0;
-//! \brief Height of the top of the seat plate of the chair mesh (SpaChair) above the floor (1.13) plus 0.04, the depth to which the Sit clip lets the seat of the
-//! figure hang below its origin, so that he sits on the plate and not in it, in tiles.
-const double CHAIR_SEAT_HEIGHT = 1.13 + 0.04;
-//! \brief Distance in tiles from the middle of the chair tile to the foot of the ladder, which is in front of the chair
-//! on the side of the pool (the chair is 0.6 tiles wide).
-const double LADDER_FOOT_OFFSET = 0.4;
+//! \brief Height of the top of the seat plate of the chair mesh (SpaChair) above the floor, in tiles.
+const double CHAIR_SEAT_HEIGHT = 1.13;
+//! \brief Offset in y (tiles) from the middle of the chair tile to the foot of the ladder. The ladder is on the back of the
+//! chair (the -Y side of the SpaChair mesh, under the backrest); the chair faces the pool, so the ladder is on the side
+//! away from the pool (the chair is 0.6 tiles deep, decision 837).
+const double LADDER_FOOT_OFFSET = -0.4;
+//! \brief Distance in tiles from the middle of the chair tile to the point beside the back of the chair the attendant
+//! passes on his way between the ladder and the next rim tile (the chair is 0.6 tiles wide, his body about 0.5).
+const double BEHIND_CHAIR_SIDE = 0.6;
 //! \brief The direction from the chair to the pool: the chair stands on the tile above (y - 1) the first pool tile.
 const Ogre::Vector3 TOWARDS_POOL(0.0f, 1.0f, 0.0f);
-//! \brief The direction the attendant faces while he climbs the ladder: to the chair, away from the pool.
-const Ogre::Vector3 AWAY_FROM_POOL(0.0f, -1.0f, 0.0f);
+//! \brief The direction the attendant faces while he climbs the ladder: to the chair. The ladder is behind the chair, so
+//! he looks over the chair towards the pool.
+const Ogre::Vector3 TOWARDS_CHAIR = TOWARDS_POOL;
 //! \brief Factor of the parabola that gives the height of a jump: 4 x p x (1 - p) is 1 at the apex.
 const Ogre::Real JUMP_ARC_FACTOR = 4.0f;
 //! \brief Number of random acts the attendant can play while nobody bathes (towel and doze).
@@ -356,7 +361,7 @@ void PoolAttendantEntity::startClimb(bool down)
 {
     mState = down ? PoolAttendantState::climbingDown : PoolAttendantState::climbingUp;
     mTurnsLeft = getClipTurns();
-    setAnimationState(PoolAttendantPose::climb, true, AWAY_FROM_POOL, false);
+    setAnimationState(PoolAttendantPose::climb, true, TOWARDS_CHAIR, false);
 }
 
 void PoolAttendantEntity::placeOnLadder(double progress)
@@ -394,8 +399,22 @@ void PoolAttendantEntity::startWalkToBoard()
     }
 
     mState = PoolAttendantState::walkingToBoard;
+    // Around the pool on the rim, never over the mud (decision 837); he leaves the foot of the ladder sideways behind
+    // the chair
     std::vector<Ogre::Vector2> path;
-    path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(board->getX()), static_cast<Ogre::Real>(board->getY())));
+    const std::pair<int32_t, int32_t> chair(mChairTile->getX(), mChairTile->getY());
+    // A loaded walk goes on from the tile he stands on
+    const Ogre::Vector3 position = getPosition();
+    const std::pair<int32_t, int32_t> start(Helper::round(position.x), Helper::round(position.y));
+    std::vector<std::pair<int32_t, int32_t> > tiles;
+    if(!mRoom->getAttendantWalk(start, std::make_pair(board->getX(), board->getY()), tiles) || tiles.empty())
+        tiles.assign(1, std::make_pair(board->getX(), board->getY()));
+    const Ogre::Vector3 foot = getLadderFootPosition();
+    if((start == chair) && (tiles.front().second == chair.second))
+        path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(chair.first) +
+            static_cast<Ogre::Real>(tiles.front().first - chair.first) * static_cast<Ogre::Real>(BEHIND_CHAIR_SIDE), foot.y));
+    for(const std::pair<int32_t, int32_t>& tile : tiles)
+        path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(tile.first), static_cast<Ogre::Real>(tile.second)));
     setWalkPath(EntityAnimation::walk_anim, EntityAnimation::walk_anim, true, false, path, false);
 }
 
@@ -458,8 +477,32 @@ void PoolAttendantEntity::land()
 void PoolAttendantEntity::startWalkBack()
 {
     mState = PoolAttendantState::walkingBack;
+    // Out of the mud by the fewest pool tiles, then around the pool on the rim to the back of the chair (decision 837)
     const Ogre::Vector3 foot = getLadderFootPosition();
     std::vector<Ogre::Vector2> path;
+    const std::pair<int32_t, int32_t> chair(mChairTile->getX(), mChairTile->getY());
+    const Ogre::Vector3 position = getPosition();
+    const std::pair<int32_t, int32_t> start(Helper::round(position.x), Helper::round(position.y));
+    // He goes to the rim tile beside the chair (the row of the chair holds no pool tile), the nearer of the two, then
+    // behind the chair to the ladder instead of through the chair
+    std::vector<std::pair<int32_t, int32_t> > tiles;
+    int32_t side = 0;
+    for(int32_t candidate = -1; candidate <= 1; candidate += 2)
+    {
+        std::vector<std::pair<int32_t, int32_t> > walk;
+        if(!mRoom->getAttendantWalk(start, std::make_pair(chair.first + candidate, chair.second), walk))
+            continue;
+        if((side == 0) || (walk.size() < tiles.size()))
+        {
+            tiles.swap(walk);
+            side = candidate;
+        }
+    }
+    for(const std::pair<int32_t, int32_t>& tile : tiles)
+        path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(tile.first), static_cast<Ogre::Real>(tile.second)));
+    if(side != 0)
+        path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(chair.first) +
+            static_cast<Ogre::Real>(side) * static_cast<Ogre::Real>(BEHIND_CHAIR_SIDE), foot.y));
     path.push_back(Ogre::Vector2(foot.x, foot.y));
     setWalkPath(EntityAnimation::walk_anim, PoolAttendantPose::climb, true, false, path, false);
 }
@@ -538,6 +581,14 @@ void PoolAttendantEntity::setPosition(const Ogre::Vector3& position, GameMap* ga
     RenderedMovableEntity::setPosition(position, gameMap);
 }
 
+void PoolAttendantEntity::addEntityToPositionTile(GameMap* gameMap)
+{
+    // The seat, the ladder and the arc of a jump are above the floor: the height the caller set stays
+    const float height = getPosition().z;
+    RenderedMovableEntity::addEntityToPositionTile(gameMap);
+    setEntityHeight(height);
+}
+
 void PoolAttendantEntity::exportSaveData(PoolAttendantSave& save) const
 {
     const Ogre::Vector3 position = getPosition();
@@ -612,7 +663,7 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             }
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
-            setAnimationState(PoolAttendantPose::climb, true, AWAY_FROM_POOL, false);
+            setAnimationState(PoolAttendantPose::climb, true, TOWARDS_CHAIR, false);
             // The clip goes on at the time that was reached, it does not start again
             setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
             const double done = 1.0 - mTurnsLeft / getClipTurns();

@@ -1851,6 +1851,12 @@ const float PROFILE_SIDE_MARGIN = 16.0f;
 const float PROFILE_RIGHT_MARGIN = 32.0f;
 //! Height of one text line if the window has no font (design pixels)
 const float PROFILE_FALLBACK_LINE_HEIGHT = 16.0f;
+//! Height of the health and experience bars, the least height of their row and the gap below the row (design
+//! pixels). The row is at least one line of its labels high and the bars sit in its middle; the gap keeps the bars
+//! clear of the handle line below them (owner decision 830).
+const float PROFILE_BAR_HEIGHT = 16.0f;
+const float PROFILE_BAR_ROW_MIN_HEIGHT = 20.0f;
+const float PROFILE_BAR_ROW_GAP = 8.0f;
 //! Number of rows with a label and links (friends, foe) and the most windows in such a row (label and two links)
 const std::size_t PROFILE_LINK_ROWS = 2;
 const std::size_t PROFILE_LINK_ROW_WINDOWS = 3;
@@ -1936,17 +1942,22 @@ float Gui::layoutCreatureProfilePage(CEGUI::Window* page)
     y = layoutProfileTextRow(page->getChild("AttributesText"), y, scale);
 
 
-    // The existing health and experience bars follow the attributes without overlapping a wrapped line.
+    // The existing health and experience bars follow the attributes without overlapping a wrapped line: the labels
+    // are one line of their font high, the bars sit in the middle of the row, and the gap below keeps them off the
+    // handle line (owner decision 830)
     const char* const barNames[] = {"HealthLabel", "HealthBar", "ExperienceLabel", "ExperienceBar"};
+    const float barRowHeight = std::max(PROFILE_BAR_ROW_MIN_HEIGHT,
+        getProfileLinesHeight(page->getChild("HealthLabel"), 1, scale));
+    const float barTop = (barRowHeight - PROFILE_BAR_HEIGHT) / 2.0f;
     for(std::size_t i = 0; i < 4; ++i)
     {
         CEGUI::Window* child = page->getChild(barNames[i]);
         CEGUI::URect area = mScaledWindows.find(child)->second.area;
-        area.d_min.d_y = CEGUI::UDim(0, y + ((i % 2 == 0) ? 0.0f : 2.0f));
-        area.d_max.d_y = CEGUI::UDim(0, y + ((i % 2 == 0) ? 20.0f : 18.0f));
+        area.d_min.d_y = CEGUI::UDim(0, y + ((i % 2 == 0) ? 0.0f : barTop));
+        area.d_max.d_y = CEGUI::UDim(0, y + ((i % 2 == 0) ? barRowHeight : barTop + PROFILE_BAR_HEIGHT));
         setScaledArea(child, area);
     }
-    y += 24.0f;
+    y += barRowHeight + PROFILE_BAR_ROW_GAP;
 
     const char* const personalRows[] = {"HandleText", "AgeText", "RelationText", "FromText", "JobText"};
     for(std::size_t i = 0; i < 5; ++i)

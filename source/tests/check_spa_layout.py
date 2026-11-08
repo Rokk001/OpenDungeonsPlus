@@ -13,7 +13,7 @@ What is run (the real header, no copy)
                                           room without a pool has neither
 What is checked on the source text
   RoomSpa.cpp             one mud piece per pool tile, a rim piece on every side of a pool tile that borders a non-pool tile
-                          turned to that side, the chair (180) and the springboard (0) on the rim, recomputation after the tiles
+                          turned to that side, the chair (0) and the springboard (180) on the rim (decision 837), recomputation after the tiles
                           change, places of bathers are kept by a recomputation and released only by a lost tile
   RoomObjectBounds.h      a bounds row for each of the four meshes, the mud and the rim are walkable, the chair and the
                           springboard are not
@@ -56,13 +56,17 @@ assert 'wantedMesh = SPA_POOL_MESH;' in update, 'every pool tile gets a mud piec
 assert 'wantedMesh = SPA_CHAIR_MESH;\n            angle = CHAIR_ANGLE;' in update
 assert 'wantedMesh = SPA_SPRINGBOARD_MESH;\n            angle = SPRINGBOARD_ANGLE;' in update
 assert 'updateRimObjects(pool, gameMap);' in update and 'placeAttendant();' in update
-assert re.search(r'const double CHAIR_ANGLE = 180\.0;', room_cpp) and re.search(r'const double SPRINGBOARD_ANGLE = 0\.0;', room_cpp)
+# Chair and springboard have their front on +y: the chair (y - 1 of the pool) keeps 0, the springboard (y + 1) turns 180 so
+# the board reaches over the pool; the attendant (mesh looks along -y) turns 180 to look at the pool (decision 837)
+assert re.search(r'const double CHAIR_ANGLE = 0\.0;', room_cpp) and re.search(r'const double SPRINGBOARD_ANGLE = 180\.0;', room_cpp)
+assert re.search(r'const double ATTENDANT_ANGLE = 180\.0;', room_cpp) and 'static_cast<Ogre::Real>(ATTENDANT_ANGLE)' in room_cpp
 rim = extract(room_cpp, 'void RoomSpa::updateRimObjects(')
 assert 'pool.find(std::make_pair(it->first + SIDE_DX[i], it->second + SIDE_DY[i])) == pool.end()' in rim, \
     'a rim piece stands on every side of a pool tile that borders a non-pool tile'
 assert 'SIDE_DX[] = { 0, -1, 0, 1 }' in rim and 'SIDE_DY[] = { 1, 0, -1, 0 }' in rim and 'NB_SIDES = 4' in rim
-# The angles: the side +y 0, -x 90, -y 180, +x 270 (the engine turns counter-clockwise, like the tavern)
-for name, value in (('TOP', '0.0'), ('LEFT', '90.0'), ('BOTTOM', '180.0'), ('RIGHT', '270.0')):
+# The angles: the rim mesh lies on the -y edge, the engine turns counter-clockwise, so the side +y needs 180, -x 270,
+# -y 0, +x 90 (decision 837: the old values put every rim piece on the inner edge)
+for name, value in (('TOP', '180.0'), ('LEFT', '270.0'), ('BOTTOM', '0.0'), ('RIGHT', '90.0')):
     assert re.search(r'const double OBJECT_ANGLE_SIDE_' + name + r' = ' + re.escape(value) + ';', room_cpp), name
 # A recomputation runs after the tiles change and never moves a place: the places are stored in the bathers, only a lost
 # tile releases them

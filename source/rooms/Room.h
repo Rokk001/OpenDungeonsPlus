@@ -228,6 +228,13 @@ public:
     virtual bool shouldNotUseIfBadMood(Creature& creature, bool forced)
     { return true; }
 
+    //! \brief Called before the use action sends a creature away from the room (a need, its mood, tiredness, hunger,
+    //! its wage). Returns true when the room first ends the use itself and the action goes on with useRoom until then:
+    //! a tavern guest gets off its bench instead of staying in the table, where it would sleep, lie down or walk through
+    //! the furniture.
+    virtual bool keepGuestUntilItLeft(Creature& creature)
+    { return false; }
+
     //! \brief Updates the active spot lists.
     virtual void updateActiveSpots(GameMap* gameMap = nullptr) override;
 

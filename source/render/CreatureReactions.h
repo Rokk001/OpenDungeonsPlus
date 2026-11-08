@@ -24,6 +24,7 @@
 
 #include <OgrePrerequisites.h>
 #include <OgreSingleton.h>
+#include <OgreQuaternion.h>
 #include <OgreVector3.h>
 
 #include <cstdint>
@@ -229,6 +230,8 @@ private:
             mMotionAngle(0.0),
             mMotionLastPosition(Ogre::Vector3::ZERO),
             mMotionLastScale(Ogre::Vector3::UNIT_SCALE),
+            mMotionLastOrientation(Ogre::Quaternion::IDENTITY),
+            mMotionTurnLost(false),
             mMotionTurnAngle(0.0),
             mMotionTurnComputed(false),
             mWhileWorking(false),
@@ -278,6 +281,10 @@ private:
         //! the next time, someone else moved or scaled the creature and our share is not taken away.
         Ogre::Vector3 mMotionLastPosition;
         Ogre::Vector3 mMotionLastScale;
+        //! The orientation of the node after the last motion step. If it is different the next time, someone else
+        //! turned the creature: the angle of the motion is not taken back and the motion turns no more
+        Ogre::Quaternion mMotionLastOrientation;
+        bool mMotionTurnLost;
         //! For the motion 'turn': the angle to the camera
         double mMotionTurnAngle;
         bool mMotionTurnComputed;

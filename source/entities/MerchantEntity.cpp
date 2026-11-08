@@ -89,7 +89,10 @@ void MerchantEntity::doUpkeep()
     {
         mDealTurns -= 1.0;
         if(mDealTurns <= 0.0)
+        {
             setAnimationState("Idle");
+            mFacedRoom = false;
+        }
         return;
     }
     if(isMoving())
@@ -97,8 +100,19 @@ void MerchantEntity::doUpkeep()
     if(mIdleTurns > 0.0)
     {
         mIdleTurns -= 1.0;
+        if(!mFacedRoom)
+        {
+            // He stands, idles and turns at the table, never facing a wall
+            Tile* stop = getPositionTile();
+            Room* stopRoom = stop == nullptr ? nullptr : stop->getCoveringRoom();
+            const Ogre::Vector3 facing = stopRoom == nullptr ? Ogre::Vector3::ZERO : getRoomFacing(stop, stopRoom);
+            if(facing != Ogre::Vector3::ZERO)
+                setAnimationState("CountGold", true, facing);
+            mFacedRoom = true;
+        }
         return;
     }
+    mFacedRoom = false;
     Tile* start = getPositionTile();
     Room* room = start == nullptr ? nullptr : start->getCoveringRoom();
     if(room == nullptr || room->getType() != RoomType::merchant || room->getSeat() != getSeat())
@@ -140,6 +154,28 @@ void MerchantEntity::doUpkeep()
     static const double IDLE_SECONDS_MIN = 10.0;
     static const double IDLE_SECONDS_MAX = 20.0;
     mIdleTurns = Random::Double(IDLE_SECONDS_MIN, IDLE_SECONDS_MAX) * ODApplication::turnsPerSecond;
+}
+
+//! brief Turns the back to the wall side of a tile and the face to the open room side.
+Ogre::Vector3 MerchantEntity::getRoomFacing(Tile* tile, Room* room) const
+{
+    static const int DIRECTIONS[][2] = {{0,1},{1,0},{0,-1},{-1,0}};
+    bool open[4];
+    for(int index = 0; index < 4; ++index)
+    {
+        Tile* next = getGameMap()->getTile(tile->getX() + DIRECTIONS[index][0], tile->getY() + DIRECTIONS[index][1]);
+        open[index] = next != nullptr && next->getCoveringRoom() == room && !next->isFullTile();
+    }
+    for(int index = 0; index < 4; ++index)
+    {
+        const int opposite = (index + 2) % 4;
+        if(!open[index] && open[opposite])
+            return Ogre::Vector3(static_cast<Ogre::Real>(DIRECTIONS[opposite][0]), static_cast<Ogre::Real>(DIRECTIONS[opposite][1]), 0);
+    }
+    for(int index = 0; index < 4; ++index)
+        if(open[index])
+            return Ogre::Vector3(static_cast<Ogre::Real>(DIRECTIONS[index][0]), static_cast<Ogre::Real>(DIRECTIONS[index][1]), 0);
+    return Ogre::Vector3::ZERO;
 }
 
 //! \brief Loads the ordinary rendered packet fields of a client merchant.
