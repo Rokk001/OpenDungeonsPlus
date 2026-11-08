@@ -73,7 +73,6 @@ SCALE = seats.LEVEL_SCALE_LOW
 # The foot of a mug on the table stands this little above the top, the mug this far behind the near edge of the table
 TABLE_CLEARANCE = 0.003
 TABLE_INSET = 0.0
-BENCH_CLEARANCE = 0.003
 # A limb reaches this share of its length at most
 MAX_REACH = 0.97
 # The rim of the mug stays this far in front of the face at least; the search moves it further out in these steps
@@ -103,12 +102,11 @@ MAX_OVERSHOOT = 0.01
 # Where the limb reaches into the table in the pause, the mug stands this much further out (-y) and to the side (outwards
 # first), and the inner joints of the limb swing about the line from its root to the grip by these degrees
 # The places of the mug on the table are tried on a grid of this step, this far to either side of the root of the limb
-# and this far beyond the near edge; on the bench at these depths and twice as far to the side. The nearest ones that the
-# limb reaches are tried first, this many of each support. No part of the body that stays stands this close to the mug.
+# and this far beyond the near edge. The nearest table places that the limb reaches are tried first, this many in all.
+# No part of the body that stays stands this close to the mug.
 PLACE_STEP = 0.025
 PLACE_SPAN = 0.2
 PLACE_DEPTH = 0.2
-BENCH_PLACES_Y = (0.0, -0.03, 0.03, -0.06, 0.06)
 PLACES_PER_SUPPORT = 6
 BODY_CLEARANCE = 0.01
 # Held places on a grid of this step this far around the root of the limb, this many lowest ones
@@ -146,12 +144,10 @@ BENCH_REACH_ALONG = 1.48
 BENCH_OFFSET = 0.4116
 # Bench places a large body takes (LARGE_BENCH_PLACES of check_tavern_stools_863.py)
 BENCH_PLACES = {'Troll': 4, 'PitDemon': 4, 'Dragon': 3}
-# The bodies whose mug rests where their first pose carries it: the slime carries it on its head (its limb mount), and
-# its limb is its whole body, which would bend down to the floor or the seat to set the mug there
-REST_IN_PLACE = ('Slime',)
 # A standing body holds the mug at least this high above the floor (its foot)
 STANDING_FLOOR_CLEARANCE = 0.03
-# The pause may reach this far into the furniture and miss the place of the mug by this much; the way this far (tiles)
+# Preferred pause depth and maximum resting-place error; the way prefers this depth (tiles). MAX_CLEAR_DEPTH remains
+# the hard furniture limit when accepting a resting pose.
 MAX_REST_DEPTH = 0.02
 MAX_REST_ERROR = 0.01
 MAX_WAY_DEPTH = 0.03
@@ -493,7 +489,7 @@ def phase(times):
 
 def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
     """The places where the foot of the mug may stand in the pause, upright, best first, each with what carries it: the
-    table top in front of a seated guest, else the seat of the bench beside it, else the hand holds it as low as it reaches.
+    table top in front of a seated guest; a standing guest holds it as low as it reaches.
     A place counts where the limb reaches it and no part of the body that does not move stands where the mug would be."""
     root = skeleton.fk(start)[skeleton.idx[limb[0]]][0][0]
     lift = MUG_FOOT * mug.scale
@@ -515,8 +511,16 @@ def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
         found.sort(key=lambda item: item[0])
         return [(point, kind) for _, point, kind in found[:PLACES_PER_SUPPORT]]
 
-    # Held places lie above the seat (seated) or the floor (standing), on a grid that is finer for a short limb
-    lowest = (seats.BENCH_TOP / SCALE + BENCH_CLEARANCE + lift) if seated else (STANDING_FLOOR_CLEARANCE + lift)
+    if seated:
+        # Every seated guest sets the mug on the table. A short limb needs a different pose or rig, never a held fallback.
+        edge = -(STOOL_DISTANCE - seats.LONG_TABLE_HALF_LENGTH) if SEAT['stool'] else seats.TABLE_NEAR_EDGE
+        near_edge = (edge - TABLE_INSET) / SCALE - mug.base_radius
+        across = root[0] + np.arange(-PLACE_SPAN, PLACE_SPAN + 1e-9, PLACE_STEP)
+        return places(across, near_edge - np.arange(0.0, PLACE_DEPTH + 1e-9, PLACE_STEP),
+                      seats.TABLE_TOP / SCALE + TABLE_CLEARANCE + lift, 'table')
+
+    # Held places lie above the floor, on a grid that is finer for a short limb.
+    lowest = STANDING_FLOOR_CLEARANCE + lift
     step = min(HELD_STEP, MAX_REACH * reach / 3.0)
     span = min(HELD_SPAN, MAX_REACH * reach)
     grid = []
@@ -524,37 +528,21 @@ def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
         for dy in np.arange(-span, span + 1e-9, step):
             for dz in np.arange(-span, 0.0 + 1e-9, step):
                 point = root + np.array([dx, dy, dz])
-                # above the seat, never down beside the bench or the stool
+                # Above the floor, never below it.
                 if point[2] >= lowest and np.linalg.norm(point - root) <= MAX_REACH * reach:
                     grid.append((not clear(point), round(float(point[2]), 6), float(np.linalg.norm(point[:2] - root[:2])), point))
     grid.sort(key=lambda item: item[:3])
     # The places clear of the body first; a limb so short that the mug touches the body wherever it holds it (the cave
     # hornet) takes the lowest of the others, which the rest pose then keeps out of the head
     grid = [(point, 'held') for _, _, _, point in [g for g in grid if not g[0]][:HELD_PLACES] + [g for g in grid if g[0]][:HELD_PLACES]]
-    if not seated:
-        # Standing: low in front of the belly, else anywhere in reach where the mug is clear of the body. A body whose
-        # mouth is so low that the floor stops the mug (the roach) holds it out to the side of its limb by as much, so the
-        # mug still travels to the mouth
-        low = root[2] - 0.7 * reach
-        carried = skeleton.fk(start)
-        out = 1.0 if mug.world(carried, skeleton)[0][0][0] >= root[0] else -1.0
-        aside = out * max(0.0, lowest - low)
-        return [(np.array([root[0] + aside, root[1] - 0.35 * reach, max(low, lowest)]), 'held')] + grid
-    edge = -(STOOL_DISTANCE - seats.LONG_TABLE_HALF_LENGTH) if SEAT['stool'] else seats.TABLE_NEAR_EDGE
-    near_edge = (edge - TABLE_INSET) / SCALE - mug.base_radius
-    across = root[0] + np.arange(-PLACE_SPAN, PLACE_SPAN + 1e-9, PLACE_STEP)
-    table = places(across, near_edge - np.arange(0.0, PLACE_DEPTH + 1e-9, PLACE_STEP), seats.TABLE_TOP / SCALE + TABLE_CLEARANCE + lift, 'table')
-    bench_across = root[0] + np.arange(-2.0 * PLACE_SPAN, 2.0 * PLACE_SPAN + 1e-9, PLACE_STEP)
-    # A stool has no room beside its guest: there the mug stands on the table or the limb holds it
-    bench = [] if SEAT['stool'] else places(bench_across, np.array(BENCH_PLACES_Y), seats.BENCH_TOP / SCALE + BENCH_CLEARANCE + lift, 'bench')
-    # A limb too short for both holds it as low as it reaches, outwards
-    outward = np.array([1.0 if root[0] >= 0.0 else -1.0, 0.0, -1.0]) / math.sqrt(2.0)
-    held = root + outward * MAX_REACH * reach
-    held = [(np.array([held[0], held[1], max(held[2], lowest)]), 'held')]
-    # or anywhere in reach where the mug is clear of the body, lowest first (a limb whose mesh carries a long weapon, or
-    # whose mug cannot stand on the table or the bench, holds it where the furniture lets it)
-    held += grid
-    return table + bench + held
+    # Standing: low in front of the belly, else anywhere in reach where the mug is clear of the body. A body whose
+    # mouth is so low that the floor stops the mug (the roach) holds it out to the side of its limb by as much, so the
+    # mug still travels to the mouth.
+    low = root[2] - 0.7 * reach
+    carried = skeleton.fk(start)
+    out = 1.0 if mug.world(carried, skeleton)[0][0][0] >= root[0] else -1.0
+    aside = out * max(0.0, lowest - low)
+    return [(np.array([root[0] + aside, root[1] - 0.35 * reach, max(low, lowest)]), 'held')] + grid
 
 
 def stool_depth(points):
@@ -726,6 +714,7 @@ def drink_pose(skeleton, resting, limb, mug, head, gap, towards, tip, depth_of=N
 
 
 def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
+    """Solve one calm sip, rejecting a seated pose that cannot rest its mug on the table."""
     seated = clip == 'SitDrink'
     old = skeleton.clips[clip]
     start = skeleton.locals_at(old, np.zeros(1))
@@ -756,7 +745,10 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     if seated and spine:
         for degrees in LEANS:
             trial = lean_forward(skeleton, start, spine, degrees)
-            point, kind = rest_targets(skeleton, trial, limb, mug, True, reach, still)[0]
+            candidates = rest_targets(skeleton, trial, limb, mug, True, reach, still)
+            if not candidates:
+                continue
+            point, kind = candidates[0]
             # The limb really brings the upright mug onto the table (a hand mount holds the mug above the hand)
             if kind == 'table' and solve(skeleton, copy_pose(trial), limb, mug, point, np.array([0.0, 0.0, 1.0])) <= MAX_REST_ERROR:
                 start, lean = trial, degrees
@@ -772,8 +764,8 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     found = None
     rest_limit = MAX_REST_DEPTH
     targets = rest_targets(skeleton, start, limb, mug, seated, reach, still)
-    if name in REST_IN_PLACE:
-        targets = [(mug.world(skeleton.fk(start), skeleton)[0][0], 'held')] + targets
+    if not targets:
+        raise ValueError('%s %s has no reachable mug place on the table; its seated pose or rig needs repair' % (name, clip))
     for order, (point, kind) in enumerate(targets):
         for swing in SWINGS:
             trial = copy_pose(start)
@@ -789,6 +781,9 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
         if found[0][0] <= rest_limit + 10.0 * MAX_REST_ERROR:
             break
     _, resting, support, rest_error, rest_depth, swing, carrier = found
+    if seated and (rest_error > MAX_REST_ERROR or rest_depth > MAX_CLEAR_DEPTH):
+        raise ValueError('%s %s cannot rest the mug on the table: error %.6f, obstruction %.6f' %
+                         (name, clip, rest_error, rest_depth))
 
     # The drink: the mug moves out until no part of it is in the head
     best = None
