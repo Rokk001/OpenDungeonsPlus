@@ -149,6 +149,13 @@ const char* const TAB_BUTTONS_WINDOW_NAME = "__auto_TabPane__Buttons";
 const char* const CATEGORY_TOOLTIP_FONT = "MedievalSharp-13";
 //! Space between the hand cursor and its tooltip, as a share of the tooltip font height
 const float TOOLTIP_HAND_GAP_FACTOR = 0.25f;
+//! Set when a sibling of the default tooltip changed its place in the drawing order (owner decision 920). The tooltip
+//! and every shown dialog share the always-on-top layer of the root window (GameMode::raiseShownDialog), and CEGUI
+//! leaves the tooltip where it is while it stays attached between two targets: a dialog that rose later (opened, or
+//! clicked, which raises it) covered the tooltip, so the item values of the Dungeonbook slots were drawn behind the book.
+bool sTooltipOrderChanged = false;
+//! True while Gui::keepTooltipInFront re-attaches the tooltip, so its own change of order is not counted
+bool sRaisingTooltip = false;
 
 // Prohibition image, in pixels of its generated texture.
 const int PROHIBITION_IMAGE_SIZE = 64;
@@ -1658,6 +1665,16 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
                 tooltip->setPosition(CEGUI::UVector2(CEGUI::UDim(0, x), CEGUI::UDim(0, y)));
             return true;
         }));
+    // CEGUI tells every child of a window when one of them moved in the drawing order; the tooltip is brought back in
+    // front by Gui::keepTooltipInFront, outside of the event and of the update of the windows (owner decision 920)
+    if(defaultTooltip != nullptr)
+        defaultTooltip->subscribeEvent(CEGUI::Window::EventZOrderChanged,
+        CEGUI::Event::Subscriber([](const CEGUI::EventArgs&)
+        {
+            if(!sRaisingTooltip)
+                sTooltipOrderChanged = true;
+            return false;
+        }));
     CEGUI::WindowManager* wmgr = CEGUI::WindowManager::getSingletonPtr();
     mSheets[hideGui] = wmgr->createWindow("DefaultWindow", "DummyWindow");
     mSheets[inGameMenu] = wmgr->loadLayoutFromFile("ModeGame.layout");
@@ -1720,6 +1737,26 @@ CEGUI::MouseButton Gui::convertButton(OIS::MouseButtonID buttonID)
     if(static_cast<int>(buttonID) < static_cast<int>(CEGUI::MouseButton::MouseButtonCount))
         return static_cast<CEGUI::MouseButton>(buttonID);
     return CEGUI::MouseButton::NoButton;
+}
+
+//! \brief Draws the default tooltip in front of every dialog again after one of them rose above it (owner decision 920).
+//! Removing and adding the tooltip puts it at the front of the always-on-top layer of its parent; moveToFront is not
+//! used, since it would activate the tooltip and take the keyboard from the dialog under the mouse.
+void Gui::keepTooltipInFront()
+{
+    if(!sTooltipOrderChanged || CEGUI::System::getSingletonPtr() == nullptr)
+        return;
+
+    sTooltipOrderChanged = false;
+    CEGUI::Tooltip* tooltip = CEGUI::System::getSingleton().getDefaultGUIContext().getDefaultTooltipObject();
+    CEGUI::Window* parent = tooltip == nullptr ? nullptr : tooltip->getParent();
+    if(parent == nullptr)
+        return;
+
+    sRaisingTooltip = true;
+    parent->removeChild(tooltip);
+    parent->addChild(tooltip);
+    sRaisingTooltip = false;
 }
 
 void Gui::loadGuiSheet(guiSheet newSheet)
