@@ -29,7 +29,7 @@ public:
     void clear();
     //! Builds dirty cells before Ogre updates their new scene nodes.
     void preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Camera* camera) override;
-    //! Resets the lighting decision separately for every viewport and shadow pass.
+    //! Resets each view's lighting decision and limits failed construction probes.
     void preFindVisibleObjects(Ogre::SceneManager* source,
         Ogre::SceneManager::IlluminationRenderStage stage, Ogre::Viewport* viewport) override;
     //! Reports observed source suppression after visibility traversal, separately from estimated draw savings.
@@ -60,6 +60,8 @@ private:
         bool mEnabled;
         //! Previous post-transform light compatibility permits construction, never source suppression.
         bool mBuildAllowed;
+        //! A failed construction hint delays only new geometry, never current-view validation.
+        std::chrono::steady_clock::time_point mNextBuildProbe;
         Ogre::uint32 mVisibilityMask;
     };
     //! Destroys a cell's geometry immediately, retaining the original entity draws.

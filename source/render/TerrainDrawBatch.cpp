@@ -119,7 +119,7 @@ void TerrainDrawBatch::add(Ogre::SceneManager* scene, Ogre::Entity* entity)
     mMembers[entity->getName()] = cell.get();
 }
 
-//! Removes generated geometry before an original can be changed or destroyed.
+//! Removes generated geometry and resets construction retry state before a source changes.
 void TerrainDrawBatch::invalidate(Cell& cell)
 {
     if(cell.mGeometry != nullptr)
@@ -127,6 +127,7 @@ void TerrainDrawBatch::invalidate(Cell& cell)
     cell.mGeometry = nullptr;
     cell.mDirty = true;
     cell.mBuildAllowed = false;
+    cell.mNextBuildProbe = std::chrono::steady_clock::time_point();
     cell.mDecided = false;
     cell.mEnabled = false;
 }
@@ -203,11 +204,12 @@ void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Cam
     }
 }
 
-//! Culls cells, records post-transform build eligibility and validates draws; shadows keep originals.
+//! Culls cells, limits failed construction probes and validates every built batch in each view.
 void TerrainDrawBatch::preFindVisibleObjects(Ogre::SceneManager* source,
     Ogre::SceneManager::IlluminationRenderStage stage, Ogre::Viewport* viewport)
 {
     (void)source;
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     for(std::map<std::string, std::unique_ptr<Cell> >::iterator it = mCells.begin(); it != mCells.end(); ++it)
     {
         Cell& cell = *it->second;
@@ -224,6 +226,10 @@ void TerrainDrawBatch::preFindVisibleObjects(Ogre::SceneManager* source,
         // Dirty cells keep ordinary draws while learning whether construction could help next frame.
         if(!cell.mDecided && cell.mDirty && cell.mEntities.size() >= 2)
         {
+            // Incompatible cells keep their ordinary draws during the retry interval.
+            // The hint only enables construction; canBatch still validates every current view.
+            if(now < cell.mNextBuildProbe)
+                continue;
             cell.mBuildAllowed = true;
             Ogre::LightList firstLights;
             for(size_t i = 0; i < cell.mEntities.size(); ++i)
@@ -243,6 +249,8 @@ void TerrainDrawBatch::preFindVisibleObjects(Ogre::SceneManager* source,
                     break;
                 }
             }
+            if(!cell.mBuildAllowed)
+                cell.mNextBuildProbe = now + std::chrono::milliseconds(250);
         }
         const bool enabled = cell.canBatch();
         if(cell.mGeometry != nullptr)
