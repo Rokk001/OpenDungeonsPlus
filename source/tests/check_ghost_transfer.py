@@ -63,12 +63,19 @@ transfer_seconds = float(values['GhostTransferSeconds'])
 lid_open = float(values['GhostLidOpenSeconds'])
 # Decision 894: the put-in under a two-line documentation; the hand reach and height of the old device are gone
 rows = rooms.splitlines()
-assert values.get('GhostPutInSeconds') == '1'
+# Decision 936 point 3: the put-in lasts two seconds so that the hand placement can be seen
+assert values.get('GhostPutInSeconds') == '2'
 assert 'GhostDeliveryHandReach' not in values and 'GhostDeliveryHeight' not in values, 'the old device keys are gone'
 put_in_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ['GhostPutInSeconds'])
 put_in_doc = ' '.join(rows[put_in_row - 2:put_in_row])
 assert all(row.startswith('#') for row in rows[put_in_row - 2:put_in_row]), 'two documentation lines over GhostPutInSeconds'
-assert all(word in put_in_doc for word in ('put-in', 'Empty clip', 'shut', 'trap seat')), 'the put-in doc lines describe the motion'
+assert all(word in put_in_doc for word in ('put-in', 'sets', 'shut', 'trap seat', 'decision 936')), 'the put-in doc lines describe the motion'
+# Decision 936 point 2: the visible pick-up of the trap from the floor, with its doc lines
+assert values.get('GhostPickUpSeconds') == '2' and values.get('GhostPickUpReach') == '0.3', 'pick-up time and reach'
+pick_row = next(i for i, row in enumerate(rows) if row.split()[:1] == ['GhostPickUpSeconds'])
+pick_doc = ' '.join(rows[pick_row - 2:pick_row])
+assert all(row.startswith('#') for row in rows[pick_row - 2:pick_row]) and 'bends down' in pick_doc and 'decision 936' in pick_doc
+assert rows[pick_row + 1].split()[:1] == ['GhostPickUpReach']
 put_in = float(values['GhostPutInSeconds'])
 
 # 2. The server: fixed duration, teleport into the socket, saved clock
@@ -89,11 +96,12 @@ has(state6, 'transfer at the delivery point', 'const Ogre::Vector3 socket=RoomGh
     'if(mEmptyAnchor==nullptr) { interrupt();return false; }')
 for removed in ('GhostEmptyTurns', 'getEfficiency'):
     assert removed not in state6, ('the old emptying is replaced', removed)
-# Decision 865: the put-in motion plays once on arrival (the Empty clip, not looped), facing the device
-has(state6, 'the put-in motion once', 'if(!mPutIn) { mCreature.setAnimationState(EntityAnimation::empty_anim,false,facing(mCreature,socket),true);mPutIn=true; }')
+# Decisions 865 and 936: the put-in motion starts once on arrival, facing the seat; the hunter keeps his Idle clip and
+# the client lays the generated reach pose over it (no more one-second Empty clip)
+has(state6, 'the put-in motion once', 'if(!mPutIn) { mCreature.setAnimationState(EntityAnimation::idle_anim,true,facing(mCreature,socket),false);mPutIn=true; }')
 assert state6.index('getTrapSocketPosition') < state6.index('if(!mPutIn)') < state6.index('const double duration=getTransferTurns();')
 assert 'empty_anim,true' not in action, 'the Empty clip no longer loops for the whole transfer'
-assert action.count('EntityAnimation::empty_anim') == 1, 'the put-in is the only Empty clip of the hunt'
+assert action.count('EntityAnimation::empty_anim') == 0, 'decision 936: the put-in is the generated reach pose, no Empty clip'
 has(header, 'the put-in flag', 'bool mPutIn = false;')
 restore = body(action, 'void CreatureActionHuntGhost::restore()')
 has(restore, 'a loaded delivery past its put-in does not repeat it', 'if(mState==6 && isTransferring() &&',
@@ -160,7 +168,7 @@ has(refresh, 'transferred share sent', 'else if(boxMode==5)', 'const double tran
     'turns=transfer>0.0?std::min(1.0,turns/transfer):1.0;', 'const double transfer=hunt->getTransferTurns();', '(boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5) && turns!=mGhostThrowTurns')
 visuals = body(creature, 'void Creature::updateGhostHuntVisuals(double seconds)')
 has(visuals, 'the shut trap put into the device beside the hunter',
-    'const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6;',
+    'const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6 || mGhostBoxMode==7;',
     'ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);', 'mGhostHeldBox->setVisible(mGhostBoxMode==2);')
 delivery = visuals[visuals.index('else if(mGhostBoxMode==5)'):visuals.index('else if(mGhostBoxMode==6)')]
 ordered_parts = ('const Ogre::Vector3 seat=ghost->getPosition();',
@@ -169,18 +177,28 @@ ordered_parts = ('const Ogre::Vector3 seat=ghost->getPosition();',
     'config.getRoomConfigDouble("GhostTransferSeconds"),"CatchTime");',
     'mGhostDeliveryClock=mGhostThrowTurns*transferSeconds>=putIn?putIn:0.0;',
     'mGhostDeliveryMouth=ghostCauldronMouthNear(*getGameMap(),seat);',
-    'else mGhostDeliveryClock+=seconds*getGameMap()->getGameSpeedFactor();',
-    'const float inserted=static_cast<float>(putIn>0.0?std::max(0.0,std::min(1.0,mGhostDeliveryClock/putIn)):1.0);',
-    'position=hand+(seat-hand)*inserted;',
-    'share=std::max(0.0,(mGhostThrowTurns*transferSeconds-putIn)/(transferSeconds-putIn));',
+    'else mGhostDeliveryClock+=frame;',
+    'const double placed=putIn>0.0?std::max(0.0,std::min(1.0,mGhostDeliveryClock/putIn)):1.0;',
+    # Decision 936 point 3: the trap leaves the hand on one eased curve over a point above the seat down onto it
+    'const float release=static_cast<float>(ghostEase(0.3,0.62,placed));',
+    'const Ogre::Vector3 above=seat+Ogre::Vector3(0.0f,0.0f,0.08f);',
+    'position=heldOrigin*((1.0f-release)*(1.0f-release))+above*(2.0f*(1.0f-release)*release)+seat*(release*release);',
+    'boxTurn=Ogre::Quaternion::Slerp(release,heldTurn,Ogre::Quaternion::IDENTITY,true);',
+    'poseMode=5;poseWeight=ghostPoseWeight(placed,0.35,0.6);',
+    # Decision 936 point 4: the flow clock runs every frame, the server share only corrects it gently
+    'mGhostFlowClock+=frame;', 'const double error=serverSeconds-mGhostFlowClock;',
+    'if(std::fabs(error)>1.5) { mGhostFlowClock=serverSeconds;mGhostFlowCorrection=0.0; }',
+    'const double step=std::max(-0.5*frame,std::min(0.5*frame,mGhostFlowCorrection*std::min(1.0,seconds)));',
+    'share=(mGhostFlowClock-putIn)/(transferSeconds-putIn);',
     'if(inserted<1.0f) share=0.0;',
-    'mGhostTransferShown+=(share-mGhostTransferShown)*std::min(1.0,seconds*6.0);',
+    'mGhostTransferShown=std::max(mGhostTransferShown,std::max(0.0,std::min(1.0,share)));',
     'mGhostLidShown=0.0;', 'trapLight=inserted>=1.0f?1.0:0.0;', 'ghost->setTransferTarget(mGhostDeliveryMouth);')
 position = -1
 for part in ordered_parts:
     found = delivery.find(part, position + 1)
     assert found > position, ('put-in, then the flow, the trap stays shut', part)
     position = found
+assert 'mGhostTransferShown+=(share-mGhostTransferShown)' not in delivery, 'decision 936: no chase of the 1.4 Hz server share'
 for removed in ('Hinge', 'buildGhostDeliveryDevice', 'swing', 'GHOST_DEVICE', 'yaw'):
     assert removed not in delivery, ('no device is built or swung any more', removed)
 for removed in ('lidTarget', 'poured', 'GhostLidOpenSeconds'):
@@ -194,37 +212,63 @@ has(body(creature, 'void Creature::clearGhostHuntVisuals()'), 'reset', 'ghost->s
     'mGhostDeliveryGhost.clear();mGhostDeliveryClock=0.0;')
 ghost = read('source/entities/GhostEntity.cpp')
 look = body(ghost, 'void GhostEntity::updateLook()')
-has(look, 'transfer look', 'if(mState == GhostState::boxed && transfer > 0.0)', 'const double rise = std::min(1.0, transfer / 0.1);',
+has(look, 'transfer look', 'if(mState == GhostState::boxed && transfer > 0.0)',
     'const Ogre::Vector3 mouth = mHasTransferTarget ? mTransferTarget : mPosition;',
-    'const double spiral = std::max(0.0, std::min(1.0, (transfer - 0.1) / 0.8));',
-    'const double fade = std::max(0.0, std::min(1.0, (transfer - 0.9) / 0.1));',
-    'const double glide = std::min(1.0, spiral / 0.25);',
-    'const double angle = spiral * 5.0 * 2.0 * Ogre::Math::PI;',
-    'const double radius = 0.42 * std::sin(spiral * Ogre::Math::PI) + 0.1 * (1.0 - spiral);',
-    'static const double TRANSFER_RISE = 0.45;', 'const double top = std::max(mPosition.z, mouth.z) + TRANSFER_RISE;',
-    'const double lift = mPosition.z + (top - mPosition.z) * rise - (top - mouth.z) * spiral - 0.2 * fade;',
-    'const double centreX = mPosition.x + (mouth.x - mPosition.x) * glide;',
-    'const double centreY = mPosition.y + (mouth.y - mPosition.y) * glide;',
-    'alpha = 0.45f * static_cast<float>(rise * (1.0 - fade));', 'node->setVisible(true);')
+    'const GhostTransferPath::Point point = GhostTransferPath::at(transfer, mPosition, mouth);',
+    'node->setPosition(point.position);', 'alpha = 0.45f * static_cast<float>(point.visible);', 'node->setVisible(true);')
+# Decision 936 point 4: one smooth path of the share (the model below mirrors it with the constants of the header)
+path_code = body(ghost, 'GhostTransferPath::Point GhostTransferPath::at(')
+has(path_code, 'the smooth path',
+    'const double radius = (start + (RADIUS - start) * ease(0.03, APPROACH, t)) * (1.0 - ease(CLOSE, 1.0, t));',
+    'const double angle = startAngle + TURNS * 2.0 * Ogre::Math::PI *',
+    '(t < EASE_IN ? t * t / (2.0 * EASE_IN) : t - 0.5 * EASE_IN) / (1.0 - 0.5 * EASE_IN);',
+    'const double top = std::max(trap.z, mouth.z) + RISE;',
+    'const double height = trap.z + (top - trap.z) * ease(0.0, 0.1, t) - (top - mouth.z) * even(0.08, 0.92, 0.12, t) -',
+    'SINK * ease(0.9, 1.0, t);',
+    'point.visible = ease(0.0, 0.05, t) * (1.0 - ease(0.9, 0.99, t));')
+has(body(ghost, 'double GhostTransferPath::ease('), 'smooth step', 'return x * x * (3.0 - 2.0 * x);')
+has(body(ghost, 'double GhostTransferPath::even('), 'even rate with eased ends', 'return x * x / (2.0 * e) / total;',
+    'return (total - (1.0 - x) * (1.0 - x) / (2.0 * e)) / total;', 'return (x - 0.5 * e) / total;')
+ghost_header = read('source/entities/GhostEntity.h')
+path_constants = {name: float(value) for name, value in
+                  re.findall(r'static constexpr double (\w+) = ([\d.]+);', ghost_header)}
+assert set(path_constants) >= {'RADIUS', 'TURNS', 'APPROACH', 'CLOSE', 'EASE_IN', 'RISE', 'SINK'}, path_constants
 has(read('source/entities/GhostEntity.h'), 'the mouth the ghost flows into',
     'void setTransferTarget(const Ogre::Vector3& mouth) { mTransferTarget = mouth; mHasTransferTarget = true; }')
 assert look.index('if(mState == GhostState::boxed && transfer > 0.0)') < look.index('setMeshOpacity(alpha);')
 
 
 # 5. Model of the timeline: 20 s at 1.4 turns per second; the put-in first, then the ghost visible for the whole flow,
-# out of the device beside the hunter over the rim into the mouth, ends in the ectoplasm; the trap stays shut
+# out of the trap in the seat over the rim into the mouth, ends in the ectoplasm; the trap stays shut. The model is the
+# smooth path of decision 936 (GhostTransferPath::at with the constants of the header).
+def ease(a, b, t):
+    x = max(0.0, min(1.0, (t - a) / (b - a)))
+    return x * x * (3.0 - 2.0 * x)
+
+
+def even(a, b, soft, t):
+    x = max(0.0, min(1.0, (t - a) / (b - a)))
+    total = 1.0 - soft
+    if x < soft:
+        return x * x / (2.0 * soft) / total
+    if x > 1.0 - soft:
+        return (total - (1.0 - x) ** 2 / (2.0 * soft)) / total
+    return (x - 0.5 * soft) / total
+
+
 def ghost_at(share, device, mouth):
-    rise = min(1.0, share / 0.1)
-    spiral = max(0.0, min(1.0, (share - 0.1) / 0.8))
-    fade = max(0.0, min(1.0, (share - 0.9) / 0.1))
-    glide = min(1.0, spiral / 0.25)
-    angle = spiral * 5.0 * 2.0 * math.pi
-    radius = 0.42 * math.sin(spiral * math.pi) + 0.1 * (1.0 - spiral)
-    top = max(device[2], mouth[2]) + 0.45
-    lift = device[2] + (top - device[2]) * rise - (top - mouth[2]) * spiral - 0.2 * fade
-    x = device[0] + (mouth[0] - device[0]) * glide + radius * math.cos(angle)
-    y = device[1] + (mouth[1] - device[1]) * glide + radius * math.sin(angle)
-    return 0.45 * rise * (1.0 - fade), x, y, lift, spiral
+    c = path_constants
+    t = max(0.0, min(1.0, share))
+    start = math.hypot(device[0] - mouth[0], device[1] - mouth[1])
+    start_angle = math.atan2(device[1] - mouth[1], device[0] - mouth[0])
+    radius = (start + (c['RADIUS'] - start) * ease(0.03, c['APPROACH'], t)) * (1.0 - ease(c['CLOSE'], 1.0, t))
+    ramp = t * t / (2.0 * c['EASE_IN']) if t < c['EASE_IN'] else t - 0.5 * c['EASE_IN']
+    angle = start_angle + c['TURNS'] * 2.0 * math.pi * ramp / (1.0 - 0.5 * c['EASE_IN'])
+    top = max(device[2], mouth[2]) + c['RISE']
+    lift = device[2] + (top - device[2]) * ease(0.0, 0.1, t) - (top - mouth[2]) * even(0.08, 0.92, 0.12, t) - \
+        c['SINK'] * ease(0.9, 1.0, t)
+    visible = ease(0.0, 0.05, t) * (1.0 - ease(0.9, 0.99, t))
+    return 0.45 * visible, mouth[0] + radius * math.cos(angle), mouth[1] + radius * math.sin(angle), lift, t
 
 
 turns_per_second = float(re.search(r'double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp')).group(1))
@@ -236,10 +280,11 @@ for x, y in [(0, 0)]:
     device = device_for(x, y)
     for step in range(1, 1000):
         alpha, gx, gy, lift, spiral = ghost_at(step / 1000.0, device, mouth)
-        assert alpha > 0.0, ('ghost visible during the whole flow', step)
+        if step < 990:
+            assert alpha > 0.0, ('ghost visible during the whole flow until it is sucked in', step)
         from_mouth = math.hypot(gx - 0.5, gy - 0.5)
-        if spiral >= 0.25:
-            assert from_mouth <= 0.53, ('inside the cauldron mouth once over it', x, y, step, from_mouth)
+        if spiral >= path_constants['APPROACH']:
+            assert from_mouth <= path_constants['RADIUS'] + 1e-9 <= 0.53, ('inside the cauldron mouth once over it', x, y, step, from_mouth)
         if from_mouth > rim_radius:
             assert lift > rim_top or math.hypot(gx - device[0], gy - device[1]) <= 0.11, ('over the rim, not through it', x, y, step)
     start = ghost_at(0.001, device, mouth)
@@ -247,6 +292,21 @@ for x, y in [(0, 0)]:
     end = ghost_at(1.0, device, mouth)
     assert end[0] < 1e-9 and end[3] < surface and math.hypot(end[1] - 0.5, end[2] - 0.5) <= 0.11, ('ends faded in the ectoplasm', end)
     assert ghost_at(0.9, device, mouth)[3] < ghost_at(0.5, device, mouth)[3] < ghost_at(0.1, device, mouth)[3]
+    # Decision 936 point 4, smooth: the flow of 18 s drawn at 60 frames a second has no jump and no sudden change of
+    # speed; it circles with one even angular speed from the end of the ease-in until it is sucked in
+    frames = int((transfer_seconds - put_in) * 60)
+    points = [ghost_at(i / frames, device, mouth) for i in range(frames + 1)]
+    speeds = [math.dist(points[i][1:4], points[i + 1][1:4]) * 60 for i in range(frames)]
+    assert max(speeds) < 2.0, ('no jump', max(speeds))
+    assert max(abs(speeds[i + 1] - speeds[i]) * 60 for i in range(frames - 1)) < 3.0, 'no sudden change of speed'
+    middle = speeds[frames // 5:frames * 7 // 10]
+    assert max(middle) < 1.6 * min(middle), ('an even speed on the circle', min(middle), max(middle))
+    angles = [math.atan2(p[2] - 0.5, p[1] - 0.5) for p in points]
+    steps = [(angles[i + 1] - angles[i] + math.pi) % (2 * math.pi) - math.pi for i in range(frames)]
+    even_steps = steps[int(frames * path_constants['EASE_IN']) + 2:int(frames * 0.99)]
+    assert max(even_steps) - min(even_steps) < 1e-6, 'one even angular speed'
+    # (the last frame ends in the middle, where no angle is left)
+    assert abs(sum(steps[:-1]) / (2 * math.pi) - path_constants['TURNS']) < 0.01, 'five turns'
 # The put-in comes first and the whole delivery keeps the transfer time: 20, 16 and 13.3 s by the research
 for seconds in (20.0, 16.0, 20.0 * 0.667):
     for t_step in range(0, int(seconds * 100) + 1):
@@ -262,6 +322,34 @@ for seconds in (20.0, 16.0, 20.0 * 0.667):
         ('the ghost has fully flowed in at the end of the transfer time', seconds, t_now, share)
     assert all(max(0.0, (k / 100.0 - put_in) / (seconds - put_in)) < 1.0 for k in range(0, int(seconds * 100) - 1)), \
         'not fully in before the transfer time is over'
+
+# 5b. Decision 936 point 4, the root cause of the stutter: the server sends the transfer share only once a turn (1.4
+# times a second). The old client chased it (6/s): the ghost jumped after every turn and nearly stopped before the
+# next. The client flow clock runs every frame, the server share only corrects it within half the speed of time.
+flow = transfer_seconds - put_in
+old_shown, new_clock, correction, seen, frame_seconds = 0.0, 0.0, 0.0, 0.0, 1.0 / 60.0
+old_steps, new_steps = [], []
+for frame_index in range(1, int(flow * 60)):
+    now = frame_index * frame_seconds
+    server = math.floor(now * turns_per_second) / turns_per_second
+    previous_old, previous_new = old_shown, new_clock
+    old_shown += (server / flow - old_shown) * min(1.0, frame_seconds * 6.0)
+    new_clock += frame_seconds
+    if server != seen:
+        seen = server
+        error = server - new_clock
+        correction = 0.0 if abs(error) > 1.5 else error
+        new_clock = server if abs(error) > 1.5 else new_clock
+    step = max(-0.5 * frame_seconds, min(0.5 * frame_seconds, correction * min(1.0, frame_seconds)))
+    new_clock += step
+    correction -= step
+    if now > 2.0:
+        old_steps.append(old_shown - previous_old)
+        new_steps.append(new_clock - previous_new)
+assert max(old_steps) > 8 * min(old_steps), 'the old chase jerked (premise of the fix)'
+assert min(new_steps) >= 0.5 * frame_seconds - 1e-12 and max(new_steps) <= 1.5 * frame_seconds + 1e-12, 'never stops, never jumps'
+assert max(abs(new_steps[i + 1] - new_steps[i]) for i in range(len(new_steps) - 1)) < 0.02 * frame_seconds, 'no sudden change'
+assert abs(new_clock - (int(flow * 60) - 1) * frame_seconds) < 1.0, 'stays with the server clock'
 
 # 6. A loaded game resumes the remaining time: the saved clock k leaves duration - k turns
 for saved in (0.0, 7.0, 27.0):

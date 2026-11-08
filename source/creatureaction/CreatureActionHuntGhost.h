@@ -51,8 +51,11 @@ public:
     //! while it opens and the beam then pulls the ghost in, 4 lying under the ghost while it snaps shut with the bang,
     //! 5 put by hand into the delivery device beside the hunter at the cauldron, shut, while the ghost flows out of the
     //! device into the cauldron (decisions 845 and 865), 6 lying shut under the caught ghost until the hunter picks it
-    //! up (decision 865: once shut it stays shut).
+    //! up (decision 865: once shut it stays shut), 7 lifted from the floor into his hand while he bends down to it
+    //! (decision 936 point 2, GhostPickUpSeconds).
     uint32_t getBoxVisualState() const;
+    //! \brief Returns the time of the visible pick-up of the shut box from the floor in turns (GhostPickUpSeconds, decision 936).
+    static double getPickUpTurns();
     //! \brief Returns the ghost under a box being thrown, pulled in, snapping shut or waiting to be picked up, or the
     //! ghost being transferred from the delivery device into the cauldron.
     std::string getThrowGhostName() const;
@@ -75,6 +78,9 @@ private:
     RoomGhostRoom* hookRoom() const;
     //! \brief Walks an exact normal path without pushing a second creature action.
     bool moveTo(Tile* tile);
+    //! \brief Walks the tile path to a point but stops GhostPickUpReach in front of it (decision 936 point 2); false if he
+    //! already stands there and no step is needed.
+    bool walkInFrontOf(const Ogre::Vector3& point);
     //! \brief Reserves the next unassigned ghost or lying box in own territory.
     bool nextTarget();
     //! \brief Releases the current target, restoring a held ghost to floating.
@@ -107,6 +113,10 @@ private:
     //! \brief True once the hunter has put the trap into the delivery device at the cauldron with the put-in motion
     //! (decision 865); runtime only, a loaded delivery derives it from its saved clock (restore).
     bool mPutIn = false;
+    //! \brief State 9 (decision 936 point 2): true once the hunter has walked in front of the shut box, and while he bends
+    //! down and picks it up over GhostPickUpSeconds; runtime only, a loaded hunter repeats the walk and the whole pick-up.
+    bool mPickUpWalked = false;
+    bool mPickingUp = false;
     std::vector<Ogre::Vector2> mLoadedPath;
 };
 #endif

@@ -297,6 +297,54 @@ void GhostEntity::refresh()
     }
 }
 
+double GhostTransferPath::ease(double a, double b, double t)
+{
+    const double x = b > a ? std::max(0.0, std::min(1.0, (t - a) / (b - a))) : (t >= b ? 1.0 : 0.0);
+    return x * x * (3.0 - 2.0 * x);
+}
+
+double GhostTransferPath::even(double a, double b, double soft, double t)
+{
+    // 0 to 1 from a to b at one constant speed, only the first and the last `soft` share of the way eased (zero speed at
+    // a and at b, no change of speed in between): the integral of a trapezoid speed
+    const double length = b - a;
+    if(length <= 0.0)
+        return t >= b ? 1.0 : 0.0;
+    const double x = std::max(0.0, std::min(1.0, (t - a) / length));
+    const double e = std::max(1.0e-6, std::min(0.5, soft));
+    const double total = 1.0 - e;
+    if(x < e)
+        return x * x / (2.0 * e) / total;
+    if(x > 1.0 - e)
+        return (total - (1.0 - x) * (1.0 - x) / (2.0 * e)) / total;
+    return (x - 0.5 * e) / total;
+}
+
+GhostTransferPath::Point GhostTransferPath::at(double share, const Ogre::Vector3& trap, const Ogre::Vector3& mouth)
+{
+    const double t = std::max(0.0, std::min(1.0, share));
+    // Polar coordinates around the middle of the mouth, starting at the trap
+    const double dx = trap.x - mouth.x, dy = trap.y - mouth.y;
+    const double start = std::sqrt(dx * dx + dy * dy);
+    const double startAngle = start > 1.0e-6 ? std::atan2(dy, dx) : 0.0;
+    // Onto the circle while it rises (a little after the rise has begun, so it clears the rim), the circle held, then
+    // closing to the middle until it is sucked in
+    const double radius = (start + (RADIUS - start) * ease(0.03, APPROACH, t)) * (1.0 - ease(CLOSE, 1.0, t));
+    // One even angular speed from the start to the end, only eased in from rest over the first EASE_IN
+    const double angle = startAngle + TURNS * 2.0 * Ogre::Math::PI *
+        (t < EASE_IN ? t * t / (2.0 * EASE_IN) : t - 0.5 * EASE_IN) / (1.0 - 0.5 * EASE_IN);
+    // Up out of the trap to RISE over the higher of trap and ectoplasm, down to the ectoplasm at an even rate, then
+    // SINK into it
+    const double top = std::max(trap.z, mouth.z) + RISE;
+    const double height = trap.z + (top - trap.z) * ease(0.0, 0.1, t) - (top - mouth.z) * even(0.08, 0.92, 0.12, t) -
+        SINK * ease(0.9, 1.0, t);
+    Point point;
+    point.position = Ogre::Vector3(static_cast<Ogre::Real>(mouth.x + radius * std::cos(angle)),
+        static_cast<Ogre::Real>(mouth.y + radius * std::sin(angle)), static_cast<Ogre::Real>(height));
+    point.visible = ease(0.0, 0.05, t) * (1.0 - ease(0.9, 0.99, t));
+    return point;
+}
+
 void GhostEntity::updateLook()
 {
     Ogre::SceneNode* node = getEntityNode();
@@ -334,30 +382,20 @@ void GhostEntity::updateLook()
     const double transfer = std::max(0.0, std::min(1.0, mTransferProgress));
     if(mState == GhostState::boxed && transfer > 0.0)
     {
-        // The transfer into the cauldron (decisions 845 and 865), visible for the whole flow: the boxed ghost waits in
-        // the delivery device beside the hunter (mPosition). Over the first tenth it rises out of the device at half size
-        // to TRANSFER_RISE over the ectoplasm in the cauldron's mouth (mTransferTarget); over the first quarter of the
-        // spiral it glides over the rim to the middle of the mouth, it spirals five times down to the ectoplasm surface
-        // while it shrinks, and over the last tenth it sinks into the ectoplasm and fades out.
+        // The transfer into the cauldron (decisions 845, 865 and 936), visible for the whole flow: the boxed ghost waits in
+        // the trap in the seat on the rim (mPosition). It rises out of the trap at half size and moves onto a circle of
+        // GhostTransferPath::RADIUS around the middle of the cauldron's mouth (mTransferTarget), circles it with one even angular
+        // speed (GhostTransferPath::TURNS turns; only the very start eases in from rest), comes down to the ectoplasm at
+        // an even rate, and over the last part the circle closes to the middle and the ghost is sucked into the
+        // ectoplasm and fades out. Every part is a smooth function of the share, so a share that grows every frame gives
+        // a motion without jumps or stops (decision 936 point 4).
         const Ogre::Vector3 mouth = mHasTransferTarget ? mTransferTarget : mPosition;
-        const double rise = std::min(1.0, transfer / 0.1);
-        const double spiral = std::max(0.0, std::min(1.0, (transfer - 0.1) / 0.8));
-        const double fade = std::max(0.0, std::min(1.0, (transfer - 0.9) / 0.1));
-        const double glide = std::min(1.0, spiral / 0.25);
-        const double angle = spiral * 5.0 * 2.0 * Ogre::Math::PI;
-        const double radius = 0.42 * std::sin(spiral * Ogre::Math::PI) + 0.1 * (1.0 - spiral);
-        // From the device up to TRANSFER_RISE over the ectoplasm surface, down to the surface, then 0.2 into it
-        static const double TRANSFER_RISE = 0.45;
-        const double top = std::max(mPosition.z, mouth.z) + TRANSFER_RISE;
-        const double lift = mPosition.z + (top - mPosition.z) * rise - (top - mouth.z) * spiral - 0.2 * fade;
-        const double centreX = mPosition.x + (mouth.x - mPosition.x) * glide;
-        const double centreY = mPosition.y + (mouth.y - mPosition.y) * glide;
-        const double size = minScale * (1.0 - 0.6 * spiral);
+        const GhostTransferPath::Point point = GhostTransferPath::at(transfer, mPosition, mouth);
+        const double size = minScale * (1.0 - 0.6 * GhostTransferPath::ease(0.1, 1.0, transfer));
         node->setScale(Ogre::Vector3::UNIT_SCALE*static_cast<Ogre::Real>(size));
         node->setVisible(true);
-        node->setPosition(Ogre::Vector3(static_cast<Ogre::Real>(centreX + radius * std::cos(angle)),
-            static_cast<Ogre::Real>(centreY + radius * std::sin(angle)), static_cast<Ogre::Real>(lift)));
-        alpha = 0.45f * static_cast<float>(rise * (1.0 - fade));
+        node->setPosition(point.position);
+        alpha = 0.45f * static_cast<float>(point.visible);
     }
     setMeshOpacity(alpha);
 }

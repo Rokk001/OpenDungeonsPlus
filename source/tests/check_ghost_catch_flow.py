@@ -112,18 +112,21 @@ def visual_states():
     phases = body(action, "uint32_t CreatureActionHuntGhost::getBoxVisualState() const")
     rules = re.findall(r"if\((.*?)\) return (\d)u;", phases)
     # Decision 865: the shut trap waiting under the caught ghost (state 9) is its own phase 6, no longer the open phase 3
+    # Decision 936 point 2: while the hunter bends down and lifts the shut trap into his hand it is phase 7
     assert rules == [("!hasBackpack()", "0"), ("mState==2", "1"), ("mState==3", "3"), ("mState==10", "4"),
-                     ("mState==9", "6"), ("isTransferring()", "5")], rules
+                     ("mState==9 && mPickingUp", "7"), ("mState==9", "6"), ("isTransferring()", "5")], rules
     assert phases.rstrip("}\n ").endswith("return 2u;"), "held in the hand otherwise"
     for state in range(11):
         for backpack in (False, True):
             for transferring in ((False, True) if state == 6 else (False,)):
+              for picking in ((False, True) if state == 9 else (False,)):
                 values = {"!hasBackpack()": not backpack, "mState==2": state == 2, "mState==3": state == 3,
-                          "mState==10": state == 10, "mState==9": state == 9, "isTransferring()": transferring}
+                          "mState==10": state == 10, "mState==9 && mPickingUp": state == 9 and picking,
+                          "mState==9": state == 9, "isTransferring()": transferring}
                 mode = next((int(m) for condition, m in rules if values[condition]), 2)
                 expected = 0 if not backpack else 1 if state == 2 else 3 if state == 3 else 4 if state == 10 else \
-                    6 if state == 9 else 5 if transferring else 2
-                assert mode == expected, (state, backpack, transferring, mode, expected)
+                    (7 if picking else 6) if state == 9 else 5 if transferring else 2
+                assert mode == expected, (state, backpack, transferring, picking, mode, expected)
     throw = body(action, "std::string CreatureActionHuntGhost::getThrowGhostName() const")
     has(throw, "the lying box stays under its ghost while thrown, pulled, snapping and shut",
         "if(mState==2 || mState==3 || mState==10 || mState==9) return mTarget;", "if(isTransferring()) return mGhosts.front();")
@@ -147,7 +150,21 @@ def catch_order():
         "ghost->setState(GhostState::boxed);", "mState=9;")
     assert "mTarget.clear();mState=4;" not in capture, "after the snap the hunter first fetches the box"
     fetch = body(hunt, "    if(mState==9)")
-    ordered(fetch, "walk to the shut box, then carry it", "moveTo(there)", "mCreature.isMoving()", "mState=4;")
+    # Decision 936 point 2: he walks in front of the shut box, turns to it, bends down and lifts it over
+    # GhostPickUpSeconds, then carries it
+    ordered(fetch, "walk in front of the shut box, bend down and pick it up, then carry it",
+        "if(boxed!=nullptr && walkInFrontOf(boxed->getPosition())) return false;", "if(mCreature.isMoving()) return false;",
+        "facing(mCreature,boxed->getPosition())", "mPickingUp=true;mTurns=0.0;",
+        "if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }",
+        "if(mTurns<getPickUpTurns()) return false;", "mState=4;")
+    walk = body(action, "bool CreatureActionHuntGhost::walkInFrontOf(const Ogre::Vector3& point)")
+    has(walk, "the last step ends GhostPickUpReach before the box",
+        'getRoomConfigDouble("GhostPickUpReach")', "const Ogre::Vector2 stand=target-approach*reach;", "path.back()=stand;",
+        "if(!onRoute) return mCreature.getPositionTile()!=tile && moveTo(tile) && mCreature.isMoving();")
+    has(body(action, "double CreatureActionHuntGhost::getPickUpTurns()"), "pick-up time",
+        'getRoomConfigDouble("GhostPickUpSeconds")*ODApplication::turnsPerSecond')
+    has(body(action, "void CreatureActionHuntGhost::restore()"), "a loaded pick-up starts again",
+        "if(mState==9) { mPickingUp=false;mPickUpWalked=false; }")
     has(action, "saves accept the fetch and snap states", "mState>10")
     interrupt = body(action, "void CreatureActionHuntGhost::interrupt()")
     ordered(interrupt, "a dropped box stays where it lay under the ghost (D21)",
@@ -239,7 +256,7 @@ def catch_timing():
     has(update, "the throw arc runs the full throw time",
         'getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond', "position.z+=4.0f*progress*(1.0f-progress)*0.5f;")
     has(update, "the lying box is shown during throw, beam and snap",
-        "const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6;",
+        "const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6 || mGhostBoxMode==7;",
         "mGhostBoxNode->setVisible(lyingBox);")
     snap = update[update.index("else if(mGhostBoxMode==4)"):]
     snap = snap[:snap.index("            else\n")]
