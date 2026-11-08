@@ -13,8 +13,8 @@ What is checked (python only, no compiler, no game)
              away only when the clip changes (a drink clip that fades out in a seat blend keeps it to the end of the
              blend, decision 863), the creature is picked up or destroyed; the seated weapon hiding never touches it
   sip        decision 901: Drink and SitDrink of every visiting skeleton are one calm sip of 5 s (ClipSecondsDrink and
-             ClipSecondsSitDrink 5, water two sips, beer six): the mug stands upright on the table (seated; the bench or
-             the hand for the listed small bodies), is lifted once to the mouth, the rim holds at the mouth with the mug
+             ClipSecondsSitDrink 5, water two sips, beer six): the mug stands upright on the table when seated,
+             is lifted once to the mouth, the rim holds at the mouth with the mug
              in front of the face, then it goes back and pauses; no fast back and forth; Weapon_R and the hand of the
              Defender hold the mug at its middle (TAVERN_MUG_GRIP_SHIFT)
   duration   [Tavern] BeerDrinkTurns = 30 s x 1.4 turns per second = 42, WaterDrinkTurns = 10 s x 1.4 = 14; every drink starts
@@ -71,7 +71,7 @@ GRIP_SHIFT = 0.1
 # MAX_REST_TILT degrees; it is lifted once, by at least MIN_LIFT of the height of the body, and its rim holds its place at
 # the mouth (within HOLD) for at least MIN_DRINK; it moves at most MAX_SPEED_HEIGHTS body heights per second (bodies smaller
 # than MIN_HEIGHT count as that tall); at most MAX_MUG_IN_FACE of it lies in the head in any frame and its rim comes within
-# MAX_RIM_TO_MOUTH of the mouth. Seated, it stands on the table top (or the bench) within MAX_STAND_GAP at the smallest
+# MAX_RIM_TO_MOUTH of the mouth. Seated, it stands on the table top within MAX_STAND_GAP at the smallest
 # creature scale.
 SIP_SECONDS = 5.0
 CYCLE_SAMPLES = 251
@@ -86,46 +86,9 @@ MIN_HEIGHT = 0.3
 MAX_MUG_IN_FACE = 0.05
 MAX_RIM_TO_MOUTH = 0.06
 MAX_STAND_GAP = 0.015
-# Bodies whose limb is too short for the table: the mug stands on the seat of the bench beside them, or the limb holds it
-# low over the bench; bodies whose limb and head do not bring the rim to the mouth without the table or the head in the way
-# Each entry has its measured reason (tools/author_tavern_drink.py, first frame of the clip, level scale 1, in tiles):
-# HELD_GUESTS hold the mug upright above their seat in SitDrink instead of setting it on the table top.
-#   Defender: the spear in the mesh of its drinking hand reaches from 0.10 to 1.41 above the floor; with the mug on the
-#     table the spear would stand in the table top.
-#   CaveHornet, Rat, Slime, Spider, Tentacle (stool guests): the nearest place of the mug on the end of the table is 0.29,
-#     0.35, 0.37, 0.51 and 0.39 from the root of the limb, which reaches 0.10, 0.23, 0.26, 0.24 and 0.27.
-#   Roach, Scarab, LavaSpawn (stool guests): the limb reaches the end of the table, but the body that sets the mug there
-#     stands 0.44, 0.43 and 0.47 in front of the stool at level scale 1.1, beyond its footprint (TAVERN_STOOL_BODIES front
-#     0.15, 0.23 and 0.42, times 1.1), where it would reach into the places the stool leaves free.
-#   Kreatur (stool guest): its Weapon_R is a passive mount (check_rest_animation_assets.py), so the tip of the tentacle
-#     itself stands the mug upright; on the end of the table the tentacle then lies 0.025 deep in the table top (the
-#     pause allows 0.02).
-# SHORT_REACH stop the rim before the mouth, where the mug would go into the head or the table.
-#   CaveHornet: the leg reaches 0.10 and the wide mug is 0.17 across; seated the rim stops 0.19 from the mouth, where the
-#     mug comes into the head (standing it reaches the mouth).
-#   Rat, Spider: the front leg (0.23) and the palp (0.24) hold the mug beside the head; the rim stops 0.26 (seated 0.14)
-#     and 0.11 (seated 0.13) from the mouth, where the mug comes into the head.
-#   Slime: the mug rides on its head (the limb mount slime_head) and the limb is its whole body; tipped further towards
-#     the mouth the mug comes into the head, 0.18 from the mouth.
-#   Tentacle: seated the arm (0.27) and the mug (0.18) reach 0.45 against 0.44 from the root of the arm to the mouth; at
-#     full stretch the rim stops 0.08 from the mouth.
-#   Lizardman (SitDrink): every way from the table to the mouth either brings the forearm 0.0401 into the table top
-#     between two steps or the mug 0.05 into the face; the way ends before, the rim 0.24 from the mouth.
-#   Dragon: the arm (0.49) and the mug (0.18) reach 0.67 against 0.72 from the shoulder to the mouth; standing the head
-#     bows to the mug, seated the snout is 0.10 above the table top and the wide mug at it would stand in the table: the
-#     rim stops 0.40 from the mouth.
-# LOW_LIFT lift the mug less than MIN_LIFT of their height.
-#   Roach (Drink): its mouth is 0.24 above the floor and the upright mug 0.16 tall, so held low in front of the body the
-#     rim rests just below the mouth (the lift is 0.07 of a body 0.62 tall).
-#   Dragon (SitDrink): the mug stands on the table under the snout; past 0.55 of its way the wide mug would reach 0.22
-#     into the table top, so the way ends there (the lift is 0.05 of a body 0.86 tall).
-BENCH_GUESTS = ()
-HELD_GUESTS = ('Defender', 'CaveHornet', 'Rat', 'Slime', 'Spider', 'Tentacle', 'Roach', 'Scarab', 'LavaSpawn', 'Kreatur')
-# SHORT_REACH and LOW_LIFT name the clip too: the other clip of the body keeps the full check
-SHORT_REACH = (('CaveHornet', 'SitDrink'), ('Rat', 'Drink'), ('Rat', 'SitDrink'), ('Spider', 'Drink'), ('Spider', 'SitDrink'),
-               ('Slime', 'Drink'), ('Slime', 'SitDrink'), ('Tentacle', 'SitDrink'), ('Dragon', 'SitDrink'),
-               ('Lizardman', 'SitDrink'))
-LOW_LIFT = (('Roach', 'Drink'), ('Dragon', 'SitDrink'))
+# Fixed distance of a stool from the table centre (decision 863).
+STOOL_DISTANCE = 0.8
+# Decision 901(2) applies to every creature: a short limb, a held mug or a path cut short by furniture is a failed cycle.
 
 
 def read(path):
@@ -306,7 +269,7 @@ def check_mug_models(out):
     print('mug models ok: %d skeletons, %d on limb mounts, Drink loops on all' % (len(skeletons), len(used)))
 
 
-# 1c. Decision 901: one calm sip per clip, the mug at the mouth and not through the head
+# 1c. Check every creature's complete calm sip, without support, reach or lift exemptions.
 def check_drink_cycle(out):
     from check_animation_assets import export
     import fix_walk_feet as feet
@@ -338,6 +301,7 @@ def check_drink_cycle(out):
             local = skeleton.locals_at(played, times)
             foot, axis, points = mug.world(skeleton.fk(local), skeleton)
             rim = foot + axis * mug.length
+            assert float(np.abs(points[0] - points[-1]).max()) <= MAX_SEAM, (name, clip, 'the mug does not return to its starting pose')
             height = float(np.ptp(rest.skin_vertices(skeleton, skeleton.locals_at(played, np.zeros(1)), vertices, weights)[0, :, 2]))
             # The pause: the mug stands still and upright at the start and the end of the clip, at least MIN_PAUSE in all
             away = np.linalg.norm(rim - rim[0], axis=1)
@@ -348,7 +312,7 @@ def check_drink_cycle(out):
             # One lift: the rim leaves its place once and comes back once
             lifted = away >= 0.5 * float(away.max())
             assert int(np.sum(lifted[1:] & ~lifted[:-1])) == 1, (name, clip, 'lifts the mug more than once')
-            assert float(away.max()) >= MIN_LIFT * height or (name, clip) in LOW_LIFT, (name, clip, 'hardly lifts the mug', float(away.max()))
+            assert float(away.max()) >= MIN_LIFT * height, (name, clip, 'hardly lifts the mug', float(away.max()))
             # The drink: the rim holds its place at the mouth for at least MIN_DRINK
             top = int(np.argmax(away))
             held = np.linalg.norm(rim - rim[top], axis=1) < HOLD
@@ -366,17 +330,23 @@ def check_drink_cycle(out):
             assert in_face <= MAX_MUG_IN_FACE, (name, clip, 'the mug goes through the head', in_face)
             mouth = drink.Face(heads[top]).mouth()
             reach = float(np.linalg.norm(rim[top] - mouth))
-            if (name, clip) not in SHORT_REACH:
-                worst['mouth'] = max(worst['mouth'], reach)
-                assert reach <= MAX_RIM_TO_MOUTH, (name, clip, 'the rim does not come to the mouth', reach)
-            # Seated: the mug stands on the table top (at the smallest creature scale), or on the seat of the bench for the
-            # bodies that rest on the bench and do not reach the table
-            if clip == 'SitDrink' and name not in HELD_GUESTS:
-                base = foot[0] - axis[0] * drink.MUG_FOOT * mug.scale
-                surface = seats.BENCH_TOP if name in BENCH_GUESTS else seats.TABLE_TOP
-                assert 0.0 <= base[2] - surface <= MAX_STAND_GAP, (name, 'the mug does not stand on its support', base, surface)
-                if name not in BENCH_GUESTS:
-                    assert base[1] + mug.base_radius <= seats.TABLE_NEAR_EDGE + 1e-3, (name, 'the mug stands beyond the table edge', base)
+            worst['mouth'] = max(worst['mouth'], reach)
+            assert reach <= MAX_RIM_TO_MOUTH, (name, clip, 'the rim does not come to the mouth', reach)
+            # A single frame at the mouth is insufficient: the calm hold must remain there for a continuous drink.
+            mouth_distances = np.linalg.norm(rim - np.array([drink.Face(frame).mouth() for frame in heads]), axis=1)
+            at_mouth = held & (mouth_distances <= MAX_RIM_TO_MOUTH)
+            changes = np.diff(np.concatenate(([False], at_mouth, [False])).astype(int))
+            spans = np.flatnonzero(changes == -1) - np.flatnonzero(changes == 1)
+            assert len(spans) and (int(spans.max()) - 1) * step >= MIN_DRINK, (name, clip, 'does not hold the rim at the mouth for a full drink')
+            # Seated: every mug stands on the table top at the smallest creature scale. Stool guests face the table end;
+            # bench guests face its long edge. The same rule applies at both ends of the closed loop.
+            if clip == 'SitDrink':
+                surface = seats.TABLE_TOP
+                edge = -(STOOL_DISTANCE - seats.LONG_TABLE_HALF_LENGTH) if name in seats.RESTING_MODELS else seats.TABLE_NEAR_EDGE
+                for frame in (0, -1):
+                    base = foot[frame] - axis[frame] * drink.MUG_FOOT * mug.scale
+                    assert 0.0 <= base[2] - surface <= MAX_STAND_GAP, (name, 'the mug does not stand on its support', base, surface)
+                    assert base[1] + mug.base_radius <= edge + 1e-3, (name, 'the mug stands beyond the table edge', base)
     print('drink cycle ok: one sip of %.0f s per clip (water %d, beer %d sips), pause and drink of at least %.1f s, mug at most '
           '%.2f body heights per second, at most %.0f %% of it in the head, rim within %.3f of the mouth'
           % (SIP_SECONDS, sips[0], sips[1], MIN_PAUSE, worst['speed'], 100 * worst['face'], worst['mouth']))

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Author the drink clips Drink and SitDrink of one creature skeleton as one calm drink (owner decision 901, point 2).
 
-One clip is one sip of CYCLE seconds: the mug stands on its support (the table top in front of a seated guest, or the bench
-beside a body too small to reach the table; a standing guest holds it low in front of its belly), the creature takes it,
+One clip is one sip of CYCLE seconds: the mug stands on the table top in front of a seated guest
+(a standing guest holds it low in front of its belly), the creature takes it,
 lifts it to its mouth, drinks with the rim AT the mouth and the mug in front of the face (not through the head), puts it
 back and pauses. The body keeps the first pose of the old clip; only the limb that holds the mug moves. The limb is solved
 along the way of the foot of the mug in small steps, each from the pose of the one before, so that it does not jump; the way
@@ -10,8 +10,9 @@ back is the way there. The clip starts and ends in the rest pose, so it loops wi
 ClipSecondsSitDrink of config/rooms.cfg play it in CYCLE game seconds: a water of 10 s is two sips, a beer of 30 s six.
 
 Writes <output>/<name>.drink.skeleton.xml with the bones and only the two clips, and <output>/<name>.drink.json with the
-measures of every clip. splice_animation_chunks.py puts the two clips into the game skeleton after OgreXMLConverter made
-the binary.
+measures of every clip. Incomplete cycles raise an error before the output skeleton is written; held seated mugs and
+paths that stop before the mouth are not finished assets. splice_animation_chunks.py puts the two clips into the game
+skeleton after OgreXMLConverter made the binary.
 
 Calls: python tools/author_tavern_drink.py <folder with the exported .skeleton.xml, .mesh.xml and TavernMug.mesh.xml>
        <output folder> <skeleton name>[:<mesh file name>]...
@@ -53,7 +54,7 @@ SOLVE_ROUNDS = 4
 # it reaches through (the forearm of the lizardman 0.0401 into the table top, a tentacle tip of the kreatur into the seat
 # of its stool): their way has twice as many steps, checked half way between two steps (MAX_HALF_DEPTH); with steps
 # that fine the mug may come closer into the face before the way ends (MAX_CLEAR_FACE, check_tavern_drink_834 allows
-# 0.05). The lizardman still ends its way before the mouth when seated (SHORT_REACH of check_tavern_drink_834)
+# 0.05). A fine path that still ends before the mouth is rejected by validate_report.
 FINE_WAYS = {'Lizardman': {'WAY_STEPS': 81, 'MAX_CLEAR_FACE': 0.045, 'MAX_HALF_DEPTH': 0.038},
              'Kreatur': {'WAY_STEPS': 81, 'MAX_CLEAR_FACE': 0.045, 'MAX_HALF_DEPTH': 0.038}}
 # The mesh of the mug: its foot lies 0.009 below the origin, its rim 0.171 above it along the -x axis of the mesh. The
@@ -960,6 +961,24 @@ def sipped(skeleton, pose, limb, share, towards, mug):
 NORMAL_WAY = {'WAY_STEPS': WAY_STEPS, 'MAX_CLEAR_FACE': MAX_CLEAR_FACE, 'MAX_HALF_DEPTH': MAX_HALF_DEPTH}
 
 
+# Reject partial solver results before they can replace the game's complete drinking clips.
+def validate_report(name, report):
+    problems = []
+    for clip in ('Drink', 'SitDrink'):
+        measured = report[clip]
+        if clip == 'SitDrink' and measured['support'] != 'table':
+            problems.append('%s rests on %s instead of the table' % (clip, measured['support']))
+        if measured['rest_error'] > MAX_REST_ERROR:
+            problems.append('%s misses its resting place by %.6f' % (clip, measured['rest_error']))
+        if measured['shortened'] < 1.0:
+            problems.append('%s completes only %.4f of its lift (%s)' % (clip, measured['shortened'], measured['cut_by']))
+        if measured['rim_to_mouth'] > MAX_RIM_DISTANCE:
+            problems.append('%s rim is %.6f from the mouth (maximum %.6f)' % (clip, measured['rim_to_mouth'], MAX_RIM_DISTANCE))
+    if problems:
+        raise ValueError('Incomplete calm drink cycle for %s: %s' % (name, '; '.join(problems)))
+
+
+# Author both clips and publish their skeleton XML only when both complete the required cycle.
 def author(source, mesh, mug_mesh, destination):
     skeleton = feet.Skel(str(source))
     name = source.name.removesuffix('.skeleton.xml')
@@ -992,6 +1011,7 @@ def author(source, mesh, mug_mesh, destination):
             SEAT['envelope'] = saved
         blocks.append(block)
         report[clip] = measured
+    validate_report(name, report)
     text = source.read_text(encoding='utf-8')
     head_part = text[:text.index('<animations>')]
     destination.write_text(head_part + '<animations>\n' + '\n'.join(blocks) + '\n</animations>\n</skeleton>\n', encoding='utf-8')
