@@ -52,6 +52,13 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\ogre" apply --recount $taskExactUniformPatch
     if ($LASTEXITCODE -ne 0) { throw 'OGRE GL3Plus exact uniform cache patch failed' }
 }
+$taskTowerTracePatch = Join-Path $PSScriptRoot 'patches/ogre14-tower-trace.patch'
+& git -C "$taskRoot\src\ogre" apply --recount --reverse --check $taskTowerTracePatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Applying OGRE opt-in tower draw trace'
+    & git -C "$taskRoot\src\ogre" apply --recount $taskTowerTracePatch
+    if ($LASTEXITCODE -ne 0) { throw 'OGRE tower trace patch failed' }
+}
 $ErrorActionPreference = 'Stop'
 $taskPatchHashes = Get-OgrePrereqPatchHashes
 $taskParallel = if ($env:BUILD_PARALLEL) { [int]$env:BUILD_PARALLEL } else { 1 }

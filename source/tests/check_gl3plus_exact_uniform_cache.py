@@ -158,13 +158,14 @@ int main()
 
 
 def pinned_source_check(source):
-    """Apply all six installer patches to isolated pinned source files, then reverse them."""
+    """Apply all seven installer patches to isolated pinned source files, then reverse them."""
     pinned = 'f906880885f6014ca9b5bd8aaa09b399394d5676'
     subprocess.run(['git', '-C', str(source), 'cat-file', '-e', pinned + '^{commit}'], check=True)
     names = (
         'ogre14-multiwindow-settings.patch', 'ogre14-short-emitter.patch',
         'ogre14-light-position-cache.patch', 'ogre14-discard-lock-unsynchronized.patch',
         'ogre14-gl3plus-program-shutdown.patch', 'ogre14-gl3plus-exact-uniform-cache.patch',
+        'ogre14-tower-trace.patch',
     )
     patches = [PATCH.parent / name for name in names]
     install = (ROOT / 'scripts/win32/install-ogre-prereq.ps1').read_text()
@@ -194,7 +195,7 @@ def pinned_source_check(source):
             result = subprocess.run(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass',
                                      '-File', str(script), temporary, str(PATCH.parent.parent)],
                                     capture_output=True, text=True, check=True)
-            assert result.stdout.count('Applying OGRE') == (6 if repeat == 0 else 0), result.stdout
+            assert result.stdout.count('Applying OGRE') == (7 if repeat == 0 else 0), result.stdout
             for patch in patches:
                 subprocess.run(['git', 'apply', '--recount', '--reverse', '--check', str(patch)],
                                cwd=directory, check=True)
@@ -204,7 +205,8 @@ def pinned_source_check(source):
                            cwd=directory, check=True)
             subprocess.run(['git', 'apply', '--recount', '--reverse', str(patch)], cwd=directory, check=True)
         assert all((directory / name).read_bytes() == data for name, data in before.items())
-    print('pinned Ogre: six patches applied, second install skipped all six, all reversed byte-for-byte')
+        assert not (directory / 'OgreMain/src/OgreODTowerTrace.h').exists()
+    print('pinned Ogre: seven patches applied, second install skipped all seven, all reversed byte-for-byte')
 
 
 def main():
