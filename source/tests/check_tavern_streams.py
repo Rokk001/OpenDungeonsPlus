@@ -464,7 +464,7 @@ static void checkRoomStream()
     const char* broken[] = {
         "RoomData\nTavernPayer 7\n", "RoomData\nGame 9 1 1 2 1 A B 4 0 0 0\n", "RoomData\nSpot 1 1 A sitting 3\n",
         "RoomData\nSpot 1 1 A drinking\n", "RoomData\nCounter 3\n", "RoomData\nGame 0 1 1 2 1 A B\n", "RoomData\nSeatLayout 9\n",
-        "RoomData\nSeatLayout 0\n", "RoomData\nSpot 1 1 A drinking 3 0 0 0 8\n", "RoomData\nGame 0 1 1 2 1 A B 4 0 0 0 0 8\n",
+        "RoomData\nSeatLayout 0\n", "RoomData\nSpot 1 1 A drinking 3 0 0 0 10\n", "RoomData\nGame 0 1 1 2 1 A B 4 0 0 0 0 10\n",
         "RoomData\nGame 2 1 1 2 1 A B 4 0 0 0 0 4 3 5 0 0\n", "RoomData\nGame 2 1 1 2 1 A B 4 0 0 0 0 4 1 5 9 4\n" };
     for(unsigned i = 0; i < sizeof(broken) / sizeof(broken[0]); ++i)
     {

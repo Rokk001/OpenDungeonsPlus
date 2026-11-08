@@ -177,12 +177,18 @@ const Ogre::Real CORPSE_SWARM_HEIGHT = 0.35f;
 const std::string TAVERN_MUG_MESH = "TavernMug.mesh";
 //! Prefix of the name of the mug entity of a creature
 const std::string TAVERN_MUG_PREFIX = "TavernMug_";
+//! The mug is this much wider and deeper than its mesh (decision 863: a tankard that reads from the game camera, 0.23
+//! instead of 0.13 tiles across). Its length, from the grip to the rim, stays, so the drink clips still bring the rim to
+//! the mouth; checked against the table in SitDrink by source/tests/check_tavern_stools_863.py.
+const Ogre::Real TAVERN_MUG_GIRTH_SCALE = 1.8f;
 
 //! \brief Where a guest whose skeleton has no Weapon_R bone holds its mug: on the paw, claw, feeler or front tentacle that
 //! its drink clips raise (decision 834: every guest holds a mug in every drink). The turn stands the mug upright in the
 //! rest pose of the bone (its rim along the -x axis of the mesh points up), the offset puts its foot on the middle of the
-//! limb (in the frame of the bone) and the scale keeps it at most about 0.3 of the height of a small body. Values from
-//! the rest poses of the models (decision 834); checked against them by source/tests/check_tavern_drink_834.py.
+//! limb (in the frame of the bone) and the scale is at least 0.67, so that even the mug of a small body is 0.12 tiles
+//! tall and readable from the game camera (decision 863; decision 834 had kept it at 0.3 of the height of a small body,
+//! 0.06 tiles on the spider). Values from the rest poses of the models (decision 834); checked against them by
+//! source/tests/check_tavern_drink_834.py.
 struct TavernMugLimbMount
 {
     const char* mSkeleton;
@@ -199,12 +205,12 @@ struct TavernMugLimbMount
 
 const TavernMugLimbMount TAVERN_MUG_LIMB_MOUNTS[] =
 {
-    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0000f, 0.0810f, 0.8172f, -0.0012f, 0.0104f, -0.0002f, 0.35f },
+    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0000f, 0.0810f, 0.8172f, -0.0012f, 0.0104f, -0.0002f, 0.67f },
     { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, 0.0000f, 0.0000f, 0.0000f, 1.00f },
-    { "Rat.skeleton", "FrontLeg_R.003", 0.7071f, 0.0000f, -0.7071f, 0.0000f, 0.0011f, 0.0260f, 0.0028f, 0.47f },
+    { "Rat.skeleton", "FrontLeg_R.003", 0.7071f, 0.0000f, -0.7071f, 0.0000f, 0.0011f, 0.0260f, 0.0028f, 0.67f },
     { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0000f, -0.0561f, 0.4743f, -0.0002f, 0.0557f, -0.0080f, 0.90f },
     { "Slime.skeleton", "slime_head", 0.7071f, 0.0000f, -0.3376f, -0.6213f, 0.0000f, 0.1018f, 0.0001f, 0.67f },
-    { "Spider.skeleton", "FU_3_R", 0.7487f, 0.0000f, -0.5237f, 0.4064f, -0.0201f, -0.0652f, -0.1277f, 0.35f },
+    { "Spider.skeleton", "FU_3_R", 0.7487f, 0.0000f, -0.5237f, 0.4064f, -0.0201f, -0.0652f, -0.1277f, 0.67f },
     { "Tentacle.skeleton", "ForeTentacle3_R", 0.5427f, 0.0000f, -0.7964f, 0.2670f, 0.0074f, 0.1346f, -0.0365f, 1.00f }
 };
 
@@ -5464,9 +5470,10 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         animState->setTimePosition(animState->getLength());
     curAnimatedObject->setAnimationState(animState);
 
-    // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table
+    // A seated guest shows no attached weapon: a sword or a staff in the hand would reach through the table. A drinking
+    // guest neither: the mug sits on the same hand bone (decision 863)
     if((dropCreature != nullptr) &&
-       (EntityAnimation::isSeatClip(anim) != ((previousState != nullptr) && EntityAnimation::isSeatClip(previousState->getAnimationName()))))
+       (EntityAnimation::hidesWeapons(anim) != ((previousState != nullptr) && EntityAnimation::hidesWeapons(previousState->getAnimationName()))))
         CreatureCombatReactions::showWeaponsForClip(dropCreature);
 
     // Sitting down and getting up blend the body from the one pose into the other; the old clip holds still meanwhile
@@ -5500,9 +5507,14 @@ void RenderManager::updateCreatureSeatBlends(Ogre::Real timeSinceLastFrame)
 {
     for(std::vector<CreatureSeatBlend>::iterator it = mCreatureSeatBlends.begin(); it != mCreatureSeatBlends.end();)
     {
-        // Another clip took over without passing rrSetObjectAnimationState: it keeps its own weights
+        // Another clip took over without passing rrSetObjectAnimationState: it keeps its own weights. A drink clip that
+        // faded out kept its mug for the blend (updateCreatureTavernProps); it goes with the blend
         if(it->mCreature->getAnimationState() != it->mTo)
         {
+            const Ogre::AnimationState* current = it->mCreature->getAnimationState();
+            if(EntityAnimation::isDrinkClip(it->mFrom->getAnimationName()) &&
+               ((current == nullptr) || !EntityAnimation::isDrinkClip(current->getAnimationName())))
+                removeCreatureTavernMug(it->mCreature);
             it = mCreatureSeatBlends.erase(it);
             continue;
         }
@@ -5519,6 +5531,8 @@ void RenderManager::updateCreatureSeatBlends(Ogre::Real timeSinceLastFrame)
         }
 
         it->mFrom->setEnabled(false);
+        if(EntityAnimation::isDrinkClip(it->mFrom->getAnimationName()) && !EntityAnimation::isDrinkClip(it->mTo->getAnimationName()))
+            removeCreatureTavernMug(it->mCreature);
         it = mCreatureSeatBlends.erase(it);
     }
 }
@@ -8106,8 +8120,8 @@ void RenderManager::rrReleaseCarriedEntity(Creature* carrier, GameEntity* carrie
         rrSetObjectAnimationState(carrier, EntityAnimation::walk_anim, true);
 }
 
-//! \brief Removes the mug from the hand and the circling birds from over the head of a creature, if it has them.
-void RenderManager::removeCreatureTavernProps(Creature* creature)
+//! \brief Removes the mug from the hand of a creature, if it has one.
+void RenderManager::removeCreatureTavernMug(Creature* creature)
 {
     const std::string mugName = TAVERN_MUG_PREFIX + creature->getName();
     if(mSceneManager->hasEntity(mugName))
@@ -8116,6 +8130,12 @@ void RenderManager::removeCreatureTavernProps(Creature* creature)
         mugEntity->detachFromParent();
         mSceneManager->destroyEntity(mugEntity);
     }
+}
+
+//! \brief Removes the mug from the hand and the circling birds from over the head of a creature, if it has them.
+void RenderManager::removeCreatureTavernProps(Creature* creature)
+{
+    removeCreatureTavernMug(creature);
 
     const std::string birdsName = DUEL_BIRDS_PREFIX + creature->getName();
     if(mSceneManager->hasParticleSystem(birdsName))
@@ -8131,10 +8151,16 @@ void RenderManager::removeCreatureTavernProps(Creature* creature)
 }
 
 //! \brief Gives a creature the props of the clip it plays: the mug in the right hand while it drinks and the
-//! little birds over its head while it lies knocked out. The props of an earlier clip are removed first. A mug or
-//! birds whose asset is missing are left out.
+//! little birds over its head while it lies knocked out. The props of an earlier clip are removed first; only a drink
+//! clip that still fades out into the new clip (a seat blend, see updateCreatureSeatBlends) keeps its mug until the
+//! blend is over, so the hand never comes down from the mouth without it (decision 863). A mug or birds whose asset
+//! is missing are left out.
 void RenderManager::updateCreatureTavernProps(Creature* creature, const std::string& anim)
 {
+    // The clip that is still playing: rrSetObjectAnimationState calls this before it sets the new one
+    const Ogre::AnimationState* previousState = creature->getAnimationState();
+    const bool fadingDrink = (previousState != nullptr) && EntityAnimation::isDrinkClip(previousState->getAnimationName()) &&
+        (EntityAnimation::isSeatClip(previousState->getAnimationName()) != EntityAnimation::isSeatClip(anim));
     removeCreatureTavernProps(creature);
 
     const std::string objectName = creature->getOgreNamePrefix() + creature->getName();
@@ -8142,7 +8168,7 @@ void RenderManager::updateCreatureTavernProps(Creature* creature, const std::str
         return;
 
     Ogre::Entity* objectEntity = mSceneManager->getEntity(objectName);
-    if((anim == EntityAnimation::drink_anim) || (anim == EntityAnimation::sit_drink_anim))
+    if(EntityAnimation::isDrinkClip(anim) || fadingDrink)
     {
         Ogre::Skeleton* skeleton = objectEntity->getSkeleton();
         if((skeleton == nullptr) || !Ogre::ResourceGroupManager::getSingleton().resourceExistsInAnyGroup(TAVERN_MUG_MESH))
@@ -8151,26 +8177,36 @@ void RenderManager::updateCreatureTavernProps(Creature* creature, const std::str
         // The right hand holds the mug; a skeleton without a hand bone holds it on the limb its drink clips raise
         WeaponMount mount;
         Ogre::Real mugScale = 1.0f;
-        if(!getWeaponMount(skeleton, "R", TAVERN_MUG_MESH, mount))
+        bool hasMount = getWeaponMount(skeleton, "R", TAVERN_MUG_MESH, mount);
+        if(!hasMount)
         {
             const TavernMugLimbMount* limb = nullptr;
-            if(!findTavernMugLimbMount(skeleton, limb))
+            hasMount = findTavernMugLimbMount(skeleton, limb);
+            if(hasMount)
+            {
+                mount.mBoneName = limb->mBone;
+                mount.mRotation = Ogre::Quaternion(limb->mW, limb->mX, limb->mY, limb->mZ);
+                mount.mOffset = Ogre::Vector3(limb->mOffsetX, limb->mOffsetY, limb->mOffsetZ);
+                mugScale = limb->mScale;
+            }
+            else
             {
                 OD_LOG_WRN("No bone for the tavern mug of creature=" + creature->getName() + ", skeleton=" + skeleton->getName());
-                return;
             }
-            mount.mBoneName = limb->mBone;
-            mount.mRotation = Ogre::Quaternion(limb->mW, limb->mX, limb->mY, limb->mZ);
-            mount.mOffset = Ogre::Vector3(limb->mOffsetX, limb->mOffsetY, limb->mOffsetZ);
-            mugScale = limb->mScale;
         }
 
-        Ogre::Entity* mugEntity = mSceneManager->createEntity(TAVERN_MUG_PREFIX + creature->getName(), TAVERN_MUG_MESH);
-        Ogre::TagPoint* mugPoint = objectEntity->attachObjectToBone(mount.mBoneName, mugEntity, mount.mRotation, mount.mOffset);
-        if((mugPoint != nullptr) && (mugScale != 1.0f))
-            mugPoint->setScale(mugScale, mugScale, mugScale);
+        if(hasMount)
+        {
+            // Decision 863: a wide tankard that reads from the game camera. Only its girth grows (the y and z axes of the
+            // mesh); its length along x stays, so the rim still reaches the mouth where the drink clips put it
+            Ogre::Entity* mugEntity = mSceneManager->createEntity(TAVERN_MUG_PREFIX + creature->getName(), TAVERN_MUG_MESH);
+            Ogre::TagPoint* mugPoint = objectEntity->attachObjectToBone(mount.mBoneName, mugEntity, mount.mRotation, mount.mOffset);
+            if(mugPoint != nullptr)
+                mugPoint->setScale(mugScale, mugScale * TAVERN_MUG_GIRTH_SCALE, mugScale * TAVERN_MUG_GIRTH_SCALE);
+        }
     }
-    else if(anim == EntityAnimation::knockedout_anim)
+
+    if(anim == EntityAnimation::knockedout_anim)
     {
         if(Ogre::ParticleSystemManager::getSingleton().getTemplate(DUEL_BIRDS_TEMPLATE) == nullptr)
             return;

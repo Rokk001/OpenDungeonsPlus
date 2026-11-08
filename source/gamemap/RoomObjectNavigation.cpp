@@ -8,6 +8,7 @@
 #include "gamemap/GameMap.h"
 #include "rooms/Room.h"
 #include "rooms/RoomPrison.h"
+#include "rooms/RoomTavern.h"
 #include "rooms/RoomInfirmary.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
@@ -435,6 +436,10 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::collect(GameMap& map
             append(entry.second);
         if(room->getType() == RoomType::prison)
             for(const std::pair<Tile* const, BuildingObject*>& entry : static_cast<RoomPrison*>(room)->getFencingObjects())
+                append(entry.second);
+        // The round stools at the ends of the tavern tables stand on the tiles of their table, beside the table object
+        if(room->getType() == RoomType::tavern)
+            for(const std::pair<const RoomTavernSeat, BuildingObject*>& entry : static_cast<RoomTavern*>(room)->getStoolObjects())
                 append(entry.second);
     }
     return result;

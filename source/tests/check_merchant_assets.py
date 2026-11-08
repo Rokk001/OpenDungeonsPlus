@@ -5,7 +5,11 @@ scales of D-6-v2 variant 1; in the room light the textures came out near black (
 texture value: robe 49 -> 30-38 in the screenshot). Owner check 836 (build 48): robe and hood came out light beige/pink
 (rework 2 had lifted them for that 0.7 x light, but at the front table corner the figure gets about 1.0 x: hood texture
 135/109/84 -> 133/106/82 in the screenshot), the hood was a smooth pale sack, the face was not readable from the game
-camera, and the belt with pouch and the scales hanging at the belt were missing (he held the scales).
+camera, and the belt with pouch and the scales hanging at the belt were missing (he held the scales). Owner check 863
+finding 1 (build 0.7.4.51): the robe read as a mottled olive camouflage, too shaggy, face not readable: the cloth
+textures had blue at only 0.70-0.74 x green and the yellow cursor hand light on the front (screen / texture about
+1.0 / 0.94 / 0.64) made them ochre-khaki (robe front 91/63/30) with large hard dark blotches; about 14 long rag strips
+and deep pointed hems all round; the skin (149/122/102) came out as a white blob.
 
 One check per fault
   furniture textures   SalesTable and MerchantShelf use only materials with a texture (the flat ItemWood, ItemWoodLight,
@@ -31,6 +35,14 @@ One check per fault
                        build 48 robe 96, cloak 80, hood 114 beige/pink failed) with a brown hue (red clearly above
                        green, blue clearly below green: the build 48 cloak had blue at 0.94 x green and read pink) and
                        enough fold and wear contrast (standard deviation) not to read as a smooth sack
+  not olive (863)      robe, over-cloak and hood: blue 0.82-0.95 x green, red at least 1.35 x green, the mean hue under the
+                       yellow front light at most 28 degrees (build 51: 32-35), at most 10 % of the pixels yellow-olive
+                       under that light, and no large blotches: the luminance of 32 x 32 pixel blocks varies by a
+                       standard deviation of at most 7 (build 51: 10-11)
+  readable face (863)  the skin texture is a weathered tan (mean luminance 80-105, build 51 128 read as a white blob) and
+                       at least 1.35 x as light as the hood, so the face stands out of the hood
+  not shaggy (863)     at most 6 rag strips hanging at the hem (narrow loose pieces of robe or cloak cloth below 0.5),
+                       each at most 0.2 long (build 51: 15 strips, up to 0.45 long)
   clips and skeleton   Merchant.mesh links Merchant.skeleton with Idle, Walk, CountGold and RubHands
   textures and credits every new texture is a 256 x 256 PNG with a CREDITS row
   bounds               SalesTable and MerchantShelf vertex bounds equal their rows in RoomObjectBounds.h
@@ -40,6 +52,7 @@ Calls (from the repository root; mesh vertex checks need OgreXMLConverter, set O
 """
 from pathlib import Path
 import fnmatch
+import math
 import os
 import re
 import struct
@@ -66,7 +79,6 @@ NEW_TEXTURES = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantBrass'
                 'MerchantWares')
 # Minimum mean luminance (0..255) per texture for the room light (decision 710); build 41 values in brackets
 MIN_LUMINANCE = {'MerchantLeather': 60,    # (39)
-                 'MerchantHide': 110,      # (97)
                  'MerchantTableWood': 50,  # (26)
                  'MerchantWares': 60}      # (50)
 # The table cloth stays a dark stained linen, not the light beige cloth of build 41 (73)
@@ -75,9 +87,29 @@ MAX_CLOTH_LUMINANCE = 70
 CLOTH_LUMINANCE = {'MerchantRobe': (52, 72),    # (49 near black / 96 beige)
                    'MerchantCloak': (48, 68),   # (- / 80 pink)
                    'MerchantHood': (54, 76)}    # (52 / 114 beige)
-CLOTH_MIN_RED_OVER_GREEN = 1.2
-CLOTH_MAX_BLUE_OVER_GREEN = 0.8
+CLOTH_MIN_RED_OVER_GREEN = 1.35       # (decision 836: 1.2; build 51 hood 1.28)
+# Blue against green: below 0.82 the yellow front light turns the cloth khaki-olive (build 51: 0.70-0.74), above 0.95
+# it reads pink (build 48 cloak 0.94 at a much higher luminance)
+CLOTH_BLUE_OVER_GREEN = (0.82, 0.95)
 CLOTH_MIN_STD = 10.0
+# Decision 863: screen / texture factors of the yellow cursor hand light on the robe front in build 51 (sRGB, red = 1)
+FRONT_LIGHT = (1.0, 0.94, 0.64)
+CLOTH_MAX_LIT_HUE = 28.0               # degrees; build 51 robe 32, cloak 33, hood 35
+OLIVE_HUE = (35.0, 90.0)               # yellow-olive hue range of a lit pixel ...
+OLIVE_MIN_SATURATION = 0.15            # ... with at least this saturation
+CLOTH_MAX_OLIVE_SHARE = 0.10
+CLOTH_BLOCK = 32
+CLOTH_MAX_BLOCK_STD = 7.0              # large blotches (build 51: 10.1-10.9)
+# Skin: weathered tan, clearly lighter than the hood (build 51: 128, a white blob in the game light)
+SKIN_LUMINANCE = (80, 105)
+SKIN_OVER_HOOD = 1.35
+# Rag strips: narrow loose pieces of robe or cloak cloth hanging at the hem
+RAG_MATERIALS = ('MerchantRobe', 'MerchantCloak')
+RAG_MAX_TOP = 0.5
+RAG_MAX_WIDTH = 0.1
+RAG_MIN_LENGTH = 0.05
+RAG_MAX_COUNT = 6
+RAG_MAX_LENGTH = 0.2
 # Belt height above the feet for belt, buckle, pouch and the scales hook
 BELT_LOW, BELT_HIGH = 0.5, 0.72
 SCALES_PARENTS = ('Pelvis',)
@@ -131,6 +163,25 @@ def texture_exists(tex):
 # Returns (mean luminance, mean red, mean green, mean blue, luminance standard deviation), 0..255, of an 8-bit grey,
 # RGB or RGBA PNG without interlacing.
 def png_stats(path):
+    return png_analyse(path)[:5]
+
+
+def hue_saturation(r, g, b):
+    hi, lo = max(r, g, b), min(r, g, b)
+    if hi <= 0 or hi == lo:
+        return 0.0, 0.0
+    if hi == r:
+        h = 60.0 * (((g - b) / (hi - lo)) % 6)
+    elif hi == g:
+        h = 60.0 * ((b - r) / (hi - lo) + 2)
+    else:
+        h = 60.0 * ((r - g) / (hi - lo) + 4)
+    s = (hi - lo) / (hi + lo) if hi + lo <= 255 else (hi - lo) / (510.0 - hi - lo)
+    return h, s
+
+
+# png_stats plus (share of yellow-olive pixels under FRONT_LIGHT, standard deviation of the CLOTH_BLOCK block means)
+def png_analyse(path):
     data = (root / path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     at, idat, head = 8, b'', None
@@ -151,6 +202,8 @@ def png_stats(path):
     total = 0.0
     total2 = 0.0
     rgb = [0.0, 0.0, 0.0]
+    olive = 0
+    blocks = {}
     for y in range(height):
         kind = raw[y * (stride + 1)]
         line = bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
@@ -180,10 +233,19 @@ def png_stats(path):
                     rgb[c] += px[c]
             total += lum
             total2 += lum * lum
+            if channels >= 3:
+                h, sat = hue_saturation(px[0] * FRONT_LIGHT[0], px[1] * FRONT_LIGHT[1], px[2] * FRONT_LIGHT[2])
+                if OLIVE_HUE[0] <= h <= OLIVE_HUE[1] and sat >= OLIVE_MIN_SATURATION:
+                    olive += 1
+            key = (x // CLOTH_BLOCK, y // CLOTH_BLOCK)
+            blocks[key] = blocks.get(key, 0.0) + lum
         prev = line
     n = width * height
     mean = total / n
-    return (mean, rgb[0] / n, rgb[1] / n, rgb[2] / n, max(0.0, total2 / n - mean * mean) ** 0.5)
+    means = [v / (CLOTH_BLOCK * CLOTH_BLOCK) for v in blocks.values()]
+    block_mean = sum(means) / len(means)
+    block_std = (sum((v - block_mean) ** 2 for v in means) / len(means)) ** 0.5
+    return (mean, rgb[0] / n, rgb[1] / n, rgb[2] / n, max(0.0, total2 / n - mean * mean) ** 0.5, olive / n, block_std)
 
 
 def png_mean_luminance(path):
@@ -240,6 +302,48 @@ def submesh_positions(tree, material):
             used.update(int(f.get(k)) for k in ('v1', 'v2', 'v3'))
         out.extend(pts[i] for i in sorted(used))
     return out
+
+
+# Faces (vertex position triples) of the submeshes with this material
+def submesh_triangles(tree, material):
+    shared = None
+    out = []
+    for sm in tree.iter('submesh'):
+        if sm.get('material') != material:
+            continue
+        if sm.get('usesharedvertices') == 'true':
+            if shared is None:
+                shared = geometry_positions(tree.find('sharedgeometry'))
+            pts = shared
+        else:
+            pts = geometry_positions(sm.find('geometry'))
+        for f in sm.iter('face'):
+            out.append(tuple(pts[int(f.get(k))] for k in ('v1', 'v2', 'v3')))
+    return out
+
+
+# Connected pieces (vertex position lists) of the faces of these materials; vertices at the same position are joined
+def mesh_pieces(tree, materials):
+    parent = {}
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+    for mat in materials:
+        for tri in submesh_triangles(tree, mat):
+            keys = [tuple(round(c, 4) for c in p) for p in tri]
+            for k in keys:
+                parent.setdefault(k, k)
+            for k in keys[1:]:
+                ra, rb = find(keys[0]), find(k)
+                if ra != rb:
+                    parent[ra] = rb
+    pieces = {}
+    for k in parent:
+        pieces.setdefault(find(k), []).append(k)
+    return list(pieces.values())
 
 
 def positions(tree):
@@ -341,6 +445,17 @@ assert gold, 'Merchant.mesh has no gold tooth'
 width = max(p[0] for p in gold) - min(p[0] for p in gold)
 assert width >= GOLD_TOOTH_MIN, 'the gold tooth is too small to read from the game camera (%.3f wide)' % width
 
+# Not shaggy (decision 863): few short rag strips at the hem
+rags = []
+for piece in mesh_pieces(trees['Merchant'], RAG_MATERIALS):
+    xs = [p[0] for p in piece]
+    ys = [p[1] for p in piece]
+    zs = [p[2] for p in piece]
+    if max(zs) < RAG_MAX_TOP and max(max(xs) - min(xs), max(ys) - min(ys)) < RAG_MAX_WIDTH and max(zs) - min(zs) > RAG_MIN_LENGTH:
+        rags.append(max(zs) - min(zs))
+assert len(rags) <= RAG_MAX_COUNT, 'the robe is shaggy: %d rag strips at the hem (at most %d)' % (len(rags), RAG_MAX_COUNT)
+assert not rags or max(rags) <= RAG_MAX_LENGTH, 'a rag strip is %.2f long (at most %.2f)' % (max(rags), RAG_MAX_LENGTH)
+
 # 6. Beside the table, not in it and not hidden behind it
 t_min_x, t_min_y, t_max_x, t_max_y = object_bounds('SalesTable')
 low = [p for p in positions(trees['Merchant']) if p[2] < TABLE_TOP]
@@ -379,8 +494,22 @@ for mat, (low_value, high_value) in CLOTH_LUMINANCE.items():
     assert value >= low_value, '%s.png is near black in the room light (mean %.0f, needs %d)' % (mat, value, low_value)
     assert value <= high_value, '%s.png reads beige in the room light (mean %.0f, at most %d)' % (mat, value, high_value)
     assert red >= CLOTH_MIN_RED_OVER_GREEN * green, '%s.png is not brown (red %.0f, green %.0f)' % (mat, red, green)
-    assert blue <= CLOTH_MAX_BLUE_OVER_GREEN * green, '%s.png reads pink or grey (blue %.0f, green %.0f)' % (mat, blue, green)
+    assert blue <= CLOTH_BLUE_OVER_GREEN[1] * green, '%s.png reads pink or grey (blue %.0f, green %.0f)' % (mat, blue, green)
+    assert blue >= CLOTH_BLUE_OVER_GREEN[0] * green, \
+        '%s.png turns khaki-olive under the yellow room light (blue %.0f, green %.0f)' % (mat, blue, green)
     assert std >= CLOTH_MIN_STD, '%s.png is a smooth cloth without folds and wear (contrast %.1f)' % (mat, std)
+    olive, block_std = png_analyse(path)[5:]
+    hue = hue_saturation(red * FRONT_LIGHT[0], green * FRONT_LIGHT[1], blue * FRONT_LIGHT[2])[0]
+    assert hue <= CLOTH_MAX_LIT_HUE, '%s.png reads ochre-olive under the front light (hue %.0f, at most %.0f)' % (
+        mat, hue, CLOTH_MAX_LIT_HUE)
+    assert olive <= CLOTH_MAX_OLIVE_SHARE, '%s.png has %.0f %% yellow-olive pixels under the front light' % (mat, 100 * olive)
+    assert block_std <= CLOTH_MAX_BLOCK_STD, \
+        '%s.png has large camouflage blotches (block contrast %.1f, at most %.1f)' % (mat, block_std, CLOTH_MAX_BLOCK_STD)
+skin = png_mean_luminance('materials/textures/MerchantHide.png')
+assert SKIN_LUMINANCE[0] <= skin <= SKIN_LUMINANCE[1], \
+    'MerchantHide.png is no weathered tan skin (mean %.0f, needs %d-%d; lighter reads as a white blob)' % ((skin,) + SKIN_LUMINANCE)
+hood_value = png_mean_luminance('materials/textures/MerchantHood.png')
+assert skin >= SKIN_OVER_HOOD * hood_value, 'the face does not stand out of the hood (skin %.0f, hood %.0f)' % (skin, hood_value)
 for tex, low_value in MIN_LUMINANCE.items():
     value = png_mean_luminance('materials/textures/' + tex + '.png')
     assert value >= low_value, '%s.png is too dark for the room light (mean %.0f, needs %d)' % (tex, value, low_value)

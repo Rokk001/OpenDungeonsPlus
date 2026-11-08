@@ -305,11 +305,12 @@ double sTickTimer = 0.0;
 uint32_t sNextFallenId = 0;
 
 //! \brief Returns the combat state of the creature with that name and creates it (calm, as of now) if it is new
-//! \brief True while the creature plays a seated tavern clip: a weapon in its hand would reach through the table
+//! \brief True while the creature plays a seated tavern clip: a weapon in its hand would reach through the table. The
+//! standing Drink counts too: the mug sits on the same hand bone as the weapon and was buried in it (decision 863).
 bool playsSeatClip(const Creature* creature)
 {
     const Ogre::AnimationState* animState = creature->getAnimationState();
-    return (animState != nullptr) && EntityAnimation::isSeatClip(animState->getAnimationName());
+    return (animState != nullptr) && EntityAnimation::hidesWeapons(animState->getAnimationName());
 }
 
 //! \brief Shows or hides the models of both weapons of the creature

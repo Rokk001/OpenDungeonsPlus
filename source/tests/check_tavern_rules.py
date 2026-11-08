@@ -573,6 +573,13 @@ public:
     bool pickFreeSeat(const Creature& creature, RoomTavernSeat& seat) const;
     static bool isLargeGuest(const Creature& creature);
     static uint32_t getPlacesOf(const Creature& creature);
+    static bool usesStool(const Creature& creature);
+    static bool isStoolSeat(const RoomTavernSeat& seat);
+    bool isFreeSeatFor(const Creature& creature, const RoomTavernSeat& seat) const;
+    // The stools of decision 863 need the furniture and the floor of the room; they are worked out in
+    // check_tavern_stools_863.py, the guests of this probe all sit on benches
+    bool isFreeStool(const Creature& creature, const RoomTavernSeat& seat) const { return false; }
+    bool isPlaceBlockedByStool(const RoomTavernSeat& seat, uint32_t places) const;
     void tryStartGame(const RoomTavernSeat& seat);
     void startGame(const RoomTavernSeat& seatA, const RoomTavernSeat& seatB);
     void playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
@@ -790,7 +797,7 @@ static void checkDrinks()
         { Fixture f; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); RoomTavernSpot& spot = f.room.findSpotOf(c)->second; spot.mDrinks = n - 1;
           Random::script({ thresholds[n - 1] - 0.01 }, {});
           f.room.finishDrink(c->mTile, spot);
-          expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 4, "drink " + std::to_string(n) + ": a roll just below " + std::to_string(thresholds[n - 1]) + " takes another drink for 4 turns"); }
+          expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 14, "drink " + std::to_string(n) + ": a roll just below " + std::to_string(thresholds[n - 1]) + " takes another drink for 14 turns"); }
         { Fixture f; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); RoomTavernSpot& spot = f.room.findSpotOf(c)->second; spot.mDrinks = n - 1;
           Random::script({ thresholds[n - 1] + 0.01 }, {});
           f.room.finishDrink(c->mTile, spot);
@@ -804,7 +811,7 @@ static void checkDrinks()
       Random::script({ 10.0 }, {});
       f.room.finishDrink(c->mTile, spot);
       expect(spot.mState == TavernGuestState::drinking, "a creature without thirst still drinks when the roll says so"); }
-    // Decision 835: a beer lasts BeerDrinkTurns (42 turns, 30 s at 1.4 turns per second), a water DrinkTurns (4 turns)
+    // Decisions 835 and 866: beer lasts BeerDrinkTurns (42 turns, 30 s), water WaterDrinkTurns (14 turns, 10 s)
     { Fixture f; f.seat.beerLevel = 1; f.seat.gold = 100; f.map.treasury = 100; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0);
       RoomTavernSpot& spot = f.room.findSpotOf(c)->second;
       Random::script({ 1.0 }, {}); f.room.finishDrink(c->mTile, spot);
@@ -816,11 +823,11 @@ static void checkDrinks()
     { Fixture f; f.seat.beerLevel = 1; f.room.mPayer = TavernPayer::creature; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); c->mGold = 6;
       RoomTavernSpot& spot = f.room.findSpotOf(c)->second;
       Random::script({ 1.0 }, {}); f.room.finishDrink(c->mTile, spot);
-      expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 4, "a purse without the price of the next beer gets water for 4 turns"); }
+      expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 14, "a purse without the price of the next beer gets water for 14 turns"); }
     { Fixture f; f.seat.beerLevel = 0; f.seat.gold = 100; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0);
-      expect(f.room.nextDrinkTurns(*c) == 4, "without Beer the water keeps DrinkTurns (4 turns)");
+      expect(f.room.nextDrinkTurns(*c) == 14, "without Beer the water lasts WaterDrinkTurns (14 turns)");
       f.seat.beerLevel = 1; f.seat.gold = 4;
-      expect(f.room.nextDrinkTurns(*c) == 4, "an empty treasury serves water for 4 turns");
+      expect(f.room.nextDrinkTurns(*c) == 14, "an empty treasury serves water for 14 turns");
       f.seat.gold = 5;
       expect(f.room.nextDrinkTurns(*c) == 42, "a treasury with the price serves a beer for 42 turns"); }
 }
@@ -1230,8 +1237,15 @@ constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) '
 constants += '\n' + find_line(room_cpp, r'^const float TAVERN_SEAT_SPACING = [^;]+;$')
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
 helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'int32_t getUpTurns(', 'int32_t randomDuelTurns(', 'Ogre::Vector3 directionTo('])
+# The stool guests of decision 863: their body table (the struct and the table up to its closing brace) and the place
+# rules of the stools
+stool_start = room_cpp.index('struct TavernStoolBody')
+stool_end = room_cpp.index('\n};\n', room_cpp.index('const TavernStoolBody TAVERN_STOOL_BODIES[] =')) + 4
+helpers += '\n' + room_cpp[stool_start:stool_end] + '\n'.join(extract(room_cpp, h) for h in [
+    'const TavernStoolBody* findStoolBody(', 'bool stoolReachesPlace(', 'uint32_t seatSide('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
-    'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
+    'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'bool RoomTavern::usesStool(',
+    'bool RoomTavern::isStoolSeat(', 'bool RoomTavern::isFreeSeatFor(', 'bool RoomTavern::isPlaceBlockedByStool(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
     'void RoomTavern::setSpotState(', 'void RoomTavern::setSpotDone(', 'bool RoomTavern::isGuestDisturbed(', 'void RoomTavern::upkeepSpots(',
     'void RoomTavern::abortDisturbedGuests(', 'bool RoomTavern::payForBeer(', 'int32_t RoomTavern::nextDrinkTurns(', 'bool RoomTavern::hasDrinkingTableMate(', 'void RoomTavern::finishDrink(', 'void RoomTavern::tryStartGame(',
     'void RoomTavern::startGame(', 'void RoomTavern::playContestTurn(', 'void RoomTavern::playDuelTurn(', 'void RoomTavern::cheerSpectators(',

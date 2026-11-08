@@ -65,6 +65,47 @@ const std::string TAVERN_COUNTER_MESH = "TavernCounter";
 const std::string TAVERN_KEG_MESH = "TavernKeg";
 //! \brief Mesh name of the table on a tavern tile that lies inside the room.
 const std::string TAVERN_TABLE_MESH = "TavernTable";
+//! Mesh of the round stool at each end of a table (decision 863, built by tools/tavern-meshes/make_tavern_stool.py)
+const std::string TAVERN_STOOL_MESH = "TavernStool";
+//! \brief A stool stands this far from the middle of its table along the table, in tiles: just beyond the ends of the
+//! benches (0.656), still on the tiles of the table, so that its guest looks along the table to its middle.
+const float TAVERN_STOOL_DISTANCE = 0.8f;
+//! \brief How far the guests of the benches of a table reach with all their seated clips, measured from the middle of the
+//! table along it and across it, at the largest creature scale (1.1); a stool guest of another table keeps its footprint
+//! outside. Measured on all visiting models that sit on benches; checked by check_tavern_stools_863.py.
+const float TAVERN_BENCH_REACH_ALONG = 1.48f;
+const float TAVERN_BENCH_REACH_ACROSS = 1.51f;
+//! \brief The footprint of a stool guest is tested on points this far apart (and on its edges), in tiles.
+const float FOOTPRINT_SAMPLE_STEP = 0.25f;
+//! \brief A creature that sits on a stool and the floor its seated clips cover there (decision 863). The models are those
+//! whose seated clips rest the body on the seat instead of sitting on legs (RESTING_MODELS of
+//! tools/author_tavern_seats.py): many legs, wings, tails, large bodies. mBlockedPlaces is the number of bench places at
+//! the end of the stool, on each bench, that the seated body reaches (they stay free while it sits; 4 is the whole
+//! bench). mFront, mBack and mHalfWidth bound the body in all frames of the seven seated clips at level scale 1: towards
+//! the table, away from it and to the side. Measured on the models; checked by check_tavern_stools_863.py.
+struct TavernStoolBody
+{
+    const char* mMesh;
+    uint32_t mBlockedPlaces;
+    float mFront;
+    float mBack;
+    float mHalfWidth;
+};
+
+const TavernStoolBody TAVERN_STOOL_BODIES[] =
+{
+    { "CaveHornet.mesh", 1, 0.13f, 0.12f, 0.26f },
+    { "Kreatur.mesh", 4, 0.66f, 1.23f, 0.70f },
+    { "LavaSpawn.mesh", 4, 0.42f, 0.96f, 0.98f },
+    { "Rat.mesh", 1, 0.12f, 0.47f, 0.37f },
+    { "Roach.mesh", 2, 0.15f, 0.57f, 0.39f },
+    { "Scarab.mesh", 2, 0.23f, 0.86f, 0.43f },
+    { "Slime.mesh", 1, 0.14f, 0.30f, 0.23f },
+    { "Spider.mesh", 1, 0.20f, 0.56f, 0.42f },
+    { "TentacleAlbine.mesh", 2, 0.35f, 0.24f, 0.33f },
+    { "TentacleGreen.mesh", 2, 0.35f, 0.24f, 0.33f },
+    { "Wyvern.mesh", 2, 0.38f, 0.69f, 0.49f }
+};
 //! \brief Scale of the table mesh: across, the table with its two benches is 1.19 tiles wide unscaled and so ends at the
 //! edges of its tiles; along, the two tiles long table is 1.56 tiles unscaled.
 const float TAVERN_TABLE_SCALE = 0.84f;
@@ -184,6 +225,41 @@ const TavernLyingBody TAVERN_LYING_BODY_DEFAULT = { "", -0.49f, 1.54f, 0.68f };
 //! \brief The loser walks this far (tiles) past the place it falls on and turns back to it, so that it looks towards its
 //! table when it goes down and its body falls away from the table.
 const float KO_TURN_STEP = 0.15f;
+//! \brief The stool body of a creature, nullptr for a creature that sits on a bench.
+//! \param creature The creature.
+const TavernStoolBody* findStoolBody(const Creature& creature)
+{
+    const CreatureDefinition* definition = creature.getDefinition();
+    if(definition == nullptr)
+        return nullptr;
+
+    for(const TavernStoolBody& body : TAVERN_STOOL_BODIES)
+    {
+        if(definition->getMeshName() == body.mMesh)
+            return &body;
+    }
+    return nullptr;
+}
+//! \brief True when a stool guest that reaches blockedPlaces bench places from the end of its stool reaches the place.
+//! \param stoolIndex The stool place, 8 (at the end of the places 0 and 4) or 9 (at the end of 3 and 7).
+//! \param blockedPlaces The places it reaches on each bench.
+//! \param place A bench place (0 to 7).
+bool stoolReachesPlace(uint32_t stoolIndex, uint32_t blockedPlaces, uint32_t place)
+{
+    const uint32_t along = place % TAVERN_SEATS_PER_BENCH;
+    if(stoolIndex == TAVERN_SEATS_PER_TABLE)
+        return along < blockedPlaces;
+    return along + blockedPlaces >= TAVERN_SEATS_PER_BENCH;
+}
+//! \brief The side of the table a place belongs to: 0 and 1 the benches, 2 and 3 the stools. Two guests on different
+//! benches, or on the two stools, face each other.
+//! \param index The place at the table.
+uint32_t seatSide(uint32_t index)
+{
+    if(index < TAVERN_SEATS_PER_TABLE)
+        return index / TAVERN_SEATS_PER_BENCH;
+    return 2 + (index - TAVERN_SEATS_PER_TABLE);
+}
 //! \brief Scale of the percent values of the [Tavern] block.
 const double PERCENT_SCALE = 100.0;
 //! \brief A squared direction shorter than this has no usable direction.
@@ -260,17 +336,23 @@ Ogre::Vector3 directionTo(const Creature& from, const Ogre::Vector3& target)
 }
 
 //! \brief The place of a seat relative to the middle of its table. The four places of a bench lie TAVERN_SEAT_SPACING
-//! apart along the table, symmetric around its middle; a large guest sits in the middle of the places it takes.
+//! apart along the table, symmetric around its middle; a large guest sits in the middle of the places it takes. The two
+//! stools stand TAVERN_STOOL_DISTANCE from the middle along the table, 8 beyond the places 0 and 4, 9 beyond 3 and 7.
 //! \param index The number of the place at the table.
-//! \param places The number of places the guest takes, starting at the given one.
+//! \param places The number of places the guest takes, starting at the given one (not used for a stool).
 //! \param angleDegrees The rotation of the table.
 Ogre::Vector2 seatOffset(uint32_t index, uint32_t places, double angleDegrees)
 {
-    const float x = (index < TAVERN_SEATS_PER_BENCH) ? TAVERN_BENCH_OFFSET : -TAVERN_BENCH_OFFSET;
+    float x = (index < TAVERN_SEATS_PER_BENCH) ? TAVERN_BENCH_OFFSET : -TAVERN_BENCH_OFFSET;
     const float place = static_cast<float>(index % TAVERN_SEATS_PER_BENCH);
     float y = (0.5f * static_cast<float>(TAVERN_SEATS_PER_BENCH - 1) - place) * TAVERN_SEAT_SPACING;
     if(places > 1)
         y -= 0.5f * static_cast<float>(places - 1) * TAVERN_SEAT_SPACING;
+    if(index >= TAVERN_SEATS_PER_TABLE)
+    {
+        x = 0.0f;
+        y = (index == TAVERN_SEATS_PER_TABLE) ? TAVERN_STOOL_DISTANCE : -TAVERN_STOOL_DISTANCE;
+    }
 
     const double angle = angleDegrees * DEGREES_TO_RADIANS;
     const float cosine = static_cast<float>(std::cos(angle));
@@ -685,7 +767,7 @@ std::vector<Tile*> RoomTavern::getTableTiles() const
 }
 
 //! \brief True when the seat is at a table of the room and can take a guest: its bench has no wall behind it and all the
-//! places the guest needs, starting at the seat, are free on that bench.
+//! places the guest needs, starting at the seat, are free on that bench and out of reach of a guest on a stool.
 bool RoomTavern::isFreeSeat(const RoomTavernSeat& seat, uint32_t places) const
 {
     if((seat.mTable == nullptr) || (seat.mIndex >= TAVERN_SEATS_PER_TABLE) || (places < 1))
@@ -698,6 +780,10 @@ bool RoomTavern::isFreeSeat(const RoomTavernSeat& seat, uint32_t places) const
 
     // A bench with a wall behind it stays empty
     if(isBenchBlocked(seat.mTable, bench))
+        return false;
+
+    // The places a guest on a stool of this table reaches stay free (decision 863)
+    if(isPlaceBlockedByStool(seat, places))
         return false;
 
     // A guest is kept under its first place and covers the places after it
@@ -725,6 +811,255 @@ bool RoomTavern::isBenchBlocked(const Tile* table, uint32_t bench) const
     return isBenchBehindWall(getGameMap(), *table, object->second->getRotationAngle(), bench);
 }
 
+bool RoomTavern::usesStool(const Creature& creature)
+{
+    return findStoolBody(creature) != nullptr;
+}
+
+bool RoomTavern::isStoolSeat(const RoomTavernSeat& seat)
+{
+    return (seat.mIndex >= TAVERN_SEATS_PER_TABLE) && (seat.mIndex < TAVERN_PLACES_PER_TABLE);
+}
+
+//! \brief A stool guest may only take a free stool, every other guest only free places of a bench.
+bool RoomTavern::isFreeSeatFor(const Creature& creature, const RoomTavernSeat& seat) const
+{
+    if(usesStool(creature))
+        return isStoolSeat(seat) && isFreeStool(creature, seat);
+
+    return !isStoolSeat(seat) && isFreeSeat(seat, getPlacesOf(creature));
+}
+
+//! \brief The stool is free, the bench places its guest reaches are free and its footprint touches nobody and nothing.
+bool RoomTavern::isFreeStool(const Creature& creature, const RoomTavernSeat& seat) const
+{
+    const TavernStoolBody* body = findStoolBody(creature);
+    if((body == nullptr) || !isStoolSeat(seat) || (seat.mTable == nullptr) ||
+       (mBuildingObjects.find(seat.mTable) == mBuildingObjects.end()) || (mSpots.find(seat) != mSpots.end()))
+        return false;
+
+    // The bench places at the end of the stool that its seated body reaches must be free, also of a large guest that
+    // covers them from an earlier place
+    for(const std::pair<const RoomTavernSeat, RoomTavernSpot>& entry : mSpots)
+    {
+        if((entry.first.mTable != seat.mTable) || isStoolSeat(entry.first))
+            continue;
+
+        for(uint32_t place = entry.first.mIndex; place < entry.first.mIndex + entry.second.mPlaces; ++place)
+        {
+            if(stoolReachesPlace(seat.mIndex, body->mBlockedPlaces, place))
+                return false;
+        }
+    }
+
+    Ogre::Vector2 minimum;
+    Ogre::Vector2 maximum;
+    if(!getStoolFootprint(creature, seat, minimum, maximum))
+        return false;
+
+    // The footprint never overlaps the footprint of a guest on another stool of the room
+    for(const std::pair<const RoomTavernSeat, RoomTavernSpot>& entry : mSpots)
+    {
+        if(!isStoolSeat(entry.first) || (entry.second.mCreature == nullptr) || (entry.second.mCreature == &creature))
+            continue;
+
+        Ogre::Vector2 otherMinimum;
+        Ogre::Vector2 otherMaximum;
+        if(!getStoolFootprint(*entry.second.mCreature, entry.first, otherMinimum, otherMaximum))
+            continue;
+
+        if((minimum.x < otherMaximum.x) && (otherMinimum.x < maximum.x) && (minimum.y < otherMaximum.y) &&
+           (otherMinimum.y < maximum.y))
+            return false;
+    }
+
+    // Every point of the footprint lies on a tile of this room without furniture (the tiles of its own table excepted)
+    // and outside the reach of the guests of every other table
+    const Tile* secondTile = nullptr;
+    std::map<Tile*, BuildingObject*>::const_iterator ownTable = mBuildingObjects.find(seat.mTable);
+    secondTile = tableSecondTile(getGameMap(), *seat.mTable, ownTable->second->getRotationAngle());
+    const int32_t stepsX = static_cast<int32_t>(std::ceil((maximum.x - minimum.x) / FOOTPRINT_SAMPLE_STEP));
+    const int32_t stepsY = static_cast<int32_t>(std::ceil((maximum.y - minimum.y) / FOOTPRINT_SAMPLE_STEP));
+    for(int32_t ix = 0; ix <= stepsX; ++ix)
+    {
+        for(int32_t iy = 0; iy <= stepsY; ++iy)
+        {
+            const Ogre::Vector2 point(
+                minimum.x + (maximum.x - minimum.x) * static_cast<float>(ix) / static_cast<float>(std::max(stepsX, 1)),
+                minimum.y + (maximum.y - minimum.y) * static_cast<float>(iy) / static_cast<float>(std::max(stepsY, 1)));
+            Tile* tile = getGameMap()->getTile(Helper::round(point.x), Helper::round(point.y));
+            if((tile == nullptr) || (tile->getCoveringRoom() != this))
+                return false;
+
+            if((tile != seat.mTable) && (tile != secondTile) && hasFurnitureOn(tile))
+                return false;
+
+            for(const std::pair<Tile* const, BuildingObject*>& entry : mBuildingObjects)
+            {
+                if((entry.first == seat.mTable) || (entry.second->getMeshName() != TAVERN_TABLE_MESH))
+                    continue;
+
+                const double angle = entry.second->getRotationAngle() * DEGREES_TO_RADIANS;
+                const float dx = point.x - entry.second->getPosition().x;
+                const float dy = point.y - entry.second->getPosition().y;
+                const float along = -dx * static_cast<float>(std::sin(angle)) + dy * static_cast<float>(std::cos(angle));
+                const float across = dx * static_cast<float>(std::cos(angle)) + dy * static_cast<float>(std::sin(angle));
+                if((std::abs(along) < TAVERN_BENCH_REACH_ALONG) && (std::abs(across) < TAVERN_BENCH_REACH_ACROSS))
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool RoomTavern::isPlaceBlockedByStool(const RoomTavernSeat& seat, uint32_t places) const
+{
+    for(uint32_t stool = TAVERN_SEATS_PER_TABLE; stool < TAVERN_PLACES_PER_TABLE; ++stool)
+    {
+        std::map<RoomTavernSeat, RoomTavernSpot>::const_iterator guest = mSpots.find(RoomTavernSeat(seat.mTable, stool));
+        if((guest == mSpots.end()) || (guest->second.mCreature == nullptr))
+            continue;
+
+        const TavernStoolBody* body = findStoolBody(*guest->second.mCreature);
+        // A guest of a save that sits on a stool without a stool body reaches the whole table
+        const uint32_t blocked = (body != nullptr) ? body->mBlockedPlaces : TAVERN_SEATS_PER_BENCH;
+        for(uint32_t place = seat.mIndex; place < seat.mIndex + places; ++place)
+        {
+            if(stoolReachesPlace(stool, blocked, place))
+                return true;
+        }
+    }
+    return false;
+}
+
+bool RoomTavern::getStoolFootprint(const Creature& creature, const RoomTavernSeat& seat, Ogre::Vector2& minimum,
+    Ogre::Vector2& maximum) const
+{
+    const TavernStoolBody* body = findStoolBody(creature);
+    if(body == nullptr)
+        return false;
+
+    // The guest looks along the table; its body reaches mFront towards the table, mBack away from it, mHalfWidth aside
+    const float scale = static_cast<float>(creature.getLevelScale());
+    const Ogre::Vector2 position = getSeatPosition(seat, 1);
+    const Ogre::Vector3 facing = getAcrossTableDirection(seat);
+    const Ogre::Vector2 forward(facing.x, facing.y);
+    const Ogre::Vector2 side(-facing.y, facing.x);
+    const Ogre::Vector2 corners[] =
+    {
+        position + forward * (body->mFront * scale) + side * (body->mHalfWidth * scale),
+        position + forward * (body->mFront * scale) - side * (body->mHalfWidth * scale),
+        position - forward * (body->mBack * scale) + side * (body->mHalfWidth * scale),
+        position - forward * (body->mBack * scale) - side * (body->mHalfWidth * scale)
+    };
+    minimum = corners[0];
+    maximum = corners[0];
+    for(const Ogre::Vector2& corner : corners)
+    {
+        minimum.makeFloor(corner);
+        maximum.makeCeil(corner);
+    }
+    return true;
+}
+
+std::vector<RoomObjectPath::Obstacle> RoomTavern::seatObstacles(Creature& creature, const RoomTavernSeat& seat) const
+{
+    std::map<Tile*, BuildingObject*>::const_iterator table = mBuildingObjects.find(seat.mTable);
+    std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::bodyObstacles(creature,
+        (table != mBuildingObjects.end()) ? table->second : nullptr);
+    std::map<RoomTavernSeat, BuildingObject*>::const_iterator stool = mStoolObjects.find(seat);
+    if(stool == mStoolObjects.end())
+        return obstacles;
+
+    // The stool of the seat is the piece the guest sits on: it stands where the stool stands
+    const Ogre::Vector2 stoolPosition(stool->second->getPosition().x, stool->second->getPosition().y);
+    for(std::vector<RoomObjectPath::Obstacle>::iterator it = obstacles.begin(); it != obstacles.end();)
+    {
+        if(it->position.squaredDistance(stoolPosition) < static_cast<float>(DIRECTION_EPSILON))
+            it = obstacles.erase(it);
+        else
+            ++it;
+    }
+    return obstacles;
+}
+
+void RoomTavern::updateStools(GameMap* gameMap)
+{
+    if(!getIsOnServerMap())
+        return;
+
+    if(gameMap == nullptr)
+        gameMap = getGameMap();
+
+    // Stools of tables that are gone or were turned go away
+    bool changed = false;
+    std::map<RoomTavernSeat, BuildingObject*>::iterator it = mStoolObjects.begin();
+    while(it != mStoolObjects.end())
+    {
+        std::map<Tile*, BuildingObject*>::const_iterator table = mBuildingObjects.find(it->first.mTable);
+        bool keep = (table != mBuildingObjects.end()) && (table->second->getMeshName() == TAVERN_TABLE_MESH);
+        if(keep)
+        {
+            const Ogre::Vector2 wanted = getSeatPosition(it->first, 1);
+            const Ogre::Vector2 placed(it->second->getPosition().x, it->second->getPosition().y);
+            keep = (wanted.squaredDistance(placed) < static_cast<float>(DIRECTION_EPSILON)) &&
+                (std::abs(static_cast<double>(it->second->getRotationAngle()) - table->second->getRotationAngle()) < ANGLE_EPSILON);
+        }
+        if(keep)
+        {
+            ++it;
+            continue;
+        }
+
+        it->second->removeFromGameMap();
+        it->second->deleteYourself();
+        it = mStoolObjects.erase(it);
+        changed = true;
+    }
+
+    // Every table gets a stool at each of its two ends, turned like the table
+    for(Tile* table : getTableTiles())
+    {
+        const double angle = mBuildingObjects.find(table)->second->getRotationAngle();
+        for(uint32_t index = TAVERN_SEATS_PER_TABLE; index < TAVERN_PLACES_PER_TABLE; ++index)
+        {
+            const RoomTavernSeat seat(table, index);
+            if(mStoolObjects.find(seat) != mStoolObjects.end())
+                continue;
+
+            const Ogre::Vector2 position = getSeatPosition(seat, 1);
+            Tile* tile = gameMap->getTile(Helper::round(position.x), Helper::round(position.y));
+            if(tile == nullptr)
+                continue;
+
+            BuildingObject* stool = new BuildingObject(gameMap, *this, TAVERN_STOOL_MESH, tile, position.x, position.y, 0.0f,
+                static_cast<Ogre::Real>(angle), false);
+            stool->addToGameMap(gameMap);
+            stool->setPosition(stool->getPosition(), gameMap);
+            stool->createMesh();
+            mStoolObjects[seat] = stool;
+            changed = true;
+        }
+    }
+
+    // A creature on its way may now walk into a stool: it looks for its way again, like for any new room object
+    if(changed)
+    {
+        for(Creature* creature : gameMap->getCreatures())
+            creature->checkWalkPathValid(true);
+    }
+}
+
+void RoomTavern::removeStools()
+{
+    for(std::pair<const RoomTavernSeat, BuildingObject*>& entry : mStoolObjects)
+    {
+        entry.second->removeFromGameMap();
+        entry.second->deleteYourself();
+    }
+    mStoolObjects.clear();
+}
+
 //! \brief True when the creature is large (a bed of two by two tiles) and takes more than one place.
 bool RoomTavern::isLargeGuest(const Creature& creature)
 {
@@ -736,7 +1071,8 @@ bool RoomTavern::isLargeGuest(const Creature& creature)
 //! seated width covers.
 uint32_t RoomTavern::getPlacesOf(const Creature& creature)
 {
-    if(!isLargeGuest(creature))
+    // A stool guest takes its stool, whatever its size
+    if(!isLargeGuest(creature) || usesStool(creature))
         return 1;
 
     // Width of the seated body in tiles, measured on the models (a bench is 1.31 tiles long). The guests share a bench
@@ -767,7 +1103,6 @@ uint32_t RoomTavern::getPlacesOf(const Creature& creature)
 //! \brief Picks a free seat for the creature; a table with a guest comes first, then the nearest table.
 bool RoomTavern::pickFreeSeat(const Creature& creature, RoomTavernSeat& seat) const
 {
-    const uint32_t places = getPlacesOf(creature);
     Tile* creatureTile = creature.getPositionTile();
     int32_t bestDistance = std::numeric_limits<int32_t>::max();
     bool bestHasGuest = false;
@@ -795,9 +1130,10 @@ bool RoomTavern::pickFreeSeat(const Creature& creature, RoomTavernSeat& seat) co
         if(found && bestHasGuest && !hasGuest)
             continue;
 
-        for(uint32_t index = 0; index < TAVERN_SEATS_PER_TABLE; ++index)
+        // A stool guest looks only at the stools, every other guest only at the benches (isFreeSeatFor)
+        for(uint32_t index = 0; index < TAVERN_PLACES_PER_TABLE; ++index)
         {
-            if(!isFreeSeat(RoomTavernSeat(table, index), places))
+            if(!isFreeSeatFor(creature, RoomTavernSeat(table, index)))
                 continue;
 
             seat = RoomTavernSeat(table, index);
@@ -838,6 +1174,12 @@ Ogre::Vector3 RoomTavern::getAcrossTableDirection(const RoomTavernSeat& seat) co
 
     // The first bench lies on the +x side of the table, so its guests look towards -x; the second bench looks back
     const double angle = angleDegrees * DEGREES_TO_RADIANS;
+    if(isStoolSeat(seat))
+    {
+        // A stool guest looks along the table to its middle: from the stool on +y towards -y, from the other one back
+        const float along = (seat.mIndex == TAVERN_SEATS_PER_TABLE) ? -1.0f : 1.0f;
+        return Ogre::Vector3(-along * static_cast<float>(std::sin(angle)), along * static_cast<float>(std::cos(angle)), 0.0f);
+    }
     const float across = (seat.mIndex < TAVERN_SEATS_PER_BENCH) ? -1.0f : 1.0f;
     return Ogre::Vector3(across * static_cast<float>(std::cos(angle)), across * static_cast<float>(std::sin(angle)), 0.0f);
 }
@@ -873,8 +1215,8 @@ void RoomTavern::findSeatStagingPoints(Creature& creature, const RoomTavernSeat&
     if(table == mBuildingObjects.end())
         return;
 
-    // The table of the seat is the object the creature may enter; everything else stays an obstacle
-    const std::vector<RoomObjectPath::Obstacle> obstacles = RoomObjectNavigation::bodyObstacles(creature, table->second);
+    // The table and the stool of the seat are the objects the creature may enter; everything else stays an obstacle
+    const std::vector<RoomObjectPath::Obstacle> obstacles = seatObstacles(creature, seat);
     const Ogre::Vector2 target = getSeatPosition(seat, places);
     // Away from the table means across it, not along: the outer places of a long bench lie far from its middle
     const Ogre::Vector3 across = getAcrossTableDirection(seat);
@@ -962,10 +1304,10 @@ bool RoomTavern::walkToOtherSeat(Creature& creature, const RoomTavernSeat& seat)
     const uint32_t places = own->second.mPlaces;
     for(Tile* table : getTableTiles())
     {
-        for(uint32_t index = 0; index < TAVERN_SEATS_PER_TABLE; ++index)
+        for(uint32_t index = 0; index < TAVERN_PLACES_PER_TABLE; ++index)
         {
             const RoomTavernSeat candidate(table, index);
-            if((candidate == seat) || !isFreeSeat(candidate, places) || !walkToSeat(creature, candidate, places))
+            if((candidate == seat) || !isFreeSeatFor(creature, candidate) || !walkToSeat(creature, candidate, places))
                 continue;
 
             const RoomTavernSpot spot = own->second;
@@ -1072,7 +1414,7 @@ bool RoomTavern::addCreatureUsingRoom(Creature* creature)
     const std::vector<Tile*> tables = getTableTiles();
     RoomTavernSeat seat;
     std::map<std::string, RoomTavernPendingSpot>::iterator pending = mPendingSpots.find(creature->getName());
-    if((pending != mPendingSpots.end()) && isFreeSeat(pending->second.mSeat, places) &&
+    if((pending != mPendingSpots.end()) && isFreeSeatFor(*creature, pending->second.mSeat) &&
        (std::find(tables.begin(), tables.end(), pending->second.mSeat.mTable) != tables.end()))
     {
         seat = pending->second.mSeat;
@@ -1506,7 +1848,7 @@ bool RoomTavern::payForBeer(Creature& creature, bool& noCoin)
     return false;
 }
 
-//! \brief The turns the next drink of the guest lasts: a beer BeerDrinkTurns (30 seconds), water DrinkTurns. A beer is
+//! \brief The turns the next drink of the guest lasts: a beer BeerDrinkTurns (30 seconds), water WaterDrinkTurns (10 seconds). A beer is
 //! expected when the tavern serves beer and whoever pays has the price at hand; the drink is paid when it is finished.
 int32_t RoomTavern::nextDrinkTurns(const Creature& creature) const
 {
@@ -1517,7 +1859,7 @@ int32_t RoomTavern::nextDrinkTurns(const Creature& creature) const
     else if(beer)
         beer = creature.getGoldCarried() >= price;
 
-    const int32_t turns = static_cast<int32_t>(std::floor(getTavernValue(beer ? "BeerDrinkTurns" : "DrinkTurns") + 0.5));
+    const int32_t turns = static_cast<int32_t>(std::floor(getTavernValue(beer ? "BeerDrinkTurns" : "WaterDrinkTurns") + 0.5));
     return std::max(turns, static_cast<int32_t>(1));
 }
 
@@ -1603,10 +1945,10 @@ void RoomTavern::tryStartGame(const RoomTavernSeat& seat)
         return;
 
     // A guest at the same table that is done too (and waits for the turns to pass) and of the same seat of the keeper;
-    // one on the opposite bench comes first, so that the two can face each other
+    // one on the opposite bench (or, from a stool, on the other stool) comes first, so that the two can face each other
     std::vector<RoomTavernSeat> partners;
     std::vector<RoomTavernSeat> oppositePartners;
-    for(uint32_t index = 0; index < TAVERN_SEATS_PER_TABLE; ++index)
+    for(uint32_t index = 0; index < TAVERN_PLACES_PER_TABLE; ++index)
     {
         if(index == seat.mIndex)
             continue;
@@ -1622,7 +1964,9 @@ void RoomTavern::tryStartGame(const RoomTavernSeat& seat)
         if(other->second.mCreature->getSeat() != own->second.mCreature->getSeat())
             continue;
 
-        if((index / TAVERN_SEATS_PER_BENCH) != (seat.mIndex / TAVERN_SEATS_PER_BENCH))
+        const uint32_t ownSide = seatSide(seat.mIndex);
+        const uint32_t otherSide = seatSide(index);
+        if((ownSide != otherSide) && ((ownSide < 2) == (otherSide < 2)))
             oppositePartners.push_back(otherSeat);
         else
             partners.push_back(otherSeat);
@@ -1948,7 +2292,7 @@ bool RoomTavern::fallNextToBench(RoomTavernSpot& spot)
     const float scale = static_cast<float>(creature->getLevelScale());
     const std::vector<RoomObjectPath::Obstacle> lying = RoomObjectNavigation::collect(*getGameMap(), body->mHalfWidth * scale);
     const std::vector<RoomObjectPath::Obstacle> solid = RoomObjectNavigation::bodyObstacles(*creature);
-    const std::vector<RoomObjectPath::Obstacle> onTheWay = RoomObjectNavigation::bodyObstacles(*creature, ownTable->second);
+    const std::vector<RoomObjectPath::Obstacle> onTheWay = seatObstacles(*creature, own->first);
     Tile* best = nullptr;
     Ogre::Vector2 bestPoint = position;
     Ogre::Vector2 bestTurn = position;
@@ -2174,8 +2518,10 @@ void RoomTavern::absorbRoom(Room* r)
         mPayer = other->mPayer;
     }
 
-    // The figure of the other room goes away; updateActiveSpots puts one on the counter of the merged room
+    // The figure of the other room goes away; updateActiveSpots puts one on the counter of the merged room. Its stools go
+    // too: updateActiveSpots puts them at the tables of the merged room
     other->removeInnkeeper();
+    other->removeStools();
     other->mCounterTile = nullptr;
 
     Room::absorbRoom(r);
@@ -2217,6 +2563,7 @@ bool RoomTavern::removeCoveredTile(Tile* t)
 void RoomTavern::removeFromGameMap(GameMap* gameMap)
 {
     removeInnkeeper();
+    removeStools();
     Room::removeFromGameMap(gameMap);
 }
 
@@ -2309,6 +2656,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
         removeInnkeeper();
         mLayoutTiles.clear();
         mLayoutCounter = nullptr;
+        updateStools(gameMap);
         // Nothing is left to sit on: the guests go to another tavern or back to work
         standUpGuests();
         return;
@@ -2326,6 +2674,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
     const bool layoutChanged = (orderedTiles != mLayoutTiles) || (mCounterTile != mLayoutCounter);
     if(!layoutChanged && mSavedFurniture.empty())
     {
+        updateStools(gameMap);
         placeInnkeeper();
         return;
     }
@@ -2493,6 +2842,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
         object->createMesh();
     }
 
+    updateStools(gameMap);
     placeInnkeeper();
 
     // The furniture was spread again: all guests stand up and look for a seat at the new tables
@@ -2632,7 +2982,7 @@ bool RoomTavern::importFromStream(std::istream& is)
             int32_t wantsGame = 0;
             uint32_t seatIndex = 0;
             line >> saved.mDrinks >> sleepAfter >> wantsGame >> seatIndex;
-            if(seatIndex >= TAVERN_SEATS_PER_TABLE)
+            if(seatIndex >= TAVERN_PLACES_PER_TABLE)
                 return false;
 
             saved.mSleepAfter = (sleepAfter != 0);
@@ -2663,7 +3013,7 @@ bool RoomTavern::importFromStream(std::istream& is)
             uint32_t seatA = 0;
             uint32_t seatB = 0;
             line >> seatA >> seatB;
-            if((seatA >= TAVERN_SEATS_PER_TABLE) || (seatB >= TAVERN_SEATS_PER_TABLE))
+            if((seatA >= TAVERN_PLACES_PER_TABLE) || (seatB >= TAVERN_PLACES_PER_TABLE))
                 return false;
 
             // The clock of a slap duel: the slap or pause goes on where it was. A save made before the duel clock has
