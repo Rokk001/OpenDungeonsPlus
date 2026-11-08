@@ -376,7 +376,7 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
 void CreatureActionCarryEntity::startDrag()
 {
     Creature* dragged = static_cast<Creature*>(mEntityToCarry);
-    dragged->notifyDragStart(mCreature.getDefinition()->getDirtFactor());
+    dragged->notifyDragStart(mCreature, mCreature.getDefinition()->getDirtFactor());
     if(mCorpseDrag)
         dragged->notifyCorpseDragStart(mCreature, mForced);
 

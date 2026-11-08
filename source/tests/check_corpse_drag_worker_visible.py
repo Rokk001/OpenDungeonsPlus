@@ -50,8 +50,13 @@ assert action.count('dragGap(mCreature, *dragged)') == 2
 # frame on the way the worker walked, one gap behind it, instead of letting its own queued walk fall behind
 assert 'updateDragTether();' in creature.split('void Creature::update(Ogre::Real timeSinceLastFrame)')[1].split(chr(10) + '}' + chr(10))[0]
 tether = creature.split('void Creature::updateDragTether()')[1].split(chr(10) + '}' + chr(10))[0]
-assert '!getIsOnServerMap()' in tether and '!isAlive()' in tether
-assert 'EntityAnimation::dragged_anim' in tether and 'EntityAnimation::drag_anim' in tether
+assert '!getIsOnServerMap()' in tether and 'mDragWorkerName.empty()' in tether
+assert 'getCreature(mDragWorkerName)' in tether
+assert 'getCreatures()' not in tether
+assert creature.count('os << mDragWorkerName;') == 2
+assert creature.count('is >> mDragWorkerName') == 2
+assert 'mDragWorkerName = worker.getName();' in creature
+assert 'mDragWorkerName.clear();' in creature
 assert 'getDragGap(*worker, *this)' in tether and 'setPosition(' in tether
 # the gap works for big bodies too (same function for small and big)
 # the lying body of the biggest creatures needs more than the old gap of 0.9

@@ -2569,8 +2569,9 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
-    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    // The stolen part of the carried gold sizes the thief sack; the live drag worker follows it.
     os << mGoldStolen;
+    os << mDragWorkerName;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2650,6 +2651,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
     OD_ASSERT_TRUE(is >> mGoldStolen);
+    OD_ASSERT_TRUE(is >> mDragWorkerName);
     clampGoldStolen();
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
@@ -4465,34 +4467,16 @@ double Creature::getDragGap(const Creature& worker, const Creature& dragged)
 
 //! \brief Client: sets a dead body that is pulled exactly on the way the worker walked, one gap behind it, every frame.
 //! The walk path the server sends moves the body at its own speed from its own place, so it fell behind the worker
-//! (worker and body are simulated apart on a client). The worker is the creature that plays the Drag clip next to it.
+//! (worker and body are simulated apart on a client). The server identifies the worker independently of animation.
 void Creature::updateDragTether()
 {
-    static const double TETHER_WORKER_RADIUS = 6.0;
     static const double TETHER_MIN_STEP = 0.01;
     static const double TETHER_KEEP_BEHIND = 1.0;
 
-    const bool tethered = !getIsOnServerMap() && getIsOnMap() && !isAlive() &&
-        (getAnimationStateName() == EntityAnimation::dragged_anim);
-    const Creature* worker = nullptr;
-    if(tethered && (getGameMap() != nullptr))
-    {
-        double best = TETHER_WORKER_RADIUS;
-        const Ogre::Vector3& pos = getPosition();
-        for(const Creature* candidate : getGameMap()->getCreatures())
-        {
-            if((candidate == this) || !candidate->getIsOnMap() || !candidate->isAlive() ||
-               (candidate->getAnimationStateName() != EntityAnimation::drag_anim))
-                continue;
-            const Ogre::Vector3& other = candidate->getPosition();
-            double distance = static_cast<double>(Ogre::Vector2(other.x, other.y).distance(Ogre::Vector2(pos.x, pos.y)));
-            if(distance < best)
-            {
-                best = distance;
-                worker = candidate;
-            }
-        }
-    }
+    const bool tethered = !getIsOnServerMap() && getIsOnMap() && !mDragWorkerName.empty();
+    const Creature* worker = tethered && getGameMap() != nullptr ? getGameMap()->getCreature(mDragWorkerName) : nullptr;
+    if(worker != nullptr && (!worker->getIsOnMap() || !worker->isAlive()))
+        worker = nullptr;
     if(worker == nullptr)
     {
         mDragTetherTrail.clear();
@@ -5753,8 +5737,9 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
-    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    // The stolen part of the carried gold sizes the thief sack; the live drag worker follows it.
     os << mGoldStolen;
+    os << mDragWorkerName;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -5916,6 +5901,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
     OD_ASSERT_TRUE(is >> mGoldStolen);
+    OD_ASSERT_TRUE(is >> mDragWorkerName);
     clampGoldStolen();
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
@@ -8848,9 +8834,11 @@ void Creature::notifyCorpseDragEnd()
 }
 
 //! \brief Starts a ground pull while retaining the creature's position on the map.
-void Creature::notifyDragStart(double pullerDirtFactor)
+void Creature::notifyDragStart(const Creature& worker, double pullerDirtFactor)
 {
     mIsBeingDragged = true;
+    mDragWorkerName = worker.getName();
+    mNeedFireRefresh = true;
     mDragDirtFactor = pullerDirtFactor;
 
     // The creature lies on the map and follows the worker's path; a knockout countdown continues.
@@ -8868,6 +8856,8 @@ void Creature::notifyDragEnd()
         return;
 
     mIsBeingDragged = false;
+    mDragWorkerName.clear();
+    mNeedFireRefresh = true;
     mDragDirtFactor = 1.0;
 }
 
