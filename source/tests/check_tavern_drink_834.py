@@ -12,8 +12,8 @@ What is checked (python only, no compiler, no game)
              the requested clip before the clip fallback, so a skeleton without the clip still shows it; it is taken
              away only when the clip changes (a drink clip that fades out in a seat blend keeps it to the end of the
              blend, decision 863), the creature is picked up or destroyed; the seated weapon hiding never touches it
-  duration   [Tavern] BeerDrinkTurns = 30 s x 1.4 turns per second = 42, DrinkTurns (water) stays 4; every drink starts
-             with nextDrinkTurns, which reads BeerDrinkTurns for a beer the payer can pay and DrinkTurns otherwise; the
+  duration   [Tavern] BeerDrinkTurns = 30 s x 1.4 turns per second = 42, WaterDrinkTurns = 10 s x 1.4 = 14; every drink starts
+             with nextDrinkTurns, which reads BeerDrinkTurns for a beer the payer can pay and WaterDrinkTurns otherwise; the
              drink clips are set looping and nothing sets another clip while a guest drinks; Drink of every visiting
              skeleton starts and ends in the same pose, so the 30 s loop has no jump
   chain      D16 from the config and finishDrink: 50, 25, 12.5, 6.25 percent, at most five drinks, 1.64 drinks per visit
@@ -46,7 +46,7 @@ sys.path.insert(0, str(ROOT / 'source' / 'tests'))
 
 TURNS_PER_SECOND = 1.4
 BEER_SECONDS = 30
-WATER_TURNS = 4
+WATER_TURNS = 14
 # The mug of a limb mount stands this close to upright in the rest pose of its bone, in degrees
 MAX_MUG_TILT = 2.0
 # The foot of the mug lies this close to the middle of the limb, in tiles
@@ -231,15 +231,17 @@ def check_mug_models(out):
     print('mug models ok: %d skeletons, %d on limb mounts, Drink loops on all' % (len(skeletons), len(used)))
 
 
-# 2. A beer lasts 30 seconds, the water stays
+# 2. A beer lasts 30 seconds and water lasts 10 seconds (decision 866)
 def check_duration():
     tavern = block_values(read('config/global.cfg'), 'Tavern')
     assert float(tavern['BeerDrinkTurns']) == round(BEER_SECONDS * TURNS_PER_SECOND) == 42, 'a beer lasts 30 s'
-    assert float(tavern['DrinkTurns']) == WATER_TURNS, 'the water is not decided and keeps DrinkTurns 4'
+    assert float(tavern['WaterDrinkTurns']) == WATER_TURNS == round(10 * TURNS_PER_SECOND), 'a water lasts 10 s'
+    assert float(tavern['DrinkTurns']) == 4, 'vomiting and pouring keep DrinkTurns 4'
+    assert re.search(r'^# WaterDrinkTurns\s+\S', read('config/global.cfg'), re.M), 'WaterDrinkTurns is not documented'
     assert re.search(r'^# BeerDrinkTurns\s+\S', read('config/global.cfg'), re.M), 'BeerDrinkTurns is not documented'
     room = read('source/rooms/RoomTavern.cpp')
     turns = extract(room, 'int32_t RoomTavern::nextDrinkTurns(')
-    assert 'getTavernValue(beer ? "BeerDrinkTurns" : "DrinkTurns")' in turns and 'servesBeer()' in turns
+    assert 'getTavernValue(beer ? "BeerDrinkTurns" : "WaterDrinkTurns")' in turns and 'servesBeer()' in turns
     assert 'mPayer == TavernPayer::keeper' in turns and 'getSeat()->getGold() >= price' in turns
     assert 'creature.getGoldCarried() >= price' in turns
     assert room.count('setSpotState(spot, TavernGuestState::drinking, nextDrinkTurns(') == 2, 'a drink starts without its duration'

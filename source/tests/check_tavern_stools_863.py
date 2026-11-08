@@ -25,7 +25,7 @@ What is checked (python only, no compiler, no game; fixed values of this branch,
                shown in Drink (it sits on the same hand bone); a drink clip that fades out keeps its mug until the blend
                ends; models: at most 10 percent of the wide mug lies 0.02 deep in the table top in any frame of SitDrink
                on every skeleton with Weapon_R, the wide mug stays above the floor in Drink on every skeleton
-  finding 8    DrinkTurns 4 (water, 2.9 s) and BeerDrinkTurns 42 (beer, 30 s); a beer only where Beer is researched and the
+  finding 8    WaterDrinkTurns 14 (water, 10 s; decision 866) and BeerDrinkTurns 42 (beer, 30 s); a beer only where Beer is researched and the
                payer has the price; [Test] Ghosts has neither Tavern nor Beer researched (its guests get water), [Test] Spa
                has both and 5000 gold (its guests get beer)
   finding 9    when a duel starts (code) and how often: a model of the upkeep of two guests at one table gives a game in
@@ -270,19 +270,19 @@ def seat_skills(level, seat_id):
 
 def check_drink_duration():
     tavern = block_values(read('config/global.cfg'), 'Tavern')
-    assert int(tavern['DrinkTurns']) == 4 and int(tavern['BeerDrinkTurns']) == 42 and int(tavern['BeerPrice']) == 5
+    assert int(tavern['DrinkTurns']) == 4 and int(tavern['WaterDrinkTurns']) == 14 and int(tavern['BeerDrinkTurns']) == 42 and int(tavern['BeerPrice']) == 5
     room = read('source/rooms/RoomTavern.cpp')
     turns = extract(room, 'int32_t RoomTavern::nextDrinkTurns(')
-    assert 'bool beer = servesBeer();' in turns and 'getTavernValue(beer ? "BeerDrinkTurns" : "DrinkTurns")' in turns
+    assert 'bool beer = servesBeer();' in turns and 'getTavernValue(beer ? "BeerDrinkTurns" : "WaterDrinkTurns")' in turns
     assert 'getSkillLevel(SkillType::tavernBeer) >= 1' in extract(room, 'bool RoomTavern::servesBeer(')
     ghosts, ghost_gold, ghost_player = seat_skills('levels/skirmish/TestGhosts.level', 1)
     spa, spa_gold, spa_player = seat_skills('levels/skirmish/TestSpa.level', 1)
     assert re.search(r'^Name\s+\\\[Test\\\] Ghosts$', read('levels/skirmish/TestGhosts.level'), re.M)
     assert ghost_player == 'Human' and 'tavernBeer' not in ghosts and 'roomTavern' not in ghosts
     assert spa_player == 'Human' and 'tavernBeer' in spa and 'roomTavern' in spa and spa_gold >= 5
-    water = 4 / TURNS_PER_SECOND
+    water = 14 / TURNS_PER_SECOND
     beer = 42 / TURNS_PER_SECOND
-    assert abs(water - 2.857) < 0.001 and abs(beer - 30.0) < 1e-9
+    assert abs(water - 10.0) < 1e-9 and abs(beer - 30.0) < 1e-9
     print('finding 8 ok: [Test] Ghosts without Beer serves water, %.2f s a drink; [Test] Spa with Beer and %d gold serves beer, %.0f s'
           % (water, spa_gold, beer))
 
