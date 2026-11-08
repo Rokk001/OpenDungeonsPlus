@@ -44,6 +44,7 @@
 #include <OgreRenderWindow.h>
 #include <OgreRoot.h>
 #include <Overlay/OgreOverlaySystem.h>
+#include <RTShaderSystem/OgreShaderExHardwareSkinning.h>
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #if OGRE_VERSION > 0x10A00
 #include <OgreMaterialManager.h>
@@ -411,6 +412,17 @@ void ODApplication::startClient()
     }
     Ogre::MaterialManager::getSingleton().removeListener(sgListener);
     delete sgListener;
+    // RenderManager registers CreatureShadowCaster in static arrays of OgreRTShaderSystem.dll. Release
+    // those references while Root still owns the material and GPU program managers: left alone, the
+    // DLL's exit-time destructors free the material after Root and the process ends with 0xC0000005.
+    const Ogre::MaterialPtr noMaterial;
+    for(Ogre::RTShader::SkinningType skinningType : {Ogre::RTShader::ST_LINEAR, Ogre::RTShader::ST_DUAL_QUATERNION})
+    {
+        Ogre::RTShader::HardwareSkinningFactory::setCustomShadowCasterMaterials(skinningType,
+            noMaterial, noMaterial, noMaterial, noMaterial);
+        Ogre::RTShader::HardwareSkinningFactory::setCustomShadowReceiverMaterials(skinningType,
+            noMaterial, noMaterial, noMaterial, noMaterial);
+    }
     Ogre::RTShader::ShaderGenerator::destroy();
     // Ogre's primary window owns the context needed to unload meshes, buffers and textures.
     // Root must release those resources before it destroys the primary window during shutdown.
