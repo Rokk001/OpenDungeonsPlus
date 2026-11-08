@@ -11,7 +11,7 @@ SCRIPTS = ROOT / 'scripts/win32'
 
 
 def main():
-    """Reject seven missing, stale and replaced dependency receipt fixtures."""
+    """Reject missing, stale and replaced dependency receipt fixtures."""
     install = (SCRIPTS / 'install-ogre-prereq.ps1').read_text()
     configure = (SCRIPTS / 'configure-windows-prereqs.ps1').read_text()
     runtime = (SCRIPTS / 'prepare-windows-runtime.ps1').read_text()
@@ -42,7 +42,7 @@ $receiptPath = Join-Path $fixtureRoot 'install/share/opendungeons-plus/ogre-prer
 New-Item -ItemType Directory -Force (Split-Path -Parent $receiptPath) | Out-Null
 $receipt = [ordered]@{ schema = 1; commit = 'f906880885f6014ca9b5bd8aaa09b399394d5676'
     patches = (Get-OgrePrereqPatchHashes); binaries = (Get-OgrePrereqBinaryHashes $fixtureRoot) }
-if ($receipt.patches.Count -ne 4 -or $receipt.binaries.Count -ne 16) { throw 'Fixture inventory changed' }
+if ($receipt.patches.Count -ne 5 -or $receipt.binaries.Count -ne 16) { throw 'Fixture inventory changed' }
 $goodReceipt = $receipt | ConvertTo-Json -Depth 4
 function Require-Rejection {
     # A failed fixture must throw rather than report a usable dependency.
@@ -69,10 +69,22 @@ $originalDll = Get-Content -LiteralPath $dll -Raw
 Require-Rejection
 [IO.File]::WriteAllText($dll, $originalDll)
 Assert-OgrePrereqProvenance $fixtureRoot
+# A receipt for the old four-patch dependency must not be accepted.
+$receipt.patches.Remove('ogre14-gl3plus-program-shutdown.patch')
+$receipt.binaries['OgreMain.dll'] = (Get-OgrePrereqBinaryHashes $fixtureRoot)['OgreMain.dll']
+$receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $receiptPath
+Require-Rejection
+$goodReceipt | Set-Content -LiteralPath $receiptPath
 $patch = Join-Path $fixtureRoot 'patches/ogre14-discard-lock-unsynchronized.patch'
+$originalPatch = [IO.File]::ReadAllText($patch)
 Add-Content -LiteralPath $patch 'changed patch'
 Require-Rejection
-Write-Output 'PASS: seven invalid dependency fixtures rejected; valid receipt accepted'
+[IO.File]::WriteAllText($patch, $originalPatch)
+Assert-OgrePrereqProvenance $fixtureRoot
+$patch = Join-Path $fixtureRoot 'patches/ogre14-gl3plus-program-shutdown.patch'
+Add-Content -LiteralPath $patch 'changed patch'
+Require-Rejection
+Write-Output 'PASS: nine invalid dependency fixtures rejected; valid receipt accepted'
 ''', encoding='utf-8')
         # Let Windows PowerShell choose its own modules when Python was launched by pwsh.
         environment = {key: value for key, value in os.environ.items() if key.upper() != 'PSMODULEPATH'}

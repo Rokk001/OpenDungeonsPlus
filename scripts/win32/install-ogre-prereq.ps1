@@ -38,6 +38,13 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\ogre" apply --recount $taskDiscardLockPatch
     if ($LASTEXITCODE -ne 0) { throw 'OGRE discard lock patch failed' }
 }
+$taskProgramShutdownPatch = Join-Path $PSScriptRoot 'patches/ogre14-gl3plus-program-shutdown.patch'
+& git -C "$taskRoot\src\ogre" apply --recount --reverse --check $taskProgramShutdownPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Applying OGRE GL3Plus program shutdown fix'
+    & git -C "$taskRoot\src\ogre" apply --recount $taskProgramShutdownPatch
+    if ($LASTEXITCODE -ne 0) { throw 'OGRE GL3Plus program shutdown patch failed' }
+}
 $ErrorActionPreference = 'Stop'
 $taskPatchHashes = Get-OgrePrereqPatchHashes
 $taskParallel = if ($env:BUILD_PARALLEL) { [int]$env:BUILD_PARALLEL } else { 1 }

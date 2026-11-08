@@ -1,0 +1,19 @@
+Fix: release cached GL3Plus programs before their manager and context are destroyed.
+
+The program manager owns separable programs whose destructors consult its singleton.
+Destroy them while the singleton and GL context are still alive, before render target
+shutdown removes the primary context. Shutdown can also run before initialisation.
+
+diff --git a/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp b/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp
+--- a/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp
++++ b/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp
+@@ -568,6 +568,10 @@ namespace Ogre {
+     void GL3PlusRenderSystem::shutdown(void)
+     {
++        // Cached separable programs need the manager singleton and current GL context during destruction.
++        if (mProgramManager)
++            mProgramManager->destroyAllPrograms();
++
+         RenderSystem::shutdown();
+ 
+         // Remove from manager safely
