@@ -1963,20 +1963,22 @@ assets-src/gui/icons/tiles/SpaButton.png AI-generated with Codex GPLv3+ Original
 
 materials/scripts/Spa.material OD Team GPLv3+ Original mud, ember seam, dark wood, stone and attendant material bindings; the attendant skin, suit and towel use the textures credited below (2026-11-05); AI-generated with Codex and Claude Code
 assets-src/rooms/spa/SpaMudPool.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
-models/SpaMudPool.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
+models/SpaMudPool.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex; reworked in Blender as a flush liquid surface with continuous edge normals and periodic UVs, decision 863, 2026-11-08
 assets-src/rooms/spa/SpaPoolRim.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
 models/SpaPoolRim.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
 assets-src/rooms/spa/SpaChair.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
-models/SpaChair.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex; red and white lifebuoy on an iron peg added by tools/spa-meshes/add_chair_lifebuoy.py (decision 837, 2026-11-07, AI-generated with Claude Code, CC0)
+models/SpaChair.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex; red and white lifebuoy on an iron peg added by tools/spa-meshes/add_chair_lifebuoy.py (decision 837, 2026-11-07, AI-generated with Claude Code, CC0); lifebuoy enlarged and thickened in Blender for room camera readability, AI-generated with Codex, decision 863, 2026-11-08
 assets-src/rooms/spa/SpaSpringboard.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
 models/SpaSpringboard.mesh OD Team CC0 Original hot mud bath model exported with the project Ogre exporter; AI-generated with Codex
 assets-src/rooms/spa/PoolAttendant.blend OD Team CC0 Original independently editable Blender model, authored for the hot mud bath; source contains separate editable parts; AI-generated with Codex
-models/PoolAttendant.mesh AI-generated with Claude Code GPLv3+ Original pot-bellied pool attendant in a striped bathing suit with a towel over the shoulder and a whistle on a cord, rebuilt in Blender after the chosen design, 2026-11-05
-models/PoolAttendant.skeleton AI-generated with Claude Code GPLv3+ Original pool attendant rig with Sit, Whistle, TowelWave, Doze, Walk, Climb and Jump clips, each two seconds, rebuilt 2026-11-05
+models/PoolAttendant.mesh AI-generated with Claude Code GPLv3+ Original pot-bellied pool attendant in a striped bathing suit with a towel over the shoulder and a whistle on a cord, rebuilt in Blender after the chosen design, 2026-11-05; shoulder weights corrected and whistle enlarged in Blender, AI-generated with Codex, decision 863, 2026-11-08
+models/PoolAttendant.skeleton AI-generated with Claude Code GPLv3+ Original pool attendant rig with Sit, Whistle, TowelWave, Doze, Walk, Climb and Jump clips, each two seconds, rebuilt 2026-11-05; relaxed seated arm rotations in Sit, AI-generated with Codex, decision 863, 2026-11-08
 materials/textures/SpaAttendantSkin.png AI-generated with Claude Code GPLv3+ Original ruddy skin texture of the pool attendant with body hair and two faint scratches, procedurally painted, 2026-11-05
 materials/textures/SpaAttendantSuit.png AI-generated with Claude Code GPLv3+ Original worn cream and navy striped knitted bathing suit texture, procedurally painted, 2026-11-05
 materials/textures/SpaAttendantTowel.png AI-generated with Claude Code GPLv3+ Original grubby terry towel texture with red end stripes, procedurally painted, 2026-11-05
 materials/textures/SpaMud.png AI-generated with Claude Code GPLv3+ Original seamless hot liquid mud surface with flow swirls, wet gloss streaks, bubble rings and a faint lava warmth, procedurally painted by tools/spa-textures/generate_spa_mud.py, 2026-11-07
+materials/textures/SpaMudBubble.png AI-generated with Codex GPLv3+ Original glossy mud bubble sprite procedurally painted by tools/spa-textures/generate_spa_bubbles.py, decision 863, 2026-11-08
+particles/RoomAmbienceProduction.particle (SpaMudBubbles) AI-generated with Codex GPLv3+ Original expanding and popping hot mud domes over the opaque bath, decision 863, 2026-11-08
 
 == Real hot mud bath recordings ==
 
