@@ -8524,6 +8524,7 @@ bool Creature::parkToWallTile(Tile* wallTile, Tile* nTile)
     return true;
 }
 
+//! \brief Finds an ordinary walking route, keeping spa mud and tavern furniture closed to fallback routes.
 bool Creature::setDestination(Tile* tile)
 {
     if(tile == nullptr)
@@ -8551,6 +8552,8 @@ bool Creature::setDestination(Tile* tile)
         // waits for a way around rather than walk through a table, keg or counter. It may only leave its own tile.
         for(Tile* step : result)
         {
+            if((step != posTile) && RoomSpa::isPoolTile(step))
+                return false;
             Room* room = step->getCoveringRoom();
             if((step != posTile) && (room != nullptr) && (room->getType() == RoomType::tavern) &&
                static_cast<RoomTavern*>(room)->hasFurnitureOn(step))
@@ -11714,10 +11717,10 @@ bool Creature::isHungry() const
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
 }
 
-//! \brief Detects urgent needs unless fighting, fleeing, held, knocked out, imprisoned or leaving.
+//! \brief Detects urgent needs unless fighting, fleeing, bathing, held, knocked out, imprisoned or leaving.
 bool Creature::needInterrupt(bool servingNeed) const
 {
-    if(mIsInHand || isKo() || isInPrison() || isActionInList(CreatureActionType::leaveDungeon) ||
+    if(mSpaBathing || mIsInHand || isKo() || isInPrison() || isActionInList(CreatureActionType::leaveDungeon) ||
        isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
        isActionInList(CreatureActionType::flee))
         return false;

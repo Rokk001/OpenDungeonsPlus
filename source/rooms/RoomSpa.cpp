@@ -16,6 +16,7 @@
  */
 
 #include "rooms/RoomSpa.h"
+#include "ODApplication.h"
 
 #include "creatureaction/CreatureActionUseRoom.h"
 #include "creatureaction/CreatureActionWalkToTile.h"
@@ -120,6 +121,12 @@ std::string batherStateToString(SpaBatherState state)
             return "jumping";
         case SpaBatherState::bathing:
             return "bathing";
+        case SpaBatherState::sitting:
+            return "sitting";
+        case SpaBatherState::standing:
+            return "standing";
+        case SpaBatherState::leaving:
+            return "leaving";
     }
     return "reserved";
 }
@@ -136,6 +143,12 @@ bool batherStateFromString(const std::string& token, SpaBatherState& state)
         state = SpaBatherState::jumping;
     else if(token == "bathing")
         state = SpaBatherState::bathing;
+    else if(token == "sitting")
+        state = SpaBatherState::sitting;
+    else if(token == "standing")
+        state = SpaBatherState::standing;
+    else if(token == "leaving")
+        state = SpaBatherState::leaving;
     else
         return false;
 
@@ -465,6 +478,49 @@ bool RoomSpa::hasOpenCreatureSpot(Creature* c)
     return canAccept(*c);
 }
 
+//! \brief Finds a dry, reachable rim tile instead of targeting mud or room walls.
+Tile* RoomSpa::getArrivalTile(const Creature& creature)
+{
+    Tile* start = creature.getPositionTile();
+    if(start == nullptr)
+        return nullptr;
+    Tile* best = nullptr;
+    std::size_t bestLength = 0;
+    for(Tile* tile : mCoveredTiles)
+    {
+        if(isPoolTile(tile) || tile == getChairTile() || tile == getSpringboardTile() ||
+           !creature.canGoThroughTile(tile))
+            continue;
+        std::list<Tile*> path = getGameMap()->path(start, tile, &creature, creature.getSeat());
+        if((tile != start) && path.empty())
+            continue;
+        if((best == nullptr) || (path.size() < bestLength))
+        {
+            best = tile;
+            bestLength = path.size();
+        }
+    }
+    return best;
+}
+
+//! \brief A keeper drop into mud requests a complete normally priced visit after the drop stun.
+void RoomSpa::creatureDropped(Creature& creature)
+{
+    if(isPoolTile(creature.getPositionTile()) && canAccept(creature))
+    {
+        creature.pushAction(Utils::make_unique<CreatureActionUseRoom>(creature, *this, true));
+        return;
+    }
+    Room::creatureDropped(creature);
+}
+
+//! \brief A bath already assigned to this room survives routine needs and mood recovery.
+bool RoomSpa::keepGuestUntilItLeft(Creature& creature)
+{
+    return findBatherOf(&creature) != mBathers.end();
+}
+
+//! \brief Reserves a bathing place and restores paid transitions without taking payment twice.
 bool RoomSpa::addCreatureUsingRoom(Creature* creature)
 {
     if(creature == nullptr)
@@ -479,6 +535,7 @@ bool RoomSpa::addCreatureUsingRoom(Creature* creature)
         bather.mBlock = pending->second.mBlock;
         bather.mState = pending->second.mState;
         bather.mTurnsDone = pending->second.mTurnsDone;
+        bather.mTransitionTurns = pending->second.mTransitionTurns;
         bather.mJump = pending->second.mJump;
         fromSave = true;
     }
@@ -500,7 +557,7 @@ bool RoomSpa::addCreatureUsingRoom(Creature* creature)
         // One bath in SpaCannonballChance starts with a jump from the springboard, when it can be reached
         Tile* springboard = getSpringboardTile();
         Tile* creatureTile = creature->getPositionTile();
-        if((springboard != nullptr) && (creatureTile != nullptr) &&
+        if(!isPoolTile(creatureTile) && (springboard != nullptr) && (creatureTile != nullptr) &&
            (Random::Double(0.0, 1.0) < ConfigManager::getSingleton().getRoomConfigDouble("SpaCannonballChance")) &&
            getGameMap()->pathExists(creature, creatureTile, springboard))
         {
@@ -530,10 +587,17 @@ bool RoomSpa::addCreatureUsingRoom(Creature* creature)
     }
 
     mBathers.push_back(bather);
+    creature->setSpaBathing(true);
     if(fromSave && (bather.mState == SpaBatherState::bathing))
     {
         creature->setSpaBathing(true);
         creature->setAnimationState(EntityAnimation::bathe_anim, true, Ogre::Vector3::ZERO, false);
+    }
+    else if(fromSave && ((bather.mState == SpaBatherState::sitting) || (bather.mState == SpaBatherState::standing)))
+    {
+        creature->setSpaBathing(true);
+        creature->setTimedAnimationState(bather.mState == SpaBatherState::sitting ? "SpaSit" : "SpaStand",
+            std::max(0.001, bather.mTransitionTurns / ODApplication::turnsPerSecond), false, Ogre::Vector3::ZERO, false);
     }
 
     return true;
@@ -673,6 +737,7 @@ bool RoomSpa::isBatherDisturbed(const Creature& creature)
         creature.isActionInList(CreatureActionType::flee);
 }
 
+//! \brief Runs arrival and exit movement while upkeep counts seated and transition time.
 bool RoomSpa::useRoom(Creature& creature, bool forced)
 {
     std::vector<RoomSpaBather>::iterator it = findBatherOf(&creature);
@@ -681,6 +746,17 @@ bool RoomSpa::useRoom(Creature& creature, bool forced)
         // The bath was broken off (fight, flight): the use of the room ends
         creature.popAction();
         return true;
+    }
+
+    if(creature.getPositionTile()->getCoveringRoom() != this)
+    {
+        Tile* arrival = getArrivalTile(creature);
+        if((arrival == nullptr) || !creature.setDestination(arrival))
+        {
+            creature.popAction();
+            return true;
+        }
+        return false;
     }
 
     switch(it->mState)
@@ -696,12 +772,68 @@ bool RoomSpa::useRoom(Creature& creature, bool forced)
             creature.popAction();
             return true;
         }
+        case SpaBatherState::leaving:
+        {
+            Tile* rim = getArrivalTile(creature);
+            if(rim == nullptr)
+                return false;
+            const Ogre::Vector3 destination(rim->getX(), rim->getY(), 0.0f);
+            if((creature.getPosition() - destination).squaredLength() > CENTRE_EPSILON * CENTRE_EPSILON)
+            {
+                walkBather(creature, rim, destination);
+                return false;
+            }
+            finishBath(*it);
+            creature.popAction();
+            return true;
+        }
         default:
             // jumping is run by doUpkeep
             return false;
     }
 }
 
+//! \brief Traverses checked room tiles at the normal walking speed, never teleporting through a wall.
+bool RoomSpa::walkBather(Creature& creature, Tile* target, const Ogre::Vector3& endpoint)
+{
+    if(creature.isMoving())
+        return true;
+    Tile* here = creature.getPositionTile();
+    if((here == nullptr) || (target == nullptr))
+        return false;
+    SpaTileSet passable;
+    for(Tile* tile : mCoveredTiles)
+    {
+        if(creature.canGoThroughTile(tile) && ((tile != getChairTile() && tile != getSpringboardTile()) || tile == here))
+            passable.insert(std::make_pair(tile->getX(), tile->getY()));
+    }
+    std::vector<std::pair<int32_t, int32_t> > steps;
+    if(!SpaLayout::rimWalk(passable, getPoolSet(), std::make_pair(here->getX(), here->getY()),
+        std::make_pair(target->getX(), target->getY()), steps))
+        return false;
+    std::vector<Ogre::Vector2> path;
+    const bool wading = !steps.empty() ? isPoolPosition(steps.front().first, steps.front().second) : isPoolTile(here);
+    // Starting at the tile centre prevents a diagonal from a hand drop cutting a solid corner.
+    path.push_back(Ogre::Vector2(here->getX(), here->getY()));
+    bool reachedTarget = true;
+    for(const std::pair<int32_t, int32_t>& step : steps)
+    {
+        if(isPoolPosition(step.first, step.second) != wading)
+        {
+            reachedTarget = false;
+            break;
+        }
+        path.push_back(Ogre::Vector2(step.first, step.second));
+    }
+    if(reachedTarget)
+        path.push_back(Ogre::Vector2(endpoint.x, endpoint.y));
+    creature.setWalkPath(wading ? "SpaWade" : EntityAnimation::walk_anim, EntityAnimation::idle_anim,
+        true, false, path, false, true);
+    creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
+    return true;
+}
+
+//! \brief Walks via the rim into the assigned place and starts one paid settling transition.
 bool RoomSpa::walkToPlace(Creature& creature, RoomSpaBather& bather)
 {
     Tile* springboard = bather.mJump ? getSpringboardTile() : nullptr;
@@ -711,7 +843,8 @@ bool RoomSpa::walkToPlace(Creature& creature, RoomSpaBather& bather)
         // on the tile of the springboard or on a tile next to it stands there.
         const Tile* here = creature.getPositionTile();
         const bool atBoard = (here != nullptr) && (here == springboard ||
-            ((std::abs(here->getX() - springboard->getX()) <= 1) && (std::abs(here->getY() - springboard->getY()) <= 1) &&
+            ((std::abs(here->getX() - springboard->getX()) + std::abs(here->getY() - springboard->getY()) == 1) &&
+             !isPoolTile(here) &&
              !creature.isMoving()));
         if(!atBoard)
         {
@@ -726,8 +859,6 @@ bool RoomSpa::walkToPlace(Creature& creature, RoomSpaBather& bather)
         // On the springboard the creature jumps into the middle of its place; the bath is paid at the landing
         bather.mState = SpaBatherState::jumping;
         bather.mTurnsDone = 0.0;
-        creature.setPosition(Ogre::Vector3(static_cast<Ogre::Real>(springboard->getX()),
-            static_cast<Ogre::Real>(springboard->getY()), 0.0f));
         creature.startJump(getBlockCentre(bather));
         return false;
     }
@@ -739,21 +870,9 @@ bool RoomSpa::walkToPlace(Creature& creature, RoomSpaBather& bather)
     const Ogre::Real distance = Ogre::Vector2(position.x - centre.x, position.y - centre.y).length();
     if(distance > CENTRE_EPSILON)
     {
-        if(isInBlock(creature, bather.mBlock))
-        {
-            // On a tile of the block: the last steps lead to the middle of the block
-            if(!creature.isMoving())
-            {
-                std::vector<Ogre::Vector2> path;
-                path.push_back(Ogre::Vector2(centre.x, centre.y));
-                creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, path, false, true);
-                creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
-            }
-            return false;
-        }
-
+        // On a tile of the block: the last steps lead to the middle of the block.
         Tile* anchor = getGameMap()->getTile(bather.mBlock.mX, bather.mBlock.mY);
-        if(!creature.isMoving() && !creature.setDestination(anchor))
+        if(!walkBather(creature, anchor, centre))
         {
             creature.popAction();
             return true;
@@ -768,10 +887,22 @@ bool RoomSpa::walkToPlace(Creature& creature, RoomSpaBather& bather)
         return true;
     }
 
-    startBath(bather);
+    sitDown(bather);
     return false;
 }
 
+//! \brief Settles the paid guest for a random 3-5 seconds before its full seated bath.
+void RoomSpa::sitDown(RoomSpaBather& bather)
+{
+    bather.mState = SpaBatherState::sitting;
+    bather.mTransitionTurns = Random::Double(3.0, 5.0) * ODApplication::turnsPerSecond;
+    bather.mTurnsDone = 0.0;
+    bather.mCreature->setSpaBathing(true);
+    bather.mCreature->setTimedAnimationState("SpaSit", bather.mTransitionTurns / ODApplication::turnsPerSecond,
+        false, Ogre::Vector3::ZERO, false);
+}
+
+//! \brief Starts seated mood gain only after the settling transition has finished.
 void RoomSpa::startBath(RoomSpaBather& bather)
 {
     bather.mState = SpaBatherState::bathing;
@@ -784,6 +915,7 @@ void RoomSpa::startBath(RoomSpaBather& bather)
     bather.mCreature->setAnimationState(EntityAnimation::bathe_anim, true, Ogre::Vector3::ZERO, false);
 }
 
+//! \brief Charges a landing once and settles the guest before its seated bath.
 bool RoomSpa::landJump(RoomSpaBather& bather)
 {
     Creature* creature = bather.mCreature;
@@ -794,7 +926,7 @@ bool RoomSpa::landJump(RoomSpaBather& bather)
     if(!payForBath(*creature))
         return false;
 
-    startBath(bather);
+    sitDown(bather);
     return true;
 }
 
@@ -860,6 +992,7 @@ void RoomSpa::doUpkeep()
     upkeepSteam();
 }
 
+//! \brief Counts a full seated bath separately from sitting, standing and distance-based walking.
 void RoomSpa::upkeepBathers()
 {
     const double moodPerTurn = ConfigManager::getSingleton().getRoomConfigDouble("SpaMoodPerTurn");
@@ -869,6 +1002,21 @@ void RoomSpa::upkeepBathers()
     {
         switch(bather.mState)
         {
+            case SpaBatherState::sitting:
+            case SpaBatherState::standing:
+            {
+                bather.mTransitionTurns -= 1.0;
+                if(bather.mTransitionTurns > 0.0)
+                    break;
+                if(bather.mState == SpaBatherState::sitting)
+                    startBath(bather);
+                else
+                {
+                    bather.mState = SpaBatherState::leaving;
+                    bather.mCreature->setAnimationState(EntityAnimation::idle_anim, true);
+                }
+                break;
+            }
             case SpaBatherState::jumping:
             {
                 bather.mCreature->continueJump();
@@ -885,7 +1033,12 @@ void RoomSpa::upkeepBathers()
                 bather.mCreature->addSpaMood(moodPerTurn);
                 bather.mTurnsDone += 1.0;
                 if(bather.mTurnsDone >= bathTurns)
-                    finishBath(bather);
+                {
+                    bather.mState = SpaBatherState::standing;
+                    bather.mTransitionTurns = Random::Double(3.0, 5.0) * ODApplication::turnsPerSecond;
+                    bather.mCreature->setTimedAnimationState("SpaStand", bather.mTransitionTurns / ODApplication::turnsPerSecond,
+                        false, Ogre::Vector3::ZERO, false);
+                }
                 break;
             }
             default:
@@ -899,6 +1052,7 @@ void RoomSpa::upkeepBathers()
         creature->clearActionQueue();
 }
 
+//! \brief Aborts disturbed visits while allowing a reserved keeper-drop bath to wait for its drop stun.
 void RoomSpa::abortDisturbedBathers()
 {
     // A fight, a flight, a knock-out or a hand that takes a bather away ends its bath: the mood it gained stays, it
@@ -906,7 +1060,10 @@ void RoomSpa::abortDisturbedBathers()
     std::vector<RoomSpaBather>::iterator it = mBathers.begin();
     while(it != mBathers.end())
     {
-        if(!it->mDone && isBatherDisturbed(*it->mCreature))
+        // A keeper drop starts with its ordinary stun; the reserved bath waits for recovery.
+        if(!it->mDone && isBatherDisturbed(*it->mCreature) &&
+           !((it->mState == SpaBatherState::reserved) && it->mCreature->isKo() && it->mCreature->isAlive() &&
+             it->mCreature->getIsOnMap() && !it->mCreature->isBeingDragged()))
         {
             if(it->mState == SpaBatherState::jumping)
                 it->mCreature->cancelJump();
@@ -1308,6 +1465,7 @@ void RoomSpa::updateActiveSpots(GameMap* gameMap)
     placeAttendant();
 }
 
+//! \brief Saves seated progress and the optional transition timer alongside the existing room state.
 void RoomSpa::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
@@ -1338,7 +1496,7 @@ void RoomSpa::exportToStream(std::ostream& os) const
         line << bather.mCreature->getName() << " " << bather.mBlock.mX << " " << bather.mBlock.mY << " "
              << bather.mBlock.mWidth << " " << bather.mBlock.mHeight << " " << batherStateToString(bather.mState) << " "
              << ((bather.mState == SpaBatherState::jumping) ? static_cast<double>(bather.mCreature->getJumpTurnsLeft()) : bather.mTurnsDone)
-             << " " << (bather.mJump ? 1 : 0);
+             << " " << (bather.mJump ? 1 : 0) << " " << bather.mTransitionTurns;
         lines.push_back(line.str());
     }
     for(std::map<std::string, RoomSpaPendingBather>::const_iterator it = mPendingBathers.begin(); it != mPendingBathers.end(); ++it)
@@ -1346,7 +1504,7 @@ void RoomSpa::exportToStream(std::ostream& os) const
         std::ostringstream line;
         line << it->first << " " << it->second.mBlock.mX << " " << it->second.mBlock.mY << " " << it->second.mBlock.mWidth
              << " " << it->second.mBlock.mHeight << " " << batherStateToString(it->second.mState) << " "
-             << it->second.mTurnsDone << " " << (it->second.mJump ? 1 : 0);
+             << it->second.mTurnsDone << " " << (it->second.mJump ? 1 : 0) << " " << it->second.mTransitionTurns;
         lines.push_back(line.str());
     }
 
@@ -1358,6 +1516,7 @@ void RoomSpa::exportToStream(std::ostream& os) const
         os << line << std::endl;
 }
 
+//! \brief Restores all bath phases while retaining compatibility with streams without a transition timer.
 bool RoomSpa::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
@@ -1436,6 +1595,8 @@ bool RoomSpa::importFromStream(std::istream& is)
                 int32_t jump = 0;
                 line >> jump;
                 saved.mJump = (jump != 0);
+                // Older streams have no transition field and remain valid.
+                line >> saved.mTransitionTurns;
                 mPendingBathers[name] = saved;
             }
         }
