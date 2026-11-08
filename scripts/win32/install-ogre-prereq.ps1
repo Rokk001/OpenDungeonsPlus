@@ -27,6 +27,13 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\ogre" apply --recount $taskLightPositionPatch
     if ($LASTEXITCODE -ne 0) { throw 'OGRE light position patch failed' }
 }
+$taskDiscardLockPatch = Join-Path $PSScriptRoot 'patches/ogre14-discard-lock-unsynchronized.patch'
+& git -C "$taskRoot\src\ogre" apply --recount --reverse --check $taskDiscardLockPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Applying OGRE discard lock without GPU wait fix'
+    & git -C "$taskRoot\src\ogre" apply --recount $taskDiscardLockPatch
+    if ($LASTEXITCODE -ne 0) { throw 'OGRE discard lock patch failed' }
+}
 $ErrorActionPreference = 'Stop'
 $taskOptions = @('-S', "$taskRoot\src\ogre", '-B', "$taskRoot\build\ogre",
     '-G', 'Visual Studio 18 2026', '-A', 'x64', "-DCMAKE_INSTALL_PREFIX=$taskRoot\install",

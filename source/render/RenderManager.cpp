@@ -112,6 +112,7 @@
 #include <Overlay/OgreOverlay.h>
 #include <Overlay/OgreOverlayManager.h>
 #include <Overlay/OgreOverlaySystem.h>
+#include <RTShaderSystem/OgreShaderExHardwareSkinning.h>
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #include <RTShaderSystem/OgreShaderRenderState.h>
 
@@ -1837,7 +1838,7 @@ RenderManager::~RenderManager()
 }
 
 //! \brief Builds the rock border around the map from shared earth wall meshes, grouped in chunk nodes so
-//! that chunks outside the view are skipped as a whole.
+//! that chunks outside the view are skipped as a whole; compatible earth shares draw submission.
 void RenderManager::createWorldBorder(GameMap* gameMap)
 {
     const std::vector<TileSetValue>& borderMeshes = gameMap->getMeshesForEnclosedEarth();
@@ -1897,6 +1898,7 @@ void RenderManager::createWorldBorder(GameMap* gameMap)
             Ogre::SceneNode* tileNode = chunk->second->createChildSceneNode(
                 Ogre::Vector3(static_cast<Ogre::Real>(xx), static_cast<Ogre::Real>(yy), 0.0f), orientation);
             tileNode->attachObject(entity);
+            mTerrainDrawBatch.add(mSceneManager, entity);
         }
     }
 }
@@ -2203,8 +2205,10 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 }
 
 
+//! Releases terrain batches before destroying their source entities and game visuals.
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    mTerrainDrawBatch.clear();
     mGameMap = nullptr;
     mForeignWealth.clear();
     if(mSceneManager->hasEntity(GROUND_UNDERLAY_ENTITY_NAME))
@@ -2474,6 +2478,97 @@ void RenderManager::prepareMenuShaders()
     OD_LOG_INF("Prepared the shaders of " + Helper::toString(static_cast<uint32_t>(materials.size())) + " menu materials");
 }
 
+//! Infix of the material copies that carry the hardware skinning stage (see useShaderSkinning()).
+static const Ogre::String SHADER_SKINNING_INFIX = "_RtssSkin_";
+//! Skeletons with more bones than this are left to the CPU. The array of bone matrices is 3 vec4 per bone.
+static const Ogre::ushort SHADER_SKINNING_MAX_BONES = 128;
+
+bool RenderManager::useShaderSkinning(Ogre::Entity* entity)
+{
+#if OGRE_VERSION_MAJOR >= 13
+    if(entity == nullptr || mShaderGenerator == nullptr || !entity->hasSkeleton() || entity->getMesh()->hasVertexAnimation())
+        return false;
+
+    // Ogre skins an entity on the GPU only when every sub entity is skinned there, so check all before changing any.
+    for(const Ogre::SubEntity* subEntity : entity->getSubEntities())
+    {
+        const Ogre::MaterialPtr& material = subEntity->getMaterial();
+        if(!material || material->getNumTechniques() == 0)
+            return false;
+        // The visibility of these parts is found by the name of their material, which the copy would change.
+        if(material->getName() == "ItemBagSealed" || material->getName() == "ChickenStraw")
+            return false;
+        for(unsigned short t = 0; t < material->getNumTechniques(); ++t)
+        {
+            const Ogre::Technique* technique = material->getTechnique(t);
+            for(unsigned short p = 0; p < technique->getNumPasses(); ++p)
+            {
+                const Ogre::Pass* pass = technique->getPass(p);
+                if(pass->hasVertexProgram() || pass->hasGeometryProgram() || pass->hasTessellationHullProgram()
+                    || pass->hasTessellationDomainProgram())
+                    return false;
+            }
+        }
+    }
+
+    Ogre::RTShader::HardwareSkinningFactory* factory = static_cast<Ogre::RTShader::HardwareSkinningFactory*>(
+        mShaderGenerator->getSubRenderStateFactory(Ogre::RTShader::SRS_HARDWARE_SKINNING));
+    if(factory == nullptr)
+        return false;
+    factory->setMaxCalculableBoneCount(SHADER_SKINNING_MAX_BONES);
+    // A skinned entity needs a skinning shadow caster, else its shadow shows the bind pose. The caster of the creatures
+    // rebuilds the fourth weight from the other three, so it serves meshes with any number of weights.
+    Ogre::MaterialPtr caster = Ogre::MaterialManager::getSingleton().getByName("CreatureShadowCaster");
+    if(caster)
+        factory->setCustomShadowCasterMaterials(Ogre::RTShader::ST_LINEAR, caster, caster, caster, caster);
+
+    const Ogre::String& scheme = Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME;
+    std::vector<Ogre::MaterialPtr> skinned;
+    for(Ogre::SubEntity* subEntity : entity->getSubEntities())
+    {
+        Ogre::MaterialPtr material = subEntity->getMaterial();
+        if(material->getName().find(SHADER_SKINNING_INFIX) != Ogre::String::npos)
+        {
+            skinned.push_back(material);
+            continue;
+        }
+        const Ogre::String copyName = material->getName() + SHADER_SKINNING_INFIX + entity->getMesh()->getName();
+        Ogre::MaterialPtr copy = Ogre::MaterialManager::getSingleton().getByName(copyName);
+        if(!copy)
+        {
+            copy = material->clone(copyName);
+            // The copy gets the render states of the original, then the skinning stage in every pass.
+            mShaderGenerator->cloneShaderBasedTechniques(*material, *copy);
+            if(!mShaderGenerator->createShaderBasedTechnique(*copy, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme))
+            {
+                OD_LOG_ERR("Cannot create the shader technique of " + copyName);
+                return false;
+            }
+            const Ogre::Technique* technique = copy->getTechnique(0);
+            for(unsigned short p = 0; p < technique->getNumPasses(); ++p)
+            {
+                Ogre::RTShader::RenderState* renderState = mShaderGenerator->getRenderState(scheme, *copy, p);
+                bool hasSkinning = false;
+                for(const Ogre::RTShader::SubRenderState* subState : renderState->getSubRenderStates())
+                    hasSkinning = hasSkinning || subState->getType() == Ogre::RTShader::SRS_HARDWARE_SKINNING;
+                if(!hasSkinning)
+                    renderState->addTemplateSubRenderState(
+                        mShaderGenerator->createSubRenderState(Ogre::RTShader::SRS_HARDWARE_SKINNING));
+            }
+        }
+        skinned.push_back(copy);
+    }
+
+    for(size_t index = 0; index < skinned.size(); ++index)
+        entity->getSubEntity(static_cast<unsigned int>(index))->setMaterial(skinned[index]);
+    // Reads the bone and weight counts of the mesh into the materials and regenerates their shaders.
+    factory->prepareEntityForSkinning(entity);
+    return true;
+#else
+    return false;
+#endif
+}
+
 //! \brief Adds a menu point light with its own scene node so several lights can coexist.
 Ogre::Light* RenderManager::addPointLightMenu(const std::string& name, const Ogre::Vector3& pos,
         const Ogre::ColourValue& diffuse, const Ogre::ColourValue& specular, Ogre::Real attenuationRange,
@@ -2526,7 +2621,9 @@ Ogre::Entity* RenderManager::addEntityMenu(const std::string& meshName, const st
     } 
 
     Ogre::Entity* ent = mSceneManager->createEntity(entityName, meshPtr);
-    
+    // Banners, crows, cages, chained dead and the other animated menu models would otherwise be skinned on the CPU.
+    useShaderSkinning(ent);
+
     Ogre::SceneNode* node = mMainMenuSceneNode->createChildSceneNode(ent->getName() + "_node");
     node->attachObject(ent);
     node->setPosition(pos);
@@ -3552,8 +3649,8 @@ static void rrPlaceFogInstance(Ogre::InstancedEntity* instance)
     instance->setPosition(Ogre::Vector3::ZERO);
 }
 
-//! \brief Creates or updates discovered terrain or matching neutral earth, its delayed cloud
-//! and the dig mark of the local player.
+//! \brief Creates or updates discovered terrain or matching neutral earth, its delayed cloud,
+//! the dig mark of the local player and look-neutral earth submission batches.
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
 {
     if (tile.getEntityNode() == nullptr)
@@ -3591,6 +3688,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     meshName = tileSetValue.getMeshName();
     Ogre::Entity* tileMeshEnt = nullptr;
     const std::string tileMeshName = tileName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_tileMesh";
+    mTerrainDrawBatch.remove(tileMeshName);
     if(mSceneManager->hasEntity(tileMeshName))
     {
         tileMeshEnt = mSceneManager->getEntity(tileMeshName);
@@ -3772,6 +3870,8 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
 
 
     
+    if(nt == NodeType::MTILES_NODE && tileMeshEnt != nullptr)
+        mTerrainDrawBatch.add(mSceneManager, tileMeshEnt);
 }
 
 void RenderManager::rrCreateTile(Tile& tile, GameMap& dtc, const Player& localPlayer, NodeType nt)
@@ -3790,6 +3890,7 @@ void RenderManager::rrCreateTile(Tile& tile, GameMap& dtc, const Player& localPl
     rrRefreshTile(tile, dtc, localPlayer,nt);
 }
 
+//! Removes terrain batch membership before releasing the tile's original query entity.
 void RenderManager::rrDestroyTile(Tile& tile, NodeType nt)
 {
     if (tile.getEntityNode() == nullptr)
@@ -3811,6 +3912,7 @@ void RenderManager::rrDestroyTile(Tile& tile, NodeType nt)
     }
 
     const std::string tileMeshName = tileName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_tileMesh";
+    mTerrainDrawBatch.remove(tileMeshName);
     if(mSceneManager->hasSceneNode(tileMeshName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_node"))
     {
         Ogre::SceneNode* tileMeshNode = mSceneManager->getSceneNode(tileMeshName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_node");
@@ -4047,6 +4149,8 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             ent->setCastShadows(false);
             ent->setQueryFlags(0);
         }
+        // Chickens, doors, beds and the other animated objects: skin on the GPU, after their final material is set.
+        useShaderSkinning(ent);
         if(meshName == "Cauldron" && ent->hasSkeleton() && ent->getSkeleton()->hasBone("FireAnchor"))
         {
             Ogre::ParticleSystem* fire = mSceneManager->createParticleSystem(tempString + "_CauldronFire", "RoomAmbAltarFlame");
@@ -4217,6 +4321,22 @@ void RenderManager::rrUpdateEntityOpacity(RenderedMovableEntity* entity)
     }
 }
 
+//! \brief Gives the plain ReflMetal sub entities of an animated creature the hardware skinned ReflMetalSkinned.
+//! An entity is only skinned on the GPU when the materials of all its sub entities are, and the Wyvern
+//! mesh has a ReflMetal part next to its creature material. ReflMetal itself stays unskinned for weapons.
+static void useSkinnedMetalMaterial(Ogre::Entity* entity)
+{
+    if(!entity->hasSkeleton())
+        return;
+
+    for(unsigned int sub = 0; sub < entity->getNumSubEntities(); ++sub)
+    {
+        Ogre::SubEntity* part = entity->getSubEntity(sub);
+        if(part->getMaterialName() == "ReflMetal")
+            part->setMaterialName("ReflMetalSkinned");
+    }
+}
+
 void RenderManager::rrCreateCreature(Creature* curCreature)
 {
     const std::string& meshName = curCreature->getCurrentMeshName();
@@ -4237,6 +4357,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
     }    
     std::string creatureName = curCreature->getOgreNamePrefix() + curCreature->getName();
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
+    useSkinnedMetalMaterial(ent);
 
 
     Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(creatureName + "_node");
@@ -4301,6 +4422,7 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
     }
 
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
+    useSkinnedMetalMaterial(ent);
     node->attachObject(ent);
 
     Ogre::Camera* cam = mViewport->getCamera();
@@ -6064,6 +6186,7 @@ void RenderManager::rrSetFeedingChicken(Creature* creature, MovableGameEntity* c
 
         const std::string name = "FeedingChicken_" + Helper::toString(++mChickenFeatherEffectNumber);
         feeding.mChickenEntity = mSceneManager->createEntity(name, "Chicken.mesh");
+        useShaderSkinning(feeding.mChickenEntity);
         // The feathers have the plumage of the animal that is eaten
         feeding.mRoosterFeathers = (dynamic_cast<ChickenEntity*>(chicken) != nullptr) &&
             (static_cast<ChickenEntity*>(chicken)->getKind() == ChickenKind::rooster);
@@ -7888,6 +8011,8 @@ void RenderManager::rrAddOutliner(Creature* creature)
                 vertex_program = mgr.createProgram("Enlarge", "Graphics","glsl" ,Ogre::GpuProgramType::GPT_VERTEX_PROGRAM);
 
                 vertex_program->setSourceFile("Enlarge.vert");
+                // The contour follows the hardware skinned creature, so it skins the same way
+                vertex_program->setSkeletalAnimationIncluded(true);
             }
             else
             {
@@ -7897,8 +8022,9 @@ void RenderManager::rrAddOutliner(Creature* creature)
             myPass1->setVertexProgram("Enlarge","Graphics");
 
             myPass1->getVertexProgramParameters()->setNamedConstant("pixelWidth", OutlinerContourPixels);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldViewProj", Ogre::GpuProgramParameters::ACT_WORLDVIEWPROJ_MATRIX);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldView", Ogre::GpuProgramParameters::ACT_WORLDVIEW_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewProjectionMatrix", Ogre::GpuProgramParameters::ACT_VIEWPROJ_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewMatrix", Ogre::GpuProgramParameters::ACT_VIEW_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4);
             myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewportSize", Ogre::GpuProgramParameters::ACT_VIEWPORT_SIZE);
 
             Ogre::HighLevelGpuProgramPtr fragment_program;

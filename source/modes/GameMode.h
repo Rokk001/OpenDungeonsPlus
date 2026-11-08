@@ -388,7 +388,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void endSkillTree(bool apply);
 
     //! \brief Called at each frame. It checks if the Gui should be refreshed (for example,
-    //! if a skill is done) and, if yes, refreshes accordingly.
+    //! if a skill is done) and, if yes, refreshes accordingly. A change of the research progress alone refreshes
+    //! only while the skill tree is open; while it is closed, the refresh is kept for when the tree opens.
     //! \param forceRefresh Refresh the gui even if no changes was declared by the local player Seat.
     void refreshGuiSkill(bool forceRefresh = false);
 
@@ -558,6 +559,10 @@ private:
 
     //! \brief Whether the spell buttons were last shown locked because the library was lost
     bool mIsLibraryLostShown;
+
+    //! \brief Whether the research progress changed while the skill tree was closed, so the tree is refreshed
+    //! when it opens
+    bool mIsSkillTreeOutdated = false;
 
     SkillType mCurrentSkillType;
     float mCurrentSkillProgress;

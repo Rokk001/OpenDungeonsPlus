@@ -3375,6 +3375,8 @@ bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
     {
     }
     resetSkillTree();
+    // Brings the tree up to date if the research progress changed while it was closed
+    refreshGuiSkill();
     // The Rooms tab is shown when the window opens
     static_cast<CEGUI::TabControl*>(mRootWindow->getChild("SkillTreeWindow/Skills/SkillTabs"))->setSelectedTab("Rooms");
     mRootWindow->getChild("SkillTreeWindow")->show();
@@ -4698,8 +4700,15 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
        ((mCurrentSkillType != curResType) ||
         (mCurrentSkillProgress != curSkillProgress)))
     {
-        forceRefresh = true;
+        // The progress is shown only inside the skill tree. While the tree is closed, the refresh waits until it
+        // opens: the cast buttons and the action bar do not depend on the progress.
+        if(mIsSkillWindowOpen)
+            forceRefresh = true;
+        else
+            mIsSkillTreeOutdated = true;
     }
+    if(mIsSkillWindowOpen && mIsSkillTreeOutdated)
+        forceRefresh = true;
 
     // Losing or regaining the library locks or unlocks the spells
     if(mIsLibraryLostShown != localPlayerSeat->isLibraryLost())
@@ -4710,6 +4719,9 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
 
     if(!forceRefresh && !localPlayerSeat->getGuiSkillNeedsRefresh())
         return;
+
+    // Every refresh below brings the whole tree up to date, the progress included
+    mIsSkillTreeOutdated = false;
 
     if(mIsSkillWindowOpen && localPlayerSeat->getGuiSkillNeedsRefresh())
     {
