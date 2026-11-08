@@ -73,6 +73,9 @@ SCALE = seats.LEVEL_SCALE_LOW
 # The foot of a mug on the table stands this little above the top, the mug this far behind the near edge of the table
 TABLE_CLEARANCE = 0.003
 TABLE_INSET = 0.0
+# The lizard guest sets its mug further onto the table before lifting it. An edge placement routes the upright mug
+# beside its cheek; the deeper supported placement leaves room to tip the mug in front of the muzzle.
+TABLE_INSETS = {'Lizardman': 0.1}
 # A limb reaches this share of its length at most
 MAX_REACH = 0.97
 # The rim of the mug stays this far in front of the face at least; the search moves it further out in these steps
@@ -123,7 +126,7 @@ MAX_CLEAR_FACE = 0.03
 MAX_HALF_DEPTH = float('inf')
 # Where the guest sits: on a stool at the end of the table (TAVERN_STOOL_DISTANCE from its middle, TAVERN_STOOL_BODIES of
 # RoomTavern.cpp) or on a bench; and the room its seated clips took before, which the drink keeps to within this margin
-SEAT = {'stool': False, 'envelope': None, 'side': None}
+SEAT = {'stool': False, 'envelope': None, 'side': None, 'inset': TABLE_INSET}
 # A bench guest whose arm would swing further to the side than this (tiles at level scale 1) reaches the second place
 # beside a stool guest (check_tavern_stools_863 blocked places: the slime blocks one place): the lich keeps to the room
 # its SitDrink took before decision 901 (0.501)
@@ -174,6 +177,21 @@ HEADS = {
     'RunelordDwarf': (('head.cr',), None),
     'Slime': (('slime_head',), None),
 }
+
+# Anatomically identified material points, in the original mesh vertex order. A turned head keeps the same mouth:
+# selecting its global front again would move the target onto another part of the head. Dragon uses the opening between
+# its upper and lower centre lips, Spider the midpoint between its inner fangs, Rat its muzzle centre and Slime its front.
+MOUTHS = {
+    'Dragon': ((80, (0.0, -0.708788, 0.961628)), (72, (0.0, -0.703024, 0.954036))),
+    'Spider': ((14, (-0.00848184, -0.142194, 0.131078)), (69, (0.00848184, -0.142194, 0.131078))),
+    'Rat': ((462, (0.0, -0.430011, 0.145937)),),
+    'Slime': ((16, (0.0, -0.274409, 0.27)),),
+}
+
+# The seated dragon brings its long muzzle around the right shoulder with its independent neck joints. The hip, legs
+# and seat stay fixed. The mug approaches the front of the turned muzzle, whose forward direction is (-0.5, sqrt(0.75)).
+DRINK_NECK_TURNS = {('Dragon', 'SitDrink'): (('Spine_3', -60.0), ('Spine_4', -90.0))}
+DRINK_APPROACHES = {('Dragon', 'SitDrink'): (('neck-front', (0.5, -math.sqrt(0.75), 0.0)),)}
 
 
 def read_limb_mounts():
@@ -288,13 +306,15 @@ def head_vertices(skeleton, name, weights, limb_root_z, posed, limb=()):
 class Face(object):
     """The front of the head: per cell across (x) and up (z), how far forward (-y) the head reaches and how far back."""
 
-    def __init__(self, points):
+    def __init__(self, points, mouth=None):
+        """Build collision cells and optionally carry the skinned anatomical mouth point."""
         self.cells = {}
         for x, y, z in points:
             key = (int(math.floor(x / FACE_CELL)), int(math.floor(z / FACE_CELL)))
             front, back = self.cells.get(key, (y, y))
             self.cells[key] = (min(front, y), max(back, y))
         self.points = points
+        self.material_mouth = mouth
 
     def inside(self, points):
         """Share of the points that lie in the head."""
@@ -308,7 +328,9 @@ class Face(object):
         return count / max(1, len(points))
 
     def mouth(self):
-        """The mouth: the middle of the front of the lower half of the head."""
+        """Return the material mouth, or estimate the front of the lower half of an unannotated head."""
+        if self.material_mouth is not None:
+            return self.material_mouth
         p = self.points
         low, high = np.percentile(p[:, 2], 15), np.percentile(p[:, 2], 55)
         part = p[(p[:, 2] >= low) & (p[:, 2] <= high)]
@@ -514,7 +536,7 @@ def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
     if seated:
         # Every seated guest sets the mug on the table. A short limb needs a different pose or rig, never a held fallback.
         edge = -(STOOL_DISTANCE - seats.LONG_TABLE_HALF_LENGTH) if SEAT['stool'] else seats.TABLE_NEAR_EDGE
-        near_edge = (edge - TABLE_INSET) / SCALE - mug.base_radius
+        near_edge = (edge - SEAT['inset']) / SCALE - mug.base_radius
         across = root[0] + np.arange(-PLACE_SPAN, PLACE_SPAN + 1e-9, PLACE_STEP)
         return places(across, near_edge - np.arange(0.0, PLACE_DEPTH + 1e-9, PLACE_STEP),
                       seats.TABLE_TOP / SCALE + TABLE_CLEARANCE + lift, 'table')
@@ -642,14 +664,21 @@ def lean_forward(skeleton, local, spine, degrees):
 
 
 class Head(object):
-    """The vertices of the head and the bone that bows it."""
+    """The head surface, anatomical mouth anchors and the bone that bows it."""
 
     def __init__(self, skeleton, name, vertices, weights, limb, start):
+        """Identify the head and verify annotated mouths against the original mesh topology."""
         world = skeleton.fk(start)
         posed = rest.skin_vertices(skeleton, start, vertices, weights)[0]
         self.indices = head_vertices(skeleton, name, weights, world[skeleton.idx[limb[0]]][0][0][2], posed, limb)
         self.vertices = np.asarray(vertices)[self.indices]
         self.weights = [weights[index] for index in self.indices]
+        anchors = MOUTHS.get(name, ())
+        for index, expected in anchors:
+            assert np.allclose(vertices[index], expected, atol=1e-5, rtol=0.0), (name, 'mouth topology changed', index)
+        self.mouth_vertices = np.asarray([vertices[index] for index, _ in anchors])
+        self.mouth_weights = [weights[index] for index, _ in anchors]
+        self.drink_turns = ()
         totals = {}
         for index in self.indices:
             for bone, weight in weights[index]:
@@ -667,7 +696,15 @@ class Head(object):
         self.movable = (pivot not in ancestors) and (self.pivot not in limb)
 
     def face(self, skeleton, local):
-        return Face(rest.skin_vertices(skeleton, local, self.vertices, self.weights)[0])
+        """Return the posed collision surface with its anatomical mouth when annotated."""
+        mouth = self.mouths(skeleton, local)[0] if len(self.mouth_vertices) else None
+        return Face(rest.skin_vertices(skeleton, local, self.vertices, self.weights)[0], mouth)
+
+    def mouths(self, skeleton, local):
+        """Follow the same lip vertices through skinning in every frame of a clip."""
+        if len(self.mouth_vertices):
+            return rest.skin_vertices(skeleton, local, self.mouth_vertices, self.mouth_weights).mean(axis=1)
+        return np.asarray([Face(points).mouth() for points in rest.skin_vertices(skeleton, local, self.vertices, self.weights)])
 
 
 def mug_rim(skeleton, local, mug):
@@ -687,6 +724,8 @@ def drink_pose(skeleton, resting, limb, mug, head, gap, towards, tip, depth_of=N
     """The pose of the drink: the rim of the mug at the mouth, the mug leaning back in front of the face. A limb too short
     to bring the mug to the mouth meets the mouth half way: the head bows to the mug, until its mouth moved max_bow."""
     drinking = copy_pose(resting)
+    for bone, degrees in head.drink_turns:
+        rest.rotate_joint(skeleton, drinking, bone, np.array([0.0, 0.0, 1.0]), np.array([math.radians(degrees)]))
     axis = tipped(tip, towards)
     start_mouth = head.face(skeleton, resting).mouth()
     for _ in range(MOUTH_ROUNDS):
@@ -716,6 +755,7 @@ def drink_pose(skeleton, resting, limb, mug, head, gap, towards, tip, depth_of=N
 def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     """Solve one calm sip, rejecting a seated pose that cannot rest its mug on the table."""
     seated = clip == 'SitDrink'
+    SEAT['inset'] = TABLE_INSETS.get(name, TABLE_INSET)
     old = skeleton.clips[clip]
     start = skeleton.locals_at(old, np.zeros(1))
     # The mug shows at its own size: a clip that shrank the weapon bone to hide a weapon (Troll) does not shrink the mug
@@ -754,6 +794,7 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
                 start, lean = trial, degrees
                 break
     head = Head(skeleton, name, vertices, weights, limb, start)
+    head.drink_turns = DRINK_NECK_TURNS.get((name, clip), ())
     head.max_bow = MAX_BOW_SHARE * float(np.ptp(posed[:, 2]))
 
     # The pause: the mug upright on its support. Where the limb would reach into the table, the mug stands a little further
@@ -793,6 +834,8 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     # it comes from the side of the limb, or between the two
     approaches = (('front', np.array([0.0, 1.0, 0.0])), ('side', np.array([-side, 0.0, 0.0])),
                   ('corner', unit(np.array([-side, 1.0, 0.0]))), ('behind', unit(np.array([-side, -1.0, 0.0]))))
+    if (name, clip) in DRINK_APPROACHES:
+        approaches = tuple((approach, np.asarray(direction)) for approach, direction in DRINK_APPROACHES[(name, clip)])
 
     def depth_of(pose):
         return pose_depth(skeleton, pose, mug, vertices, weights)
@@ -817,6 +860,7 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     _, _, rim_distance, gap, drinking, in_face, approach, towards, drink_depth, tip = best
     drink_foot, drink_axis, _ = mug.world(skeleton.fk(drinking), skeleton)
     pivot = [skeleton.idx[head.pivot]] if head.movable else []
+    pivot = sorted(set(pivot) | {skeleton.idx[bone] for bone, _ in head.drink_turns})
     # The bones that go from the rest to the drink with the way: the head and a spine that straightens up again
     pivot = sorted(set(pivot) | ({skeleton.idx[bone] for bone in spine} if lean > 0.0 else set()))
 

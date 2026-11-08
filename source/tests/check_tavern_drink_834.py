@@ -86,6 +86,9 @@ MIN_HEIGHT = 0.3
 MAX_MUG_IN_FACE = 0.05
 MAX_RIM_TO_MOUTH = 0.06
 MAX_STAND_GAP = 0.015
+# Independently measured centres of the annotated mouth openings in the original mesh coordinates.
+EXPECTED_MOUTHS = {'Dragon': (0.0, -0.705906, 0.957832), 'Spider': (0.0, -0.142194, 0.131078),
+                   'Rat': (0.0, -0.430011, 0.145937), 'Slime': (0.0, -0.274409, 0.27)}
 # Fixed distance of a stool from the table centre (decision 863).
 STOOL_DISTANCE = 0.8
 # Decision 901(2) applies to every creature: a short limb, a held mug or a path cut short by furniture is a failed cycle.
@@ -271,6 +274,7 @@ def check_mug_models(out):
 
 # 1c. Check every creature's complete calm sip, without support, reach or lift exemptions.
 def check_drink_cycle(out):
+    """Require complete supported sips with continuous contact at each creature's anatomical mouth."""
     from check_animation_assets import export
     import fix_walk_feet as feet
     import author_rest_poses as rest
@@ -328,12 +332,13 @@ def check_drink_cycle(out):
             in_face = max(drink.Face(heads[i]).inside(points[i]) for i in range(0, len(times), 4))
             worst['face'] = max(worst['face'], in_face)
             assert in_face <= MAX_MUG_IN_FACE, (name, clip, 'the mug goes through the head', in_face)
-            mouth = drink.Face(heads[top]).mouth()
+            mouths = head.mouths(skeleton, local)
+            mouth = mouths[top]
             reach = float(np.linalg.norm(rim[top] - mouth))
             worst['mouth'] = max(worst['mouth'], reach)
             assert reach <= MAX_RIM_TO_MOUTH, (name, clip, 'the rim does not come to the mouth', reach)
             # A single frame at the mouth is insufficient: the calm hold must remain there for a continuous drink.
-            mouth_distances = np.linalg.norm(rim - np.array([drink.Face(frame).mouth() for frame in heads]), axis=1)
+            mouth_distances = np.linalg.norm(rim - mouths, axis=1)
             at_mouth = held & (mouth_distances <= MAX_RIM_TO_MOUTH)
             changes = np.diff(np.concatenate(([False], at_mouth, [False])).astype(int))
             spans = np.flatnonzero(changes == -1) - np.flatnonzero(changes == 1)
@@ -489,7 +494,42 @@ def check_lying_models(out):
     print('lying models ok: %d bodies inside their measured floor' % checked)
 
 
+# A head turn must transport the same mouth opening rather than select a new global-front surface point.
+def check_mouth_anchors(out):
+    """Check fixed anatomical centres and their movement under a rigid turn and translation of each actual rig."""
+    from check_animation_assets import export
+    import fix_walk_feet as feet
+    import author_rest_poses as rest
+    import author_tavern_drink as drink
+    assert set(drink.MOUTHS) == set(EXPECTED_MOUTHS)
+    meshes = {skeleton_of(mesh): mesh for mesh in visiting_meshes()}
+    export('TavernMug.mesh', out)
+    mug_points = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
+    turn = drink.rotation_matrix(np.array([0.0, 0.0, 1.0]), math.pi / 2.0)
+    shift = np.array([0.2, 0.1, 0.3])
+    for name, expected in EXPECTED_MOUTHS.items():
+        export(name + '.skeleton', out)
+        export(meshes[name], out)
+        skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
+        vertices, _, weights = rest.mesh_data(out / (meshes[name] + '.xml'))
+        mug = drink.Mug(skeleton, name, mug_points, drink.read_limb_mounts())
+        bind = skeleton.locals_at(feet.Clip('bind', 1.0), np.zeros(1))
+        head = drink.Head(skeleton, name, vertices, weights, drink.limb_of(skeleton, name, mug), bind)
+        assert np.allclose(head.mouths(skeleton, bind)[0], expected, atol=1e-5, rtol=0.0), name
+        moved = drink.copy_pose(bind)
+        for index, parent in enumerate(skeleton.parent):
+            if parent >= 0:
+                continue
+            rest.rotate_joint(skeleton, moved, skeleton.names[index], np.array([0.0, 0.0, 1.0]), np.array([math.pi / 2.0]))
+            position, rotation, scale = moved[index]
+            moved[index] = (position @ turn.T + shift, rotation, scale)
+        assert np.allclose(head.mouths(skeleton, moved)[0], turn @ np.asarray(expected) + shift,
+                           atol=1e-5, rtol=0.0), (name, 'mouth changed surface during a turn')
+    print('mouth anchors ok: four measured anatomical openings follow their rig through a rigid turn')
+
+
 def main():
+    """Run the source contracts, anatomical anchors and strict serialized-model checks."""
     check_mug_code()
     check_duration()
     check_chain_and_game()
@@ -501,6 +541,7 @@ def main():
         out = ROOT / 'out' / 'tavern-drink-834'
         out.mkdir(parents=True, exist_ok=True)
         check_mug_models(out)
+        check_mouth_anchors(out)
         check_drink_cycle(out)
         check_lying_models(out)
     print('tavern drink 834 ok')

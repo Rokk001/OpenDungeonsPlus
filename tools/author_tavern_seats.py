@@ -1258,11 +1258,18 @@ def hammer_arms(skeleton, local, seated, times, length, hammer):
         aim_bone(skeleton, local, forearm, hand, directions[1])
 
 
-# Solve a chain of joints for a point by moving it from the tip to the root and back; the root stays and the lengths stay.
+# Solve a chain of joints without stretching; stop converged iterations and directly handle targets beyond full reach.
 def reach_chain(joints, target, rounds=80):
+    """Keep the root and segment lengths while reaching the target, including the straight unreachable case."""
     lengths = [float(np.linalg.norm(joints[index + 1] - joints[index])) for index in range(len(joints) - 1)]
     points = [joint.copy() for joint in joints]
     root = points[0].copy()
+    distance = float(np.linalg.norm(target - root))
+    if distance >= sum(lengths) and distance > 1e-12:
+        direction = (target - root) / distance
+        for index, length in enumerate(lengths):
+            points[index + 1] = points[index] + direction * length
+        return points
     for _ in range(rounds):
         points[-1] = target.copy()
         for index in range(len(points) - 2, -1, -1):
@@ -1272,6 +1279,8 @@ def reach_chain(joints, target, rounds=80):
         for index in range(1, len(points)):
             step = points[index] - points[index - 1]
             points[index] = points[index - 1] + step / np.linalg.norm(step) * lengths[index - 1]
+        if np.linalg.norm(points[-1] - target) <= 1e-10:
+            break
     return points
 
 
