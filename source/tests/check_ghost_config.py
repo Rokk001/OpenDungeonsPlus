@@ -34,7 +34,7 @@ def main():
         "GhostAiGoldPerResearchPoint":.4144,"GhostAiGoldPerXp":0.8536668706148699}
     for key, value in expected.items():
         assert global_values[key] == value, (key, global_values.get(key), value)
-    expected = {"GhostEmptyTurns":5.5,"GhostBoxCapacity":1,"GhostBeamRange":1,
+    expected = {"GhostTransferSeconds":20,"GhostBoxCapacity":1,"GhostBeamRange":1,
         "GhostBoxOpenSeconds":120,"GhostHuntersPerCauldron":3,"GhostLevelsPerEctoplasm":10,
         "GhostEctoplasmMana":1580,"GhostEctoplasmResearchPoints":319.8663176854666,"GhostEctoplasmPerCrystal":6,"GhostReviveMana":14000,
         "GhostReviveHpShare":.35,"CryptCorpsesPerLich":10,"CryptLichLevelBonus":0,
@@ -45,8 +45,9 @@ def main():
         "GhostHeroProductWeightBook":6,"GhostHeroProductWeightCrystal":1,"GhostProductBoxChance":.05}
     for key, value in expected.items():
         assert room[key] == value, (key, room.get(key), value)
-    # Owner decision 726: the catch takes 2 s throw, 16 s beam and 2 s snap, 20 s for every hunter; the former
-    # efficiency- and research-scaled beam turns are gone.
+    # Owner decision 726: the catch takes 2 s throw, 16 s beam and 2 s snap; the former beam turns are gone. Decisions
+    # 855 and 857: 16 s is the base beam at research level 1 and hunter efficiency 1, the CatchTime research and the
+    # hunter efficiency shorten only the beam (getBeamSeconds), throw and snap stay fixed.
     catch = {"GhostBoxThrowSeconds":2,"GhostBeamSeconds":16,"GhostBoxSnapSeconds":2}
     for key, value in catch.items():
         assert room[key] == value, (key, room.get(key), value)
@@ -132,7 +133,7 @@ def main():
     manager = read('source/game/SkillManager.cpp')
     for skill,effect,key in [('roomGhostRoom','EctoplasmLevels','GhostLevelsPerEctoplasm'),
             ('roomGhostRoom','BoxCapacity','GhostBoxCapacity'),('roomGhostRoom','BeamRange','GhostBeamRange'),
-            ('roomGhostRoom','CatchTime','GhostEmptyTurns'),('roomGhostRoom','RevivePrice','GhostReviveMana'),
+            ('roomGhostRoom','CatchTime',r'GhostTransferSeconds",\s*"GhostBeamSeconds'),('roomGhostRoom','RevivePrice','GhostReviveMana'),
             ('roomCrypt','LichCorpses','CryptCorpsesPerLich'),('roomCrypt','LichLevel','CryptLichLevelBonus')]:
         assert re.search(r'SkillType::'+skill+r'\s*,\s*"'+effect+r'"\s*,\s*ResearchBaseSource::rooms\s*,\s*"'+key+r'"',manager), (effect,key)
 

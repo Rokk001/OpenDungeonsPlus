@@ -78,7 +78,7 @@ assert 'const bool isOwn = (localSeat != nullptr) && (getSeat() == localSeat);' 
 assert 'effectsText->setVisible(isOwn && !effects.empty());' in profile_page
 # The restored acts and climbs go on at the reached turn of their clip instead of starting it again
 attendant_restore = extract(read('source/entities/PoolAttendantEntity.cpp'), 'void PoolAttendantEntity::restoreFromSave(')
-assert attendant_restore.count('setAnimationTime(save.mHasClipTime ? save.mClipTime : getClipTurns() - mTurnsLeft);') == 4
+assert attendant_restore.count('setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);') == 4
 assert attendant_restore.count('if(save.mHasClipTime') == 3, 'sitting, walk to the board and walk back also use the saved clip time'
 # The jump of the attendant shows its clip at the phase of the arc, when it starts and in every frame
 attendant_source = read('source/entities/PoolAttendantEntity.cpp')
@@ -425,6 +425,7 @@ namespace PoolAttendantPose
 static const Ogre::Vector3 TOWARDS_CHAIR(0.0f, 1.0f, 0.0f);
 struct Tile { };
 static double getClipTurns() { return 40.0; }
+struct ODApplication { static constexpr double turnsPerSecond = 1.4; };
 struct RenderedMovableEntity { static void setPosition(const Ogre::Vector3& position) { } };
 struct ProbeRoom
 {
@@ -468,7 +469,7 @@ static void checkAttendantRestore()
         AttendantProbe a(&room, &chair); PoolAttendantSave save; save.mState = acts[i]; save.mTurnsLeft = 30.0;
         a.restoreFromSave(save);
         expect(a.mState == acts[i] && a.clip == clips[i], std::string("the act is restored: ") + clips[i]);
-        expectNear(a.clipTime, 10.0, std::string("the act clip goes on at the reached turn: ") + clips[i]);
+        expectNear(a.clipTime, 10.0 / 1.4, std::string("the act clip goes on at the reached turn: ") + clips[i]);
         AttendantProbe b(&room, &chair); save.mTurnsLeft = 40.0; b.restoreFromSave(save);
         expectNear(b.clipTime, 0.0, std::string("an act that had just begun starts at 0: ") + clips[i]);
     }
@@ -487,9 +488,9 @@ static void checkAttendantRestore()
     AttendantProbe down(&room, &chair); PoolAttendantSave climb; climb.mState = PoolAttendantState::climbingDown; climb.mTurnsLeft = 10.0;
     climb.mHasPlace = true; down.restoreFromSave(climb);
     expect(down.mState == PoolAttendantState::climbingDown && down.clip == "Climb", "the climb down is restored");
-    expectNear(down.clipTime, 30.0, "the climb clip goes on at the reached turn"); expectNear(down.ladderProgress, 0.75, "the height follows the same turn");
+    expectNear(down.clipTime, 30.0 / 1.4, "the climb clip goes on at the reached turn"); expectNear(down.ladderProgress, 0.75, "the height follows the same turn");
     AttendantProbe up(&room, &chair); climb.mState = PoolAttendantState::climbingUp; up.restoreFromSave(climb);
-    expectNear(up.clipTime, 30.0, "the climb up goes on at the reached turn"); expectNear(up.ladderProgress, 0.25, "the height of the climb up");
+    expectNear(up.clipTime, 30.0 / 1.4, "the climb up goes on at the reached turn"); expectNear(up.ladderProgress, 0.25, "the height of the climb up");
     // Sitting and both walks go on at the saved clip time; an old save without it starts at 0
     const PoolAttendantState others[] = { PoolAttendantState::sitting, PoolAttendantState::walkingToBoard, PoolAttendantState::walkingBack };
     for(int i = 0; i < 3; ++i)

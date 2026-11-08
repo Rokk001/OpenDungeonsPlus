@@ -34,6 +34,7 @@
 #include "utils/LogManager.h"
 #include "utils/Random.h"
 #include "ODApplication.h"
+#include "utils/ConfigManager.h"
 
 #include <OgreAnimationState.h>
 #include <algorithm>
@@ -54,6 +55,9 @@ MovableGameEntity::MovableGameEntity(GameMap* gameMap) :
     mDestinationAnimationDirection(Ogre::Vector3::ZERO),
     mWalkDirection(Ogre::Vector3::ZERO),
     mAnimationTime(0.0),
+    mClipSeconds(0.0),
+    mTimedClipSeconds(0.0),
+    mPendingTimedClipSeconds(0.0),
     mBlowStartDelay(0.0),
     mAnimationSequence(0)
 {
@@ -231,6 +235,21 @@ void MovableGameEntity::setAnimationState(const std::string& state, bool loop, c
 
     ++mAnimationSequence;
 
+    // A playing time chosen at run time (setTimedAnimationState) holds for its clip until another clip is requested, so
+    // the clip a client keeps for the end of a walk plays with it too. The clip time is looked up again in update.
+    if(mPendingTimedClipSeconds > 0.0)
+    {
+        mTimedClip = state;
+        mTimedClipSeconds = mPendingTimedClipSeconds;
+    }
+    else if(state != mTimedClip)
+    {
+        mTimedClip.clear();
+        mTimedClipSeconds = 0.0;
+    }
+    mPendingTimedClipSeconds = 0.0;
+    mClipSecondsFor.clear();
+
     // On server side, we update the entity
     if(getIsOnServerMap())
     {
@@ -241,7 +260,8 @@ void MovableGameEntity::setAnimationState(const std::string& state, bool loop, c
         if(direction != Ogre::Vector3::ZERO)
             setWalkDirection(direction);
 
-        fireObjectAnimationState(state, loop, direction, playIdleWhenAnimationEnds);
+        fireObjectAnimationState(state, loop, direction, playIdleWhenAnimationEnds,
+            (state == mTimedClip) ? mTimedClipSeconds : 0.0);
         return;
     }
 
@@ -357,6 +377,24 @@ void recordScriptWalk(MovableGameEntity& entity, const Ogre::Vector2& from, cons
 }
 }
 
+//! \brief Requests a clip whose whole length takes clipSeconds game seconds on screen (0: the normal or configured rate).
+void MovableGameEntity::setTimedAnimationState(const std::string& state, double clipSeconds, bool loop,
+    const Ogre::Vector3& direction, bool playIdleWhenAnimationEnds)
+{
+    mPendingTimedClipSeconds = std::max(0.0, clipSeconds);
+    setAnimationState(state, loop, direction, playIdleWhenAnimationEnds);
+    // A request that was ignored (the same looped clip) does not hand its time to a later one
+    mPendingTimedClipSeconds = 0.0;
+}
+
+//! \brief Looks up the playing time that the room configuration key ClipSeconds<Clip> gives a clip.
+double MovableGameEntity::getClipSeconds(const std::string& clip) const
+{
+    const std::string clipKey = "ClipSeconds" + clip;
+    return ConfigManager::getSingleton().hasRoomConfig(clipKey) ?
+        ConfigManager::getSingleton().getRoomConfigDouble(clipKey) : 0.0;
+}
+
 //! \brief Advances movement, clips and deferred strikes using the same game-time scale.
 //! Observes actual crossing steps without changing movement.
 void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
@@ -392,6 +430,31 @@ void MovableGameEntity::update(Ogre::Real timeSinceLastFrame)
             addedTime = static_cast<double>(timeSinceLastFrame) * gameSpeedFactor;
         else
             addedTime *= DIE_ANIMATION_SPEED_FACTOR;
+    }
+    // Clips that the plans give in seconds play for exactly that time: the whole clip takes ClipSeconds<Clip> game
+    // seconds, whatever the creature speed and the turn length. The clip files are authored with the plan length, the
+    // server (which has no clip) counts with that and a client takes the length of the clip it really shows.
+    if(mClipSecondsFor != mPrevAnimationState)
+    {
+        mClipSecondsFor = mPrevAnimationState;
+        // A playing time chosen at run time (a slap of the slap duel) wins over the configured one
+        mClipSeconds = ((mTimedClipSeconds > 0.0) && (mTimedClip == mPrevAnimationState)) ?
+            mTimedClipSeconds : getClipSeconds(mPrevAnimationState);
+    }
+    if(mClipSeconds > 0.0)
+    {
+        double clipLength = mClipSeconds;
+        bool timed = true;
+        if(!getIsOnServerMap() && (getAnimationState() != nullptr))
+        {
+            // A fallback clip that stands in for a missing one keeps the normal rate
+            timed = (getAnimationState()->getAnimationName() == mPrevAnimationState) &&
+                (getAnimationState()->getLength() > 0.0);
+            if(timed)
+                clipLength = static_cast<double>(getAnimationState()->getLength());
+        }
+        if(timed)
+            addedTime = clipLength / mClipSeconds * static_cast<double>(timeSinceLastFrame) * gameSpeedFactor;
     }
     mAnimationTime += addedTime;
     // A dead creature lies still: only its death clip and its slow decay clip run, no other clip moves a body
@@ -514,7 +577,8 @@ void MovableGameEntity::setPosition(const Ogre::Vector3& v,GameMap *gameMap)
 
 }
 
-void MovableGameEntity::fireObjectAnimationState(const std::string& state, bool loop, const Ogre::Vector3& direction, bool playIdleWhenAnimationEnds)
+void MovableGameEntity::fireObjectAnimationState(const std::string& state, bool loop, const Ogre::Vector3& direction, bool playIdleWhenAnimationEnds,
+    double clipSeconds)
 {
     for(Seat* seat : mSeatsWithVisionNotified)
     {
@@ -533,6 +597,8 @@ void MovableGameEntity::fireObjectAnimationState(const std::string& state, bool 
             serverNotification->mPacket << true << mWalkDirection;
         else
             serverNotification->mPacket << false;
+        // The playing time of the whole clip in game seconds, 0 for the normal or configured rate
+        serverNotification->mPacket << clipSeconds;
         ODServer::getSingleton().queueServerNotification(serverNotification);
     }
 }

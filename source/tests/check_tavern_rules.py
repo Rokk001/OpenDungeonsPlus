@@ -17,9 +17,12 @@ What is run (the function bodies are taken from the source files, not copied by 
                       rule, eight places per table (four per bench), a large creature takes the places its seated width
                       needs (a dragon three, every other whole bench), shares a bench only when all fit side by side, a bench
                       with a wall behind it stays empty, the draw of the three games (the slap duel only with beer), the underdog chances with the
-                      floor of 5 percent, underdog mood and double experience, spectators, the slap duel (10 HP per hit,
-                      critical chance 10 +- 0.25 per level, knock-out at a critical or below 30 HP, HP never below 1,
-                      the time limit), 42 turns lying then getting up, a fight, a flight, a knock-out or a pick-up ends a
+                      floor of 5 percent, underdog mood and double experience, spectators, the slap duel (one slap of 4 to
+                      10 s = 6 to 14 turns drawn per slap with the SitSlap clip over the whole slap, the hit at its half
+                      with the SitSlapped clip over the rest, a pause of 3 to 6 s = 5 to 8 turns drawn per pause, then
+                      the other guest; 10 HP per hit, critical chance 10 +- 0.25 per level, knock-out at a critical or
+                      below 30 HP when the slap is over, HP never below 1, the limit in slaps), 42 turns (30 s) lying
+                      then 9 turns (6 s) getting up, a fight, a flight, a knock-out or a pick-up ends a
                       game without effects
   CreatureMoodThirst::getAmount        the same numbers as the hunger problem, for prisoners as for every seat creature
   RoomPortal getResearchedCooldown     the portal cooldown factors 1.0 / 0.9 / 0.8 per Beer level
@@ -319,7 +322,8 @@ assert re.search(r'^\s+TavernLeisureCooldownTurns\s+600\s*$', rooms_cfg, re.M), 
 tavern = block_values(global_cfg, 'Tavern')
 rooms = block_values(rooms_cfg, 'Rooms')
 config_entries = [(k, v) for k, v in tavern.items()] + [('Room' + k, rooms[k]) for k in ('TavernDirtPerDrink', 'PortalCooldownSpawnMin', 'PortalCooldownSpawnMax',
-    'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving')]
+    'TavernDuelMaxTurnsFactor', 'TavernDrinkChainHalving', 'CreatureGetUpSeconds', 'TavernSlapSecondsMin', 'TavernSlapSecondsMax',
+    'TavernSlapPauseSecondsMin', 'TavernSlapPauseSecondsMax')]
 config_table = ',\n'.join('    {"%s", %s}' % (k, v) for k, v in config_entries)
 effect_line = re.search(r'^\s*tavernBeer\s+PortalCooldown\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', skills_cfg, re.M)
 assert effect_line is not None, 'the portal cooldown effect line is missing'
@@ -363,12 +367,13 @@ const Vector3 Vector3::ZERO(0, 0, 0);
 namespace Random
 {
 static std::vector<double> doubles; static std::vector<uint32_t> uints; static unsigned doublePos = 0, uintPos = 0;
-static uint32_t lastUintMax = 0;
-static void script(const std::vector<double>& d, const std::vector<uint32_t>& u) { doubles = d; uints = u; doublePos = 0; uintPos = 0; lastUintMax = 0; }
+static uint32_t lastUintMax = 0; static uint32_t lastUintMin = 0;
+static void script(const std::vector<double>& d, const std::vector<uint32_t>& u) { doubles = d; uints = u; doublePos = 0; uintPos = 0; lastUintMax = 0; lastUintMin = 0; }
 static double Double(double a, double b) { return (doublePos < doubles.size()) ? doubles[doublePos++] : 100.0; }
-static uint32_t Uint(uint32_t a, uint32_t b) { lastUintMax = b; return (uintPos < uints.size()) ? uints[uintPos++] : a; }
+static uint32_t Uint(uint32_t a, uint32_t b) { lastUintMin = a; lastUintMax = b; return (uintPos < uints.size()) ? uints[uintPos++] : a; }
 }
 
+struct ODApplication { static constexpr double turnsPerSecond = 1.4; };
 // ---- Configuration: the real values of the config files, an unknown key is a failure
 struct ConfigManager
 {
@@ -456,6 +461,8 @@ struct Creature
     double mUrge, mThirst, mTavernMood, mTavernMoodTurns, mDrunk, mHangoverTurns, mHp, mExp, mStoredMood;
     bool mVomited, mHangoverPending, mOnMap, mAlive, mKo, mDragged, mPossessed, mFighting, mFleeing, mHit;
     uint32_t mLevel; double mGold; int takeDamageCalls; int32_t mTavernCooldownTurns = 0; int32_t mPleasureVisitKind = -1;
+    //! The last clip with a playing time chosen at run time, its seconds and how many such clips were requested
+    std::string mLastClip; double mLastClipSeconds = 0.0; int timedClips = 0;
     //! \brief Initializes the tavern creature with the production fractional gold balance.
     Creature(const std::string& name, CreatureDefinition* def, Seat* seat, uint32_t level)
       : mDefinition(def), mSeat(seat), mName(name), mTile(nullptr), mUrge(0.0), mThirst(0.0), mTavernMood(0.0), mTavernMoodTurns(0.0), mDrunk(0.0),
@@ -486,6 +493,8 @@ struct Creature
     Tile* getPositionTile() const { return mTile; }
     const Ogre::Vector3& getPosition() const { return mPos; }
     void setAnimationState(const std::string& state, bool loop = true, const Ogre::Vector3& direction = Ogre::Vector3::ZERO, bool idle = true) {}
+    void setTimedAnimationState(const std::string& state, double clipSeconds, bool loop, const Ogre::Vector3& direction, bool idle)
+    { mLastClip = state; mLastClipSeconds = clipSeconds; ++timedClips; }
     //! \brief The one-time mood event of the real creature, reduced to its effect on the stored mood: 0 .. CreatureBaseMood.
     void applyMoodEvent(double points, bool sensitive)
     { mStoredMood = std::max(0.0, std::min(@@BASE_MOOD@@, mStoredMood + points)); }
@@ -871,7 +880,8 @@ static void checkGameStart()
     { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); Creature* b = f.guest("B", 3, 1, TavernGuestState::done, 2);
       Random::script({}, { 2 }); f.room.startGame(f.seatOf(a), f.seatOf(b));
       expect(Random::lastUintMax == 2, "with beer three games are drawn");
-      expect(f.room.mGames.begin()->second.mKind == TavernGameKind::slapDuel && f.room.mGames.begin()->second.mTurnsLeft == 32, "the duel ends after 4 x 8 turns at the latest"); }
+      expect(f.room.mGames.begin()->second.mKind == TavernGameKind::slapDuel && f.room.mGames.begin()->second.mTurnsLeft == 32, "the duel ends after 4 x 8 slaps at the latest");
+      expect(f.room.mGames.begin()->second.mDuelClock.mPhase == TavernDuelPhase::none, "the first slap starts in the next turn"); }
 
     // A guest on the opposite bench comes before the one next to it
     { Fixture f; Creature* a = f.guest("A", 2, 1, TavernGuestState::done, 2); Creature* side = f.guest("Side", 3, 1, TavernGuestState::done, 2); Creature* across = f.guest("Across", 4, 1, TavernGuestState::done, 2);
@@ -1000,9 +1010,32 @@ static void checkContest()
       expectNear(possessed->mStoredMood, START_MOOD, "a possessed creature does not cheer"); expectNear(off->mStoredMood, START_MOOD, "a creature off the map does not cheer"); }
 }
 
+// Plays turns of the slap duel kept under the seat key until the game ends; returns the turns played
+static int runDuel(Fixture& f, const RoomTavernSeat& key, int turns)
+{
+    int played = 0;
+    for(; played < turns; ++played)
+    {
+        std::map<RoomTavernSeat, RoomTavernGame>::iterator it = f.room.mGames.find(key);
+        if(it == f.room.mGames.end())
+            break;
+        f.room.playDuelTurn(it);
+    }
+    return played;
+}
+
 static void checkDuel()
 {
-    // The critical chance is 10 percent at equal level and 0.25 points per level of difference
+    // The lengths in turns (decisions 856 and 858): a slap of 4 to 10 s is 6 to 14 turns (4.29 s to 10 s), a pause of
+    // 3 to 6 s is 5 to 8 turns (3.57 s to 5.71 s); the shortest and longest whole turns inside the ranges
+    const double tps = ODApplication::turnsPerSecond;
+    { Random::script({}, {}); expect(randomDuelTurns("TavernSlapSecondsMin", "TavernSlapSecondsMax") == 6 && Random::lastUintMin == 6 && Random::lastUintMax == 14, "a slap is drawn from 6 to 14 turns");
+      expect(6 / tps >= 4.0 && 5 / tps < 4.0 && 14 / tps <= 10.0 + 1e-9 && 15 / tps > 10.0, "6 to 14 turns are the whole turns of 4 to 10 s");
+      Random::script({}, {}); expect(randomDuelTurns("TavernSlapPauseSecondsMin", "TavernSlapPauseSecondsMax") == 5 && Random::lastUintMin == 5 && Random::lastUintMax == 8, "a pause is drawn from 5 to 8 turns");
+      expect(5 / tps >= 3.0 && 4 / tps < 3.0 && 8 / tps <= 6.0 && 9 / tps > 6.0, "5 to 8 turns are the whole turns of 3 to 6 s"); }
+
+    // The critical chance is 10 percent at equal level and 0.25 points per level of difference. With the shortest slap
+    // (6 turns) the slap starts in the first turn, the hand lands in the fourth and the slap is over in the seventh.
     struct Case { uint32_t slapper, target; double roll; bool crit; const char* what; };
     const Case cases[] = {
         { 10, 10, 9.99, true, "equal level: 9.99 is critical" }, { 10, 10, 10.01, false, "equal level: 10.01 is not" },
@@ -1012,17 +1045,20 @@ static void checkDuel()
     for(unsigned i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i)
     {
         Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, cases[i].slapper, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, cases[i].target, TavernGuestState::game, 0);
-        std::map<RoomTavernSeat, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::slapDuel, 32);
-        Random::script({ cases[i].roll }, {}); f.room.playDuelTurn(g);
+        const RoomTavernSeat key = f.game(a, b, TavernGameKind::slapDuel, 32)->first;
+        Random::script({ cases[i].roll }, {});
+        runDuel(f, key, 6);
+        expect(f.room.mGames.size() == 1, std::string(cases[i].what) + ": the duel runs until the slap is over");
+        runDuel(f, key, 1);
         if(cases[i].crit)
         {
-            expect(f.room.mGames.empty() && b->mHp == 100.0, std::string(cases[i].what) + ": the duel is decided, no damage");
+            expect(f.room.mGames.empty() && b->mHp == 100.0, std::string(cases[i].what) + ": the duel is decided when the slap is over, no damage");
             expect(f.stateOf(b) == TavernGuestState::ko && f.room.findSpotOf(b)->second.mTurnsLeft == 42 && f.room.findSpotOf(b)->second.mSleepAfter, "a critical slap knocks the loser out for 42 turns and sends it to bed");
         }
         else expect(f.room.mGames.size() == 1 && b->mHp == 90.0, std::string(cases[i].what) + ": a normal slap takes 10 HP");
     }
 
-    // A normal hit: 10 HP, the loser is the one who falls below 30, HP never below 1
+    // A normal hit: 10 HP when the hand lands, the loser is the one who falls below 30 when the slap is over, HP never below 1
     struct HpCase { double hp; bool decided; double after; const char* what; };
     const HpCase hpCases[] = { { 100.0, false, 90.0, "100 HP -> 90" }, { 45.0, false, 35.0, "45 HP -> 35" }, { 40.0, false, 30.0, "40 HP -> 30 is not below 30" },
                                { 39.9, true, 29.9, "39.9 HP -> 29.9 is below 30" }, { 31.0, true, 21.0, "31 HP -> 21" }, { 5.0, true, 1.0, "5 HP -> 1, never below 1" },
@@ -1030,9 +1066,14 @@ static void checkDuel()
     for(unsigned i = 0; i < sizeof(hpCases) / sizeof(hpCases[0]); ++i)
     {
         Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0); b->mHp = hpCases[i].hp;
-        std::map<RoomTavernSeat, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::slapDuel, 32);
-        Random::script({ 50.0 }, {}); f.room.playDuelTurn(g);
+        const RoomTavernSeat key = f.game(a, b, TavernGameKind::slapDuel, 32)->first;
+        Random::script({ 50.0 }, {});
+        runDuel(f, key, 3);
+        expect(b->mHp == hpCases[i].hp && b->takeDamageCalls == 0, std::string(hpCases[i].what) + ": no damage during the wind-up");
+        runDuel(f, key, 1);
         expectNear(b->mHp, hpCases[i].after, hpCases[i].what, 1e-9);
+        expect(f.room.mGames.size() == 1, std::string(hpCases[i].what) + ": the reaction is played before the duel is decided");
+        runDuel(f, key, 3);
         expect(f.room.mGames.empty() == hpCases[i].decided, std::string(hpCases[i].what) + ": decided = " + (hpCases[i].decided ? "yes" : "no"));
         if(hpCases[i].decided)
         {
@@ -1041,32 +1082,69 @@ static void checkDuel()
             expect(f.room.kinds.size() == 2 && f.room.kinds[0] == 2 && f.room.kinds[1] == 3, "winner and loser are told to the clients");
         }
     }
-    // A miss passes the turn and does no damage
-    { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0); a->mHit = true; b->mHit = false;
-      std::map<RoomTavernSeat, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::slapDuel, 32);
-      b->mHit = false;   // the target rolls the hit: a miss
-      Random::script({}, {}); f.room.playDuelTurn(g);
-      expect(g->second.mTurnIsA == false && b->mHp == 100.0 && g->second.mTurnsLeft == 31, "a miss passes the turn without damage"); }
-    // After 4 x 8 turns without a decision the one with more HP left wins; a tie is decided by chance
-    { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0); a->mHp = 80.0; b->mHp = 60.0;
-      b->mHit = false; std::map<RoomTavernSeat, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::slapDuel, 1);
-      Random::script({}, {}); f.room.playDuelTurn(g);
-      expect(f.room.mGames.empty() && a->mExp == 2.86 && f.stateOf(b) == TavernGuestState::ko, "no decision: the one with more HP wins and the other goes down"); }
+
+    // One slap of a drawn length: the slapper's SitSlap takes the whole slap, the target's SitSlapped the rest after the hit
     { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
-      b->mHit = false; std::map<RoomTavernSeat, RoomTavernGame>::iterator g = f.game(a, b, TavernGameKind::slapDuel, 1);
-      Random::script({}, { 1 }); f.room.playDuelTurn(g);
+      const RoomTavernSeat key = f.game(a, b, TavernGameKind::slapDuel, 32)->first;
+      Random::script({}, { 14 });
+      runDuel(f, key, 1);
+      const RoomTavernDuelClock& clock = f.room.mGames.find(key)->second.mDuelClock;
+      expect(clock.mPhase == TavernDuelPhase::slap && clock.mSlapTurns == 14 && clock.mTurnsLeft == 14, "the longest slap lasts 14 turns");
+      expect(a->mLastClip == "SitSlap" && std::fabs(a->mLastClipSeconds - 10.0) < 1e-9 && b->timedClips == 0, "the slap clip is stretched to the 10 s of the slap");
+      runDuel(f, key, 6);
+      expect(b->timedClips == 0 && clock.mSlapResult == TavernSlapResult::open, "the hand has not landed after 6 of 14 turns");
+      runDuel(f, key, 1);
+      expect(b->mLastClip == "SitSlapped" && std::fabs(b->mLastClipSeconds - 5.0) < 1e-9 && clock.mSlapResult == TavernSlapResult::hit && b->mHp == 90.0,
+             "the hand lands at the half and the reaction takes the other 5 s");
+      runDuel(f, key, 6);
+      expect(clock.mPhase == TavernDuelPhase::slap && clock.mTurnsLeft == 1 && f.room.mGames.find(key)->second.mTurnIsA, "the slap still runs one turn before its end");
+      Random::script({}, { 8 });
+      runDuel(f, key, 1);
+      RoomTavernGame& game = f.room.mGames.find(key)->second;
+      expect(game.mDuelClock.mPhase == TavernDuelPhase::pause && game.mDuelClock.mTurnsLeft == 8 && !game.mTurnIsA && game.mTurnsLeft == 31 &&
+             Random::lastUintMin == 5 && Random::lastUintMax == 8, "after 14 turns the slap is over and the longest pause (8 turns) follows");
+      runDuel(f, key, 7);
+      expect(game.mDuelClock.mPhase == TavernDuelPhase::pause && game.mDuelClock.mTurnsLeft == 1 && b->mLastClip == "SitSlapped", "the pause still runs, nobody slaps");
+      const int aClips = a->timedClips;
+      Random::script({}, {});
+      runDuel(f, key, 1);
+      expect(game.mDuelClock.mPhase == TavernDuelPhase::slap && game.mDuelClock.mSlapTurns == 6 && b->mLastClip == "SitSlap" &&
+             std::fabs(b->mLastClipSeconds - 6.0 / tps) < 1e-9 && a->timedClips == aClips, "after the pause the other guest slaps, its slap drawn anew"); }
+
+    // A miss passes the turn and does no damage; the target does not reel
+    { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0); a->mHit = true; b->mHit = false;
+      const RoomTavernSeat key = f.game(a, b, TavernGameKind::slapDuel, 32)->first;
+      Random::script({}, {});
+      runDuel(f, key, 7);
+      const RoomTavernGame& g = f.room.mGames.find(key)->second;
+      expect(g.mTurnIsA == false && b->mHp == 100.0 && g.mTurnsLeft == 31 && b->timedClips == 0 && g.mDuelClock.mPhase == TavernDuelPhase::pause && g.mDuelClock.mTurnsLeft == 5,
+             "a miss passes the turn without damage, then the shortest pause"); }
+    // After 4 x 8 slaps without a decision the one with more HP left wins; a tie is decided by chance
+    { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0); a->mHp = 80.0; b->mHp = 60.0;
+      b->mHit = false; const RoomTavernSeat key = f.game(a, b, TavernGameKind::slapDuel, 1)->first;
+      Random::script({}, {});
+      expect(runDuel(f, key, 20) == 7 && f.room.mGames.empty() && a->mExp == 2.86 && f.stateOf(b) == TavernGuestState::ko, "no decision: after the last slap the one with more HP wins and the other goes down"); }
+    { Fixture f; f.seat.beerLevel = 1; Creature* a = f.guest("A", 2, 10, TavernGuestState::game, 0); Creature* b = f.guest("B", 3, 10, TavernGuestState::game, 0);
+      b->mHit = false; const RoomTavernSeat key = f.game(a, b, TavernGameKind::slapDuel, 1)->first;
+      Random::script({}, { 6, 1 });
+      runDuel(f, key, 7);
       expect(f.room.mGames.empty() && b->mExp == 2.86, "a tie is decided by chance"); }
 }
 
 static void checkKnockOutAndAbort()
 {
-    // 42 turns lying, then 2 turns getting up, then done (the room sends the loser to bed in useRoom)
+    // 42 turns lying (30 real seconds at 1.4 turns per second), then 9 turns getting up (CreatureGetUpSeconds 6 s rounded up
+    // to whole turns), then done (the room sends the loser to bed in useRoom)
+    expect(std::fabs(ConfigManager::getSingleton().values["DuelKoTurns"] / ODApplication::turnsPerSecond - 30.0) < 1e-9, "the loser lies 30 real seconds");
+    expect(getUpTurns() == 9 && getUpTurns() / ODApplication::turnsPerSecond >= 6.0, "the get-up lasts 6 s, 9 turns");
     { Fixture f; f.seat.beerLevel = 1; Creature* b = f.guest("B", 3, 10, TavernGuestState::done, 0);
       f.room.knockOut(f.room.findSpotOf(b)->second);
       for(int i = 0; i < 41; ++i) f.room.upkeepSpots();
       expect(f.stateOf(b) == TavernGuestState::ko, "still lying after 41 turns");
-      f.room.upkeepSpots(); expect(f.stateOf(b) == TavernGuestState::getUp && f.room.findSpotOf(b)->second.mTurnsLeft == 2, "after 42 turns the loser gets up for 2 turns");
-      f.room.upkeepSpots(); f.room.upkeepSpots(); expect(f.stateOf(b) == TavernGuestState::done, "then it is done"); }
+      f.room.upkeepSpots(); expect(f.stateOf(b) == TavernGuestState::getUp && f.room.findSpotOf(b)->second.mTurnsLeft == 9, "after 42 turns (30 s) the loser gets up for CreatureGetUpSeconds (6 s, 9 turns)");
+      for(int i = 0; i < 8; ++i) f.room.upkeepSpots();
+      expect(f.stateOf(b) == TavernGuestState::getUp, "still getting up after 8 turns");
+      f.room.upkeepSpots(); expect(f.stateOf(b) == TavernGuestState::done, "then it is done"); }
     // A fight, a flight, a knock-out or a pick-up ends a game without effects
     for(int reason = 0; reason < 4; ++reason)
     {
@@ -1148,10 +1226,10 @@ types_start = tavern_h.index('//! \\brief Who pays for the beer a tavern serves.
 types_end = tavern_h.index('//! \\brief A room where creatures quench their thirst.')
 room_types = tavern_h[types_start:types_end]
 constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) ' + name + r' = [^;]+;$') for name in (
-    'GET_UP_TURNS', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
+    'TURN_EPSILON', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
 constants += '\n' + find_line(room_cpp, r'^const float TAVERN_SEAT_SPACING = [^;]+;$')
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
-helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'Ogre::Vector3 directionTo('])
+helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'int32_t getUpTurns(', 'int32_t randomDuelTurns(', 'Ogre::Vector3 directionTo('])
 room_functions = '\n'.join(extract(room_cpp, h) for h in [
     'bool RoomTavern::servesBeer(', 'bool RoomTavern::isFreeSeat(', 'bool RoomTavern::isLargeGuest(', 'uint32_t RoomTavern::getPlacesOf(', 'bool RoomTavern::pickFreeSeat(', 'void RoomTavern::addDrinkDirt(', 'std::map<RoomTavernSeat, RoomTavernSpot>::iterator RoomTavern::findSpotOf(',
     'void RoomTavern::setSpotState(', 'void RoomTavern::setSpotDone(', 'bool RoomTavern::isGuestDisturbed(', 'void RoomTavern::upkeepSpots(',

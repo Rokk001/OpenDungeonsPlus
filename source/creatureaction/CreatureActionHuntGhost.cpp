@@ -103,11 +103,55 @@ RoomGhostRoom* CreatureActionHuntGhost::hookRoom() const
     return room!=nullptr && room->getSeat()==mCreature.getSeat()?room:nullptr;
 }
 
+double CreatureActionHuntGhost::getBeamSeconds(const Creature& hunter)
+{
+    // Decisions 855 and 857: GhostBeamSeconds (16 s at research level 1 and hunter efficiency 1) times the CatchTime
+    // research factor of the keeper (1.0, 0.8, 0.667) divided by the hunter efficiency (GHOSTS-PLAN D19).
+    const double beam=SkillManager::getResearchValue(hunter.getSeat(),SkillType::roomGhostRoom,
+        ConfigManager::getSingleton().getRoomConfigDouble("GhostBeamSeconds"),"CatchTime");
+    const double efficiency=hunter.getDefinition()==nullptr?1.0:
+        hunter.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency();
+    // A creature without a ghost room efficiency never hunts; it keeps the base beam instead of dividing by zero.
+    return efficiency>0.0?beam/efficiency:beam;
+}
+
 double CreatureActionHuntGhost::getCaptureTurns() const
 {
-    // The beam takes the same fixed time for every hunter (decision 726); efficiency and research only act on emptying.
+    // The share of the ghost already pulled in uses the same beam time as the beam step (getBeamSeconds).
     if(mState!=3) return 0.0;
-    return ConfigManager::getSingleton().getRoomConfigDouble("GhostBeamSeconds")*ODApplication::turnsPerSecond;
+    return getBeamSeconds(mCreature)*ODApplication::turnsPerSecond;
+}
+
+uint32_t CreatureActionHuntGhost::getBoxVisualState() const
+{
+    if(!hasBackpack()) return 0u;
+    if(mState==2) return 1u;
+    if(mState==3 || mState==9) return 3u;
+    if(mState==10) return 4u;
+    // At the cauldron the trap stands open in the trap socket while its ghost flows into the cauldron (decision 845)
+    if(isTransferring()) return 5u;
+    return 2u;
+}
+
+std::string CreatureActionHuntGhost::getThrowGhostName() const
+{
+    if(mState==2 || mState==3 || mState==10 || mState==9) return mTarget;
+    if(isTransferring()) return mGhosts.front();
+    return std::string();
+}
+
+double CreatureActionHuntGhost::getTransferTurns() const
+{
+    // One ghost flows from the trap socket into the cauldron in GhostTransferSeconds (decision 845); it replaces the
+    // GhostEmptyTurns emptying with its one-second Empty clip. Hunter efficiency no longer shortens it; the CatchTime
+    // research of the room, which shortened the emptying, now shortens the transfer
+    return researched("GhostTransferSeconds","CatchTime")*ODApplication::turnsPerSecond;
+}
+
+bool CreatureActionHuntGhost::isTransferring() const
+{
+    return mState==6 && !mGhosts.empty() && mDestination!=nullptr && !mEmptyRoom.empty() && mEmptyAnchor!=nullptr &&
+        !mCreature.isMoving() && mCreature.getPositionTile()==mDestination;
 }
 
 double CreatureActionHuntGhost::researched(const std::string& key,const std::string& effect) const
@@ -313,8 +357,8 @@ bool CreatureActionHuntGhost::handleHunt()
     }
     if(mState==2 || mState==3 || mState==10)
     {
-        // The catch takes the same fixed time for every hunter (decision 726): throw, beam and snap each run their
-        // full configured seconds; hunter efficiency and research only shorten the emptying at the cauldron.
+        // Throw and snap take their fixed seconds for every hunter (decision 726); the beam is shortened by the CatchTime
+        // research of the keeper and by the hunter efficiency (decisions 855 and 857, getBeamSeconds).
         GhostEntity* ghost=ghostNamed(map,mTarget);
         if(ghost==nullptr || ghost->getState()==GhostState::dissolving)
         { releaseTarget();mTurns=0.0;mState=4;return true; }
@@ -330,8 +374,8 @@ bool CreatureActionHuntGhost::handleHunt()
         }
         if(mState==3)
         {
-            // State 3: the flickering beam with its lightning bolts pulls the ghost down into the lying box (GhostBeamSeconds).
-            const double duration=config.getRoomConfigDouble("GhostBeamSeconds")*ODApplication::turnsPerSecond;
+            // State 3: the flickering beam with its lightning bolts pulls the ghost down into the lying box (getBeamSeconds).
+            const double duration=getBeamSeconds(mCreature)*ODApplication::turnsPerSecond;
             if(mTurns<duration) return false;
             mTurns-=duration;mBeamTarget.clear();mState=10;
             // State 10: the box snaps shut with a bang over the pulled-in ghost; the hunter lowers the beam.
@@ -454,14 +498,22 @@ bool CreatureActionHuntGhost::handleHunt()
         RoomGhostRoom* empty=roomNamed(map,mEmptyRoom);
         if(empty==nullptr || empty->getSeat()!=mCreature.getSeat()) { interrupt();return false; }
         if(mCreature.getAnimationStateName()!=EntityAnimation::empty_anim) mCreature.setAnimationState(EntityAnimation::empty_anim,true,Ogre::Vector3::ZERO,false);
+        // The hunter sets the trap into the trap socket over the cauldron's mouth, the delivery point (decision 845): the
+        // ghost waits there, the client shows it flowing out of the open trap down into the cauldron, and it reaches the
+        // cauldron after GhostTransferSeconds. mTurns is saved, so a loaded game resumes the remaining time.
+        if(mEmptyAnchor==nullptr) mEmptyAnchor=empty->getHunterCauldron(mCreature);
+        if(mEmptyAnchor==nullptr) { interrupt();return false; }
+        GhostEntity* poured=ghostNamed(map,mGhosts.front());
+        const Ogre::Vector3 socket=RoomGhostRoom::getTrapSocketPosition(*mEmptyAnchor);
+        if(poured!=nullptr && poured->getPosition()!=socket) poured->teleport(socket);
         if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }
-        // Emptying is the hunting step that hunter efficiency and the CatchTime research shorten (decision 726).
-        const double duration=researched("GhostEmptyTurns","CatchTime")/mCreature.getDefinition()->getRoomAffinity(RoomType::ghostRoom).getEfficiency();
+        const double duration=getTransferTurns();
         while(!mGhosts.empty() && mTurns>=duration)
         {
             mTurns-=duration;GhostEntity* ghost=ghostNamed(map,mGhosts.front());
             if(ghost!=nullptr) empty->emptyGhost(mCreature,*ghost);
             mGhosts.erase(mGhosts.begin());
+            // The next ghost of the pack comes into the socket on the next turn
         }
         if(mGhosts.empty()) { empty->releaseCauldron(mCreature);empty->updateActiveSpots();mDestination=nullptr;mState=7;return true; }
         return false;

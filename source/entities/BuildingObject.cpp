@@ -127,7 +127,8 @@ void BuildingObject::createMeshLocal(NodeType type)
     {
         Ogre::Entity* fill=RenderManager::getSingleton().getSceneManager()->createEntity(getName()+"_GhostFill","GhostCauldronFill.mesh");
         fill->setCastShadows(false);fill->setQueryFlags(0);
-        mGhostFillNode=getEntityNode()->createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.0f,0.69f,0.35f));
+        // Just behind the inspection glass of the reworked cauldron (decision 845: glass at y 0.752, z 0.42 to 0.955)
+        mGhostFillNode=getEntityNode()->createChildSceneNode(getName()+"_GhostFillNode",Ogre::Vector3(0.0f,0.74f,0.40f));
         mGhostFillNode->attachObject(fill);
         mGhostFillNode->setScale(1.0f,1.0f,static_cast<float>(std::max(0.0,mGhostFill)));
     }

@@ -136,7 +136,6 @@ const double SLAP_LOOK_INTERVAL = 1.0;
 const Ogre::Real KEEPER_HAND_CREATURE_PICKED_OFFSET = 0.05f;
 const Ogre::Real KEEPER_HAND_CREATURE_PICKED_SCALE = 0.05f;
 const Ogre::Real CREATURE_DROP_ANIMATION_DURATION = 0.35f;
-const Ogre::Real CREATURE_GET_UP_ANIMATION_DURATION = 0.35f;
 //! Rotation around the x axis that lays a standing creature on the ground.
 const float CREATURE_LIE_PITCH_DEGREES = -90.0f;
 //! Existing bed-settling duration, also used to return naturally to the stored standing pose.
@@ -2975,8 +2974,10 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     for(std::vector<CreatureGetUpAnimation>::iterator it = mCreatureGetUpAnimations.begin(); it != mCreatureGetUpAnimations.end();)
     {
         it->mElapsed += timeSinceLastFrame;
-        const Ogre::Real progress = std::min(
-            it->mElapsed / CREATURE_GET_UP_ANIMATION_DURATION, 1.0f);
+        // CreatureGetUpSeconds (6 s) of game time; timeSinceLastFrame already includes the game speed
+        const Ogre::Real getUpDuration = std::max(static_cast<Ogre::Real>(
+            ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")), 0.01f);
+        const Ogre::Real progress = std::min(it->mElapsed / getUpDuration, 1.0f);
         if(it->mUseFallback)
         {
             it->mNode->setOrientation(Ogre::Quaternion::Slerp(progress,

@@ -6,7 +6,9 @@ import re
 ROOT = Path(__file__).resolve().parents[2]
 source = (ROOT / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
 arena = source.split('if(arenaFight)', 1)[1].split('else', 1)[0]
-assert re.search(r'mKoTurnCounter\s*=\s*ConfigManager::getSingleton\(\)\.getRoomConfigDouble\("ArenaKnockOutSeconds"\)\s*\*\s*ODApplication::turnsPerSecond', arena)
+# Decision 857: the loser lies ArenaKnockOutSeconds and then gets up for CreatureGetUpSeconds (rounded up to turns)
+assert re.search(r'mKoTurnCounter\s*=\s*ConfigManager::getSingleton\(\)\.getRoomConfigDouble\("ArenaKnockOutSeconds"\)\s*\*\s*ODApplication::turnsPerSecond'
+                 r'\s*\+\s*std::ceil\(ConfigManager::getSingleton\(\)\.getRoomConfigDouble\("CreatureGetUpSeconds"\)\s*\*\s*ODApplication::turnsPerSecond\);', arena)
 assert 'mArenaKnockOut = true' in arena
 assert re.search(r'setHP\(getMaxHp\(\)\s*\*\s*ConfigManager::getSingleton\(\)\.getRoomConfigDouble\("ArenaGetUpHpShare"\)\)', source)
 assert re.search(r'KO_SAVE_OPEN\s*=\s*"\[Ko\]"', source)

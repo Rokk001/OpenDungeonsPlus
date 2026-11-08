@@ -257,7 +257,7 @@ texts = {"GoldPerTile": "Storage per tile", "SleepRecovery": "Sleep recovery", "
          "PointsPerWork": "Points per work", "XpPerHit": "Experience per hit", "WakefulnessPerDuty": "Tiredness per duty turn",
          "Fee": "Keeper fee", "Mood": "Mood gain", "LevelCap": "Level cap", "SkeletonLevel": "Skeleton level", "LichCorpses": "Corpses per lich", "LichLevel": "Lich level bonus",
          "EctoplasmLevels": "Ghost levels per ectoplasm", "BoxCapacity": "Ghosts per box", "BeamRange": "Beam range",
-         "CatchTime": "Box emptying time", "RevivePrice": "Revival price",
+         "CatchTime": "Beam and transfer time", "RevivePrice": "Revival price",
          "ClaimResistance": "Claim resistance", "ConversionSpeed": "Conversion speed", "PrayerMana": "Prayer mana",
          "CreatureLimit": "Creature limit", "Damage": "Damage", "Reload": "Reload time", "Duration": "Duration",
          "AuraRadius": "Alarm radius", "Radius": "Radius", "HP": "Health", "HeartHP": "Heart health",

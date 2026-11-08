@@ -16,6 +16,7 @@
  */
 
 #include "rooms/RoomTavern.h"
+#include "ODApplication.h"
 
 #include "creatureaction/CreatureActionSleep.h"
 #include "creatureaction/CreatureActionUseRoom.h"
@@ -115,8 +116,26 @@ const std::string SOUND_POUR = "Rooms/Tavern/Pour";
 const std::string SOUND_SLAP = "Creatures/Default/Slap";
 //! \brief Sound family of the cheer when a game ends.
 const std::string SOUND_CHEER = "Creatures/Default/Cheer";
-//! \brief Turns the loser of a slap duel needs to get up from the floor (plan: 2 turns).
-const int32_t GET_UP_TURNS = 2;
+//! \brief Turns the loser of a slap duel needs to get up from the floor: CreatureGetUpSeconds (6 s) rounded up.
+int32_t getUpTurns()
+{
+    return static_cast<int32_t>(std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
+        * ODApplication::turnsPerSecond));
+}
+//! \brief Tolerance when seconds of the configuration are turned into whole turns (4 s x 1.4 is not exactly 5.6).
+const double TURN_EPSILON = 0.000001;
+//! \brief Turns of one slap or one pause of a slap duel, drawn anew every time: a whole number of turns that lasts
+//! between the seconds of the room keys minKey and maxKey (TavernSlapSeconds*, TavernSlapPauseSeconds*), at least one.
+int32_t randomDuelTurns(const std::string& minKey, const std::string& maxKey)
+{
+    const double minSeconds = ConfigManager::getSingleton().getRoomConfigDouble(minKey);
+    const double maxSeconds = std::max(minSeconds, ConfigManager::getSingleton().getRoomConfigDouble(maxKey));
+    const uint32_t fewest = static_cast<uint32_t>(std::max(1.0,
+        std::ceil(minSeconds * ODApplication::turnsPerSecond - TURN_EPSILON)));
+    const uint32_t most = std::max(fewest, static_cast<uint32_t>(
+        std::floor(maxSeconds * ODApplication::turnsPerSecond + TURN_EPSILON)));
+    return static_cast<int32_t>(Random::Uint(fewest, most));
+}
 //! \brief Turns a guest stays done after its last drink while a game partner may be found.
 const int32_t DONE_WAIT_TURNS = 1;
 //! \brief The floor a knocked-out guest covers in its KnockedOut clip, in tiles at level scale 1, in the frame of the
@@ -1451,7 +1470,7 @@ void RoomTavern::upkeepSpots()
                 --spot.mTurnsLeft;
                 if(spot.mTurnsLeft <= 0)
                 {
-                    setSpotState(spot, TavernGuestState::getUp, GET_UP_TURNS);
+                    setSpotState(spot, TavernGuestState::getUp, getUpTurns());
                     showSpotState(it->first.mTable, spot);
                 }
                 break;
@@ -1639,6 +1658,7 @@ void RoomTavern::startGame(const RoomTavernSeat& seatA, const RoomTavernSeat& se
     game.mCreatureA = spotA->second.mCreature;
     game.mCreatureB = spotB->second.mCreature;
     game.mTurnIsA = true;
+    // A slap duel counts slaps (each of them 4 to 10 s with a pause after it), the other games count turns
     if(game.mKind == TavernGameKind::slapDuel)
         game.mTurnsLeft = static_cast<int32_t>(ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("TavernDuelMaxTurnsFactor", 4.0) * getTavernValue("GameTurns"));
     else
@@ -1690,45 +1710,101 @@ void RoomTavern::playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::itera
         concludeGame(it, higher, 0);
 }
 
-//! \brief Plays one turn of a slap duel: the seated guest whose turn it is swings and the other one reels when it is hit.
+//! \brief Plays one turn of a slap duel. One slap (wind-up, slap, reaction) lasts TavernSlapSecondsMin to
+//! TavernSlapSecondsMax seconds, drawn for every slap; the seated slapper's clip takes the whole slap, the hand lands
+//! when half of it is left and the other guest reels for the rest. Then a pause of TavernSlapPauseSecondsMin to
+//! TavernSlapPauseSecondsMax seconds, drawn for every pause, and the other guest slaps (decisions 856 and 858).
 void RoomTavern::playDuelTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it)
 {
     RoomTavernGame& game = it->second;
+    RoomTavernDuelClock& clock = game.mDuelClock;
     Creature* slapper = game.mTurnIsA ? game.mCreatureA : game.mCreatureB;
     Creature* target = game.mTurnIsA ? game.mCreatureB : game.mCreatureA;
     uint32_t& targetSlaps = game.mTurnIsA ? game.mSlapsTakenB : game.mSlapsTakenA;
 
-    // The slapper swings; a miss passes the turn
-    slapper->setAnimationState(EntityAnimation::sit_slap_anim, false, getFacingDirection(*slapper, *target), false);
-    playSoundAt(slapper->getPositionTile(), SOUND_SLAP);
-    if(target->rollAttackHit(slapper->getAttackRating(), slapper->getLevel(), slapper->isPossessed()))
+    // The pause after a slap runs out; then the next slap starts in the same turn
+    if(clock.mPhase == TavernDuelPhase::pause)
     {
-        target->setAnimationState(EntityAnimation::sit_slapped_anim, false, getFacingDirection(*target, *slapper), false);
-        // A critical slap (10 percent at equal level, 0.25 points per level of difference) wins the duel at once
-        const double levelDifference = static_cast<double>(slapper->getLevel()) - static_cast<double>(target->getLevel());
-        const double criticalPercent = getTavernValue("SlapCritBasePercent") +
-            getTavernValue("SlapCritPerLevel") * levelDifference;
-        if(Random::Double(0.0, PERCENT_SCALE) < criticalPercent)
-        {
-            concludeGame(it, slapper, 0);
+        --clock.mTurnsLeft;
+        if(clock.mTurnsLeft > 0)
             return;
-        }
 
-        // A normal slap takes SlapDamage hit points but never the last one
-        const double damage = std::max(0.0, std::min(getTavernValue("SlapDamage"), target->getHP() - 1.0));
-        target->takeDamage(slapper, damage, 0.0, 0.0, 0.0, target->getPositionTile(), false);
-        ++targetSlaps;
-        if(target->getHP() < getTavernValue("SlapDuelLoseBelowHp"))
-        {
-            concludeGame(it, slapper, 0);
-            return;
-        }
+        clock.mPhase = TavernDuelPhase::none;
     }
 
+    // A new slap: its length is drawn and the slapper's clip is stretched to it
+    if(clock.mPhase == TavernDuelPhase::none)
+    {
+        clock.mPhase = TavernDuelPhase::slap;
+        clock.mSlapTurns = randomDuelTurns("TavernSlapSecondsMin", "TavernSlapSecondsMax");
+        clock.mTurnsLeft = clock.mSlapTurns;
+        clock.mSlapResult = TavernSlapResult::open;
+        slapper->setTimedAnimationState(EntityAnimation::sit_slap_anim,
+            static_cast<double>(clock.mSlapTurns) / ODApplication::turnsPerSecond, false,
+            getFacingDirection(*slapper, *target), false);
+        return;
+    }
+
+    // The slap runs; the hand lands when half of it is left, a miss does nothing
+    --clock.mTurnsLeft;
+    if((clock.mSlapResult == TavernSlapResult::open) && (clock.mTurnsLeft <= clock.mSlapTurns / 2))
+    {
+        playSoundAt(slapper->getPositionTile(), SOUND_SLAP);
+        clock.mSlapResult = TavernSlapResult::miss;
+        if(target->rollAttackHit(slapper->getAttackRating(), slapper->getLevel(), slapper->isPossessed()))
+        {
+            // The target reels for the rest of the slap
+            target->setTimedAnimationState(EntityAnimation::sit_slapped_anim,
+                static_cast<double>(std::max(clock.mTurnsLeft, 1)) / ODApplication::turnsPerSecond, false,
+                getFacingDirection(*target, *slapper), false);
+            // A critical slap (10 percent at equal level, 0.25 points per level of difference) wins the duel when the
+            // slap is over
+            const double levelDifference = static_cast<double>(slapper->getLevel()) - static_cast<double>(target->getLevel());
+            const double criticalPercent = getTavernValue("SlapCritBasePercent") +
+                getTavernValue("SlapCritPerLevel") * levelDifference;
+            if(Random::Double(0.0, PERCENT_SCALE) < criticalPercent)
+                clock.mSlapResult = TavernSlapResult::critical;
+            else
+            {
+                // A normal slap takes SlapDamage hit points but never the last one
+                clock.mSlapResult = TavernSlapResult::hit;
+                const double damage = std::max(0.0, std::min(getTavernValue("SlapDamage"), target->getHP() - 1.0));
+                target->takeDamage(slapper, damage, 0.0, 0.0, 0.0, target->getPositionTile(), false);
+                ++targetSlaps;
+            }
+        }
+    }
+    if(clock.mTurnsLeft > 0)
+        return;
+
+    // The slap and the reaction are over: a critical slap or a target below SlapDuelLoseBelowHp decides the duel
+    const TavernSlapResult result = clock.mSlapResult;
+    clock.mPhase = TavernDuelPhase::none;
+    clock.mSlapTurns = 0;
+    clock.mSlapResult = TavernSlapResult::open;
+    if((result == TavernSlapResult::critical) ||
+       ((result == TavernSlapResult::hit) && (target->getHP() < getTavernValue("SlapDuelLoseBelowHp"))))
+    {
+        concludeGame(it, slapper, 0);
+        return;
+    }
+
+    // The other guest slaps after the pause; mTurnsLeft counts the slaps the duel may still last
     game.mTurnIsA = !game.mTurnIsA;
     --game.mTurnsLeft;
     if(game.mTurnsLeft > 0)
+    {
+        clock.mPhase = TavernDuelPhase::pause;
+        clock.mTurnsLeft = randomDuelTurns("TavernSlapPauseSecondsMin", "TavernSlapPauseSecondsMax");
+        // Both sit and face each other during the pause
+        std::map<RoomTavernSeat, RoomTavernSpot>::iterator spotA = findSpotOf(game.mCreatureA);
+        if(spotA != mSpots.end())
+            showSpotState(spotA->first.mTable, spotA->second);
+        std::map<RoomTavernSeat, RoomTavernSpot>::iterator spotB = findSpotOf(game.mCreatureB);
+        if(spotB != mSpots.end())
+            showSpotState(spotB->first.mTable, spotB->second);
         return;
+    }
 
     // No decision: the one with more hit points left wins, a tie is decided by chance
     Creature* winner = game.mCreatureA;
@@ -1980,9 +2056,23 @@ void RoomTavern::resumeLoadedGuests()
         game.mSlapsTakenA = saved.mSlapsTakenA;
         game.mSlapsTakenB = saved.mSlapsTakenB;
         game.mTurnIsA = saved.mTurnIsA;
+        game.mDuelClock = saved.mDuelClock;
         mGames[game.mSeatA] = game;
         showSpotState(spotA->first.mTable, spotA->second);
         showSpotState(spotB->first.mTable, spotB->second);
+        // A slap that ran when the game was saved goes on for the rest of its time, its clips with it
+        const RoomTavernDuelClock& clock = game.mDuelClock;
+        if((game.mKind == TavernGameKind::slapDuel) && (clock.mPhase == TavernDuelPhase::slap) && (clock.mTurnsLeft > 0))
+        {
+            Creature* slapper = game.mTurnIsA ? creatureA : creatureB;
+            Creature* target = game.mTurnIsA ? creatureB : creatureA;
+            const double secondsLeft = static_cast<double>(clock.mTurnsLeft) / ODApplication::turnsPerSecond;
+            slapper->setTimedAnimationState(EntityAnimation::sit_slap_anim, secondsLeft, false,
+                getFacingDirection(*slapper, *target), false);
+            if((clock.mSlapResult == TavernSlapResult::hit) || (clock.mSlapResult == TavernSlapResult::critical))
+                target->setTimedAnimationState(EntityAnimation::sit_slapped_anim, secondsLeft, false,
+                    getFacingDirection(*target, *slapper), false);
+        }
     }
     mPendingGames.clear();
 
@@ -2450,8 +2540,9 @@ void RoomTavern::exportToStream(std::ostream& os) const
            << (spot.mSleepAfter ? 1 : 0) << " " << (spot.mWantsGame ? 1 : 0) << " " << it->first.mIndex << std::endl;
     }
 
-    // Game <kind> <xA> <yA> <xB> <yB> <creatureA> <creatureB> <turnsLeft> <slapsA> <slapsB> <turn> <seatA> <seatB>: one line
-    // for every running game (turn: 0 = the first guest slaps next, 1 = the second)
+    // Game <kind> <xA> <yA> <xB> <yB> <creatureA> <creatureB> <turnsLeft> <slapsA> <slapsB> <turn> <seatA> <seatB>
+    // <duelPhase> <duelTurnsLeft> <slapTurns> <slapResult>: one line for every running game (turn: 0 = the first guest
+    // slaps or slaps next, 1 = the second; the last four are the clock of a slap duel, see RoomTavernDuelClock)
     for(std::map<RoomTavernSeat, RoomTavernGame>::const_iterator it = mGames.begin(); it != mGames.end(); ++it)
     {
         const RoomTavernGame& game = it->second;
@@ -2459,7 +2550,9 @@ void RoomTavern::exportToStream(std::ostream& os) const
            << game.mSeatA.mTable->getY() << " " << game.mSeatB.mTable->getX() << " " << game.mSeatB.mTable->getY() << " "
            << game.mCreatureA->getName() << " " << game.mCreatureB->getName() << " " << game.mTurnsLeft << " "
            << game.mSlapsTakenA << " " << game.mSlapsTakenB << " " << (game.mTurnIsA ? 0 : 1) << " "
-           << game.mSeatA.mIndex << " " << game.mSeatB.mIndex << std::endl;
+           << game.mSeatA.mIndex << " " << game.mSeatB.mIndex << " "
+           << static_cast<uint32_t>(game.mDuelClock.mPhase) << " " << game.mDuelClock.mTurnsLeft << " "
+           << game.mDuelClock.mSlapTurns << " " << static_cast<uint32_t>(game.mDuelClock.mSlapResult) << std::endl;
     }
 }
 
@@ -2550,7 +2643,8 @@ bool RoomTavern::importFromStream(std::istream& is)
         }
         else if(tag == STREAM_TAG_GAME)
         {
-            // The rest of the line: kind xA yA xB yB creatureA creatureB turnsLeft slapsA slapsB turn [seatA seatB]
+            // The rest of the line: kind xA yA xB yB creatureA creatureB turnsLeft slapsA slapsB turn [seatA seatB
+            // [duelPhase duelTurnsLeft slapTurns slapResult]]
             std::string rest;
             std::getline(is, rest);
             std::istringstream line(rest);
@@ -2571,6 +2665,24 @@ bool RoomTavern::importFromStream(std::istream& is)
             line >> seatA >> seatB;
             if((seatA >= TAVERN_SEATS_PER_TABLE) || (seatB >= TAVERN_SEATS_PER_TABLE))
                 return false;
+
+            // The clock of a slap duel: the slap or pause goes on where it was. A save made before the duel clock has
+            // none, then the next slap starts in the next turn.
+            uint32_t duelPhase = 0;
+            int32_t duelTurnsLeft = 0;
+            int32_t slapTurns = 0;
+            uint32_t slapResult = 0;
+            if(line >> duelPhase >> duelTurnsLeft >> slapTurns >> slapResult)
+            {
+                if((duelPhase > static_cast<uint32_t>(TavernDuelPhase::pause)) ||
+                   (slapResult > static_cast<uint32_t>(TavernSlapResult::critical)))
+                    return false;
+
+                saved.mDuelClock.mPhase = static_cast<TavernDuelPhase>(duelPhase);
+                saved.mDuelClock.mTurnsLeft = std::max(duelTurnsLeft, 0);
+                saved.mDuelClock.mSlapTurns = std::max(slapTurns, 0);
+                saved.mDuelClock.mSlapResult = static_cast<TavernSlapResult>(slapResult);
+            }
 
             saved.mKind = static_cast<TavernGameKind>(kind);
             saved.mSeatA = RoomTavernSeat(getGameMap()->getTile(xA, yA), seatA);

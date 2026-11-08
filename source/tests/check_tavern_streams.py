@@ -90,6 +90,11 @@ resume = extract(room_cpp, 'void RoomTavern::resumeLoadedGuests(')
 assert 'getGameMap()->getCreature(' in resume and 'CreatureActionUseRoom' in resume
 assert 'mGames[game.mSeatA] = game;' in resume and 'game.mTurnsLeft = saved.mTurnsLeft;' in resume and 'game.mTurnIsA = saved.mTurnIsA;' in resume
 assert 'game.mSlapsTakenA = saved.mSlapsTakenA;' in resume and 'game.mSlapsTakenB = saved.mSlapsTakenB;' in resume
+# A running slap or pause of a slap duel goes on where it was (decision 856); a running slap starts its clips again for
+# the rest of its time
+assert 'game.mDuelClock = saved.mDuelClock;' in resume
+assert 'slapper->setTimedAnimationState(EntityAnimation::sit_slap_anim, secondsLeft, false,' in resume
+assert 'const double secondsLeft = static_cast<double>(clock.mTurnsLeft) / ODApplication::turnsPerSecond;' in resume
 # A load never resets a drink, a game or a thirst: the loading code names no reset of the thirst state
 assert 'mThirst = 0' not in extract(creature_cpp, 'bool Creature::importFromStream(')
 
@@ -323,6 +328,9 @@ static void checkRoomStream()
     RoomTavernGame duel;
     duel.mKind = TavernGameKind::slapDuel; duel.mSeatA = RoomTavernSeat(map.getTile(4, 2), 0); duel.mSeatB = RoomTavernSeat(map.getTile(5, 2), 6);
     duel.mCreatureA = &c; duel.mCreatureB = &d; duel.mTurnsLeft = 19; duel.mSlapsTakenA = 2; duel.mSlapsTakenB = 1; duel.mTurnIsA = false;
+    // The second guest slaps: 3 of its 11 turns are left and the hand has landed (decision 856)
+    duel.mDuelClock.mPhase = TavernDuelPhase::slap; duel.mDuelClock.mTurnsLeft = 3; duel.mDuelClock.mSlapTurns = 11;
+    duel.mDuelClock.mSlapResult = TavernSlapResult::hit;
     room.mGames[duel.mSeatA] = duel;
     RoomTavernGame dice;
     dice.mKind = TavernGameKind::dice; dice.mSeatA = RoomTavernSeat(map.getTile(2, 4), 1); dice.mSeatB = RoomTavernSeat(map.getTile(3, 4), 3);
@@ -336,7 +344,8 @@ static void checkRoomStream()
     expect(text.find("Spot 3 2 Bert ko 17 0 1 0 7") != std::string::npos, "a guest keeps its place on the long bench: " + text);
     expect(text.find("Spot 3 2 Bert ko 17 0 1") != std::string::npos, "a lying loser keeps its remaining turns: " + text);
     expect(text.find("Spot 2 2 Anna drinking 3 2 0") != std::string::npos, "a drinking guest keeps its turns and drinks");
-    expect(text.find("Game 2 4 2 5 2 Cleo Dirk 19 2 1 1 0 6") != std::string::npos, "a running duel keeps the turns, hits, whose turn it is and both seats: " + text);
+    expect(text.find("Game 2 4 2 5 2 Cleo Dirk 19 2 1 1 0 6 1 3 11 2\n") != std::string::npos, "a running duel keeps the slaps left, hits, whose turn it is, both seats and the running slap: " + text);
+    expect(text.find("Game 1 2 4 3 4 Anna Bert 5 0 0 0 1 3 0 0 0 0\n") != std::string::npos, "a game without a running slap writes an empty duel clock: " + text);
 
     // Load: pending places and games hold every value, the next token of the stream is still there
     GameMap map2(10, 10);
@@ -380,8 +389,26 @@ static void checkRoomStream()
         const RoomTavernPendingGame& g = loaded.mPendingGames[0];
         expect(g.mKind == TavernGameKind::slapDuel && g.mNameA == "Cleo" && g.mNameB == "Dirk" && g.mTurnsLeft == 19 && g.mSlapsTakenA == 2 &&
                g.mSlapsTakenB == 1 && !g.mTurnIsA && g.mSeatA == RoomTavernSeat(map2.getTile(4, 2), 0) && g.mSeatB == RoomTavernSeat(map2.getTile(5, 2), 6), "slap duel round trip");
+        expect(g.mDuelClock.mPhase == TavernDuelPhase::slap && g.mDuelClock.mTurnsLeft == 3 && g.mDuelClock.mSlapTurns == 11 &&
+               g.mDuelClock.mSlapResult == TavernSlapResult::hit, "the running slap resumes with its remaining time and its hit");
         const RoomTavernPendingGame& h = loaded.mPendingGames[1];
         expect(h.mKind == TavernGameKind::dice && h.mTurnIsA && h.mTurnsLeft == 5 && h.mNameA == "Anna" && h.mNameB == "Bert", "dice game round trip");
+        expect(h.mDuelClock.mPhase == TavernDuelPhase::none && h.mDuelClock.mTurnsLeft == 0, "a game without a running slap has an empty clock");
+    }
+    // A pause after a slap resumes with its remaining time; a duel of a save made before the duel clock starts its next
+    // slap in the next turn
+    {
+        GameMap mapPause(10, 10); RoomTavern pause(&mapPause); for(int i = 1; i < 6; ++i) pause.mCoveredTiles.push_back(mapPause.getTile(i, 2));
+        std::stringstream pauseIn("RoomData\nSeatLayout 2\nGame 2 2 2 3 2 Anna Bert 7 1 2 0 0 4 2 5 0 0\nGame 2 4 2 5 2 Cleo Dirk 9 0 0 1 0 6\nTail");
+        expect(pause.importFromStream(pauseIn) && pause.mPendingGames.size() == 2, "duels with and without a clock are read");
+        if(pause.mPendingGames.size() == 2)
+        {
+            const RoomTavernDuelClock& p = pause.mPendingGames[0].mDuelClock;
+            expect(p.mPhase == TavernDuelPhase::pause && p.mTurnsLeft == 5 && p.mSlapTurns == 0 && p.mSlapResult == TavernSlapResult::open, "the pause resumes with its remaining turns");
+            const RoomTavernDuelClock& q = pause.mPendingGames[1].mDuelClock;
+            expect(q.mPhase == TavernDuelPhase::none && q.mTurnsLeft == 0 && pause.mPendingGames[1].mTurnsLeft == 9 && !pause.mPendingGames[1].mTurnIsA, "an old duel goes on with its next slap");
+        }
+        std::string pauseTail; pauseIn >> pauseTail; expect(pauseTail == "Tail", "the token after the duel lines is put back");
     }
     // Exporting the loaded room again is not possible without the creatures, but the stream of an unchanged room is stable
     RoomTavern empty(&map); empty.mCoveredTiles.push_back(map.getTile(1, 2)); empty.mCounterTile = map.getTile(1, 2);
@@ -437,7 +464,8 @@ static void checkRoomStream()
     const char* broken[] = {
         "RoomData\nTavernPayer 7\n", "RoomData\nGame 9 1 1 2 1 A B 4 0 0 0\n", "RoomData\nSpot 1 1 A sitting 3\n",
         "RoomData\nSpot 1 1 A drinking\n", "RoomData\nCounter 3\n", "RoomData\nGame 0 1 1 2 1 A B\n", "RoomData\nSeatLayout 9\n",
-        "RoomData\nSeatLayout 0\n", "RoomData\nSpot 1 1 A drinking 3 0 0 0 8\n", "RoomData\nGame 0 1 1 2 1 A B 4 0 0 0 0 8\n" };
+        "RoomData\nSeatLayout 0\n", "RoomData\nSpot 1 1 A drinking 3 0 0 0 8\n", "RoomData\nGame 0 1 1 2 1 A B 4 0 0 0 0 8\n",
+        "RoomData\nGame 2 1 1 2 1 A B 4 0 0 0 0 4 3 5 0 0\n", "RoomData\nGame 2 1 1 2 1 A B 4 0 0 0 0 4 1 5 9 4\n" };
     for(unsigned i = 0; i < sizeof(broken) / sizeof(broken[0]); ++i)
     {
         RoomTavern bad(&map7); std::stringstream badIn(broken[i]);

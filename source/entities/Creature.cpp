@@ -3087,10 +3087,22 @@ void Creature::doUpkeep()
         mKoTurnCounter = std::max(0.0, mKoTurnCounter - 1.0);
         if(mKoTurnCounter == 0.0)
             mKoDroppedThisFight = false;
+        // The loser of an arena fight lies for ArenaKnockOutSeconds; the last CreatureGetUpSeconds (rounded up to turns)
+        // of its counter, which come after the lying time, are the get-up
+        if(mArenaKnockOut && (mKoTurnCounter > 0.0))
+        {
+            const double getUpTurns = std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
+                * ODApplication::turnsPerSecond);
+            if((mKoTurnCounter <= getUpTurns) && (mKoTurnCounter + 1.0 > getUpTurns) && !getGameMap()->isInEditorMode())
+                setAnimationState(EntityAnimation::getup_anim, false, Ogre::Vector3::ZERO, false);
+            return;
+        }
+
         if(mKoTurnCounter > 0)
             return;
 
         // The loser of an arena fight gets up with ArenaGetUpHpShare of its max HP and looks after itself in its bed
+        const bool wasArenaKnockOut = mArenaKnockOut;
         if(mArenaKnockOut)
         {
             mArenaKnockOut = false;
@@ -3098,7 +3110,8 @@ void Creature::doUpkeep()
             sleep();
         }
 
-        if(!getGameMap()->isInEditorMode())
+        // The arena loser got up before (see above)
+        if(!wasArenaKnockOut && !getGameMap()->isInEditorMode())
             setAnimationState(EntityAnimation::getup_anim, false,
                 Ogre::Vector3::ZERO, false);
         computeCreatureOverlayMoodValue();
@@ -7715,8 +7728,12 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
                && (creatureAttacking->getPositionTile()->getCoveringRoom()->getType() == RoomType::arena);
             if(arenaFight)
             {
+                // It lies ArenaKnockOutSeconds (30 s) and then gets up for CreatureGetUpSeconds (6 s) rounded up to
+                // whole turns, like the loser of a tavern slap duel (decision 857)
                 mKoTurnCounter = ConfigManager::getSingleton().getRoomConfigDouble("ArenaKnockOutSeconds")
-                    * ODApplication::turnsPerSecond;
+                    * ODApplication::turnsPerSecond
+                    + std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
+                    * ODApplication::turnsPerSecond);
                 mArenaKnockOut = true;
             }
             else
@@ -12654,11 +12671,18 @@ void Creature::refreshGhostHuntVisuals()
                 const double capture=hunt->getCaptureTurns();
                 turns=capture>0.0?std::min(1.0,turns/capture):1.0;
             }
+            // In the trap socket of the cauldron the clock is the share of the ghost already transferred (decision 845)
+            else if(boxMode==5)
+            {
+                const double transfer=hunt->getTransferTurns();
+                turns=transfer>0.0?std::min(1.0,turns/transfer):1.0;
+            }
             break;
         }
-    // The throw (1) and the snap (4) send their own step clock, the beam (3) the pulled-in share.
+    // The throw (1) and the snap (4) send their own step clock, the beam (3) the pulled-in share, the transfer (5) the
+    // transferred share.
     if(backpack!=mGhostBackpack || target!=mGhostBeamTarget || boxMode!=mGhostBoxMode || thrown!=mGhostThrowTarget ||
-       ((boxMode==1 || boxMode==3 || boxMode==4) && turns!=mGhostThrowTurns))
+       ((boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5) && turns!=mGhostThrowTurns))
     {
         mGhostBackpack=backpack;mGhostBeamTarget=target;mGhostBoxMode=boxMode;
         mGhostThrowTarget=thrown;mGhostThrowTurns=turns;mNeedFireRefresh=true;
@@ -12737,7 +12761,7 @@ void Creature::clearGhostHuntVisuals()
     if(!mGhostShrinkTarget.empty())
     {
         GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostShrinkTarget));
-        if(ghost!=nullptr) ghost->setCaptureProgress(0.0);
+        if(ghost!=nullptr) { ghost->setCaptureProgress(0.0);ghost->setTransferProgress(0.0); }
         mGhostShrinkTarget.clear();
     }
     if(mGhostBoxNode!=nullptr)
@@ -12775,6 +12799,7 @@ void Creature::clearGhostHuntVisuals()
     if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
     mGhostCaptureShown=0.0;
     mGhostLidShown=0.0;
+    mGhostTransferShown=0.0;
     // The light of the open trap goes with the box
     if(mGhostTrapGlow!=nullptr) { scene->destroyBillboardSet(mGhostTrapGlow);mGhostTrapGlow=nullptr; }
     if(mGhostTrapCone!=nullptr) { scene->destroyBillboardChain(mGhostTrapCone);mGhostTrapCone=nullptr; }
@@ -12842,7 +12867,7 @@ void Creature::updateGhostHuntVisuals(double seconds)
     if(!mGhostShrinkTarget.empty() && mGhostShrinkTarget!=mGhostThrowTarget)
     {
         GhostEntity* previous=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostShrinkTarget));
-        if(previous!=nullptr) previous->setCaptureProgress(0.0);
+        if(previous!=nullptr) { previous->setCaptureProgress(0.0);previous->setTransferProgress(0.0); }
         mGhostShrinkTarget.clear();
     }
     // The carried box sits in the hunter's hand: it hangs on the free hand bone and follows every arm movement.
@@ -12913,7 +12938,9 @@ void Creature::updateGhostHuntVisuals(double seconds)
     else if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
     // The thrown box leaves from the hand it was held in.
     const Ogre::Vector3 hand=mGhostHeldBox->getWorldBoundingBox(true).getCenter();
-    const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4;
+    // The box also stands open in the trap socket of the cauldron during the transfer (5, decision 845)
+    const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5;
+    if(mGhostBoxMode!=5) mGhostTransferShown=0.0;
     if(lyingBox && mGhostBoxNode==nullptr)
     {
         Ogre::Entity* box=scene->createEntity(getName()+"_ThrownGhostBox","GhostBox.mesh");
@@ -12966,14 +12993,29 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 mGhostBoxNode->setOrientation(Ogre::Quaternion(Ogre::Radian(0.25f*rock),Ogre::Vector3::UNIT_Y));
                 mGhostCaptureShown=1.0;
             }
+            else if(mGhostBoxMode==5)
+            {
+                // The hunter has set the trap into the trap socket over the cauldron's mouth (decision 845): it stands
+                // open on the socket where the ghost waits, shines, and the ghost flows out of it down into the cauldron
+                // over GhostTransferSeconds (GhostEntity::updateLook). A new ghost of the pack starts again at 0.
+                position=ghost->getPosition();
+                if(mGhostThrowTurns<mGhostTransferShown-0.5) mGhostTransferShown=mGhostThrowTurns;
+                mGhostTransferShown+=(mGhostThrowTurns-mGhostTransferShown)*std::min(1.0,seconds*6.0);
+                const double poured=mGhostTransferShown*config.getRoomConfigDouble("GhostTransferSeconds");
+                lidTarget=std::min(1.0,poured/config.getRoomConfigDouble("GhostLidOpenSeconds"));
+                mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);
+                trapLight=mGhostLidShown;
+                mGhostCaptureShown=0.0;
+            }
             else
             {
                 // The beam weakens the ghost to half its size, then the open trap pulls it down into its opening
                 // (GhostEntity::updateLook): the share follows the server's pulled-in share smoothly.
                 mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
                 // The lid opens at the start of the beam step within GhostLidOpenSeconds and stays open while the
-                // ghost is pulled in; the trap shines as far as it is open.
-                const double beamed=mGhostThrowTurns*config.getRoomConfigDouble("GhostBeamSeconds");
+                // ghost is pulled in; the trap shines as far as it is open. The beam lasts as long as on the server:
+                // GhostBeamSeconds times the CatchTime research divided by the hunter efficiency (decisions 855, 857).
+                const double beamed=mGhostThrowTurns*CreatureActionHuntGhost::getBeamSeconds(*this);
                 lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));
                 mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);
                 trapLight=mGhostLidShown;
@@ -12982,6 +13024,7 @@ void Creature::updateGhostHuntVisuals(double seconds)
             if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(Ogre::Quaternion::IDENTITY);
             mGhostBoxNode->setPosition(position);
             ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
+            ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);
             // The hinged lid of the box mesh turns open on its "Open" clip: 0 shut, the clip end fully open.
             Ogre::Entity* trap=static_cast<Ogre::Entity*>(mGhostBoxNode->getAttachedObject(static_cast<unsigned short>(0)));
             if(trap->hasSkeleton() && trap->hasAnimationState("Open"))
