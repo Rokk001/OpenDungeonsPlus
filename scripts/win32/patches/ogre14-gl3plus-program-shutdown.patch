@@ -7,7 +7,7 @@ shutdown removes the primary context. Shutdown can also run before initialisatio
 diff --git a/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp b/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp
 --- a/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp
 +++ b/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp
-@@ -568,6 +568,10 @@ namespace Ogre {
+@@ -568,3 +568,7 @@ namespace Ogre {
      void GL3PlusRenderSystem::shutdown(void)
      {
 +        // Cached separable programs need the manager singleton and current GL context during destruction.
@@ -15,5 +15,3 @@ diff --git a/RenderSystems/GL3Plus/src/OgreGL3PlusRenderSystem.cpp b/RenderSyste
 +            mProgramManager->destroyAllPrograms();
 +
          RenderSystem::shutdown();
- 
-         // Remove from manager safely
