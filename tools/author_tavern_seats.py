@@ -370,32 +370,35 @@ def frame_depths(points, selected=None):
         return np.zeros(points.shape[0])
     x, y, z = world[:, :, 0], world[:, :, 1], world[:, :, 2]
     worst = np.zeros(world.shape[:2])
+    # Furniture depth and height planes do not vary between seat positions.
+    table_yz = (z > TABLE_UNDERSIDE) & (z < TABLE_TOP) & (y > TABLE_FAR_EDGE)
+    table_depth = TABLE_NEAR_EDGE - y
+    half, near, far, low, high = PEDESTAL
+    pedestal_yz = np.minimum(y - near, far - y)
+    np.minimum(pedestal_yz, z - low, out=pedestal_yz)
+    np.minimum(pedestal_yz, high - z, out=pedestal_yz)
+    _, near, far, low, high = BENCH
+    bench_yz = np.minimum(y - near, far - y)
+    np.minimum(bench_yz, z - low, out=bench_yz)
+    np.minimum(bench_yz, high - BENCH_SINK - z, out=bench_yz)
+    leg_yz = np.minimum(BENCH_LEG_Y - np.abs(y), z)
+    np.minimum(leg_yz, BENCH_LEG_TOP - z, out=leg_yz)
     for place in LARGE_PLACES if SCENE['whole_bench'] else NORMAL_PLACES:
         # Along the bench, measured from the middle of the long table
         along = np.abs(x + place)
-        inside = (z > TABLE_UNDERSIDE) & (z < TABLE_TOP) & (along < LONG_TABLE_HALF_LENGTH) & (y > TABLE_FAR_EDGE)
-        worst = np.maximum(worst, np.where(inside, TABLE_NEAR_EDGE - y, 0.0))
+        inside = table_yz & (along < LONG_TABLE_HALF_LENGTH)
+        worst = np.maximum(worst, np.where(inside, table_depth, 0.0))
         half, near, far, low, high = PEDESTAL
         for middle in PEDESTAL_MIDDLES:
             beside = np.abs(x + place - middle)
-            depth = np.minimum(half - beside, y - near)
-            np.minimum(depth, far - y, out=depth)
-            np.minimum(depth, z - low, out=depth)
-            np.minimum(depth, high - z, out=depth)
+            depth = np.minimum(half - beside, pedestal_yz)
             np.maximum(worst, depth, out=worst)
-        _, near, far, low, high = BENCH
-        depth = np.minimum(LONG_BENCH_HALF_LENGTH - along, y - near)
-        np.minimum(depth, far - y, out=depth)
-        np.minimum(depth, z - low, out=depth)
-        np.minimum(depth, high - BENCH_SINK - z, out=depth)
+        depth = np.minimum(LONG_BENCH_HALF_LENGTH - along, bench_yz)
         np.maximum(worst, depth, out=worst)
         depth = np.minimum(along - LONG_BENCH_LEG_X[0], LONG_BENCH_LEG_X[1] - along)
-        np.minimum(depth, BENCH_LEG_Y - np.abs(y), out=depth)
-        np.minimum(depth, z, out=depth)
-        np.minimum(depth, BENCH_LEG_TOP - z, out=depth)
+        np.minimum(depth, leg_yz, out=depth)
         np.maximum(worst, depth, out=worst)
     return np.maximum(0.0, worst.max(axis=1)) / scene
-
 
 # Measure how far a posed body reaches into the furniture; selected limits it to some vertices.
 def table_depth(points, selected=None):
