@@ -1,6 +1,6 @@
 """Guard that the drawn minimap uploads no texture while Ogre does not draw the render window.
 
-Measured cause (Vera-26 F1, Lena-13 P1 recordings of build 0.7.4.54): while the game window was not
+Measured cause (profiling build 0.7.4.54): while the game window was not
 drawn, MiniMapDrawn::update still uploaded its texture in both frame callbacks without any buffer swap.
 Every 6.5-13 s the driver then blocked 0.8-1.5 s in glTexSubImage2D (minimap 16.53% of the main loop,
 S3 game minute maxima 865-1587 ms). Ogre 14 RenderSystem::_updateAllRenderTargets and
@@ -76,7 +76,7 @@ def replay():
         # Two callbacks per Ogre frame update the minimap with the same bytes.
         frames.append((pixels, active))
         frames.append((pixels, active))
-    # previous: byte reuse without the window gate (Lena-13); gated: this source.
+    # previous: byte reuse without the window gate; gated: this source.
     previous_baseline, previous_texture, previous_uploads, previous_inactive = None, None, 0, 0
     baseline, texture, uploads, inactive_uploads = None, None, 0, 0
     for pixels, active in frames:

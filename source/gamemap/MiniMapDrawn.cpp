@@ -160,7 +160,7 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
 
     // mTiles holds bytes in R, G, B, A order, which is Ogre's PF_BYTE_RGBA. One bulk conversion into
     // the locked format writes the same bytes as the former per-pixel setColourAt(colour / 255) loop,
-    // without a float round trip per pixel (Tilda F1: that loop was 4.5% of the P1 game frame).
+    // without a float round trip per pixel.
     static_assert(sizeof(Color) == 4, "map pixels must be tightly packed RGBA bytes");
     // The two frame callbacks can produce identical pixels. Avoid the driver upload in that case,
     // but keep generating colours and updating overlays so animation and camera state still advance.
@@ -168,8 +168,8 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
         mMiniMapOgreTexture->createInternalResources();
     const Ogre::HardwarePixelBufferSharedPtr currentBuffer = mMiniMapOgreTexture->getBuffer();
     // Ogre neither draws nor swaps an inactive (minimized or deactivated) render window, so an upload there
-    // only queues driver copies that no frame shows. Lena-13 P1 runs spent 0.8-1.5 s in glTexSubImage2D
-    // every 6.5-13 s while the window was not drawn (Vera-26 F1). The baseline stays the last uploaded
+    // only queues driver copies that no frame shows and can periodically stall glTexSubImage2D.
+    // The baseline stays the last uploaded
     // bytes, so the first update in the active window uploads the current map before it is drawn again.
     const Ogre::RenderWindow* window = ODFrameListener::getSingleton().getRenderWindow();
     const bool windowDrawn = window == nullptr || window->isActive();

@@ -107,6 +107,7 @@
 #include <OgreSubEntity.h>
 #include <OgreSubMesh.h>
 #include <OgreRoot.h>
+#include <OgreRenderWindow.h>
 #include <OgreTechnique.h>
 #include <OgreViewport.h>
 #include <OISKeyboard.h>
@@ -436,10 +437,13 @@ Ogre::Vector3 getHammerStrikePoint(const Ogre::MeshPtr& mesh)
 //! Moves the hand model so that the active cursor point lies on the pointer: the fingertip while
 //! pointing, the pickaxe tip while digging and the hammer's striking face while building.
 //! Without the tool arguments only the pointing alignment is applied.
+//! Inactive windows update only the skeleton used for alignment, deferring vertex uploads until drawing resumes.
 void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
     Ogre::Entity* hammer = nullptr, const Ogre::Vector3& hammerPoint = Ogre::Vector3::ZERO,
     Ogre::ManualObject* pickaxe = nullptr)
 {
+    const Ogre::RenderWindow* window = ODFrameListener::getSingleton().getRenderWindow();
+    const bool windowDrawn = window == nullptr || window->isActive();
     float weight = 0.0f;
     if(animation->getAnimationName() == "Point")
         weight = 1.0f;
@@ -470,13 +474,20 @@ void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
         model->setPosition(-(model->getOrientation() * (model->getScale() * face)));
         skeleton->setAnimationState(*hand->getAllAnimationStates());
         skeleton->_updateTransforms();
-        hand->_updateAnimation();
+        if(windowDrawn)
+            hand->_updateAnimation();
         return;
     }
     if(weight == 0.0f)
         return;
 
-    hand->_updateAnimation();
+    if(windowDrawn)
+        hand->_updateAnimation();
+    else
+    {
+        hand->_updateSkeleton();
+        hand->getSkeleton()->_updateTransforms();
+    }
     const Ogre::Bone* index = hand->getSkeleton()->getBone("Index3");
     // Centre of the distal fingertip cap in Keeperhand.mesh, in Index3 bind space.
     const Ogre::Vector3 tipLocal(-0.000284253f, 0.0155774f, 0.000218656f);
