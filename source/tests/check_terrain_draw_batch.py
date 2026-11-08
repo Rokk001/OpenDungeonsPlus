@@ -59,7 +59,9 @@ def verify(source, render):
     assert view.index('cell.mDecided =') < view.index('cell.canBatch()') < view.index('setVisible(enabled)')
     lights = body(source, 'const Ogre::LightList* TerrainDrawBatch::Cell::objectQueryLights(')
     assert 'return nullptr' in lights and 'return &mLights' in lights
-    assert 'return !canBatch();' in body(source, 'bool TerrainDrawBatch::Cell::objectRendering(')
+    submission = body(source, 'bool TerrainDrawBatch::Cell::objectRendering(')
+    assert submission.index('if(!canBatch())') < submission.index('return true;')
+    assert submission.index('return true;') < submission.index('++mSuppressed;') < submission.index('return false;')
     removal = body(source, 'void TerrainDrawBatch::remove(')
     assert removal.index('invalidate(cell)') < removal.index('setListener(nullptr)') < removal.index('mEntities.erase')
     refresh = body(render, 'void RenderManager::rrRefreshTile(')

@@ -1,4 +1,5 @@
 #include "render/TerrainDrawBatch.h"
+#include "utils/LogManager.h"
 #include <OgreEntity.h>
 #include <OgreSubEntity.h>
 #include <OgreMesh.h>
@@ -13,13 +14,14 @@
 #include <sstream>
 
 //! Creates a cell with no generated scene object.
-TerrainDrawBatch::Cell::Cell() : mGeometry(nullptr), mDirty(true), mDecided(false),
+TerrainDrawBatch::Cell::Cell() : mGeometry(nullptr), mSuppressed(0), mDirty(true), mDecided(false),
     mEnabled(false), mVisibilityMask(0)
 {
 }
 
 //! Defers scene registration until there is eligible terrain.
-TerrainDrawBatch::TerrainDrawBatch() : mScene(nullptr), mNumber(0)
+TerrainDrawBatch::TerrainDrawBatch() : mScene(nullptr), mNumber(0),
+    mNextReport(std::chrono::steady_clock::now())
 {
 }
 
@@ -57,12 +59,15 @@ bool TerrainDrawBatch::Cell::canBatch()
     return true;
 }
 
-//! Leaves original entities queryable and visible; only their render-queue submission is suppressed.
+//! Counts actual suppressed original submissions while keeping their visibility and picking state.
 bool TerrainDrawBatch::Cell::objectRendering(const Ogre::MovableObject* object, const Ogre::Camera* camera)
 {
     (void)camera;
     (void)object;
-    return !canBatch();
+    if(!canBatch())
+        return true;
+    ++mSuppressed;
+    return false;
 }
 
 //! Original entities use Ogre's finder, whereas the region reuses the common ordered list.
@@ -109,6 +114,7 @@ void TerrainDrawBatch::add(Ogre::SceneManager* scene, Ogre::Entity* entity)
     }
     invalidate(*cell);
     cell->mEntities.push_back(entity);
+    cell->mBounds.merge(entity->getWorldBoundingBox(true));
     entity->setListener(cell.get());
     mMembers[entity->getName()] = cell.get();
 }
@@ -143,15 +149,16 @@ void TerrainDrawBatch::remove(const std::string& name)
     mMembers.erase(member);
 }
 
-//! Builds immutable world-space earth geometry while retaining the original UVs and material.
+//! Builds visible dirty cells only; offscreen originals remain available without allocating batch buffers.
 void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Camera* camera)
 {
     (void)source;
-    (void)camera;
     for(std::map<std::string, std::unique_ptr<Cell> >::iterator it = mCells.begin(); it != mCells.end(); ++it)
     {
         Cell& cell = *it->second;
         if(!cell.mDirty)
+            continue;
+        if(!camera->isVisible(cell.mBounds))
             continue;
         cell.mDirty = false;
         if(cell.mEntities.size() < 2)
@@ -181,7 +188,7 @@ void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Cam
     }
 }
 
-//! Makes each view recheck culling masks and current lights; shadow passes always keep originals.
+//! Culls whole cells before checking per-source inputs; shadow passes always keep originals.
 void TerrainDrawBatch::preFindVisibleObjects(Ogre::SceneManager* source,
     Ogre::SceneManager::IlluminationRenderStage stage, Ogre::Viewport* viewport)
 {
@@ -189,15 +196,53 @@ void TerrainDrawBatch::preFindVisibleObjects(Ogre::SceneManager* source,
     for(std::map<std::string, std::unique_ptr<Cell> >::iterator it = mCells.begin(); it != mCells.end(); ++it)
     {
         Cell& cell = *it->second;
+        cell.mSuppressed = 0;
         cell.mDecided = stage != Ogre::SceneManager::IRS_NONE;
         cell.mEnabled = false;
         cell.mVisibilityMask = viewport->getVisibilityMask() & mScene->getVisibilityMask();
         // Region overrides _notifyCurrentCamera without calling MovableObject's rendering
         // listener, so choose its visibility explicitly before Ogre visits the scene.
+        // Rejecting a batch here never culls its originals: their normal Ogre traversal remains active.
+        if(!cell.mDecided && !viewport->getCamera()->isVisible(cell.mBounds))
+            cell.mDecided = true;
         const bool enabled = cell.canBatch();
         if(cell.mGeometry != nullptr)
             cell.mGeometry->setVisible(enabled);
     }
+}
+
+//! Logs current-view coverage once per minute without treating enabled cells as measured GPU draws.
+void TerrainDrawBatch::postFindVisibleObjects(Ogre::SceneManager* source,
+    Ogre::SceneManager::IlluminationRenderStage stage, Ogre::Viewport* viewport)
+{
+    (void)source;
+    if(stage != Ogre::SceneManager::IRS_NONE || !viewport->getOverlaysEnabled())
+        return;
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    if(now < mNextReport)
+        return;
+    mNextReport = now + std::chrono::seconds(60);
+    size_t enabled = 0;
+    size_t suppressed = 0;
+    size_t dirty = 0;
+    size_t culled = 0;
+    size_t fallback = 0;
+    for(std::map<std::string, std::unique_ptr<Cell> >::const_iterator it = mCells.begin(); it != mCells.end(); ++it)
+    {
+        const Cell& cell = *it->second;
+        enabled += cell.mEnabled ? 1 : 0;
+        suppressed += cell.mSuppressed;
+        dirty += cell.mDirty ? 1 : 0;
+        if(!viewport->getCamera()->isVisible(cell.mBounds))
+            ++culled;
+        else if(!cell.mEnabled)
+            ++fallback;
+    }
+    std::ostringstream report;
+    report << "Terrain batch view cells=" << mCells.size() << " enabled=" << enabled
+        << " dirty=" << dirty << " culled=" << culled << " fallback=" << fallback
+        << " candidateSources=" << mMembers.size() << " suppressedSourceCallbacks=" << suppressed;
+    OD_LOG_INF(report.str());
 }
 
 //! Clears the scene listener, region geometry and original callbacks in that order.

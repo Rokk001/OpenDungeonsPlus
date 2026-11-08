@@ -6,10 +6,12 @@
 #include <OgreMovableObject.h>
 #include <OgreStaticGeometry.h>
 #include <OgreMatrix4.h>
+#include <OgreAxisAlignedBox.h>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+#include <chrono>
 
 //! Batches opaque earth within small cells, falling back when per-object inputs differ.
 class TerrainDrawBatch : public Ogre::SceneManager::Listener
@@ -30,6 +32,9 @@ public:
     //! Resets the lighting decision separately for every viewport and shadow pass.
     void preFindVisibleObjects(Ogre::SceneManager* source,
         Ogre::SceneManager::IlluminationRenderStage stage, Ogre::Viewport* viewport) override;
+    //! Reports observed source suppression after visibility traversal, separately from estimated draw savings.
+    void postFindVisibleObjects(Ogre::SceneManager* source,
+        Ogre::SceneManager::IlluminationRenderStage stage, Ogre::Viewport* viewport) override;
 
 private:
     //! Owns one cell's geometry and supplies exactly the originals' ordered light list.
@@ -48,6 +53,8 @@ private:
         Ogre::MaterialPtr mMaterial;
         Ogre::StaticGeometry* mGeometry;
         Ogre::LightList mLights;
+        Ogre::AxisAlignedBox mBounds;
+        size_t mSuppressed;
         bool mDirty;
         bool mDecided;
         bool mEnabled;
@@ -59,6 +66,7 @@ private:
     std::map<std::string, std::unique_ptr<Cell> > mCells;
     std::map<std::string, Cell*> mMembers;
     size_t mNumber;
+    std::chrono::steady_clock::time_point mNextReport;
 };
 
 #endif
