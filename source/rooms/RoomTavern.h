@@ -50,7 +50,7 @@ enum class TavernGuestState
 {
     //! The guest has a place and walks to it.
     arriving = 0,
-    //! The guest drinks (DrinkTurns turns for every drink).
+    //! The guest drinks (WaterDrinkTurns for water, BeerDrinkTurns for beer).
     drinking = 1,
     //! The visit is over; the guest leaves, unless a second guest picks it for a game in the next turn.
     done = 2,
@@ -664,7 +664,7 @@ private:
     bool payForBeer(Creature& creature, bool& noCoin);
 
     //! \brief The turns the next drink of the guest lasts: BeerDrinkTurns for a beer (the tavern serves beer and the
-    //! payer has the price), DrinkTurns for water ([Tavern] of global.cfg).
+    //! payer has the price), WaterDrinkTurns for water ([Tavern] of global.cfg).
     //! \param creature The guest.
     int32_t nextDrinkTurns(const Creature& creature) const;
 

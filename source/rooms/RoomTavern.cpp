@@ -1848,7 +1848,7 @@ bool RoomTavern::payForBeer(Creature& creature, bool& noCoin)
     return false;
 }
 
-//! \brief The turns the next drink of the guest lasts: a beer BeerDrinkTurns (30 seconds), water DrinkTurns. A beer is
+//! \brief The turns the next drink of the guest lasts: a beer BeerDrinkTurns (30 seconds), water WaterDrinkTurns (10 seconds). A beer is
 //! expected when the tavern serves beer and whoever pays has the price at hand; the drink is paid when it is finished.
 int32_t RoomTavern::nextDrinkTurns(const Creature& creature) const
 {
@@ -1859,7 +1859,7 @@ int32_t RoomTavern::nextDrinkTurns(const Creature& creature) const
     else if(beer)
         beer = creature.getGoldCarried() >= price;
 
-    const int32_t turns = static_cast<int32_t>(std::floor(getTavernValue(beer ? "BeerDrinkTurns" : "DrinkTurns") + 0.5));
+    const int32_t turns = static_cast<int32_t>(std::floor(getTavernValue(beer ? "BeerDrinkTurns" : "WaterDrinkTurns") + 0.5));
     return std::max(turns, static_cast<int32_t>(1));
 }
 

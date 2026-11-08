@@ -797,7 +797,7 @@ static void checkDrinks()
         { Fixture f; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); RoomTavernSpot& spot = f.room.findSpotOf(c)->second; spot.mDrinks = n - 1;
           Random::script({ thresholds[n - 1] - 0.01 }, {});
           f.room.finishDrink(c->mTile, spot);
-          expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 4, "drink " + std::to_string(n) + ": a roll just below " + std::to_string(thresholds[n - 1]) + " takes another drink for 4 turns"); }
+          expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 14, "drink " + std::to_string(n) + ": a roll just below " + std::to_string(thresholds[n - 1]) + " takes another drink for 14 turns"); }
         { Fixture f; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); RoomTavernSpot& spot = f.room.findSpotOf(c)->second; spot.mDrinks = n - 1;
           Random::script({ thresholds[n - 1] + 0.01 }, {});
           f.room.finishDrink(c->mTile, spot);
@@ -811,7 +811,7 @@ static void checkDrinks()
       Random::script({ 10.0 }, {});
       f.room.finishDrink(c->mTile, spot);
       expect(spot.mState == TavernGuestState::drinking, "a creature without thirst still drinks when the roll says so"); }
-    // Decision 835: a beer lasts BeerDrinkTurns (42 turns, 30 s at 1.4 turns per second), a water DrinkTurns (4 turns)
+    // Decisions 835 and 866: beer lasts BeerDrinkTurns (42 turns, 30 s), water WaterDrinkTurns (14 turns, 10 s)
     { Fixture f; f.seat.beerLevel = 1; f.seat.gold = 100; f.map.treasury = 100; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0);
       RoomTavernSpot& spot = f.room.findSpotOf(c)->second;
       Random::script({ 1.0 }, {}); f.room.finishDrink(c->mTile, spot);
@@ -823,11 +823,11 @@ static void checkDrinks()
     { Fixture f; f.seat.beerLevel = 1; f.room.mPayer = TavernPayer::creature; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0); c->mGold = 6;
       RoomTavernSpot& spot = f.room.findSpotOf(c)->second;
       Random::script({ 1.0 }, {}); f.room.finishDrink(c->mTile, spot);
-      expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 4, "a purse without the price of the next beer gets water for 4 turns"); }
+      expect(spot.mState == TavernGuestState::drinking && spot.mTurnsLeft == 14, "a purse without the price of the next beer gets water for 14 turns"); }
     { Fixture f; f.seat.beerLevel = 0; f.seat.gold = 100; Creature* c = f.guest("A", 2, 1, TavernGuestState::drinking, 0);
-      expect(f.room.nextDrinkTurns(*c) == 4, "without Beer the water keeps DrinkTurns (4 turns)");
+      expect(f.room.nextDrinkTurns(*c) == 14, "without Beer the water lasts WaterDrinkTurns (14 turns)");
       f.seat.beerLevel = 1; f.seat.gold = 4;
-      expect(f.room.nextDrinkTurns(*c) == 4, "an empty treasury serves water for 4 turns");
+      expect(f.room.nextDrinkTurns(*c) == 14, "an empty treasury serves water for 14 turns");
       f.seat.gold = 5;
       expect(f.room.nextDrinkTurns(*c) == 42, "a treasury with the price serves a beer for 42 turns"); }
 }
