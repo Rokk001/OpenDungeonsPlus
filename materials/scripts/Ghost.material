@@ -162,6 +162,29 @@ material GhostPackRubber
     }
 }
 
+// The flexible hose from the backpack to the capture cannon (decision 894): the ribbed rubber of the pack, drawn bright so
+// that it stands out against the hunter's body, lit from both sides because the tube is shaped every frame.
+material GhostHose
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            cull_hardware none
+            ambient 1 1 1
+            diffuse 1 1 1 1
+            specular 0.12 0.12 0.12 1 12
+            texture_unit
+            {
+                texture GhostPackRubber.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
+        }
+    }
+}
+
 // The hand-held capture box: light scratched gunmetal, worn ochre warning stripes and an opaque green window glow.
 material GhostBoxCase
 {

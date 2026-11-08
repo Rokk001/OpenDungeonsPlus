@@ -82,17 +82,17 @@ public:
     size_t getHunterHookSlot(const Creature& hunter) const;
     //! \brief Returns the exact cauldron anchor reserved by a hunter.
     Tile* getHunterCauldron(const Creature& hunter) const;
-    //! \brief Returns the delivery point of a cauldron for a hunter standing on a tile beside it (decision 865, replacing
-    //! the socket over the middle of the mouth of decision 845): the top of the delivery device on the cauldron's rim
-    //! directly beside the hunter, GhostDeliveryHandReach from the middle of his tile towards the cauldron at the hand
-    //! height GhostDeliveryHeight. The hunter puts the trap into it by hand and the ghost waits there while it flows
-    //! into the cauldron.
-    static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor, const Tile& standing);
+    //! \brief Returns the trap seat of a cauldron (decision 894, replacing the device beside the hunter of decision 865):
+    //! the permanent open seat on its rim, offset (0.5, 0.82, 1.1) from the middle of the cauldron (models/
+    //! GhostCauldron.mesh). The hunter puts the trap into it by hand and the ghost waits there while it flows into the
+    //! cauldron.
+    static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor);
+    //! \brief Returns the tile the hunter stands on to use the trap seat of a cauldron: on its +Y side, facing -Y.
+    static Tile* getTrapStandingTile(GameMap& map, const Tile& anchor);
     //! \brief Returns the middle of the ectoplasm surface in the mouth of a cauldron object standing at the given
     //! position (models/GhostCauldron.mesh): where a delivered ghost sinks into the cauldron.
     static Ogre::Vector3 getCauldronMouthPosition(const Ogre::Vector3& cauldron);
-    //! \brief Returns the outer radius of the cauldron's rolled rim in tiles (models/GhostCauldron.mesh): the delivery
-    //! device hangs on the rim there.
+    //! \brief Returns the outer radius of the cauldron's rolled rim in tiles (models/GhostCauldron.mesh).
     static float getCauldronRimRadius();
     //! \brief Reserves the nearest free equipment hook for a hunter.
     Tile* reserveHook(Creature& hunter);
