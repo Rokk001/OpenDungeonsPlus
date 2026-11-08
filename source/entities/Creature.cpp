@@ -2569,8 +2569,9 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
-    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    // The stolen part of the carried gold sizes the thief sack; the live drag worker follows it.
     os << mGoldStolen;
+    os << mDragWorkerName;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2650,6 +2651,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
     OD_ASSERT_TRUE(is >> mGoldStolen);
+    OD_ASSERT_TRUE(is >> mDragWorkerName);
     clampGoldStolen();
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
@@ -2744,6 +2746,7 @@ bool Creature::isAlive() const
     return mHp > 0.0;
 }
 
+//! \brief Advances movement and creature visuals; animated contact runs in the late render pass.
 void Creature::update(Ogre::Real timeSinceLastFrame)
 {
     Tile* previousPositionTile = getPositionTile();
@@ -2771,8 +2774,7 @@ void Creature::update(Ogre::Real timeSinceLastFrame)
         }
     }
 
-    // A client keeps a pulled dead body at the hands of its worker (decision 892)
-    updateDragTether();
+    // Animated drag contact is applied by the renderer after all creatures have moved.
 
     // Update the visual debugging entities
     //if we are standing in a different tile than we were last turn
@@ -4463,81 +4465,15 @@ double Creature::getDragGap(const Creature& worker, const Creature& dragged)
     return std::max(configured, bodies);
 }
 
-//! \brief Client: sets a dead body that is pulled exactly on the way the worker walked, one gap behind it, every frame.
-//! The walk path the server sends moves the body at its own speed from its own place, so it fell behind the worker
-//! (worker and body are simulated apart on a client). The worker is the creature that plays the Drag clip next to it.
+//! \brief Resolves late worker visibility and applies animated contact after world poses advance.
 void Creature::updateDragTether()
 {
-    static const double TETHER_WORKER_RADIUS = 6.0;
-    static const double TETHER_MIN_STEP = 0.01;
-    static const double TETHER_KEEP_BEHIND = 1.0;
-
-    const bool tethered = !getIsOnServerMap() && getIsOnMap() && !isAlive() &&
-        (getAnimationStateName() == EntityAnimation::dragged_anim);
-    const Creature* worker = nullptr;
-    if(tethered && (getGameMap() != nullptr))
-    {
-        double best = TETHER_WORKER_RADIUS;
-        const Ogre::Vector3& pos = getPosition();
-        for(const Creature* candidate : getGameMap()->getCreatures())
-        {
-            if((candidate == this) || !candidate->getIsOnMap() || !candidate->isAlive() ||
-               (candidate->getAnimationStateName() != EntityAnimation::drag_anim))
-                continue;
-            const Ogre::Vector3& other = candidate->getPosition();
-            double distance = static_cast<double>(Ogre::Vector2(other.x, other.y).distance(Ogre::Vector2(pos.x, pos.y)));
-            if(distance < best)
-            {
-                best = distance;
-                worker = candidate;
-            }
-        }
-    }
-    if(worker == nullptr)
-    {
-        mDragTetherTrail.clear();
-        mDragTetherArc.clear();
+    if(getIsOnServerMap() || !getIsOnMap() || mDragWorkerName.empty())
         return;
-    }
-
-    const Ogre::Vector3& workerPos = worker->getPosition();
-    const Ogre::Vector2 workerPoint(workerPos.x, workerPos.y);
-    if(mDragTetherTrail.empty())
-    {
-        // The way starts where the body lies and goes on with the positions of the worker
-        mDragTetherTrail.push_back(Ogre::Vector2(getPosition().x, getPosition().y));
-        mDragTetherArc.push_back(0.0);
-    }
-    const double step = static_cast<double>(workerPoint.distance(mDragTetherTrail.back()));
-    if(step > TETHER_MIN_STEP)
-    {
-        mDragTetherTrail.push_back(workerPoint);
-        mDragTetherArc.push_back(mDragTetherArc.back() + step);
-    }
-
-    // The body lies one gap behind the end of the way
-    const double target = std::max(0.0, mDragTetherArc.back() - getDragGap(*worker, *this));
-    Ogre::Vector2 point = mDragTetherTrail.front();
-    for(uint32_t i = 1; i < mDragTetherTrail.size(); ++i)
-    {
-        if(mDragTetherArc[i] < target)
-            continue;
-        const double length = mDragTetherArc[i] - mDragTetherArc[i - 1];
-        const double ratio = (length > 0.0) ? ((target - mDragTetherArc[i - 1]) / length) : 1.0;
-        point = mDragTetherTrail[i - 1] + (mDragTetherTrail[i] - mDragTetherTrail[i - 1]) * static_cast<Ogre::Real>(ratio);
-        break;
-    }
-    setPosition(Ogre::Vector3(point.x, point.y, getPosition().z));
-
-    // The part of the way that is far behind the body is not needed any more
-    uint32_t drop = 0;
-    while(((drop + 2) < mDragTetherTrail.size()) && (mDragTetherArc[drop + 1] < (target - TETHER_KEEP_BEHIND)))
-        ++drop;
-    if(drop > 0)
-    {
-        mDragTetherTrail.erase(mDragTetherTrail.begin(), mDragTetherTrail.begin() + drop);
-        mDragTetherArc.erase(mDragTetherArc.begin(), mDragTetherArc.begin() + drop);
-    }
+    const Creature* worker = getGameMap() != nullptr ? getGameMap()->getCreature(mDragWorkerName) : nullptr;
+    if(worker == nullptr || !worker->getIsOnMap() || !worker->isAlive() || worker->getKoTurnCounter() != 0)
+        return;
+    RenderManager::getSingleton().rrApplyDragContact(*this, *worker);
 }
 
 void Creature::updateClientPose(double timeSinceLastFrame)
@@ -5753,8 +5689,9 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
-    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    // The stolen part of the carried gold sizes the thief sack; the live drag worker follows it.
     os << mGoldStolen;
+    os << mDragWorkerName;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -5916,6 +5853,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
     OD_ASSERT_TRUE(is >> mGoldStolen);
+    OD_ASSERT_TRUE(is >> mDragWorkerName);
     clampGoldStolen();
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
@@ -8848,9 +8786,11 @@ void Creature::notifyCorpseDragEnd()
 }
 
 //! \brief Starts a ground pull while retaining the creature's position on the map.
-void Creature::notifyDragStart(double pullerDirtFactor)
+void Creature::notifyDragStart(const Creature& worker, double pullerDirtFactor)
 {
     mIsBeingDragged = true;
+    mDragWorkerName = worker.getName();
+    mNeedFireRefresh = true;
     mDragDirtFactor = pullerDirtFactor;
 
     // The creature lies on the map and follows the worker's path; a knockout countdown continues.
@@ -8861,6 +8801,13 @@ void Creature::notifyDragStart(double pullerDirtFactor)
     }
 }
 
+//! \brief Releases animated hand contact while retaining the delivery and saved carrier reservation.
+void Creature::notifyDragLaying()
+{
+    mDragWorkerName.clear();
+    mNeedFireRefresh = true;
+}
+
 //! \brief Ends a ground pull and permits knocked-out creatures to be picked up again immediately.
 void Creature::notifyDragEnd()
 {
@@ -8868,6 +8815,8 @@ void Creature::notifyDragEnd()
         return;
 
     mIsBeingDragged = false;
+    mDragWorkerName.clear();
+    mNeedFireRefresh = true;
     mDragDirtFactor = 1.0;
 }
 

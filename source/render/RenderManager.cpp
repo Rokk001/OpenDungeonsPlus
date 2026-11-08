@@ -4299,8 +4299,88 @@ void RenderManager::rrUpdateEntityOpacity(RenderedMovableEntity* entity)
     }
 }
 
+//! \brief Samples the first supported animated contact bone in world coordinates.
+static bool dragBonePoint(Ogre::Entity* entity, std::initializer_list<const char*> names,
+    Ogre::Vector3& point)
+{
+    if(!entity->hasSkeleton() || entity->getParentSceneNode() == nullptr)
+        return false;
+    entity->_updateAnimation();
+    Ogre::SkeletonInstance* skeleton = entity->getSkeleton();
+    for(const char* name : names)
+    {
+        if(!skeleton->hasBone(name))
+            continue;
+        point = entity->getParentSceneNode()->convertLocalToWorldPosition(
+            skeleton->getBone(name)->_getDerivedPosition());
+        return true;
+    }
+    return false;
+}
+
+//! \brief Keeps an ankle in the animated hand; unknown rigs use their transformed mesh bounds.
+void RenderManager::rrApplyDragContact(Creature& dragged, const Creature& worker)
+{
+    const std::string bodyName = dragged.getOgreNamePrefix() + dragged.getName();
+    const std::string workerName = worker.getOgreNamePrefix() + worker.getName();
+    if(!mSceneManager->hasEntity(bodyName) || !mSceneManager->hasEntity(workerName))
+        return;
+    Ogre::Entity* body = mSceneManager->getEntity(bodyName);
+    Ogre::Entity* puller = mSceneManager->getEntity(workerName);
+    Ogre::SceneNode* bodyNode = body->getParentSceneNode();
+    Ogre::SceneNode* workerNode = puller->getParentSceneNode();
+    if(bodyNode == nullptr || workerNode == nullptr)
+        return;
+    Ogre::Vector3 hand;
+    if(!dragBonePoint(puller, {"Hand.R", "hand_r", "Hand_R", "RightHand", "Weapon_R"}, hand))
+    {
+        const Ogre::AxisAlignedBox& bounds = puller->getBoundingBox();
+        if(bounds.isNull() || bounds.isInfinite())
+            return;
+        hand = workerNode->convertLocalToWorldPosition(bounds.getCenter());
+    }
+    Ogre::Vector3 ankle;
+    if(!dragBonePoint(body, {"Foot.R", "foot_r", "foot.R", "Foot_R", "RightFoot"}, ankle))
+    {
+        const Ogre::AxisAlignedBox& bounds = body->getBoundingBox();
+        if(bounds.isNull() || bounds.isInfinite())
+            return;
+        // The end of the body's own bounds provides a deterministic contact for legless rigs.
+        const Ogre::Vector3 center = bounds.getCenter();
+        ankle = bodyNode->convertLocalToWorldPosition(
+            Ogre::Vector3(center.x, bounds.getMinimum().y, center.z));
+    }
+    const Ogre::Vector3 contactPosition = bodyNode->_getDerivedPosition() + hand - ankle;
+    const Ogre::Vector3 basePosition = bodyNode->getPosition();
+    Ogre::SceneNode* parent = bodyNode->getParentSceneNode();
+    bodyNode->setPosition(parent != nullptr ? parent->convertWorldToLocalPosition(contactPosition) : contactPosition);
+    mDragContactPositions[&dragged] = std::make_pair(basePosition, bodyNode->getPosition());
+}
+
+//! \brief Removes last frame's cosmetic displacement before animation and release movement.
+void RenderManager::rrResetDragContacts()
+{
+    for(const std::pair<Creature* const, std::pair<Ogre::Vector3, Ogre::Vector3>>& contact : mDragContactPositions)
+    {
+        Ogre::SceneNode* node = contact.first->getEntityNode();
+        // A packet or another pose may already have moved the node since contact was drawn.
+        if(node != nullptr && node->getPosition() == contact.second.second)
+            node->setPosition(contact.second.first);
+    }
+    mDragContactPositions.clear();
+}
+
+//! \brief Applies contact after every creature has advanced, independent of creation order.
+void RenderManager::rrUpdateDragContacts()
+{
+    for(Creature* creature : mDragContactCreatures)
+        creature->updateDragTether();
+}
+
+//! \brief Creates the visible creature and registers it for late contact sampling.
 void RenderManager::rrCreateCreature(Creature* curCreature)
 {
+    mDragContactCreatures.insert(curCreature);
     const std::string& meshName = curCreature->getCurrentMeshName();
 
     // Load the mesh for the creature
@@ -4402,8 +4482,11 @@ bool RenderManager::isLastBlowLeftHanded(const Creature* creature) const
     return it != mCreatureLastBlowLeft.end() && it->second;
 }
 
+//! \brief Removes visible creature resources and its late contact registration.
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
+    mDragContactCreatures.erase(curCreature);
+    mDragContactPositions.erase(curCreature);
     clearCreatureDecay(curCreature);
     removeCreatureTavernProps(curCreature);
     cancelCreatureStep(curCreature);

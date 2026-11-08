@@ -46,13 +46,22 @@ assert 'RoomObjectNavigation::clearance(worker) + RoomObjectNavigation::clearanc
 assert 'getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap"' in gap
 assert 'Creature::getDragGap(worker, dragged)' in action.split('double dragGap')[1].split(chr(10) + '}' + chr(10))[0]
 assert action.count('dragGap(mCreature, *dragged)') == 2
-# (decision 892) the corpse stays at the hands of the worker the whole way: a client sets the pulled dead body every
-# frame on the way the worker walked, one gap behind it, instead of letting its own queued walk fall behind
-assert 'updateDragTether();' in creature.split('void Creature::update(Ogre::Real timeSinceLastFrame)')[1].split(chr(10) + '}' + chr(10))[0]
+# Decision 892: render contact follows both animated poses after every creature has moved.
+frame = (root / 'source/render/ODFrameListener.cpp').read_text(encoding='utf-8')
+assert frame.index('mGameMap->updateAnimations(timeSinceLastFrame);') < frame.index('rrUpdateDragContacts();')
 tether = creature.split('void Creature::updateDragTether()')[1].split(chr(10) + '}' + chr(10))[0]
-assert '!getIsOnServerMap()' in tether and '!isAlive()' in tether
-assert 'EntityAnimation::dragged_anim' in tether and 'EntityAnimation::drag_anim' in tether
-assert 'getDragGap(*worker, *this)' in tether and 'setPosition(' in tether
+assert 'getIsOnServerMap()' in tether and 'mDragWorkerName.empty()' in tether
+assert 'getCreature(mDragWorkerName)' in tether and 'getCreatures()' not in tether
+assert 'rrApplyDragContact(*this, *worker)' in tether and 'getDragGap' not in tether
+assert creature.count('os << mDragWorkerName;') == 2
+assert creature.count('is >> mDragWorkerName') == 2
+assert 'mDragWorkerName = worker.getName();' in creature
+assert 'mDragWorkerName.clear();' in creature
+contact = render.split('void RenderManager::rrApplyDragContact')[1].split('void RenderManager::rrUpdateDragContacts')[0]
+assert 'dragBonePoint(puller,' in contact and 'dragBonePoint(body,' in contact
+assert 'getBoundingBox()' in contact and 'bounds.isNull() || bounds.isInfinite()' in contact
+assert 'entity->_updateAnimation();' in render.split('static bool dragBonePoint')[1].split('void RenderManager::rrApplyDragContact')[0]
+assert 'convertLocalToWorldPosition' in render.split('static bool dragBonePoint')[1].split('void RenderManager::rrApplyDragContact')[0]
 # the gap works for big bodies too (same function for small and big)
 # the lying body of the biggest creatures needs more than the old gap of 0.9
 import re
