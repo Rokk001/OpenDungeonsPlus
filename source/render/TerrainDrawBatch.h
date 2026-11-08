@@ -27,7 +27,7 @@ public:
     void remove(const std::string& name);
     //! Releases batches and detaches entity listeners before scene teardown.
     void clear();
-    //! Builds dirty cells before Ogre updates their new scene nodes.
+    //! Builds at most one eligible dirty cell per Ogre frame across all views.
     void preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Camera* camera) override;
     //! Resets each view's lighting decision and limits failed construction probes.
     void preFindVisibleObjects(Ogre::SceneManager* source,
@@ -72,6 +72,9 @@ private:
     std::map<std::string, std::unique_ptr<Cell> > mCells;
     std::map<std::string, Cell*> mMembers;
     size_t mNumber;
+    //! Retains the build budget across every view and scene reset in one Ogre frame.
+    unsigned long mLastBuildFrame;
+    bool mHasBuildFrame;
     std::chrono::steady_clock::time_point mNextReport;
 };
 

@@ -9,6 +9,7 @@
 #include <OgreSceneNode.h>
 #include <OgreViewport.h>
 #include <OgreCamera.h>
+#include <OgreRoot.h>
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -21,7 +22,7 @@ TerrainDrawBatch::Cell::Cell() : mGeometry(nullptr), mSuppressed(0), mDirty(true
 }
 
 //! Defers scene registration until there is eligible terrain.
-TerrainDrawBatch::TerrainDrawBatch() : mScene(nullptr), mNumber(0),
+TerrainDrawBatch::TerrainDrawBatch() : mScene(nullptr), mNumber(0), mLastBuildFrame(0), mHasBuildFrame(false),
     mNextReport(std::chrono::steady_clock::now())
 {
 }
@@ -218,10 +219,13 @@ void TerrainDrawBatch::remove(const std::string& name)
     }
 }
 
-//! Builds visible dirty cells after a light-compatible view; current-view validation keeps rejected originals.
+//! Builds one eligible cell per Ogre frame; waiting cells retain their original draws.
 void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Camera* camera)
 {
     (void)source;
+    const unsigned long frame = Ogre::Root::getSingleton().getNextFrameNumber();
+    if(mHasBuildFrame && mLastBuildFrame == frame)
+        return;
     for(std::map<std::string, std::unique_ptr<Cell> >::iterator it = mCells.begin(); it != mCells.end(); ++it)
     {
         Cell& cell = *it->second;
@@ -235,6 +239,8 @@ void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Cam
         // A previous compatible view only permits construction; canBatch validates the current view.
         if(!cell.mBuildAllowed)
             continue;
+        mLastBuildFrame = frame;
+        mHasBuildFrame = true;
         cell.mDirty = false;
         std::ostringstream name;
         name << "TerrainDrawBatch_" << ++mNumber;
@@ -258,6 +264,7 @@ void TerrainDrawBatch::preUpdateSceneGraph(Ogre::SceneManager* source, Ogre::Cam
             region->second->setQueryFlags(0);
             region->second->setListener(&cell);
         }
+        return;
     }
 }
 
