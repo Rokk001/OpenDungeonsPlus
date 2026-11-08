@@ -92,9 +92,40 @@ assert not extra, '[Tavern] keys without a design value: ' + ', '.join(sorted(ex
 # BeerMoodTurns and NoCoinMoodTurns are gone: the beer and the lack of coin are one-time events, nothing runs over turns
 for gone in ('BeerMoodTurns', 'NoCoinMoodTurns'):
     assert gone not in tavern and gone not in global_cfg, gone + ' must be removed with its documentation'
-# The turn values are the seconds of the design times the 1.4 turns per second
+# The turn values are the seconds of the design times the turns per second of the game (ODApplication::turnsPerSecond)
+turns_per_second_line = re.search(r'^double ODApplication::turnsPerSecond = ([\d.]+);', read('source/ODApplication.cpp'), re.M)
+assert turns_per_second_line is not None, 'ODApplication::turnsPerSecond is missing'
+turns_per_second = float(turns_per_second_line.group(1))
+assert turns_per_second == 1.4, 'the design times assume 1.4 turns per second'
 for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30)):
-    assert round(seconds * 1.4) == float(tavern[key]), key + ' must be ' + str(seconds) + ' s x 1.4 turns per second'
+    assert round(seconds * turns_per_second) == float(tavern[key]), key + ' must be ' + str(seconds) + ' s x turnsPerSecond'
+# The loser of a slap duel lies 30 real seconds (TAVERN-PLAN D18, decision 854): DuelKoTurns turns of the room upkeep, one
+# upkeep per game turn, then the get-up of CreatureGetUpSeconds follows
+assert abs(float(tavern['DuelKoTurns']) / turns_per_second - 30.0) < 1e-9, 'DuelKoTurns must last exactly 30 s'
+room_source = read('source/rooms/RoomTavern.cpp')
+knock_out = room_source[room_source.index('void RoomTavern::knockOut('):room_source.index('bool RoomTavern::fallNextToBench(')]
+assert 'setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")));' in knock_out, 'the knock-out lasts DuelKoTurns'
+upkeep = room_source[room_source.index('void RoomTavern::doUpkeep()'):]
+upkeep = upkeep[:upkeep.index('\n}\n')]
+assert upkeep.count('upkeepSpots();') == 1, 'the lying time counts one turn per room upkeep'
+spots = room_source[room_source.index('void RoomTavern::upkeepSpots()'):room_source.index('bool RoomTavern::payForBeer(')]
+ko_case = spots[spots.index('case TavernGuestState::ko:'):spots.index('case TavernGuestState::getUp:')]
+assert ko_case.count('--spot.mTurnsLeft;') == 1 and 'setSpotState(spot, TavernGuestState::getUp, getUpTurns());' in ko_case, \
+    'the lying counts down one turn per upkeep and then the loser gets up'
+# The model: a loser knocked out in one upkeep turn lies DuelKoTurns upkeeps, then gets up
+left, lying = int(tavern['DuelKoTurns']), 0
+while left > 0:
+    left -= 1
+    lying += 1
+assert abs(lying / turns_per_second - 30.0) < 1e-9, 'the loser lies 30 real seconds'
+
+# The slap duel (decisions 856 and 858): one slap 4 to 10 s, the pause after it 3 to 6 s, drawn anew every time
+rooms_values = block_values(rooms_cfg, 'Rooms')
+for key, value in (('TavernSlapSecondsMin', '4'), ('TavernSlapSecondsMax', '10'), ('TavernSlapPauseSecondsMin', '3'),
+                   ('TavernSlapPauseSecondsMax', '6')):
+    assert rooms_values.get(key) == value, key + ' must be ' + value
+    assert re.search(r'^#\s*' + key + r'\s+\(double, seconds\)', rooms_cfg, re.M), key + ' needs a doc line in seconds'
+    assert '"' + key + '"' in room_source, key + ' is read by RoomTavern.cpp'
 
 # 2. Values derived from other keys
 rooms = block_values(rooms_cfg, 'Rooms')

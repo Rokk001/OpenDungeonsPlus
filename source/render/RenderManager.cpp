@@ -2922,7 +2922,7 @@ void RenderManager::updateRenderAnimations(Ogre::Real timeSinceLastFrame)
     for(std::vector<CreatureGetUpAnimation>::iterator it = mCreatureGetUpAnimations.begin(); it != mCreatureGetUpAnimations.end();)
     {
         it->mElapsed += timeSinceLastFrame;
-        // CreatureGetUpSeconds (at least 2 s) of game time; timeSinceLastFrame already includes the game speed
+        // CreatureGetUpSeconds (6 s) of game time; timeSinceLastFrame already includes the game speed
         const Ogre::Real getUpDuration = std::max(static_cast<Ogre::Real>(
             ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")), 0.01f);
         const Ogre::Real progress = std::min(it->mElapsed / getUpDuration, 1.0f);

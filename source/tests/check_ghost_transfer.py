@@ -138,4 +138,27 @@ for saved in (0.0, 7.0, 27.0):
         turns += 1.0
         left += 1
     assert left == math.ceil(duration - saved), (saved, left)
-print('ghost transfer: delivery point, 20 s, visible, resumed: ok')
+
+# 7. Decisions 855 and 857: only the CatchTime research shortens the transfer (20 s, 16 s, 13.3 s); hunter efficiency
+# does not. The transfer clock runs one turn per game turn for every hunter, nothing in its time reads an efficiency.
+def code_only(text):
+    return re.sub(r'//[^\n]*', '', text)
+
+
+transfer_body = code_only(body(action, 'double CreatureActionHuntGhost::getTransferTurns() const'))
+state6 = code_only(state6)
+refresh = code_only(refresh)
+for word in ('fficiency', 'getAffinity', 'getLevel', 'Speed'):
+    assert word not in transfer_body, ('the transfer time does not depend on the hunter', word)
+assert state6.count('mTurns+=') == 1 and 'if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }' in state6, \
+    'the transfer clock gains exactly one turn per game turn'
+for word in ('fficiency', 'getAffinity', 'Speed'):
+    assert word not in state6, ('the transfer phase does not read the hunter efficiency', word)
+transfer_share = refresh[refresh.index('else if(boxMode==5)'):]
+transfer_share = transfer_share[:transfer_share.index('break;')]
+assert 'fficiency' not in transfer_share, 'the client share of the transfer does not read the hunter efficiency'
+catch_time = re.search(r'^\s*roomGhostRoom\s+CatchTime\s+mul\s+(\S+)\s+(\S+)\s+(\S+)\s*$', read('config/skills.cfg'), re.M)
+assert catch_time, 'CatchTime research line'
+seconds_by_level = [transfer_seconds * float(f) for f in catch_time.groups()]
+assert [round(s, 1) for s in seconds_by_level] == [20.0, 16.0, 13.3], seconds_by_level
+print('ghost transfer: delivery point, 20 s, visible, resumed, CatchTime only (not efficiency): ok')

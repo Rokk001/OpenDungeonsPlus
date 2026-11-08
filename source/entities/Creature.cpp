@@ -3087,7 +3087,8 @@ void Creature::doUpkeep()
         mKoTurnCounter = std::max(0.0, mKoTurnCounter - 1.0);
         if(mKoTurnCounter == 0.0)
             mKoDroppedThisFight = false;
-        // The loser of an arena fight lies for ArenaKnockOutSeconds, the last CreatureGetUpSeconds of it are the get-up
+        // The loser of an arena fight lies for ArenaKnockOutSeconds; the last CreatureGetUpSeconds (rounded up to turns)
+        // of its counter, which come after the lying time, are the get-up
         if(mArenaKnockOut && (mKoTurnCounter > 0.0))
         {
             const double getUpTurns = std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
@@ -7739,8 +7740,12 @@ double Creature::takeDamage(GameEntity* attacker, double absoluteDamage, double 
                && (creatureAttacking->getPositionTile()->getCoveringRoom()->getType() == RoomType::arena);
             if(arenaFight)
             {
+                // It lies ArenaKnockOutSeconds (30 s) and then gets up for CreatureGetUpSeconds (6 s) rounded up to
+                // whole turns, like the loser of a tavern slap duel (decision 857)
                 mKoTurnCounter = ConfigManager::getSingleton().getRoomConfigDouble("ArenaKnockOutSeconds")
-                    * ODApplication::turnsPerSecond;
+                    * ODApplication::turnsPerSecond
+                    + std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
+                    * ODApplication::turnsPerSecond);
                 mArenaKnockOut = true;
             }
             else

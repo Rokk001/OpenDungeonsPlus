@@ -71,6 +71,31 @@ enum class TavernGameKind
     slapDuel = 2
 };
 
+//! \brief What runs in a slap duel: one slap (wind-up, slap, reaction) of TavernSlapSecondsMin to TavernSlapSecondsMax
+//! seconds, then a pause of TavernSlapPauseSecondsMin to TavernSlapPauseSecondsMax seconds, then the other guest slaps.
+enum class TavernDuelPhase
+{
+    //! Nothing runs: the next slap starts in the next turn (a new duel, or a duel of a save without the duel clock).
+    none = 0,
+    //! A slap runs; the hand lands at the half of it.
+    slap = 1,
+    //! The pause after a slap runs.
+    pause = 2
+};
+
+//! \brief How the running slap of a slap duel landed.
+enum class TavernSlapResult
+{
+    //! The hand has not landed yet.
+    open = 0,
+    //! The slap missed.
+    miss = 1,
+    //! A normal hit: SlapDamage hit points.
+    hit = 2,
+    //! A critical slap: it wins the duel when the slap is over.
+    critical = 3
+};
+
 //! \brief Number of places of one bench of a tavern table: the table is two tiles long and four guests sit next to each
 //! other on each of its two benches.
 const uint32_t TAVERN_SEATS_PER_BENCH = 4;
@@ -151,6 +176,28 @@ struct RoomTavernSpot
     bool mLeftSeat;
 };
 
+//! \brief The clock of a slap duel: the running slap or pause and how far it is. It is saved with the game, so a loaded
+//! duel goes on in the middle of its slap or pause.
+struct RoomTavernDuelClock
+{
+    //! \brief Creates a clock on which nothing runs: the first slap starts in the next turn.
+    RoomTavernDuelClock() :
+        mPhase(TavernDuelPhase::none),
+        mTurnsLeft(0),
+        mSlapTurns(0),
+        mSlapResult(TavernSlapResult::open)
+    {}
+
+    //! What runs.
+    TavernDuelPhase mPhase;
+    //! Turns left of the running slap or pause.
+    int32_t mTurnsLeft;
+    //! Turns the running slap lasts in all (the hand lands when half of them are left); 0 while no slap runs.
+    int32_t mSlapTurns;
+    //! How the running slap landed.
+    TavernSlapResult mSlapResult;
+};
+
 //! \brief A game two guests at the same table of a tavern play. It is kept under the seat of the first guest.
 struct RoomTavernGame
 {
@@ -175,14 +222,16 @@ struct RoomTavernGame
     Creature* mCreatureA;
     //! The second guest, not owned.
     Creature* mCreatureB;
-    //! Turns until the game is decided (a slap duel: until the one with more hit points left wins).
+    //! Turns until the game is decided; a slap duel: slaps until the one with more hit points left wins.
     int32_t mTurnsLeft;
     //! Number of hits the first guest took in a slap duel.
     uint32_t mSlapsTakenA;
     //! Number of hits the second guest took in a slap duel.
     uint32_t mSlapsTakenB;
-    //! True when the first guest slaps in the next turn of a slap duel.
+    //! True when the first guest slaps (or slaps next) in a slap duel.
     bool mTurnIsA;
+    //! The running slap or pause of a slap duel.
+    RoomTavernDuelClock mDuelClock;
 };
 
 //! \brief A guest place that was read from a saved room and waits for its creature (see RoomTavern::doUpkeep).
@@ -258,6 +307,8 @@ struct RoomTavernPendingGame
     uint32_t mSlapsTakenB;
     //! True when the first guest was to slap next.
     bool mTurnIsA;
+    //! The running slap or pause of a slap duel (nothing runs in a save made before the duel clock).
+    RoomTavernDuelClock mDuelClock;
 };
 
 //! \brief A room where creatures quench their thirst. The first tile of the room is the counter, where the innkeeper
@@ -550,7 +601,8 @@ private:
     //! \param it The game.
     void playContestTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
 
-    //! \brief Plays one turn of a slap duel: the guest whose turn it is slaps.
+    //! \brief Plays one turn of a slap duel: a slap of 4 to 10 s (wind-up, slap, reaction) of the guest whose turn it
+    //! is runs on, or the pause of 3 to 6 s after it; then the other guest slaps.
     //! \param it The game.
     void playDuelTurn(std::map<RoomTavernSeat, RoomTavernGame>::iterator it);
 
