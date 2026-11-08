@@ -30,6 +30,7 @@
 #include "render/ODFrameListener.h"
 
 #include <cmath>
+#include <cstring>
 
 #include <OgrePrerequisites.h>
 #include <OgreSceneNode.h>
@@ -57,6 +58,7 @@ MiniMapDrawn::MiniMapDrawn(CEGUI::Window* miniMapWindow) :
     mHeight(static_cast<unsigned int>(mMiniMapWindow->getPixelSize().d_height)
             + mGrainSize - (static_cast<unsigned int>(mMiniMapWindow->getPixelSize().d_height) % mGrainSize)),
     mTiles(mWidth * mHeight, Color(0,0,0)),
+    mUploadedTextureState(0),
     mPixelBox(mWidth, mHeight, 1, Ogre::PF_R8G8B8A8),
     mMiniMapOgreTexture(Ogre::TextureManager::getSingletonPtr()->createManual(
             "miniMapOgreTexture",
@@ -114,7 +116,7 @@ Ogre::Vector2 MiniMapDrawn::camera_2dPositionFromClick(int xx, int yy)
         -pp * mHeight / mGrainSize) * getZoomScale();
 }
 
-//! \brief Updates visible map colours and keeps unexplored ground on the HUD stone surface.
+//! \brief Updates map colours and overlays, uploading pixels only when their bytes or texture state change.
 void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles)
 {
     advanceAnimation(timeSinceLastFrame);
@@ -155,16 +157,29 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
         }
     }
 
-    Ogre::PixelBox output = mPixelBuffer->lock(mPixelBox, Ogre::HardwareBuffer::HBL_NORMAL);
-
     // mTiles holds bytes in R, G, B, A order, which is Ogre's PF_BYTE_RGBA. One bulk conversion into
     // the locked format writes the same bytes as the former per-pixel setColourAt(colour / 255) loop,
     // without a float round trip per pixel (Tilda F1: that loop was 4.5% of the P1 game frame).
     static_assert(sizeof(Color) == 4, "map pixels must be tightly packed RGBA bytes");
-    const Ogre::PixelBox source(mWidth, mHeight, 1, Ogre::PF_BYTE_RGBA, mTiles.data());
-    Ogre::PixelUtil::bulkPixelConversion(source, output);
-
-    mPixelBuffer->unlock();
+    // The two frame callbacks can produce identical pixels. Avoid the driver upload in that case,
+    // but keep generating colours and updating overlays so animation and camera state still advance.
+    if(!mMiniMapOgreTexture->isLoaded())
+        mMiniMapOgreTexture->createInternalResources();
+    const Ogre::HardwarePixelBufferSharedPtr currentBuffer = mMiniMapOgreTexture->getBuffer();
+    if(currentBuffer != mPixelBuffer
+        || mUploadedTextureState != mMiniMapOgreTexture->getStateCount()
+        || mUploadedTiles.size() != mTiles.size()
+        || std::memcmp(mUploadedTiles.data(), mTiles.data(), mTiles.size() * sizeof(Color)) != 0)
+    {
+        Ogre::PixelBox output = currentBuffer->lock(mPixelBox, Ogre::HardwareBuffer::HBL_NORMAL);
+        const Ogre::PixelBox source(mWidth, mHeight, 1, Ogre::PF_BYTE_RGBA, mTiles.data());
+        Ogre::PixelUtil::bulkPixelConversion(source, output);
+        currentBuffer->unlock();
+        // A failed conversion/upload must leave the previous successful bytes as the comparison baseline.
+        mUploadedTiles = mTiles;
+        mPixelBuffer = currentBuffer;
+        mUploadedTextureState = mMiniMapOgreTexture->getStateCount();
+    }
     updateMapOverlay(mMiniMapWindow, mGameMap, mCamera_2dPosition,
         Ogre::Vector2(mWidth, mHeight) * (getZoomScale() / mGrainSize), rotation, cornerTiles);
 }

@@ -95,10 +95,10 @@ def update_body(source):
 def verify(source, header):
     body = re.sub(r'//[^\n]*|/\*.*?\*/', '', update_body(source), flags=re.S)
     assert 'setColourAt' not in body and 'ColourValue(' not in body
-    lock = body.index('Ogre::PixelBox output = mPixelBuffer->lock(mPixelBox, Ogre::HardwareBuffer::HBL_NORMAL);')
+    lock = body.index('Ogre::PixelBox output = currentBuffer->lock(mPixelBox, Ogre::HardwareBuffer::HBL_NORMAL);')
     box = body.index('const Ogre::PixelBox source(mWidth, mHeight, 1, Ogre::PF_BYTE_RGBA, mTiles.data());')
     convert = body.index('Ogre::PixelUtil::bulkPixelConversion(source, output);')
-    unlock = body.index('mPixelBuffer->unlock();')
+    unlock = body.index('currentBuffer->unlock();')
     assert body.count('bulkPixelConversion(') == 1
     assert lock < box < convert < unlock
     assert 'static_assert(sizeof(Color) == 4' in body
@@ -117,8 +117,8 @@ verify(source, header)
 mutations = [
     (source.replace('Ogre::PF_BYTE_RGBA, mTiles.data()', 'Ogre::PF_BYTE_BGRA, mTiles.data()', 1), header),
     (source.replace('Ogre::PF_BYTE_RGBA, mTiles.data()', 'Ogre::PF_R8G8B8A8, mTiles.data()', 1), header),
-    (source.replace('    Ogre::PixelUtil::bulkPixelConversion(source, output);\n\n    mPixelBuffer->unlock();',
-                    '    mPixelBuffer->unlock();\n    Ogre::PixelUtil::bulkPixelConversion(source, output);', 1), header),
+    (source.replace('Ogre::PixelUtil::bulkPixelConversion(source, output);\n        currentBuffer->unlock();',
+                    'currentBuffer->unlock();\n        Ogre::PixelUtil::bulkPixelConversion(source, output);', 1), header),
     (source.replace('const Ogre::PixelBox source(mWidth, mHeight, 1,', 'const Ogre::PixelBox source(mHeight, mWidth, 1,', 1), header),
     (source, header.replace('    Ogre::uint8 BB;\n    Ogre::uint8 AA;', '    Ogre::uint8 AA;\n    Ogre::uint8 BB;', 1)),
     (source.replace('    static_assert(sizeof(Color) == 4, "map pixels must be tightly packed RGBA bytes");\n', '', 1), header),
