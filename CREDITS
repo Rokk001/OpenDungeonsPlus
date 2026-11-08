@@ -1731,6 +1731,8 @@ models/TavernCounter.mesh    AI-generated with Claude Code    GPLv3+    Original
 models/TavernKeg.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 models/TavernMug.mesh    AI-generated with Codex    GPLv3+    Original wooden mug exported with a grip-centred origin and the existing right-hand weapon-mount orientation, 2026-10-25
 models/TavernTable.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25; two tiles long since 2026-11-02
+models/TavernStool.mesh    AI-generated with Claude Code    GPLv3+    Original round tavern stool (seat with iron band, turned post, round foot) built by tools/tavern-meshes/make_tavern_stool.py with the existing TavernWood and TavernIron materials, decision 863, 2026-11-08
+tools/tavern-meshes/make_tavern_stool.py    AI-generated with Claude Code    GPLv3+    Original generator of the round tavern stool mesh, decision 863, 2026-11-08
 models/Vomit.mesh    AI-generated with Codex    GPLv3+    Original dungeon tavern model exported from its individual Blender source, 2026-10-25
 particles/Tavern.particle    AI-generated with Codex    GPLv3+    New standalone TavernSmoke and DuelBirds asset definitions, existing particle files unchanged, 2026-10-25
 
