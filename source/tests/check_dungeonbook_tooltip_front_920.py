@@ -99,7 +99,7 @@ assert scenario(True) == 'Tooltip', 'with the fix the tooltip is in front of the
 # 3. Every filled slot has the item values as tooltip, the worker tool too
 fill = function_of(creature, 'void Creature::fillItemSlotWindows(')
 assert fill.index('spawnFallback = ItemDrops::poorWeapon(*weapon);') < \
-    fill.index('image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap()));'), \
+    fill.index('image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap(), heldWeapon));'), \
     'the spawn tool of a worker is a filled slot with the item values'
 inventory = function_of(social, 'void SocialWindow::refreshInventory(')
 assert 'slot->getParent()->setTooltipText(slot->getTooltipText());' in inventory

@@ -44,7 +44,7 @@ assert re.search(r'const char\* const colours = locked \? "tl:FF606060 tr:FF6060
 assert 'image->setProperty("ImageColours", colours);' in fill and 'slotType->setProperty("ImageColours", colours);' in fill
 assert fill.index('if(!showLocks)') < fill.index('image->setProperty("ImageColours", colours);'), \
     'only the book (showLocks) changes the colours; the creature card keeps its look'
-assert '"ItemImages/" + item->getImageName()' in fill and 'slotType->setVisible(item == nullptr);' in fill
+assert '"ItemImages/" + item->getImageName(heldWeapon)' in fill and 'slotType->setVisible(item == nullptr);' in fill
 assert 'frame->setVisible(item != nullptr);' in fill
 assert 'frame->setProperty("Image", "OpenDungeonsIcons/ItemFrame" + qualityName(item->mQuality));' in fill
 assert 'Creature::fillItemSlotWindows(creature, slots, true);' in function_of(social, 'void SocialWindow::refreshInventory(')
