@@ -45,6 +45,13 @@ if ($LASTEXITCODE -ne 0) {
     & git -C "$taskRoot\src\ogre" apply --recount $taskProgramShutdownPatch
     if ($LASTEXITCODE -ne 0) { throw 'OGRE GL3Plus program shutdown patch failed' }
 }
+$taskExactUniformPatch = Join-Path $PSScriptRoot 'patches/ogre14-gl3plus-exact-uniform-cache.patch'
+& git -C "$taskRoot\src\ogre" apply --recount --reverse --check $taskExactUniformPatch *> $null
+if ($LASTEXITCODE -ne 0) {
+    Write-Output 'Applying OGRE GL3Plus exact uniform upload cache'
+    & git -C "$taskRoot\src\ogre" apply --recount $taskExactUniformPatch
+    if ($LASTEXITCODE -ne 0) { throw 'OGRE GL3Plus exact uniform cache patch failed' }
+}
 $ErrorActionPreference = 'Stop'
 $taskPatchHashes = Get-OgrePrereqPatchHashes
 $taskParallel = if ($env:BUILD_PARALLEL) { [int]$env:BUILD_PARALLEL } else { 1 }

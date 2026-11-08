@@ -42,7 +42,7 @@ $receiptPath = Join-Path $fixtureRoot 'install/share/opendungeons-plus/ogre-prer
 New-Item -ItemType Directory -Force (Split-Path -Parent $receiptPath) | Out-Null
 $receipt = [ordered]@{ schema = 1; commit = 'f906880885f6014ca9b5bd8aaa09b399394d5676'
     patches = (Get-OgrePrereqPatchHashes); binaries = (Get-OgrePrereqBinaryHashes $fixtureRoot) }
-if ($receipt.patches.Count -ne 5 -or $receipt.binaries.Count -ne 16) { throw 'Fixture inventory changed' }
+if ($receipt.patches.Count -ne 6 -or $receipt.binaries.Count -ne 16) { throw 'Fixture inventory changed' }
 $goodReceipt = $receipt | ConvertTo-Json -Depth 4
 function Require-Rejection {
     # A failed fixture must throw rather than report a usable dependency.
@@ -71,6 +71,7 @@ Require-Rejection
 Assert-OgrePrereqProvenance $fixtureRoot
 # A receipt for the old four-patch dependency must not be accepted.
 $receipt.patches.Remove('ogre14-gl3plus-program-shutdown.patch')
+$receipt.patches.Remove('ogre14-gl3plus-exact-uniform-cache.patch')
 $receipt.binaries['OgreMain.dll'] = (Get-OgrePrereqBinaryHashes $fixtureRoot)['OgreMain.dll']
 $receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $receiptPath
 Require-Rejection
@@ -82,9 +83,22 @@ Require-Rejection
 [IO.File]::WriteAllText($patch, $originalPatch)
 Assert-OgrePrereqProvenance $fixtureRoot
 $patch = Join-Path $fixtureRoot 'patches/ogre14-gl3plus-program-shutdown.patch'
+$originalPatch = [IO.File]::ReadAllText($patch)
 Add-Content -LiteralPath $patch 'changed patch'
 Require-Rejection
-Write-Output 'PASS: nine invalid dependency fixtures rejected; valid receipt accepted'
+$goodReceipt | Set-Content -LiteralPath $receiptPath
+[IO.File]::WriteAllText($patch, $originalPatch)
+Assert-OgrePrereqProvenance $fixtureRoot
+# The five-patch receipt lacks the exact uniform cache and is also stale.
+$receipt = $goodReceipt | ConvertFrom-Json
+$receipt.patches.PSObject.Properties.Remove('ogre14-gl3plus-exact-uniform-cache.patch')
+$receipt | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $receiptPath
+Require-Rejection
+$goodReceipt | Set-Content -LiteralPath $receiptPath
+$patch = Join-Path $fixtureRoot 'patches/ogre14-gl3plus-exact-uniform-cache.patch'
+Add-Content -LiteralPath $patch 'changed patch'
+Require-Rejection
+Write-Output 'PASS: eleven invalid dependency fixtures rejected; valid receipt accepted'
 ''', encoding='utf-8')
         # Let Windows PowerShell choose its own modules when Python was launched by pwsh.
         environment = {key: value for key, value in os.environ.items() if key.upper() != 'PSMODULEPATH'}

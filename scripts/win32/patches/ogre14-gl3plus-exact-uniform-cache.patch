@@ -1,0 +1,203 @@
+Cache exact separable-program uniforms independently of the optional GL render-state cache.
+
+diff --git a/RenderSystems/GLSupport/include/OgreGLUniformCache.h b/RenderSystems/GLSupport/include/OgreGLUniformCache.h
+--- a/RenderSystems/GLSupport/include/OgreGLUniformCache.h
++++ b/RenderSystems/GLSupport/include/OgreGLUniformCache.h
+@@ -45,6 +45,10 @@
+         /// A map of uniform names and a hash of their values
+         UniformMap mUniformValueMap;
+
++        /// Exact GL3Plus values are independent of the optional render-state cache.
++        typedef std::pair<bool, std::vector<unsigned char> > ExactUniformValue;
++        std::unordered_map<int, ExactUniformValue> mExactUniformValueMap;
++
+     public:
+         /** Clears all cached values
+         */
+@@ -54,6 +58,9 @@
+          @return A boolean value indicating whether this uniform needs to be updated in the GL.
+          */
+         bool updateUniform(int location, const void *value, int length);
++
++        /** Compares complete GL3Plus uniform bytes and matrix orientation before an upload. */
++        bool updateUniformExact(int location, const void* value, size_t length, bool transpose);
+     };
+ }
+
+diff --git a/RenderSystems/GLSupport/src/OgreGLUniformCache.cpp b/RenderSystems/GLSupport/src/OgreGLUniformCache.cpp
+--- a/RenderSystems/GLSupport/src/OgreGLUniformCache.cpp
++++ b/RenderSystems/GLSupport/src/OgreGLUniformCache.cpp
+@@ -19,32 +19,49 @@
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+  THE SOFTWARE.
+  -----------------------------------------------------------------------------
+  */
+
+ #include "OgreGLUniformCache.h"
+ #include "OgreCommon.h"
++#include <cstring>
+
+ namespace Ogre {
+
++    //! Clears both caches when their owning program is recreated or relinked.
+     void GLUniformCache::clearCache()
+     {
++        mExactUniformValueMap.clear();
+ #ifdef OGRE_ENABLE_STATE_CACHE
+         mUniformValueMap.clear();
+ #endif
++    }
++
++    //! Suppresses only byte-identical uploads to the same linked program and orientation.
++    bool GLUniformCache::updateUniformExact(int location, const void* value, size_t length, bool transpose)
++    {
++        ExactUniformValue& cached = mExactUniformValueMap[location];
++        if(cached.second.size() == length && cached.first == transpose &&
++            length != 0 && std::memcmp(cached.second.data(), value, length) == 0)
++            return false;
++        cached.first = transpose;
++        cached.second.resize(length);
++        if(length != 0)
++            std::memcpy(cached.second.data(), value, length);
++        return true;
+     }
+
+     bool GLUniformCache::updateUniform(int location, const void *value, int length)
+     {
+ #ifdef OGRE_ENABLE_STATE_CACHE
+         uint32 current = mUniformValueMap[location];
+         uint32 hash = Ogre::FastHash((const char *)value, length);
+         // First check if the uniform name is in the map. If not, this is new so insert it into the map.
+         if (!current || (current != hash))
+         {
+             // Haven't cached this state yet or the value has changed
+             mUniformValueMap[location] = hash;
+diff --git a/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLShader.cpp b/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLShader.cpp
+--- a/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLShader.cpp
++++ b/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLShader.cpp
+@@ -392,32 +392,34 @@
+                     "#define attribute in\n"
+                     "#define varying out\n";
+
+             mSource.insert(0, mType == GPT_FRAGMENT_PROGRAM ? prefixFp : prefixVp);
+         }
+
+         // Submit shader source.
+         const char *source = mSource.c_str();
+         OGRE_CHECK_GL_ERROR(glShaderSource(mGLShaderHandle, 1, &source, NULL));
+         OGRE_CHECK_GL_ERROR(glCompileShader(mGLShaderHandle));
+     }
+
++    //! Invalidates uniform values before either source linking or loading a program binary.
+     bool GLSLShader::linkSeparable()
+     {
+         if(mCompileError)
+             return false;
+
+         if(mLinked)
+             return true;
+
++        mUniformCache.clearCache();
+         OGRE_CHECK_GL_ERROR(glProgramParameteri(mGLProgramHandle, GL_PROGRAM_SEPARABLE, GL_TRUE));
+         OGRE_CHECK_GL_ERROR(glProgramParameteri(mGLProgramHandle, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE));
+
+         uint32 hash = _getHash();
+
+         // Use precompiled program if possible.
+         mLinked = GLSLProgram::getMicrocodeFromCache(hash, mGLProgramHandle);
+
+         // Compilation needed if precompiled program is
+         // unavailable or failed to link.
+         if (!mLinked)
+         {
+@@ -468,26 +470,28 @@
+             if(mSyntaxCode == "gl_spirv" || (mSource.find("void main") != String::npos))
+                 compiled = linkSeparable();
+         }
+
+         if (!compiled)
+             OGRE_EXCEPT(Exception::ERR_RENDERINGAPI_ERROR, getResourceLogName() + " " + compileInfo, "compile");
+
+         // probably we have warnings
+         if (!compileInfo.empty())
+             LogManager::getSingleton().stream(LML_WARNING) << getResourceLogName() << " " << compileInfo;
+     }
+
++    //! Drops cached values before deleting a program whose numeric handle may later be reused.
+     void GLSLShader::unloadHighLevelImpl(void)
+     {
++        mUniformCache.clearCache();
+         OGRE_CHECK_GL_ERROR(glDeleteShader(mGLShaderHandle));
+
+         if (mGLProgramHandle)
+         {
+             OGRE_CHECK_GL_ERROR(glDeleteProgram(mGLProgramHandle));
+         }
+
+         // destroy all programs using this shader
+         GLSLProgramManager::getSingletonPtr()->destroyAllByShader(this);
+
+         mGLShaderHandle = 0;
+         mGLProgramHandle = 0;
+diff --git a/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLSeparableProgram.cpp b/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLSeparableProgram.cpp
+--- a/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLSeparableProgram.cpp
++++ b/RenderSystems/GL3Plus/src/GLSL/src/OgreGLSLSeparableProgram.cpp
+@@ -137,24 +137,25 @@
+
+     void GLSLSeparableProgram::notifyContextDestroyed(GL3PlusContext* context)
+     {
+         auto pipeline = mGLProgramPipelineHandles.find(context);
+         if (pipeline == mGLProgramPipelineHandles.end())
+             return;
+
+         if (GLSLProgramManager::getSingleton().getCurrentContext() == context)
+             OGRE_CHECK_GL_ERROR(glDeleteProgramPipelines(1, &pipeline->second));
+         mGLProgramPipelineHandles.erase(pipeline);
+     }
+
++    //! Reuses exact per-shader uniform values across draws, including shadow and main passes.
+     void GLSLSeparableProgram::updateUniforms(GpuProgramParametersSharedPtr params,
+                                               uint16 mask, GpuProgramType fromProgType)
+     {
+         // determine if we need to transpose matrices when binding
+         bool transpose = !mShaders[fromProgType] || mShaders[fromProgType]->getColumnMajorMatrices();
+
+         OgreAssert(mShaders[fromProgType], "invalid program type");
+         GLuint progID = mShaders[fromProgType]->getGLProgramHandle();
+         GLUniformCache* uniformCache = mShaders[fromProgType]->getUniformCache();
+
+         bool usesUBO = !params->hasLogicalIndexedParameters();
+
+@@ -164,25 +165,26 @@
+             const GpuConstantDefinition* def = &it.second;
+             if ((def->variability & mask) == 0) // masked
+                 continue;
+
+             GLsizei glArraySize = (GLsizei)def->arraySize;
+
+             if(usesUBO && !def->isSampler())
+                 continue; // already handled above
+
+             void* val = def->isSampler() ? (void*)params->getRegPointer(def->physicalIndex)
+                                          : (void*)params->getFloatPointer(def->physicalIndex);
+             bool shouldUpdate =
+-                uniformCache->updateUniform(def->logicalIndex, val, def->elementSize * def->arraySize * 4);
++                uniformCache->updateUniformExact(def->logicalIndex, val,
++                    def->elementSize * def->arraySize * (def->isDouble() ? 8 : 4), transpose);
+             if (!shouldUpdate)
+                 continue;
+
+             // Get the index in the parameter real list
+             switch (def->constType)
+             {
+             case GCT_FLOAT1:
+                 OGRE_CHECK_GL_ERROR(glProgramUniform1fv(progID, def->logicalIndex, glArraySize,
+                                                         params->getFloatPointer(def->physicalIndex)));
+                 break;
+             case GCT_FLOAT2:
+                 OGRE_CHECK_GL_ERROR(glProgramUniform2fv(progID, def->logicalIndex, glArraySize,

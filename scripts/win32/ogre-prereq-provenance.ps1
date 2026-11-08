@@ -7,7 +7,7 @@ function Get-OgrePrereqPatchHashes {
     $taskHashes = [ordered]@{}
     foreach ($taskName in @('ogre14-multiwindow-settings.patch', 'ogre14-short-emitter.patch',
         'ogre14-light-position-cache.patch', 'ogre14-discard-lock-unsynchronized.patch',
-        'ogre14-gl3plus-program-shutdown.patch')) {
+        'ogre14-gl3plus-program-shutdown.patch', 'ogre14-gl3plus-exact-uniform-cache.patch')) {
         $taskHashes[$taskName] = (Get-FileHash -LiteralPath (Join-Path "$PSScriptRoot\patches" $taskName) -Algorithm SHA256).Hash
     }
     return $taskHashes

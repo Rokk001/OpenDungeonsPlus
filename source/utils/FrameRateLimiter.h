@@ -28,13 +28,19 @@ class FrameRateLimiter
 {
 public:
     FrameRateLimiter(std::int64_t frameRate);
-    //! \brief Sleep if there is time left since last time the function was called.
+    //! \brief Sleep as before and report requested versus actual sleep once per minute.
     void sleepIfEarly();
     unsigned int getFrameRate();
     void setFrameRate(unsigned int frameRate);
 private:
     std::int64_t mMinFrameTime;
     sf::Clock mClock;
+    //! Aggregated sleep observations; no timer-resolution or scheduling policy changes.
+    std::int64_t mReportElapsed;
+    std::int64_t mSleepCount;
+    std::int64_t mRequestedSleep;
+    std::int64_t mActualSleep;
+    std::int64_t mMaxOversleep;
 };
 
 #endif // FPSLIMITER_H
