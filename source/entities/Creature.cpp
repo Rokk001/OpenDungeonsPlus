@@ -6570,6 +6570,10 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
     return effects;
 }
 
+//! Colour of the placeholder and the slot symbol of an empty Dungeonbook slot: grey at 40 % opacity, clearly dimmed
+//! against the full colour item picture of a filled slot (owner decision 918)
+static const char* const EMPTY_ITEM_SLOT_COLOURS = "tl:66A0A0A0 tr:66A0A0A0 bl:66A0A0A0 br:66A0A0A0";
+
 //! \brief Shows the 13 slots of the creature (or empty slots for a null creature) with pictures, tooltips and locks.
 void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks)
 {
@@ -6623,9 +6627,11 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
         if(!showLocks)
             continue;
 
-        // A locked potion slot keeps its symbol, greyed out, under the lock
+        // A filled slot shows the picture of its item in full colour inside the quality frame; an empty slot shows the
+        // placeholder with the slot symbol clearly dimmed, so filled and empty slots differ at a glance (owner decision
+        // 918). A locked potion slot keeps its symbol, greyed out, under the lock.
         const char* const colours = locked ? "tl:FF606060 tr:FF606060 bl:FF606060 br:FF606060" :
-            "tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF";
+            (item == nullptr ? EMPTY_ITEM_SLOT_COLOURS : "tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF");
         image->setProperty("ImageColours", colours);
         slotType->setProperty("ImageColours", colours);
         image->getChild("Lock")->setVisible(locked);

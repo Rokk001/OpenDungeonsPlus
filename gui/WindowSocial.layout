@@ -2174,9 +2174,13 @@
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
         </Window>
+        <!-- The pages cover the head, and a click on a page raises it above its siblings (CEGUI rise on click), so
+             the head with the back and switch arrows and the navigation bar stay always on top of the pages
+             (owner decision 921) -->
         <Window type="DefaultWindow" name="Header">
             <Property name="Area" value="{{0,0},{0,0},{1,0},{0.0786,0}}" />
             <Property name="Visible" value="False" />
+            <Property name="AlwaysOnTop" value="True" />
             <Window type="OD/Button" name="BackButton">
                 <Property name="Area" value="{{0.0097,0},{0.0909,0},{0.0628,0},{0.9091,0}}" />
                 <Property name="Text" value="" />
@@ -2224,6 +2228,7 @@
         </Window>
         <Window type="DefaultWindow" name="NavBar">
             <Property name="Area" value="{{0,0},{0.9179,0},{1,0},{1,0}}" />
+            <Property name="AlwaysOnTop" value="True" />
             <Window type="OD/StaticText" name="NavRule">
                 <Property name="Area" value="{{0.0097,0},{0,0},{0.9903,0},{0.0435,0}}" />
                 <Property name="FrameEnabled" value="False" />
