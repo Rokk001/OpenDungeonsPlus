@@ -36,7 +36,7 @@ for rel in ("RoomLibrary", "RoomCasino", "RoomCrypt", "RoomPrison", "RoomTorture
             fails.append("other wall objects: %s lacks %s degrees for the %s wall" % (rel, angle, place))
 
 ent = text("source/entities/MerchantEntity.cpp")
-if "getRoomFacing" not in ent or not re.search(r"setAnimationState\(\"CountGold\",\s*true,\s*facing\)", ent):
+if "getRoomFacing" not in ent or not re.search(r"setAnimationState\((mAtShelf \? \"Idle\" : )?\"CountGold\",\s*true,\s*facing\)", ent):
     fails.append("merchant facing: the idling merchant is not turned to the open room side")
 if not re.search(r"!open\[index\]\s*&&\s*open\[opposite\]", ent):
     fails.append("merchant facing: the back to the wall rule is missing")

@@ -103,6 +103,11 @@ struct Room {
 struct RoomPrison : Room {
  std::map<Tile*,BuildingObject*> fences;const auto& getFencingObjects()const{return fences;}
 };
+//! Supplies the tavern stool objects the production navigation collects as furniture.
+struct RoomTavernSeat {int table=0,index=0;bool operator<(const RoomTavernSeat& o)const{return table!=o.table?table<o.table:index<o.index;}};
+struct RoomTavern : Room {
+ std::map<RoomTavernSeat,BuildingObject*> stools;const std::map<RoomTavernSeat,BuildingObject*>& getStoolObjects()const{return stools;}
+};
 //! \brief Supplies the new cot delivery metadata used by the production navigation selector.
 struct RoomInfirmary : Room {
  struct CotInfo {int x=0,y=0;};
