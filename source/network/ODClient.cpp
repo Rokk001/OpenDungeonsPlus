@@ -1056,7 +1056,10 @@ bool ODClient::processMessage(ServerNotificationType cmd, ODPacket& packetReceiv
                 obj->setWalkDirection(walkDirection);
             }
 
-            obj->setAnimationState(animState, loop, Ogre::Vector3::ZERO, playIdleWhenAnimationEnds);
+            // The playing time of the whole clip in game seconds that the server chose (0: the normal or configured rate)
+            double clipSeconds = 0.0;
+            OD_ASSERT_TRUE(packetReceived >> clipSeconds);
+            obj->setTimedAnimationState(animState, clipSeconds, loop, Ogre::Vector3::ZERO, playIdleWhenAnimationEnds);
             break;
         }
 

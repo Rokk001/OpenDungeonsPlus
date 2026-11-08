@@ -441,6 +441,10 @@ bool ODClientTest::processMessage(ServerNotificationType cmd, ODPacket& packetRe
                 BOOST_CHECK(packetReceived >> walkDirection);
             }
 
+            // The playing time of the whole clip in game seconds (0: the normal or configured rate)
+            double clipSeconds = 0.0;
+            BOOST_CHECK(packetReceived >> clipSeconds);
+
             animationPlayed(entityName, animState, loop, playIdleWhenAnimationEnds, shouldSetWalkDirection, walkDirection);
             break;
         }
