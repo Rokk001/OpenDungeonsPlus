@@ -27,11 +27,13 @@ Calls (from the repository root):
 """
 from pathlib import Path
 import fnmatch
+import os
 import re
 import struct
 import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[2]
 
@@ -104,6 +106,28 @@ for name, source in MODELS.items():
             'models/' + name + '.mesh uses the material ' + used.decode('ascii') + ' which no material script defines'
 assert b'SpaMud' in (root / 'models' / 'SpaMudPool.mesh').read_bytes(), 'the pool uses SpaMud'
 assert b'SpaLavaGlow' in (root / 'models' / 'SpaPoolRim.mesh').read_bytes(), 'the rim carries the lava seam'
+
+# Decision 902: a 1.78-tile thin plank extends 0.85 tiles beyond the pool edge, supported only on the dry rim.
+converter = os.environ.get('OGRE_XML_CONVERTER', str(Path.home() / 'build-deps/install/bin/OgreXMLConverter.exe'))
+with tempfile.TemporaryDirectory(prefix='odp-spa-board-') as directory:
+    xml = Path(directory) / 'board.xml'
+    subprocess.run([converter, str(root / 'models/SpaSpringboard.mesh'), str(xml)],
+                   cwd=directory, capture_output=True, check=True)
+    exported_board = ET.parse(xml)
+    board_parts = {}
+    for submesh in exported_board.findall('.//submesh'):
+        board_parts.setdefault(submesh.get('material'), []).extend(
+            tuple(float(vertex.get(axis)) for axis in 'xyz') for vertex in submesh.findall('.//position'))
+    wood = board_parts['SpaWood']
+    stone = board_parts['SpaStone']
+    assert sum(map(len, board_parts.values())) == 4212, 'fixed board export vertex count'
+    assert abs(max(p[1] for p in wood) - 1.35) < 1e-5, 'plank tip must extend over the mud'
+    assert abs(min(p[1] for p in wood) + 0.43) < 1e-5, 'plank heel remains on the rim'
+    assert abs(max(p[2] for p in wood) - min(p[2] for p in wood) - 0.045) < 1e-5, 'thin flexible plank'
+    assert max(p[1] for p in stone) < -0.12, 'the anchor stays behind the pool edge'
+    for axis, expected in enumerate(((-0.24, 0.24), (-0.43, 1.35), (0.0, 0.4195))):
+        points = [p[axis] for part in board_parts.values() for p in part]
+        assert abs(min(points) - expected[0]) < 1e-5 and abs(max(points) - expected[1]) < 1e-5, 'fixed exported bounds'
 assert b'PoolAttendant.skeleton' in (root / 'models' / 'PoolAttendant.mesh').read_bytes(), 'the attendant mesh needs its skeleton'
 attendant_skeleton = (root / 'models' / 'PoolAttendant.skeleton').read_bytes()
 for clip in ATTENDANT_CLIPS:
@@ -251,7 +275,10 @@ for sound in ('Bubble', 'Whistle', 'Splash'):
         assert 'https://freesound.org/' in line and 'CC0' in line, sound + ' row needs a source address and CC0: ' + line[:80]
 
 # 9. The furniture bounds and the sound sources are checked by their own scripts
-bounds = subprocess.run([sys.executable, str(root / 'source' / 'tests' / 'check_room_object_bounds.py')], capture_output=True, text=True, cwd=str(root))
-assert bounds.returncode == 0, 'check_room_object_bounds.py failed:\n' + bounds.stdout[-2000:] + bounds.stderr[-2000:]
+if '--no-compile' not in sys.argv:
+    bounds = subprocess.run([sys.executable, str(root / 'source' / 'tests' / 'check_room_object_bounds.py')], capture_output=True, text=True, cwd=str(root))
+    assert bounds.returncode == 0, 'check_room_object_bounds.py failed:\n' + bounds.stdout[-2000:] + bounds.stderr[-2000:]
+else:
+    print('room-object-bounds compiled probe deferred explicitly (--no-compile)')
 
 print('spa assets ok')

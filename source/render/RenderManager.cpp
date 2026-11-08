@@ -1635,6 +1635,59 @@ std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string
     return name;
 }
 
+//! \brief Builds seated spa transitions from each creature's existing bath pose without changing shared assets.
+void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
+{
+    Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
+    if(!skeleton->hasAnimation(EntityAnimation::bathe_anim) || !skeleton->hasAnimation(EntityAnimation::idle_anim))
+        return;
+    if(!skeleton->hasAnimation(name))
+    {
+        const Ogre::Animation* idle = skeleton->getAnimation(EntityAnimation::idle_anim);
+        const Ogre::Animation* bath = skeleton->getAnimation(EntityAnimation::bathe_anim);
+        const bool wading = name == "SpaWade";
+        const Ogre::Animation* walking = skeleton->getAnimation(EntityAnimation::walk_anim);
+        const Ogre::Real duration = wading ? walking->getLength() : 1.0f;
+        Ogre::Animation* transition = skeleton->createAnimation(name, duration);
+        for(unsigned short bone = 0; bone < skeleton->getNumBones(); ++bone)
+        {
+            Ogre::TransformKeyFrame standing(nullptr, 0), seated(nullptr, 0);
+            if(idle->hasNodeTrack(bone))
+                idle->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &standing);
+            if(bath->hasNodeTrack(bone))
+                bath->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &seated);
+            Ogre::NodeAnimationTrack* track = transition->createNodeTrack(bone);
+            for(unsigned key = 0; key <= 16; ++key)
+            {
+                const Ogre::Real progress = key / 16.0f;
+                const Ogre::Real smooth = progress * progress * (3.0f - 2.0f * progress);
+                const Ogre::Real blend = name == "SpaStand" ? 1.0f - smooth : smooth;
+                Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(progress * duration);
+                if(wading)
+                {
+                    Ogre::TransformKeyFrame step(nullptr, 0);
+                    if(walking->hasNodeTrack(bone))
+                        walking->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(progress * duration), &step);
+                    Ogre::Vector3 sink = Ogre::Vector3::ZERO;
+                    if(skeleton->getBone(bone)->getParent() == nullptr)
+                        sink.z = std::min(0.0f, (seated.getTranslate().z - standing.getTranslate().z) * 0.5f);
+                    frame->setTranslate(step.getTranslate() + sink);
+                    frame->setScale(step.getScale());
+                    frame->setRotation(step.getRotation());
+                }
+                else
+                {
+                    frame->setTranslate(standing.getTranslate() + (seated.getTranslate() - standing.getTranslate()) * blend);
+                    frame->setScale(standing.getScale() + (seated.getScale() - standing.getScale()) * blend);
+                    frame->setRotation(Ogre::Quaternion::Slerp(blend, standing.getRotation(), seated.getRotation(), true));
+                }
+            }
+        }
+    }
+    if(!entity->hasAnimationState(name))
+        entity->getAllAnimationStates()->createAnimationState(name, 0, skeleton->getAnimation(name)->getLength());
+}
+
 //! Sets the corpseDecay shader parameter (0 = intact, 1 = fully decayed) on every sub-entity material that has it
 void setCreatureDecayProgress(Ogre::Entity* entity, Ogre::Real progress)
 {
@@ -5144,6 +5197,8 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         return;
 
     std::string anim = poseAnimation;
+    if((animation == "SpaSit") || (animation == "SpaStand") || (animation == "SpaWade"))
+        prepareSpaAnimation(objectEntity, animation);
     if(curAnimatedObject->getObjectType() == GameEntityType::chickenEntity)
     {
         // The hatchery animals have clips for crowing, running and peeping, the plain walk and idle clips stay for

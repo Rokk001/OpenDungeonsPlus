@@ -492,12 +492,12 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::bodyObstacles(Creatu
     return withWalkingBody(creature, collect(*creature.getGameMap(), 0.0f, interaction));
 }
 
+//! \brief Keeps mud solid for ordinary traffic, allowing only a creature's starting tile to be left.
 std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::spaPoolObstacles(GameMap& map, float clearance,
-    const Ogre::Vector2& start, const Ogre::Vector2& goal)
+    const Ogre::Vector2& start, const Ogre::Vector2& /*goal*/)
 {
     std::vector<RoomObjectPath::Obstacle> result;
     const int startX = Helper::round(start.x), startY = Helper::round(start.y);
-    const int goalX = Helper::round(goal.x), goalY = Helper::round(goal.y);
     for(Room* room : map.getRooms())
     {
         if(room->getType() != RoomType::spa)
@@ -506,9 +506,9 @@ std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::spaPoolObstacles(Gam
         {
             if(entry.second->getMeshName() != RoomObjectPath::SPA_POOL_MESH)
                 continue;
-            // The bather wades into the tile of its place and out of the tile it stands in
+            // A dropped creature may leave its starting tile; entry belongs to RoomSpa's checked bath path.
             const Tile* tile = entry.first;
-            if(((tile->getX() == startX) && (tile->getY() == startY)) || ((tile->getX() == goalX) && (tile->getY() == goalY)))
+            if((tile->getX() == startX) && (tile->getY() == startY))
                 continue;
             const Ogre::Vector2 half(SPA_POOL_HALF_SIDE + clearance, SPA_POOL_HALF_SIDE + clearance);
             result.push_back({-half, half, {static_cast<float>(tile->getX()), static_cast<float>(tile->getY())}, 1.0f, 0.0f});
@@ -916,14 +916,15 @@ static bool refineAround(Creature& creature, std::vector<Ogre::Vector2>& path, R
     return true;
 }
 
+//! \brief Routes ordinary walks around spa mud; only the spa's checked bath paths may wade.
 bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache)
 {
     if(path.empty())
         return false;
 
     // Nobody walks over the mud of a spa (decision 837): its pool pieces are solid, except the tile the creature stands
-    // in and the tile it walks to (a bather wades to its place and out again). Only when there is no way around the
-    // pool (a closed room, a place in the middle of the pool) the creature wades through the mud, as the spa plan allows.
+    // in (a dropped creature may leave its own tile). A failed route stays blocked: routine
+    // travel never falls back to crossing the pool. Assigned bathing walks are checked by RoomSpa (decision 902).
     const Ogre::Vector2 start(creature.getPosition().x, creature.getPosition().y);
     const std::vector<RoomObjectPath::Obstacle> pool = spaPoolObstacles(*creature.getGameMap(), 0.0f, start, path.back());
     if(!pool.empty())
@@ -932,11 +933,8 @@ bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>
         // The failed searches around the pool are not valid without it, so they get their own cache
         RouteCache poolCache;
         const bool refined = refineAround(creature, around, poolCache, pool);
-        if(!around.empty())
-        {
-            path.swap(around);
-            return refined;
-        }
+        path.swap(around);
+        return refined;
     }
     return refineAround(creature, path, cache, std::vector<RoomObjectPath::Obstacle>());
 }
