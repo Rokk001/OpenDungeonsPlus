@@ -54,6 +54,7 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 ## Binary and large archive files
 
 - Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset of the OpenDungeonsPlus repo) are never stored in a Git repository or kept locally. After integration they are moved to G:\Moreya-Internal\medien\<plan folder>\ (Unraid share, mapped as G: on laptop and VM). Blender agents open and save .blend files directly there. Text files (plans, state files, scripts, configs) live in the private repo %USERPROFILE%\GitHub\Moreya-Internal.
+- assets-src is not in the repository; it is a directory symlink to \\192.168.1.30\Git\Moreya-Internal\medien. Right after creating any worktree, create the same symlink in it: mklink /D assets-src \\192.168.1.30\Git\Moreya-Internal\medien. Before removing a worktree, delete only the link (rmdir assets-src), never its target.
 
 ## Load tests
 
