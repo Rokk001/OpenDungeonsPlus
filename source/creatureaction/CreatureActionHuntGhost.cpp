@@ -26,6 +26,15 @@
 
 namespace
 {
+//! \brief Returns the direction in which a hunter turns to face a point (decision 894): flat on the floor, without the
+//! height difference. A direction with a height share tilts the whole body of the hunter (the client turns the node by the
+//! shortest arc to it), which laid him on the floor and made him flail after the delivery (trap seat 1.1 above the floor)
+//! and held the cannon slanted during the beam (ghost in the air). He turns about the vertical axis only.
+Ogre::Vector3 facing(const Creature& hunter, const Ogre::Vector3& point)
+{
+    const Ogre::Vector3 difference=point-hunter.getPosition();
+    return Ogre::Vector3(difference.x,difference.y,0.0f);
+}
 //! \brief Returns an existing ghost by its stable entity name.
 GhostEntity* ghostNamed(GameMap& map, const std::string& name)
 { return static_cast<GhostEntity*>(map.getEntityFromTypeAndName(GameEntityType::ghostEntity,name)); }
@@ -337,7 +346,7 @@ bool CreatureActionHuntGhost::handleHunt()
         {
             // Within beam range the hunter first throws the box from his hand under the ghost (D17); the ghost is held.
             mCreature.clearDestinations(EntityAnimation::throw_anim,false,false);
-            mCreature.setAnimationState(EntityAnimation::throw_anim,false,ghost->getPosition()-mCreature.getPosition(),true);
+            mCreature.setAnimationState(EntityAnimation::throw_anim,false,facing(mCreature,ghost->getPosition()),true);
             ghost->setState(GhostState::beamed);mState=2;mBeamTarget.clear();
             mCreature.refreshGhostHuntVisuals();return true;
         }
@@ -371,7 +380,7 @@ bool CreatureActionHuntGhost::handleHunt()
             const double duration=config.getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond;
             if(mTurns<duration) return false;
             mTurns-=duration;mState=3;mBeamTarget=mTarget;
-            mCreature.setAnimationState(EntityAnimation::beam_anim,true,ghost->getPosition()-mCreature.getPosition(),false);
+            mCreature.setAnimationState(EntityAnimation::beam_anim,true,facing(mCreature,ghost->getPosition()),false);
             mCreature.refreshGhostHuntVisuals();
         }
         if(mState==3)
@@ -499,17 +508,17 @@ bool CreatureActionHuntGhost::handleHunt()
         }
         RoomGhostRoom* empty=roomNamed(map,mEmptyRoom);
         if(empty==nullptr || empty->getSeat()!=mCreature.getSeat()) { interrupt();return false; }
-        // The hunter takes the shut trap in his hand and puts it into the delivery device on the rim directly beside him,
+        // The hunter takes the shut trap in his hand and puts it into the trap seat on the rim of the cauldron (decision 894),
         // the delivery point (decisions 845 and 865): the ghost waits there, the client shows the put-in and then the
         // ghost flowing out of the device into the cauldron, and it reaches the cauldron after GhostTransferSeconds.
         // mTurns is saved, so a loaded game resumes the remaining time.
         if(mEmptyAnchor==nullptr) mEmptyAnchor=empty->getHunterCauldron(mCreature);
         if(mEmptyAnchor==nullptr) { interrupt();return false; }
         GhostEntity* poured=ghostNamed(map,mGhosts.front());
-        const Ogre::Vector3 socket=RoomGhostRoom::getTrapSocketPosition(*mEmptyAnchor,*mDestination);
+        const Ogre::Vector3 socket=RoomGhostRoom::getTrapSocketPosition(*mEmptyAnchor);
         // The visible put-in motion (decision 865): once, on arrival, the hunter turns to the device and puts the trap in
         // with the one-second Empty clip, then stands idle beside it while the ghost flows into the cauldron.
-        if(!mPutIn) { mCreature.setAnimationState(EntityAnimation::empty_anim,false,socket-mCreature.getPosition(),true);mPutIn=true; }
+        if(!mPutIn) { mCreature.setAnimationState(EntityAnimation::empty_anim,false,facing(mCreature,socket),true);mPutIn=true; }
         if(poured!=nullptr && poured->getPosition()!=socket) poured->teleport(socket);
         if(mLastTimedTurn!=map.getTurnNumber()) { mTurns+=1.0;mLastTimedTurn=map.getTurnNumber(); }
         const double duration=getTransferTurns();
@@ -640,7 +649,7 @@ void CreatureActionHuntGhost::restore()
         // their saved clock, so a loaded hunt only runs the remaining time of its step.
         GhostEntity* ghost=ghostNamed(*mCreature.getGameMap(),mTarget);
         mCreature.setAnimationState(mState==3?EntityAnimation::beam_anim:EntityAnimation::throw_anim,mState==3,
-            ghost==nullptr?Ogre::Vector3::ZERO:ghost->getPosition()-mCreature.getPosition(),mState!=3);
+            ghost==nullptr?Ogre::Vector3::ZERO:facing(mCreature,ghost->getPosition()),mState!=3);
         if(mState==3) mBeamTarget=mTarget;
     }
     // State 10 snaps the box shut: the beam is already lowered, the remaining snap time follows from the saved clock.
