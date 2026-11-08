@@ -351,13 +351,25 @@ def body_vertices(skeleton, chains, weights):
 # Measure per frame how far a posed body reaches into the furniture, in units of the points. The table is two tiles long and
 # the same clip plays on every place a guest can take, so the body is measured on each of them. The top of the table counts
 # from its near edge, which also catches a limb deep inside this thin plate; every other part counts from its nearest face.
+# Vertices outside all furniture heights and depths for the entire clip cannot contribute a positive penetration.
 def frame_depths(points, selected=None):
     if selected is not None:
         points = points[:, selected, :]
     scene = SCENE['size']
     world = points * scene
+    low_y = min(TABLE_FAR_EDGE, PEDESTAL[1], BENCH[1], -BENCH_LEG_Y)
+    high_y = max(TABLE_NEAR_EDGE, PEDESTAL[2], BENCH[2], BENCH_LEG_Y)
+    low_z = min(TABLE_UNDERSIDE, PEDESTAL[3], BENCH[3], 0.0)
+    high_z = max(TABLE_TOP, PEDESTAL[4], BENCH[4] - BENCH_SINK, BENCH_LEG_TOP)
+    candidate = ((world[:, :, 1] > low_y) & (world[:, :, 1] < high_y) &
+                 (world[:, :, 2] > low_z) & (world[:, :, 2] < high_z))
+    # Keep nonfinite coordinates too, preserving the original numerical failure behavior.
+    keep = candidate.any(axis=0) | (~np.isfinite(world)).any(axis=(0, 2))
+    world = world[:, keep, :]
+    if world.shape[1] == 0 and points.shape[1] != 0:
+        return np.zeros(points.shape[0])
     x, y, z = world[:, :, 0], world[:, :, 1], world[:, :, 2]
-    worst = np.zeros(points.shape[:2])
+    worst = np.zeros(world.shape[:2])
     for place in LARGE_PLACES if SCENE['whole_bench'] else NORMAL_PLACES:
         # Along the bench, measured from the middle of the long table
         along = np.abs(x + place)
@@ -366,12 +378,22 @@ def frame_depths(points, selected=None):
         half, near, far, low, high = PEDESTAL
         for middle in PEDESTAL_MIDDLES:
             beside = np.abs(x + place - middle)
-            worst = np.maximum(worst, np.minimum.reduce([half - beside, y - near, far - y, z - low, high - z]))
+            depth = np.minimum(half - beside, y - near)
+            np.minimum(depth, far - y, out=depth)
+            np.minimum(depth, z - low, out=depth)
+            np.minimum(depth, high - z, out=depth)
+            np.maximum(worst, depth, out=worst)
         _, near, far, low, high = BENCH
-        worst = np.maximum(worst, np.minimum.reduce([LONG_BENCH_HALF_LENGTH - along, y - near, far - y, z - low,
-                                                     high - BENCH_SINK - z]))
-        worst = np.maximum(worst, np.minimum.reduce([along - LONG_BENCH_LEG_X[0], LONG_BENCH_LEG_X[1] - along,
-                                                     BENCH_LEG_Y - np.abs(y), z, BENCH_LEG_TOP - z]))
+        depth = np.minimum(LONG_BENCH_HALF_LENGTH - along, y - near)
+        np.minimum(depth, far - y, out=depth)
+        np.minimum(depth, z - low, out=depth)
+        np.minimum(depth, high - BENCH_SINK - z, out=depth)
+        np.maximum(worst, depth, out=worst)
+        depth = np.minimum(along - LONG_BENCH_LEG_X[0], LONG_BENCH_LEG_X[1] - along)
+        np.minimum(depth, BENCH_LEG_Y - np.abs(y), out=depth)
+        np.minimum(depth, z, out=depth)
+        np.minimum(depth, BENCH_LEG_TOP - z, out=depth)
+        np.maximum(worst, depth, out=worst)
     return np.maximum(0.0, worst.max(axis=1)) / scene
 
 
