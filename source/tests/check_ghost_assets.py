@@ -1,6 +1,7 @@
 """Inspect original ghost assets and existing binary skeleton clips without compiling or rendering."""
 from pathlib import Path
 import importlib.util
+import hashlib
 import json
 import re
 import struct
@@ -48,6 +49,71 @@ def clips(credits):
             assert any(kind==0x4100 for kind,bone,track in children), (creature,name,'no bone track')
         assert 'Idle' in animations and 'Walk' in animations, (creature,'prior clips lost')
 
+# Check the actual cauldron export, its reachable seat, material set and timed clips (decision 894).
+def cauldron_delivery(credits, chunks_module):
+    credited('models/GhostCauldron.skeleton', credits)
+    mesh = (repo/'models/GhostCauldron.mesh').read_bytes()
+    assert b'GhostCauldron.skeleton\n' in mesh, 'cauldron rig link'
+    materials = sorted(set(name.decode() for name in re.findall(rb'(Ghost[A-Za-z]+)\n', mesh)))
+    assert materials == ['GhostBrass','GhostCoal','GhostEctoplasm','GhostEmbers','GhostIron','GhostWindow'], materials
+    material_script = read('materials/scripts/Ghost.material')
+    for name in materials:
+        assert re.search(r'^material '+name+r'\s*$', material_script, re.M), name
+
+    # Walk serializer chunks, rather than searching arbitrary vertex bytes for chunk signatures.
+    def children(data, start, end):
+        while start < end:
+            kind, size = struct.unpack_from('<HI', data, start)
+            assert size >= 6 and start+size <= end, (kind,start,size)
+            yield kind, start+6, start+size
+            start += size
+        assert start == end
+
+    root = list(children(mesh, mesh.index(b'\n')+1, len(mesh)))
+    assert len(root) == 1 and root[0][0] == 0x3000
+    parts = list(children(mesh, root[0][1]+1, root[0][2]))
+    bounds = next(struct.unpack_from('<7f',mesh,start) for kind,start,end in parts if kind == 0x9000)
+    assert [round(value,4) for value in bounds[:6]] == [-1,-1,0,1,1,1.14], bounds
+    assert re.search(r'\{"GhostCauldron", -1\.0f, -1\.0f, 1\.0f, 1\.0f, 1\.14f\}',
+                     read('source/gamemap/RoomObjectBounds.h')), 'cauldron metadata'
+    geometry = next((start,end) for kind,start,end in parts if kind == 0x5000)
+    count = struct.unpack_from('<I',mesh,geometry[0])[0]
+    assert count == 44549, count
+    positions = []
+    for kind,start,end in children(mesh,geometry[0]+4,geometry[1]):
+        if kind == 0x5200:
+            source, stride = struct.unpack_from('<HH',mesh,start)
+            if source == 0:
+                payload = list(children(mesh,start+4,end))
+                assert len(payload) == 1 and payload[0][0] == 0x5210
+                assert payload[0][2]-payload[0][1] == count*stride
+                positions = [struct.unpack_from('<3f',mesh,payload[0][1]+i*stride) for i in range(count)]
+    assert positions, 'missing positions'
+    assert not any(x*x+y*y < .3**2 and z > 1.09 for x,y,z in positions), 'centre funnel or arms remain'
+    assert any(abs(x-.5)<.08 and abs(y-.82)<.08 and abs(z-1.1)<.01 for x,y,z in positions), 'corner seat missing'
+    assignments = [struct.unpack_from('<IHf',mesh,start) for kind,start,end in parts if kind == 0x7000]
+    assert len({vertex for vertex,bone,weight in assignments if weight > 0}) == count, 'unweighted vertices'
+    assert all(bone in (0,2) and abs(weight-1)<1e-6 for vertex,bone,weight in assignments), 'rigid body or inset glow weights'
+
+    _, chunks = chunks_module.chunks((repo/'models/GhostCauldron.skeleton').read_bytes())
+    bones = {data[6:data.index(b'\n',6)].decode(): data for kind,name,data in chunks if kind == chunks_module.BONE}
+    assert set(bones) == {'Root','DeliverySocket','DeliveryGlow'}, set(bones)
+    socket = bones['DeliverySocket']
+    offset = struct.unpack_from('<3f',socket,socket.index(b'\n',6)+3)
+    assert all(abs(a-b)<1e-6 for a,b in zip(offset,(.5,.82,1.1))), offset
+    animations = {name:data for kind,name,data in chunks if kind == chunks_module.ANIMATION}
+    assert set(animations) == {'Idle','Fill','Fill16','Fill13_3'}, set(animations)
+    for name,expected in (('Idle',1),('Fill',20),('Fill16',16),('Fill13_3',13.3)):
+        data = animations[name]
+        duration = struct.unpack_from('<f',data,data.index(b'\n',6)+1)[0]
+        assert abs(duration-expected)<1e-5, (name,duration)
+        _, tracks = chunks_module.animation_children(data)
+        assert {bone for kind,bone,track in tracks if kind == 0x4100} == {1,2}, (name,'socket/glow tracks')
+    # The independent client-controlled inspection-window fill is retained byte for byte.
+    assert hashlib.sha256((repo/'models/GhostCauldronFill.mesh').read_bytes()).hexdigest() == \
+        '4bae03b231fed2dae105a0bc965e3c2e6ea98cefe8f5b0df1eeed4841f190a2c', 'inspection fill changed'
+
+
 # Check the assigned asset families and exact existing generator registration without running its writing path.
 def main():
     credits = read('CREDITS')
@@ -62,6 +128,7 @@ def main():
     spec = importlib.util.spec_from_file_location('ghost_still_chunks', repo/'tools/blender-assets/splice_animation_chunks.py')
     chunks_module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(chunks_module)
+    cauldron_delivery(credits, chunks_module)
     _, chunks = chunks_module.chunks((repo/'models/ManaStill.skeleton').read_bytes())
     still_clips = {name for kind,name,data in chunks if kind==chunks_module.ANIMATION}
     assert {'Working','Idle','Locked'} <= still_clips, still_clips
