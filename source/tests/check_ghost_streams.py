@@ -11,7 +11,20 @@ from check_corpse_rules import corpse_fixture
 
 # Build the real codecs around independent identity and storage services.
 def stream_fixture():
+    """Supply observable world services for the unchanged production codecs and restore body."""
     code = corpse_fixture()
+    code = code.replace('struct GameMap{', 'struct RenderedMovableEntity;struct GhostBoxEntity;\nstruct GameMap{GhostBoxEntity* pickupBox=nullptr;', 1)
+    code = code.replace('GhostEntity* getEntityFromTypeAndName(GameEntityType,const std::string& name);',
+        'RenderedMovableEntity* getEntityFromTypeAndName(GameEntityType,const std::string& name);', 1)
+    code = code.replace(function(code, 'GhostEntity* GameMap::getEntityFromTypeAndName('), '', 1)
+    code = code.replace('struct RenderedMovableEntity{', r'''struct RenderedMovableEntity{
+ //! \brief Dispatches the real pickup restore position lookup to the ghost or box stub.
+ virtual const Ogre::Vector3& getPosition()const=0;
+''', 1)
+    code = code.replace('void setAnimationState(const std::string& value,bool,const Ogre::Vector3&,bool){animation=value;}',
+        r'''Ogre::Vector3 restoredFacing;bool restoredLoop=false,restoredReset=true;
+ //! \brief Observes facing and restart flags without implementing pickup restoration.
+ void setAnimationState(const std::string& value,bool loop,const Ogre::Vector3& direction,bool reset){animation=value;restoredFacing=direction;restoredLoop=loop;restoredReset=reset;}''', 1)
     code = code.replace('{"GhostRiseSeconds",1.5}', '{"GhostPutInSeconds",2},{"GhostRiseSeconds",1.5}', 1)
     code = code.replace('static const Vector3 ZERO;', 'Vector3 operator-(const Vector3& other)const{return Vector3(x-other.x,y-other.y,z-other.z);}static const Vector3 ZERO;')
     code = code.replace('rot_anim="Rot";', 'rot_anim="Rot",beam_anim="Beam",throw_anim="Throw",empty_anim="Empty";')
@@ -76,6 +89,12 @@ struct GhostBoxEntity:RenderedMovableEntity{GameMap* map=nullptr;Seat* seat=null
  //! \brief Runs the actual box update reader.
  void updateFromPacket(ODPacket&);
 };
+//! \brief Resolves typed identities without implementing any pickup or restore behavior.
+RenderedMovableEntity* GameMap::getEntityFromTypeAndName(GameEntityType type,const std::string& name){
+ if(type==GameEntityType::ghostBoxEntity)return pickupBox!=nullptr&&pickupBox->getName()==name?pickupBox:nullptr;
+ if(type==GameEntityType::ghostEntity)for(GhostEntity* ghost:ghosts)if(ghost->mName==name)return ghost;
+ return nullptr;
+}
 //! \brief Supplies the actual saved hook-slot lookup contract.
 struct RoomGhostRoom:Room{size_t restoredSlot=0;Tile* standing=nullptr;Tile* anchor=nullptr;
  //! \brief Returns a controlled reserved hook index.
@@ -86,7 +105,7 @@ struct RoomGhostRoom:Room{size_t restoredSlot=0;Tile* standing=nullptr;Tile* anc
  void restoreCauldron(Creature&,Tile* stand,Tile* at,bool){standing=stand;anchor=at;}
 };
 //! \brief Stores every hunter continuation field used by the real codec.
-struct CreatureActionHuntGhost{Creature& mCreature;uint32_t mState=0;std::string mTarget,mHookRoom,mReviveTarget,mEmptyRoom;int mHookX=0,mHookY=0;double mTurns=0,mRepathTurns=0;size_t mHookSlot=0;bool mEquipped=false,mRestoring=false,mRegistered=false,interrupted=false;std::string mBeamTarget;RoomGhostRoom* equipment=nullptr;std::vector<std::string> mGhosts,mReviveGhosts;std::vector<Ogre::Vector2> mLoadedPath;Tile* mDestination=nullptr;Tile* mEmptyAnchor=nullptr;bool mPutIn=false;bool mPickUpWalked=false,mPickingUp=false;
+struct CreatureActionHuntGhost{Creature& mCreature;uint32_t mState=0;std::string mTarget,mHookRoom,mReviveTarget,mEmptyRoom;int mHookX=0,mHookY=0;int64_t mLastTimedTurn=-1;double mTurns=0,mRepathTurns=0;size_t mHookSlot=0;bool mEquipped=false,mRestoring=false,mRegistered=false,interrupted=false;std::string mBeamTarget;RoomGhostRoom* equipment=nullptr;std::vector<std::string> mGhosts,mReviveGhosts;std::vector<Ogre::Vector2> mLoadedPath;Tile* mDestination=nullptr;Tile* mEmptyAnchor=nullptr;bool mPutIn=false;bool mPickUpWalked=false,mPickingUp=false;
  //! \brief Binds this saved action to its owner.
  CreatureActionHuntGhost(Creature& creature):mCreature(creature){}
  //! \brief Uses the saved exact hook slot in an unbound continuation.
@@ -173,6 +192,7 @@ struct CorpseRecord{int32_t mNbTurnsPrison=0,mNbTurnsTorture=0;double mCorpseTur
 
 # Exercise complete records, exact fractional counters, legacy boundaries and rejection paths.
 def main():
+    """Check exact codecs, malformed records and pickup restoration against fixed expectations."""
     code = stream_fixture()+r'''
 //! \brief Runs the real serializers with nondefault continuation data and old-save sentinels.
 int main(){
@@ -205,6 +225,39 @@ int main(){
  // Decision 865: a delivery loaded at the cauldron past its put-in (GhostPutInSeconds 2 = 2.8 turns, decision 936) has the trap already in the device and the hunter waits idle; before it the put-in still runs on the next step
  hunter.tile=map.getTile(3,4);for(double turns:{0.5,2.8,7.0}){CreatureActionHuntGhost resumed(hunter);resumed.mState=6;resumed.mRestoring=true;resumed.equipment=&restoredRoom;resumed.mHookSlot=7;resumed.mHookX=1;resumed.mHookY=2;resumed.mEmptyRoom="press";resumed.mGhosts={"inside"};resumed.mTurns=turns;resumed.mDestination=map.getTile(3,4);resumed.mEmptyAnchor=map.getTile(4,4);hunter.animation="none";resumed.restore();check(resumed.isTransferring(),"a loaded hunter standing at his cauldron with a ghost is delivering");check(resumed.mPutIn==(turns>=2.8)&&hunter.animation==(turns>=2.8?"Idle":"none"),"a loaded delivery past its put-in waits idle with the trap in the device, before it the put-in is still to come");check(restoredRoom.standing==resumed.mDestination&&restoredRoom.anchor==resumed.mEmptyAnchor,"a loaded delivery keeps its exact cauldron and standing place");}
  hunter.moving=true;{CreatureActionHuntGhost walking(hunter);walking.mState=6;walking.mRestoring=true;walking.equipment=&restoredRoom;walking.mEmptyRoom="press";walking.mGhosts={"inside"};walking.mTurns=7;walking.mDestination=map.getTile(3,4);walking.mEmptyAnchor=map.getTile(4,4);hunter.animation="none";walking.restore();check(!walking.isTransferring()&&!walking.mPutIn&&hunter.animation=="none","a loaded hunter still moving onto his cauldron tile has not put the trap in yet");}hunter.moving=false;
+ // Both pickup states retain each flag independently, the fractional clock and the following record.
+ for(uint32_t phase:{8u,9u})for(bool walked:{false,true})for(bool picking:{false,true}){
+  CreatureActionHuntGhost action(hunter);action.mState=phase;action.mTurns=1.375;action.mPickUpWalked=walked;action.mPickingUp=picking;
+  std::stringstream saved;saved<<std::setprecision(17);action.exportToStream(saved);saved<<" NEXT";saved>>token;
+  CreatureActionHuntGhost resumed(hunter);check(token=="[GhostHunt]"&&resumed.importFromStream(saved),"pickup states save and load");saved>>token;
+  check(resumed.mState==phase&&resumed.mPickUpWalked==walked&&resumed.mPickingUp==picking&&token=="NEXT","pickup flags and following record roundtrip");near(resumed.mTurns,1.375,"pickup fractional clock roundtrip");
+ }
+ // The original runtime block predates pickup flags; both pickup states must still load it.
+ for(uint32_t phase:{8u,9u}){
+  std::stringstream legacy;legacy<<phase<<" inside hooks 1 2 1.375 0 [/GhostHunt] [GhostHuntRuntime] 1 3.875 7 0 none none -1 -1 -1 -1 0 [/GhostHuntRuntime] NEXT";
+  CreatureActionHuntGhost resumed(hunter);check(resumed.importFromStream(legacy)&&!resumed.mPickUpWalked&&!resumed.mPickingUp,"pre-pickup runtime defaults");legacy>>token;check(token=="NEXT","pre-pickup runtime preserves next record");near(resumed.mTurns,1.375,"pre-pickup runtime keeps saved clock");
+ }
+ for(const std::string& tail:{"pickup","pickup 1","pickup 1 1 wrong","pickup 2 1 [/GhostHuntRuntime]"}){
+  std::stringstream broken;broken<<"9 inside hooks 1 2 1.375 0 [/GhostHunt] [GhostHuntRuntime] 1 3.875 7 0 none none -1 -1 -1 -1 0 "<<tail;
+  CreatureActionHuntGhost resumed(hunter);check(!resumed.importFromStream(broken),"truncated invalid or unclosed pickup record rejected");
+ }
+ // A resumed bend faces the target horizontally and binds the current tick without restarting its clock.
+ boxed.mPosition=Ogre::Vector3(5,6,2);box.mName="lying";box.mPosition=Ogre::Vector3(6,5,0);map.pickupBox=&box;map.turn=47;hunter.tile=map.getTile(2,2);
+ for(uint32_t phase:{8u,9u})for(bool found:{false,true}){
+  CreatureActionHuntGhost resumed(hunter);resumed.mState=phase;resumed.mRestoring=true;resumed.equipment=&restoredRoom;resumed.mTarget=found?(phase==9?"inside":"lying"):"missing";resumed.mPickingUp=true;resumed.mTurns=1.375;hunter.animation="none";
+  resumed.restore();check(resumed.mRegistered&&!resumed.mRestoring&&resumed.mPickUpWalked&&resumed.mPickingUp,"restored pickup stays active and already approached");
+  check(resumed.mLastTimedTurn==47&&hunter.animation=="Idle"&&hunter.restoredLoop&&!hunter.restoredReset,"restored pickup binds current turn and keeps idle pose continuation");near(resumed.mTurns,1.375,"restored pickup preserves elapsed fractional time");
+  // State 8 resolves the dropped box; state 9 resolves the elevated boxed ghost through GameEntity.
+  near(hunter.restoredFacing.x,found?(phase==9?3:4):0,"restored pickup target facing X or missing-target zero");near(hunter.restoredFacing.y,found?(phase==9?4:3):0,"restored pickup target facing Y or missing-target zero");near(hunter.restoredFacing.z,0,"restored pickup never tilts hunter");
+ }
+ for(uint32_t phase:{8u,9u})for(bool hasPath:{false,true}){
+  CreatureActionHuntGhost resumed(hunter);resumed.mState=phase;resumed.mRestoring=true;resumed.equipment=&restoredRoom;resumed.mPickUpWalked=true;resumed.mTurns=.625;hunter.animation="none";hunter.savedPath.clear();
+  if(hasPath)resumed.mLoadedPath={Ogre::Vector2(3.25f,4.5f)};
+  resumed.restore();check(!resumed.mPickingUp&&resumed.mPickUpWalked==hasPath&&resumed.mLastTimedTurn==-1,"approaching pickup keeps its path or repeats approach without path");
+  check(hunter.animation==(hasPath?"Walk":"none")&&hunter.savedPath.size()==(hasPath?1u:0u),"approaching pickup restores walk without starting bend");
+  if(hasPath){near(hunter.savedPath.front().x,3.25,"pickup approach exact path X");near(hunter.savedPath.front().y,4.5,"pickup approach exact path Y");}
+ }
+ for(uint32_t phase:{0u,2u,3u,4u,10u}){CreatureActionHuntGhost resumed(hunter);resumed.mState=phase;resumed.mRestoring=true;resumed.equipment=&restoredRoom;resumed.mPickingUp=true;resumed.mPickUpWalked=true;resumed.restore();check(!resumed.mPickingUp&&!resumed.mPickUpWalked,"other hunt phases clear stale pickup flags");}
  std::cout<<"ghost streams and packets: ok\n";
 }
 '''
