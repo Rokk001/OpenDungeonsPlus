@@ -161,7 +161,7 @@ bool menuTestElapsed(const std::chrono::steady_clock::time_point& start, int32_t
 }
 }
 
-//! \brief Presents the loading picture before initialization and runs the native or SFML event loop.
+//! \brief Runs the client and releases visual owners before the shader generator and native window.
 void ODApplication::startClient()
 {
     ResourceManager& resMgr = ResourceManager::getSingleton();
@@ -294,114 +294,117 @@ void ODApplication::startClient()
     Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();
     LoadingScreen::presentStartup(LoadingScreen::startupFraction(3.0f));
 
-    MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
-    SoundEffectsManager soundEffectsManager;
-    LoadingScreen::presentStartup(LoadingScreen::startupFraction(4.0f));
+    // Keep the GL context and shader generator alive until every visual owner is released.
+    {
+        MusicPlayer musicPlayer(resMgr.getMusicPath(), resMgr.listAllMusicFiles());
+        SoundEffectsManager soundEffectsManager;
+        LoadingScreen::presentStartup(LoadingScreen::startupFraction(4.0f));
 
-    // Keep Python alive across game-mode changes; consoles own only their game state.
-    pybind11::scoped_interpreter pythonInterpreter;
-    pybind11::gil_scoped_release pythonMainThreadRelease;
-    LoadingScreen::presentStartup(LoadingScreen::startupFraction(5.0f));
+        // Keep Python alive across game-mode changes; consoles own only their game state.
+        pybind11::scoped_interpreter pythonInterpreter;
+        pybind11::gil_scoped_release pythonMainThreadRelease;
+        LoadingScreen::presentStartup(LoadingScreen::startupFraction(5.0f));
 
-    ODServer server;
-    ODClient client;
+        ODServer server;
+        ODClient client;
 
-    RenderManager renderManager(&overlaySystem);
+        RenderManager renderManager(&overlaySystem);
 
-    Ogre::MaterialManager::getSingleton().setActiveScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
-    Gui gui(&soundEffectsManager, resMgr.getCeguiLogFile(), *renderWindow);
-    LoadingScreen::presentStartup(LoadingScreen::startupFraction(6.0f));
-    TextRenderer textRenderer;
-    textRenderer.addTextBox("DebugMessages", ODApplication::MOTD.c_str(), 840,
-                                30, 50, 70, Ogre::ColourValue::Green);
-    textRenderer.addTextBox(ODApplication::POINTER_INFO_STRING, "",
-                                0, 0, 200, 50, Ogre::ColourValue::White);
+        Ogre::MaterialManager::getSingleton().setActiveScheme(Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME);
+        Gui gui(&soundEffectsManager, resMgr.getCeguiLogFile(), *renderWindow);
+        LoadingScreen::presentStartup(LoadingScreen::startupFraction(6.0f));
+        TextRenderer textRenderer;
+        textRenderer.addTextBox("DebugMessages", ODApplication::MOTD.c_str(), 840,
+                                    30, 50, 70, Ogre::ColourValue::Green);
+        textRenderer.addTextBox(ODApplication::POINTER_INFO_STRING, "",
+                                    0, 0, 200, 50, Ogre::ColourValue::White);
 
-    ODFrameListener frameListener(resMgr.getConfigPath() + "mainmenuscene.cfg",
-        renderWindow, &overlaySystem, &gui);
+        ODFrameListener frameListener(resMgr.getConfigPath() + "mainmenuscene.cfg",
+            renderWindow, &overlaySystem, &gui);
 
-    ogreRoot.addFrameListener(&frameListener);
+        ogreRoot.addFrameListener(&frameListener);
 
-    // Automated level load test: the main menu starts this level as soon as it opens
-    if(RunLevelTest::isActive())
-        frameListener.setPendingRestartLevel(RunLevelTest::getLevelFile());
+        // Automated level load test: the main menu starts this level as soon as it opens
+        if(RunLevelTest::isActive())
+            frameListener.setPendingRestartLevel(RunLevelTest::getLevelFile());
 
-    // Automated main menu test: the menu opens as usual and the game exits after the requested seconds
-    const int32_t menuTestSeconds = resMgr.getMenuTestSeconds();
-    const std::chrono::steady_clock::time_point menuTestStart = std::chrono::steady_clock::now();
-    uint32_t menuTestFrames = 0;
+        // Automated main menu test: the menu opens as usual and the game exits after the requested seconds
+        const int32_t menuTestSeconds = resMgr.getMenuTestSeconds();
+        const std::chrono::steady_clock::time_point menuTestStart = std::chrono::steady_clock::now();
+        uint32_t menuTestFrames = 0;
 
 #ifdef OD_USE_SFML_WINDOW
-    bool running = true;
-    while(running)
-    {
-        while (const std::optional<sf::Event> event = sfmlWindow.pollEvent()) {
-            if (event->is<sf::Event::Closed>())
-            {
-                frameListener.requestExit();
-                break;
-            }
-            else
-            {
-                const sf::Event::Resized* resized = event->getIf<sf::Event::Resized>();
-                if (resized != nullptr)
+        bool running = true;
+        while(running)
+        {
+            while (const std::optional<sf::Event> event = sfmlWindow.pollEvent()) {
+                if (event->is<sf::Event::Closed>())
                 {
-                    renderWindow->resize(resized->size.x, resized->size.y);
-                    frameListener.windowResized(renderWindow);
+                    frameListener.requestExit();
+                    break;
                 }
-                frameListener.getModeManager()->getInputManager().handleSFMLEvent(*event);
+                else
+                {
+                    const sf::Event::Resized* resized = event->getIf<sf::Event::Resized>();
+                    if (resized != nullptr)
+                    {
+                        renderWindow->resize(resized->size.x, resized->size.y);
+                        frameListener.windowResized(renderWindow);
+                    }
+                    frameListener.getModeManager()->getInputManager().handleSFMLEvent(*event);
+                }
             }
+            if(RunLevelTest::isFinished())
+                frameListener.requestExit();
+            if(menuTestElapsed(menuTestStart, menuTestSeconds))
+                frameListener.requestExit();
+            // If renderOneFrame returns false, it indicates that an exit has been requested
+            running = ogreRoot.renderOneFrame();
+            ++menuTestFrames;
+            RunLevelTest::onFrameRendered(*renderWindow);
         }
-        if(RunLevelTest::isFinished())
-            frameListener.requestExit();
-        if(menuTestElapsed(menuTestStart, menuTestSeconds))
-            frameListener.requestExit();
-        // If renderOneFrame returns false, it indicates that an exit has been requested
-        running = ogreRoot.renderOneFrame();
-        ++menuTestFrames;
-        RunLevelTest::onFrameRendered(*renderWindow);
-    }
 #else /* OD_USE_SFML_WINDOW */
-    // NOTE: Ogre::Root::startRendering() does not pump window events (Ogre::Bites does
-    // that for applications built on its context, which we are not). Without a message
-    // pump, ConfigureNotify never arrives, so windowResized() would only ever run once
-    // at startup and CEGUI's display size and OIS' clipping rectangle would go stale as
-    // soon as the window is resized. Drive the loop ourselves and pump every frame.
-    while (true)
-    {
-        Ogre::WindowEventUtilities::messagePump();
+        // NOTE: Ogre::Root::startRendering() does not pump window events (Ogre::Bites does
+        // that for applications built on its context, which we are not). Without a message
+        // pump, ConfigureNotify never arrives, so windowResized() would only ever run once
+        // at startup and CEGUI's display size and OIS' clipping rectangle would go stale as
+        // soon as the window is resized. Drive the loop ourselves and pump every frame.
+        while (true)
+        {
+            Ogre::WindowEventUtilities::messagePump();
 
-        if(RunLevelTest::isFinished())
-            frameListener.requestExit();
-        if(menuTestElapsed(menuTestStart, menuTestSeconds))
-            frameListener.requestExit();
+            if(RunLevelTest::isFinished())
+                frameListener.requestExit();
+            if(menuTestElapsed(menuTestStart, menuTestSeconds))
+                frameListener.requestExit();
 
-        // Closing the window destroys the mode manager from within the pump above, so
-        // bail out here rather than rendering a frame that would still use it.
-        if (frameListener.isExitRequested())
-            break;
+            // Closing the window destroys the mode manager from within the pump above, so
+            // bail out here rather than rendering a frame that would still use it.
+            if (frameListener.isExitRequested())
+                break;
 
-        // renderOneFrame() returns false once an exit has been requested.
-        if (!ogreRoot.renderOneFrame())
-            break;
-        ++menuTestFrames;
-        RunLevelTest::onFrameRendered(*renderWindow);
-    }
+            // renderOneFrame() returns false once an exit has been requested.
+            if (!ogreRoot.renderOneFrame())
+                break;
+            ++menuTestFrames;
+            RunLevelTest::onFrameRendered(*renderWindow);
+        }
 #endif /* OD_USE_SFML_WINDOW */
 
-    if(menuTestSeconds > 0)
-        std::cout << "MENUTEST frames=" << menuTestFrames << std::endl;
+        if(menuTestSeconds > 0)
+            std::cout << "MENUTEST frames=" << menuTestFrames << std::endl;
 
-    LoadingScreen::finishStartup();
-    OD_LOG_INF("Disconnecting client...");
-    client.disconnect();
-    OD_LOG_INF("Stopping server...");
-    server.stopServer();
-    ogreRoot.removeFrameListener(&frameListener);
+        LoadingScreen::finishStartup();
+        OD_LOG_INF("Disconnecting client...");
+        client.disconnect();
+        OD_LOG_INF("Stopping server...");
+        server.stopServer();
+        ogreRoot.removeFrameListener(&frameListener);
+        frameListener.prepareRenderWindowShutdown();
+    }
     Ogre::MaterialManager::getSingleton().removeListener(sgListener);
     delete sgListener;
     Ogre::RTShader::ShaderGenerator::destroy();
-    frameListener.prepareRenderWindowShutdown();
     ogreRoot.destroyRenderTarget(renderWindow);
 }
 

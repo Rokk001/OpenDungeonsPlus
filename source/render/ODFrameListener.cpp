@@ -60,6 +60,7 @@
 #include <OgreRenderSystem.h>
 #include <OgreRoot.h>
 #include <OgreSceneManager.h>
+#include <OgreViewport.h>
 #include <Overlay/OgreOverlaySystem.h>
 
 #include <CEGUI/EventArgs.h>
@@ -552,11 +553,16 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
     return true;
 }
 
+//! \brief Draws the interface only in overlay-enabled views, leaving scene-only texture views untouched.
 void ODFrameListener::renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& cameraName,
     bool&)
 {
     // Ogre 14 passes the camera name here; shadow-texture passes are detected via the render stage (was invocation == "SHADOWS" in Ogre 13).
-    if(queueGroupId == RenderManager::OD_RENDER_QUEUE_ID_GUI && mRenderManager->getSceneManager()->_getCurrentRenderStage() != Ogre::SceneManager::IRS_RENDER_TO_TEXTURE)
+    Ogre::SceneManager* scene = mRenderManager->getSceneManager();
+    Ogre::Viewport* viewport = scene->getCurrentViewport();
+    if(queueGroupId == RenderManager::OD_RENDER_QUEUE_ID_GUI &&
+        scene->_getCurrentRenderStage() != Ogre::SceneManager::IRS_RENDER_TO_TEXTURE &&
+        viewport != nullptr && viewport->getOverlaysEnabled())
     {
         Ogre::Root::getSingleton().getRenderSystem()->clearFrameBuffer(Ogre::FBT_DEPTH);
         CEGUI::System::getSingleton().renderAllGUIContexts();
