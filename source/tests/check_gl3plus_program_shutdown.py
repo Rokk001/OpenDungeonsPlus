@@ -27,7 +27,8 @@ def verify(source):
     expected = ('if (mProgramManager)\n'
                 '            mProgramManager->destroyAllPrograms();\n\n'
                 '        RenderSystem::shutdown();')
-    return body.count('destroyAllPrograms()') == 1 and expected in body
+    comment = '//! Releases cached programs while the manager and GL context are still alive.\n    void GL3PlusRenderSystem::shutdown(void)'
+    return comment in source and body.count('destroyAllPrograms()') == 1 and expected in body
 
 
 def main():
@@ -47,7 +48,7 @@ def main():
         target.parent.mkdir(parents=True)
         target.write_text(FIXTURE, encoding='utf-8')
         assert not verify(FIXTURE)
-        result = subprocess.run(['git', 'apply', '--recount', str(PATCH)], cwd=fixture,
+        result = subprocess.run(['git', 'apply', str(PATCH)], cwd=fixture,
                                 capture_output=True, text=True)
         assert result.returncode == 0, result.stderr
         fixed = target.read_text(encoding='utf-8')
@@ -56,6 +57,7 @@ def main():
                  '            mProgramManager->destroyAllPrograms();\n\n'
                  '        RenderSystem::shutdown();')
         mutations = [
+            fixed.replace('//! Releases cached programs while the manager and GL context are still alive.\n    ', ''),
             fixed.replace('mProgramManager->destroyAllPrograms();', ''),
             fixed.replace('if (mProgramManager)', 'if (!mProgramManager)'),
             fixed.replace('if (mProgramManager)\n            ', ''),
@@ -63,10 +65,10 @@ def main():
             fixed.replace('mProgramManager->destroyAllPrograms();', 'mProgramManager->destroyAllPrograms();\n            mProgramManager->destroyAllPrograms();'),
         ]
         assert all(not verify(candidate) for candidate in mutations)
-        reverse = subprocess.run(['git', 'apply', '--recount', '--reverse', '--check', str(PATCH)],
+        reverse = subprocess.run(['git', 'apply', '--reverse', '--check', str(PATCH)],
                                  cwd=fixture, capture_output=True, text=True)
         assert reverse.returncode == 0, reverse.stderr
-    print('GL3Plus shutdown patch: fixture applied and five unsafe mutations rejected')
+    print('GL3Plus shutdown patch: fixture applied and six unsafe mutations rejected')
 
 
 if __name__ == '__main__':
