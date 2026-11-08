@@ -1035,7 +1035,7 @@ public:
     //! \brief Clients only: blends the tile speed ratio of the walk clips (see mClientTileSpeedRatio)
     virtual void updateClientPose(double timeSinceLastFrame) override;
 
-    //! Client: a dead body that a worker pulls is tied to the way of the worker every frame (decision 892)
+    //! Client: resolves animated contact after all creatures have moved (decision 892)
     void updateDragTether();
 
     //! \brief Speed of the tile under the creature divided by its ground speed (1 when unknown), client side, no tired or hurt factor
@@ -1386,6 +1386,9 @@ public:
     //! \brief Server side. The worker stopped pulling (arrived, gave up, the creature died or was picked up):
     //! starts the pause before it can be pulled again
     void notifyDragEnd();
+
+    //! \brief Ends hand contact before the independent laying path begins.
+    void notifyDragLaying();
 
     //! \brief Server side. Walks the worker to the tile with the clip of a worker that pulls somebody (drag_anim)
     //! and without queuing a walk action, so the caller keeps its turn. Returns false if there is no way.
@@ -2230,9 +2233,7 @@ private:
     uint32_t        mJumpTurnsLeft;
     //! Live ground-drag worker identity, independent of saved corpse reservations.
     std::string mDragWorkerName;
-    //! Client: way of the worker that pulls this dead body and the length of it (see updateDragTether)
-    std::vector<Ogre::Vector2> mDragTetherTrail;
-    std::vector<double> mDragTetherArc;
+    //! Contact history is unnecessary: the renderer samples the current animated skeletons.
     //! \brief Runtime only (not saved): turns of the running jump that have passed (fractions on a client).
     Ogre::Real      mJumpElapsed;
 
