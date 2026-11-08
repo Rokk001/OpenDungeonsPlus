@@ -461,7 +461,7 @@ def hunt_fixture():
  //! \brief Takes exact revival mana only when available.
  bool takeMana(double amount){if(mana<amount)return false;mana-=amount;return true;}
  Player* getPlayer()''')
-    base = base.replace('{"GhostRiseSeconds",1.5}', '{"GhostBeamSeconds",16},{"GhostBoxSnapSeconds",2},{"GhostBellSeconds",3},{"GhostTransferSeconds",20},{"GhostDeliveryHandReach",.55},{"GhostDeliveryHeight",1.1},{"GhostBoxCapacity",1},{"GhostRepathTurns",5},{"GhostBoxThrowSeconds",2},{"GhostReviveHpShare",.35},{"GhostRiseSeconds",1.5}')
+    base = base.replace('{"GhostRiseSeconds",1.5}', '{"GhostBeamSeconds",16},{"GhostBoxSnapSeconds",2},{"GhostBellSeconds",3},{"GhostTransferSeconds",20},{"GhostBoxCapacity",1},{"GhostRepathTurns",5},{"GhostBoxThrowSeconds",2},{"GhostReviveHpShare",.35},{"GhostRiseSeconds",1.5}')
     code = r'''
 //! \brief Supplies declared hunter efficiency independently of timing code.
 struct CreatureRoomAffinity{double efficiency=3;
@@ -717,8 +717,8 @@ struct RoomGhostRoom:Room{GameMap* map=nullptr;std::vector<Tile*>& mCoveredTiles
  Tile* reserveCauldron(Creature&){return floor.empty()?nullptr:floor.front();}
  //! \brief Returns the actual reserved cauldron anchor.
  Tile* getHunterCauldron(const Creature&)const{return floor.empty()?nullptr:floor.back();}
- //! \brief Runs the original delivery point of a cauldron beside its hunter (decisions 845 and 865).
- static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor, const Tile& standing);
+ //! \brief Runs the original trap seat of a cauldron (decision 894).
+ static Ogre::Vector3 getTrapSocketPosition(const Tile& anchor);
  //! \brief Records release after emptying.
  void releaseCauldron(Creature&){}
  //! \brief Records normal layout refresh.
@@ -765,11 +765,12 @@ struct CreatureActionHuntGhost{Creature& mCreature;std::string mTarget,mBeamTarg
 '''
     action = read('source/creatureaction/CreatureActionHuntGhost.cpp')
     room = read('source/rooms/RoomGhostRoom.cpp')
-    code += ''.join(function(action,sig) for sig in ['GhostEntity* ghostNamed(', 'RoomGhostRoom* roomNamed(', 'bool eligible(',
+    code += ''.join(function(action,sig) for sig in ['Ogre::Vector3 facing(', 'GhostEntity* ghostNamed(', 'RoomGhostRoom* roomNamed(', 'bool eligible(',
         'size_t pathLength(', 'Tile* targetEndpoint(', 'double CreatureActionHuntGhost::researched(',
         'void CreatureActionHuntGhost::releaseTarget(', 'void CreatureActionHuntGhost::interrupt(',
         'void CreatureActionHuntGhost::assignHunters(', 'void CreatureActionHuntGhost::upkeep(', 'bool CreatureActionHuntGhost::selectRevival(',
         'double CreatureActionHuntGhost::getTransferTurns(', 'double CreatureActionHuntGhost::getBeamSeconds('])
+    code += 'static const float TRAP_SOCKET_OFFSET_X=0.5f;static const float TRAP_SOCKET_OFFSET_Y=0.82f;static const float TRAP_SOCKET_OFFSET_Z=1.1f;\n'
     code += function(room,'Ogre::Vector3 RoomGhostRoom::getTrapSocketPosition(')
     code += function(room,'bool tileOrder(')+function(room,'double RoomGhostRoom::getLevelsPerEctoplasm(')+function(room,'Tile* RoomGhostRoom::findDropTile(')+function(room,'void RoomGhostRoom::emptyGhost(')
     code += function(room,'void RoomGhostRoom::produceEctoplasm(')+function(room,'void RoomGhostRoom::spawnItem(')
@@ -813,8 +814,8 @@ int main(){
  CreatureActionHuntGhost empty(hunter);empty.mState=6;empty.mDestination=hunter.tile;empty.mEmptyRoom="press";empty.mGhosts={"target","extra1","extra2"};room.mCauldrons={{room.floor.back(),&hunter}};
  // Decision 845: every ghost goes into the trap socket and takes 20 s (28 turns) into the cauldron, also at efficiency three
  for(int tick=0;tick<84;++tick){map.turn=100+tick;empty.step();double before=empty.mTurns;empty.step();near(empty.mTurns,before,"transfer clock increments once per world turn");
-  // Decision 865: the delivery device stands beside the hunter at hand height, 0.55 from the middle of his tile on the line to the middle of the cauldron
-  if(tick==0){const Tile& stand=*hunter.tile;const Tile& anchor=*room.floor.back();const float sx=ghost.socket.x-stand.x,sy=ghost.socket.y-stand.y,cx=anchor.x+.5f-stand.x,cy=anchor.y+.5f-stand.y;check(ghost.teleports>0&&std::fabs(ghost.socket.z-1.1f)<1e-5f&&std::fabs(std::sqrt(sx*sx+sy*sy)-std::min(.55f,std::sqrt(cx*cx+cy*cy)))<1e-5f&&std::fabs(sx*cy-sy*cx)<1e-5f&&sx*cx+sy*cy>0,"the first ghost waits in the delivery device beside the hunter at hand height");check(hunter.animation=="Empty","the hunter puts the trap in with the Empty clip on arrival");}
+  // Decision 894: the first ghost waits in the permanent trap seat on the rim of the cauldron, offset (0.5, 0.82, 1.1) from the middle of the block
+  if(tick==0){const Tile& anchor=*room.floor.back();check(ghost.teleports>0&&std::fabs(ghost.socket.x-(anchor.x+1.0f))<1e-5f&&std::fabs(ghost.socket.y-(anchor.y+1.32f))<1e-5f&&std::fabs(ghost.socket.z-1.1f)<1e-5f,"the first ghost waits in the trap seat of the cauldron at its exact offset");check(hunter.animation=="Empty","the hunter puts the trap in with the Empty clip on arrival");}
   if(tick==26)check(empty.mGhosts.size()==3,"the first ghost is still being transferred after 27 turns");
   if(tick==27)check(empty.mGhosts.size()==2,"the first ghost reaches the cauldron after exactly 28 turns");
   if(tick==28)check(extra1.teleports>0,"the next ghost comes into the socket");}

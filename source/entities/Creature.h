@@ -2255,6 +2255,13 @@ private:
     Ogre::Entity* mGhostCaptureGun = nullptr;
     Ogre::SceneNode* mGhostGunHandNode = nullptr;
     Ogre::Entity* mGhostPackGun = nullptr;
+    //! \brief The mount of the cannon on the hand bone (decision 894): its orientation is set every frame of the beam so
+    //! that the barrel points at the ghost, whatever pose the Beam clip holds the hand in.
+    Ogre::TagPoint* mGhostCaptureGrip = nullptr;
+    //! \brief The flexible hose from the pack to the cannon (decision 894): a textured tube re-shaped every frame between
+    //! the pack's port and the rear end of the cannon, wherever the cannon is (holster or hand).
+    Ogre::SceneNode* mGhostHoseNode = nullptr;
+    Ogre::ManualObject* mGhostHose = nullptr;
     bool mGhostOwnWeaponsHidden = false;
     //! \brief Client-smoothed share of the ghost already pulled into the lying box.
     double mGhostCaptureShown = 0.0;
@@ -2276,13 +2283,9 @@ private:
     double mGhostLidShown = 0.0;
     //! \brief Client-smoothed share of the transfer of the ghost from the delivery device into the cauldron (decisions 845, 865).
     double mGhostTransferShown = 0.0;
-    //! \brief The delivery device on the cauldron rim directly beside the delivering hunter (decision 865): a brass cradle
-    //! on an iron arm, drawn while he delivers (mGhostDeliveryHinge on the rim, the device swinging out on it).
-    Ogre::SceneNode* mGhostDeliveryHinge = nullptr;
-    Ogre::SceneNode* mGhostDeliveryNode = nullptr;
-    Ogre::ManualObject* mGhostDeliveryDevice = nullptr;
     //! \brief Client seconds since the delivery began (the put-in runs over its first GhostPutInSeconds), the ghost that
-    //! came first in the trap (only its transfer waits for the put-in) and the middle of the cauldron's mouth.
+    //! came first in the trap (only its transfer waits for the put-in) and the middle of the cauldron's mouth. The trap
+    //! goes into the permanent trap seat of the cauldron (decision 894, RoomGhostRoom::getTrapSocketPosition).
     double mGhostDeliveryClock = 0.0;
     std::string mGhostDeliveryGhost;
     Ogre::Vector3 mGhostDeliveryMouth = Ogre::Vector3::ZERO;

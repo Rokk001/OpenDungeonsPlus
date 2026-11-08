@@ -49,7 +49,7 @@ static const MeshBounds meshBounds[] = {
     {"FenceCorner", -.502486f, -.500121f, .521221f, .514487f},
     {"FenceStraight", -.493929f, -.492016f, .516277f, -.462466f},
     {"GhostBell", -.3f, -.17f, .3f, .17f, .9000001f},
-    {"GhostCauldron", -1.0f, -1.0f, 1.0f, 1.0f, 1.6f},
+    {"GhostCauldron", -1.0f, -1.0f, 1.0f, 1.0f, 1.14f},
     {"GhostCauldronFill", -.2f, -.025f, .2f, .025f, .6f},
     {"GhostHook", -.2f, -.155f, .2f, .155f, .8000001f},
     {"GhostHookEmpty", -.2f, -.1f, .2f, .1f, .8000001f},
