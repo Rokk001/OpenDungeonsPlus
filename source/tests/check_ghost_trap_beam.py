@@ -10,7 +10,11 @@ Beam: a thick bright core, several jagged flickering bolts at once with forks, a
 cannon tip and a flickering impact glow on the ghost for the whole beam step, all from documented config keys, within a
 fixed per-hunter billboard budget.
 Expected values are fixed, counted once on this branch. Each part fails on base 636e678c8 (no lid, the ghost shrank to
-nothing, a thin three-bolt beam with sparks only in its first 0.1 s)."""
+nothing, a thin three-bolt beam with sparks only in its first 0.1 s).
+Owner decision 865: the beam hits the ghost itself, its chest below the head (GhostBeamAimShare of the height of the
+ghost's world bounds), never the trap under it; the trap opens first and only then is the ghost weakened and pulled in,
+over the rest of the beam step. These parts fail on base 6c97ae45c (beam end at the ghost position + 0.4, the ghost
+shrinking from the first moment of the beam while the lid still opened)."""
 from pathlib import Path
 import math
 import re
@@ -79,9 +83,12 @@ BEAM = {"GhostBeamSegments": 10, "GhostBeamBolts": 4, "GhostBeamBranches": 2, "G
         "GhostBeamImpactSize": 0.55}
 
 
+AIM = {"GhostBeamAimShare": 0.7}
+
+
 def config_values():
     values, documented = config()
-    for key, value in {**TRAP, **BEAM, "GhostBoxThrowSeconds": 2, "GhostBeamSeconds": 16, "GhostBoxSnapSeconds": 2}.items():
+    for key, value in {**TRAP, **BEAM, **AIM, "GhostBoxThrowSeconds": 2, "GhostBeamSeconds": 16, "GhostBoxSnapSeconds": 2}.items():
         assert values.get(key) == value, (key, values.get(key), value)
         assert documented[key], (key, "documentation line")
     print("trap and beam config keys with their documentation lines: ok")
@@ -123,8 +130,15 @@ def trap_source():
     has(beam, "opens at the start of the beam step and stays open",
         'const double beamed=mGhostThrowTurns*CreatureActionHuntGhost::getBeamSeconds(*this);',
         'lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));',
-        "mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);", "trapLight=mGhostLidShown;",
-        "mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")
+        "mGhostLidShown+=(lidTarget-mGhostLidShown)*std::min(1.0,seconds*12.0);", "trapLight=mGhostLidShown;")
+    # Decision 865: the lid opens first; the shrink and the pull take the beam time after GhostLidOpenSeconds
+    ordered(beam, "open first, then the ghost is weakened and pulled in",
+        "const double beamSeconds=CreatureActionHuntGhost::getBeamSeconds(*this);",
+        'const double lidOpen=config.getRoomConfigDouble("GhostLidOpenSeconds");',
+        'lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));',
+        "const double pulled=beamSeconds>lidOpen?std::max(0.0,(beamed-lidOpen)/(beamSeconds-lidOpen)):mGhostThrowTurns;",
+        "mGhostCaptureShown+=(pulled-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")
+    assert "mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)" not in update, "the ghost no longer shrinks while the lid opens"
     has(snap, "slams shut with the bang at the start of the snap step, the light fades",
         "const double snapped=mGhostThrowClientTurns/ODApplication::turnsPerSecond;",
         'mGhostLidShown=std::max(0.0,1.0-snapped/config.getRoomConfigDouble("GhostLidSnapSeconds"));',
@@ -169,7 +183,8 @@ def timeline(values):
             lid, light, capture = 0.0, 0.0, 0.0
         elif t < throw + beam:
             beamed = t - throw
-            capture = beamed / beam
+            # Decision 865: open first, then weakened and pulled in over the rest of the beam step
+            capture = max(0.0, (beamed - lid_open) / (beam - lid_open))
             lid = min(1.0, beamed / lid_open)
             light = lid
         else:
@@ -194,8 +209,13 @@ def timeline(values):
     # Smallest size 0.5, never smaller: it never vanishes
     assert abs(smallest - 0.5) < 1e-12, smallest
     assert all(scale >= 0.5 for *_, scale, height in frames)
-    # Half size reached at the end of the shrink share, then the pull into the opening
-    pull_from = throw + beam * values["GhostPullStartShare"]
+    # The ghost keeps its full size and height until the lid is fully open (decision 865)
+    assert all(scale == 1.0 and height == 0.3 for t, lid, light, scale, height in frames if lid < 1.0 and t < throw + beam), \
+        "nothing happens to the ghost before the trap is open"
+    assert all(scale < 1.0 for t, lid, light, scale, height in frames if throw + lid_open + 0.005 <= t < throw + beam), \
+        "the beam weakens it as soon as the lid is open"
+    # Half size reached at the end of the shrink share of the rest of the beam, then the pull into the opening
+    pull_from = throw + lid_open + (beam - lid_open) * values["GhostPullStartShare"]
     assert all(height == 0.3 for t, lid, light, scale, height in frames if t <= pull_from), "no pull before"
     assert all(abs(scale - 0.5) < 1e-12 for t, lid, light, scale, height in frames if t >= pull_from)
     # Pulled fully into the opening before the lid closes: at the end of the beam step with the lid still open
@@ -297,6 +317,14 @@ def beam(values):
     has(update, "green-white colours", "glowColour(0.35f,0.9f,0.45f,0.4f),coreColour(0.92f,1.0f,0.94f,1.0f),boltColour(0.55f,1.0f,0.65f,1.0f)",
         "Ogre::ColourValue colour=boltColour;colour.a=static_cast<float>(Random::Double(0.6,1.0));")
     has(update, "the beam still leaves the cannon tip", "const Ogre::Vector3 start=ghostCannonTip(*mGhostCaptureGun);")
+    # Decision 865: it ends on the ghost's chest, from the ghost's current world bounds, never at the trap
+    has(update, "the beam ends on the ghost itself", "const Ogre::Vector3 end=ghostBeamAimPoint(scene,*target);")
+    aim = body(read("source/entities/Creature.cpp"), "static Ogre::Vector3 ghostBeamAimPoint(")
+    for key in AIM:
+        assert '"%s"' % key in aim, (key, "read by the aim of the beam")
+    has(aim, "a share of the height of the ghost's body", "getWorldBoundingBox(true)",
+        "bounds.getMinimum().z+share*bounds.getSize().z")
+    assert "0.4f" not in aim and "GhostBox" not in aim, "no fixed offset and nothing of the trap in the aim"
     assert "setNumberOfChains(3)" not in update and "0.025f,fraction" not in update, "the thin three-bolt beam is gone"
     # Clearly more intense than the base beam (3 bolts of 0.025, jitter 0.08, re-shaped every 0.1 s, 35 sparks per s
     # for 0.1 s only)

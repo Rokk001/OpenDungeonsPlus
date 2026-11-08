@@ -33,7 +33,13 @@ ghost-hunter pack sized to each hunter. These parts replace the decision 733 wea
 89fbc6bd7.
 Owner decision 798 (build 46): the pack on the wall hook still showed the old dark untextured look; it must look like the
 textured pack the hunter wears. The full hook is drawn as the bare hook with the worn pack and its holstered cannon on
-it. This part fails on base 636e678c8 (GhostHook.mesh with the old GhostLeather pack drawn as it is)."""
+it. This part fails on base 636e678c8 (GhostHook.mesh with the old GhostLeather pack drawn as it is).
+Owner decision 865 (build 0.7.4.51): the capture beam must hit the ghost itself (chest or head), not the trap; the trap
+lies shut until the hunter is in beam range, opens first, then the ghost is pulled in, then it shuts and stays shut while
+the hunter carries it to the ghost room; at the cauldron he puts it by hand into a delivery device beside him (see
+check_ghost_transfer.py). The decision 865 parts fail on base 6c97ae45c (beam end at the ghost position + 0.4 over the
+trap, the shut trap waiting for pick-up drawn as phase 3 with the lid opening again, the ghost shrinking while the lid
+still opens)."""
 from pathlib import Path
 import re
 import struct
@@ -105,17 +111,18 @@ def visual_states():
     action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
     phases = body(action, "uint32_t CreatureActionHuntGhost::getBoxVisualState() const")
     rules = re.findall(r"if\((.*?)\) return (\d)u;", phases)
-    assert rules == [("!hasBackpack()", "0"), ("mState==2", "1"), ("mState==3 || mState==9", "3"), ("mState==10", "4"),
-                     ("isTransferring()", "5")], rules
+    # Decision 865: the shut trap waiting under the caught ghost (state 9) is its own phase 6, no longer the open phase 3
+    assert rules == [("!hasBackpack()", "0"), ("mState==2", "1"), ("mState==3", "3"), ("mState==10", "4"),
+                     ("mState==9", "6"), ("isTransferring()", "5")], rules
     assert phases.rstrip("}\n ").endswith("return 2u;"), "held in the hand otherwise"
     for state in range(11):
         for backpack in (False, True):
             for transferring in ((False, True) if state == 6 else (False,)):
-                values = {"!hasBackpack()": not backpack, "mState==2": state == 2, "mState==3 || mState==9": state in (3, 9),
-                          "mState==10": state == 10, "isTransferring()": transferring}
+                values = {"!hasBackpack()": not backpack, "mState==2": state == 2, "mState==3": state == 3,
+                          "mState==10": state == 10, "mState==9": state == 9, "isTransferring()": transferring}
                 mode = next((int(m) for condition, m in rules if values[condition]), 2)
-                expected = 0 if not backpack else 1 if state == 2 else 3 if state in (3, 9) else 4 if state == 10 else \
-                    5 if transferring else 2
+                expected = 0 if not backpack else 1 if state == 2 else 3 if state == 3 else 4 if state == 10 else \
+                    6 if state == 9 else 5 if transferring else 2
                 assert mode == expected, (state, backpack, transferring, mode, expected)
     throw = body(action, "std::string CreatureActionHuntGhost::getThrowGhostName() const")
     has(throw, "the lying box stays under its ghost while thrown, pulled, snapping and shut",
@@ -232,14 +239,15 @@ def catch_timing():
     has(update, "the throw arc runs the full throw time",
         'getRoomConfigDouble("GhostBoxThrowSeconds")*ODApplication::turnsPerSecond', "position.z+=4.0f*progress*(1.0f-progress)*0.5f;")
     has(update, "the lying box is shown during throw, beam and snap",
-        "const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5;", "mGhostBoxNode->setVisible(lyingBox);")
+        "const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6;",
+        "mGhostBoxNode->setVisible(lyingBox);")
     snap = update[update.index("else if(mGhostBoxMode==4)"):]
     snap = snap[:snap.index("            else\n")]
     has(snap, "the snap jolts the box over the full snap time with the ghost fully inside",
         'getRoomConfigDouble("GhostBoxSnapSeconds")*ODApplication::turnsPerSecond', "mGhostThrowClientTurns/duration",
         "mGhostBoxNode->setOrientation(", "mGhostCaptureShown=1.0;")
-    has(update, "the beam still shrinks the ghost towards the pulled-in share",
-        "mGhostCaptureShown+=(mGhostThrowTurns-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")
+    has(update, "the beam still shrinks the ghost towards the pulled-in share, once the lid is open (decision 865)",
+        "mGhostCaptureShown+=(pulled-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")
     has(update, "the client lid uses the beam time of the hunter, as the server does",
         "const double beamed=mGhostThrowTurns*CreatureActionHuntGhost::getBeamSeconds(*this);")
     assert 'mGhostThrowTurns*config.getRoomConfigDouble("GhostBeamSeconds")' not in update, "the client must not assume 16 s"
@@ -545,7 +553,7 @@ def beam_from_capture_cannon():
         "if(beaming) { setGhostHunterWeaponsVisible(scene,*this,false);mGhostOwnWeaponsHidden=true; }",
         "else if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }")
     ordered(update, "the beam and its sparks start at the cannon's emitter tip",
-        "const Ogre::Vector3 end=target->getPosition()+Ogre::Vector3(0.0f,0.0f,0.4f);",
+        "const Ogre::Vector3 end=ghostBeamAimPoint(scene,*target);",
         "const Ogre::Vector3 start=ghostCannonTip(*mGhostCaptureGun);",
         "mGhostSparkNode->setPosition(start);", "Ogre::Vector3 point=start+(end-start)*fraction;")
     tip = body(creature, "static Ogre::Vector3 ghostCannonTip(")
@@ -684,6 +692,93 @@ def hook_pack_like_worn_pack():
     print("pack on the wall hook looks like the worn textured pack: ok")
 
 
+# Owner decision 865, part 1: the beam ends on the ghost's body; part 2: shut until in beam range, open first, then
+# pull, then shut for good.
+def decision_865_beam_and_trap_order():
+    creature = read("source/entities/Creature.cpp")
+    update = body(creature, "void Creature::updateGhostHuntVisuals(double seconds)")
+    aim = body(creature, "static Ogre::Vector3 ghostBeamAimPoint(")
+    # The beam end is a point of the ghost's drawn body: the share GhostBeamAimShare of the height of its world bounds
+    has(aim, "the beam hits the ghost's body",
+        "const std::string name=ghost.getOgreNamePrefix()+ghost.getName();",
+        "const Ogre::AxisAlignedBox bounds=scene->getEntity(name)->getWorldBoundingBox(true);",
+        'getRoomConfigDouble("GhostBeamAimShare")',
+        "return Ogre::Vector3(bounds.getCenter().x,bounds.getCenter().y,bounds.getMinimum().z+share*bounds.getSize().z);")
+    code = code_only(update)
+    assert "target->getPosition()+" not in code and "0.0f,0.0f,0.4f" not in code, "the beam no longer ends at a fixed point over the trap"
+    assert code.count("ghostBeamAimPoint(scene,*target)") == 1
+    for chain in ("Ogre::Vector3 point=start+(end-start)*fraction;", "points[i]=start+(end-start)*fraction;",
+                  "mGhostBeamImpact->getBillboard(0)->setPosition(end);"):
+        assert chain in code, ("core, bolts and impact glow end on the ghost", chain)
+    rows = read("config/rooms.cfg").splitlines()
+    index = next(i for i, row in enumerate(rows) if row.split()[:1] == ["GhostBeamAimShare"])
+    assert rows[index].split()[1] == "0.7" and rows[index - 1].lstrip().startswith("#"), "GhostBeamAimShare 0.7 with its doc line"
+    doc = " ".join(row.lstrip("# ") for row in rows[index - 3:index])
+    has(doc, "the doc line names the target", "chest", "decision 865", "never ends at the trap")
+    share = float(rows[index].split()[1])
+    # Chest below the head, and for every capture share of the look model (scale 0.5 to 1, sunk by up to GhostPullDepth)
+    # the point lies inside the ghost's body; while the ghost still floats it is well above the trap on the floor
+    room = room_config()
+    assert 0.5 < share < 0.9, share
+    for capture in [i / 20.0 for i in range(21)]:
+        pull_start, min_scale = room["GhostPullStartShare"], room["GhostCaptureMinScale"]
+        shrink = min(1.0, capture / pull_start)
+        scale = 1.0 - (1.0 - min_scale) * shrink
+        pull = 0.0 if capture <= pull_start else min(1.0, (capture - pull_start) / (1.0 - pull_start))
+        bottom = 0.3 * (1.0 - pull) - pull * room["GhostPullDepth"]
+        height = scale * 1.0  # the ghost is about one tile high; its world bounds scale with its node
+        hit = bottom + share * height
+        assert bottom < hit < bottom + height, (capture, hit)
+        if pull == 0.0:
+            assert hit > 0.3 + 0.12, ("above the top of the trap on the floor while the ghost floats", capture, hit)
+    # Trap order: the phases on the client in the order of the catch
+    throw = update[update.index("if(mGhostBoxMode==1)"):update.index("else if(mGhostBoxMode==4)")]
+    shut = update[update.index("else if(mGhostBoxMode==6)"):update.index("            else\n            {\n                // The beam weakens")]
+    beam = update[update.index("            else\n            {\n                // The beam weakens"):update.index("// Only the snap rocks the box")]
+    has(throw, "shut until it lies under the ghost in beam range", "mGhostLidShown=0.0;")
+    has(shut, "shut for good once snapped, no light", "mGhostLidShown=0.0;", "mGhostCaptureShown=1.0;")
+    assert "lidTarget" not in shut and "trapLight" not in shut, "the shut trap never opens or shines again"
+    ordered(beam, "the lid opens first, only then is the ghost pulled in",
+        'lidTarget=std::min(1.0,beamed/config.getRoomConfigDouble("GhostLidOpenSeconds"));',
+        "const double pulled=beamSeconds>lidOpen?std::max(0.0,(beamed-lidOpen)/(beamSeconds-lidOpen)):mGhostThrowTurns;",
+        "mGhostCaptureShown+=(pulled-mGhostCaptureShown)*std::min(1.0,seconds*6.0);")
+    has(beam, "the beam time of the hunter", "const double beamSeconds=CreatureActionHuntGhost::getBeamSeconds(*this);",
+        'const double lidOpen=config.getRoomConfigDouble("GhostLidOpenSeconds");')
+    action = read("source/creatureaction/CreatureActionHuntGhost.cpp")
+    ordered(body(action, "uint32_t CreatureActionHuntGhost::getBoxVisualState() const"), "the waiting box is the shut phase",
+        "if(mState==3) return 3u;", "if(mState==10) return 4u;", "if(mState==9) return 6u;")
+    # Replay the catch and the time after it in 10 ms steps for research levels and efficiencies: the lid and the pull
+    lid_open, lid_snap = room["GhostLidOpenSeconds"], room["GhostLidSnapSeconds"]
+    throw_s, snap_s = room["GhostBoxThrowSeconds"], room["GhostBoxSnapSeconds"]
+    for beam_seconds in (16.0, 16.0 * 0.8 / 1.5, 16.0 * 0.667 / 3.0):
+        frames, opened_at, pulled_at, shut_at = [], None, None, None
+        for step in range(int((throw_s + beam_seconds + snap_s + 5.0) * 100) + 1):
+            t = step / 100.0
+            if t < throw_s:
+                lid, pulled = 0.0, 0.0
+            elif t < throw_s + beam_seconds:
+                beamed = t - throw_s
+                lid = min(1.0, beamed / lid_open)
+                pulled = max(0.0, (beamed - lid_open) / (beam_seconds - lid_open))
+            elif t < throw_s + beam_seconds + snap_s:
+                lid, pulled = max(0.0, 1.0 - (t - throw_s - beam_seconds) / lid_snap), 1.0
+            else:
+                lid, pulled = 0.0, 1.0  # phase 6 under the ghost, then carried shut in the hand (phase 2)
+            if lid == 1.0 and opened_at is None:
+                opened_at = t
+            if pulled > 0.0 and pulled_at is None:
+                pulled_at = t
+            if opened_at is not None and t > throw_s + beam_seconds and lid == 0.0 and shut_at is None:
+                shut_at = t
+            frames.append((t, lid, pulled))
+        assert all(lid == 0.0 for t, lid, _ in frames if t < throw_s), "shut until in beam range and thrown"
+        assert opened_at is not None and pulled_at is not None and opened_at <= pulled_at, ("open first, then pull", opened_at, pulled_at)
+        assert all(p == 0.0 for t, lid, p in frames if lid < 1.0 and t < throw_s + beam_seconds), "no pull before the lid is open"
+        assert abs(max(p for t, lid, p in frames if t < throw_s + beam_seconds) - 1.0) < 0.01, "fully inside at the end of the beam"
+        assert shut_at is not None and all(lid == 0.0 for t, lid, _ in frames if t >= shut_at), "shut and stays shut"
+    print("decision 865: beam on the ghost's chest, trap shut -> open -> pull -> shut for good: ok")
+
+
 def main():
     box_in_hand()
     visual_states()
@@ -695,6 +790,7 @@ def main():
     beam_from_capture_cannon()
     textured_backpack_sized_to_hunter()
     hook_pack_like_worn_pack()
+    decision_865_beam_and_trap_order()
     print("ghost catch flow: ok")
 
 
