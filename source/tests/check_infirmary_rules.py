@@ -233,6 +233,8 @@ struct CreatureMoodFee:CreatureMood{};
 struct CreatureMoodRested:CreatureMood{};
 //! \brief Holds controlled creature fee, eligibility, bed size and mood definitions.
 struct Definition{double fee=58,sleepHeal=2.05;std::vector<const CreatureMood*> moods;bool worker=false,champion=false;int width=1,height=1;
+ //! \brief Returns an independent dirt factor for transport restart observations.
+ double getDirtFactor()const{return 1.75;}
  //! \brief Returns the wage used for proportional admission and mana costs.
  double getFee(int)const{return fee;}
  //! \brief Returns the retained legacy flag controlling zero bed healing.
@@ -288,6 +290,9 @@ namespace Random{
 int Int(int,int){return 0;}}
 //! \brief Supplies mutable resources and records actual admission, healing and action effects.
 struct Creature:GameEntity{Definition definition;double hp=1,maximum=100,gold=100,mInfirmaryMood=0,mInfirmaryMoodTurns=0,mStoredMood=500;
+ Creature* dragWorker=nullptr;double dragDirtFactor=0;int dragStarts=0;
+ //! \brief Records production transport restarts without changing health or knockout timing.
+ void notifyDragStart(Creature& worker,double factor){dragWorker=&worker;dragDirtFactor=factor;++dragStarts;}
  double counter=-73;int glows=0,popped=0,sleeps=0;std::string name="patient";Tile* home=nullptr;Tile* tile=nullptr;
  Tile* resumedCarryTarget=nullptr;double resumedCarryCounter=0;bool resumedCarryIsDrag=false,forcedCarry=false;
  //! \brief Reports a hand-drop transport so the real room writer can omit it.
@@ -555,9 +560,12 @@ int main(){try{
  Room dormitory(&map,&seat);dormitory.type=RoomType::dormitory;dormitory.delivery=&home;home.room=&dormitory;
  CarryRedirect taken{carrier,&room,map.getTile(0,0)};check(taken.redirect(&incoming)&&taken.mBuildingDest==&dormitory&&taken.mTileDest==&home,"taken cot redirects same carry to own bed");
  check(taken.mDragPhase==0&&taken.mDragLayTurns==0&&!taken.stopped,"same carry restarts final approach");
+ check(incoming.dragWorker==&carrier&&incoming.dragStarts==1,"taken cot restarts drag with the same worker");near(incoming.dragDirtFactor,1.75,"redirect retains worker dirt factor");
  room.abandonAll();seat.payer=0;incoming.counter=-51;room.reserveCot(incoming,carrier);treasury.gold=0;
  CarryRedirect unpaid{carrier,&room,map.getTile(0,0)};check(unpaid.redirect(&incoming)&&unpaid.mBuildingDest==&dormitory,"unpaid admission redirects to own bed");check(room.mPatients.empty(),"unpaid redirection frees reservation");
+ check(incoming.dragWorker==&carrier&&incoming.dragStarts==2,"unpaid redirect restarts the same worker drag");near(incoming.counter,-51,"redirect preserves knockout countdown");
  incoming.home=nullptr;CarryRedirect homeless{carrier,&room,map.getTile(0,0)};check(!homeless.redirect(&incoming)&&homeless.stopped,"failed admission without own bed stops safely");
+ check(incoming.dragStarts==2,"missing bed never restarts drag");
  room.abandonAll();treasury.gold=0;sleeps=creature.sleeps;room.creatureDropped(creature);check(room.mPatients.empty()&&creature.sleeps==sleeps+1,"manual refusal goes to own bed");
  std::cout<<"infirmary rules: ok\n";
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}
