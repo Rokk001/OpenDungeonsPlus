@@ -13,7 +13,7 @@ What is checked (fixed values of this branch, counted once)
              level; the bench counts below the 0.015 tiles a body presses into it; the mug counts in SitDrink
   resting    the bodies that do not sit on legs lie on the bench: the lowest part above the seat rests on it
   mug        every skeleton has the mount Weapon_R for the mug except the listed ones; SitDrink is the calm sip of 5 s of
-             tools/author_tavern_drink.py (decision 901; the rim at the mouth is checked by check_tavern_drink_834.py); a
+             the independent drink authoring recipe (decision 901; the rim at the mouth is checked by check_tavern_drink_834.py); a
              guest of a stool is measured in SitDrink against the furniture as it sits at the end of the table
   weapons    attached weapon models are hidden during a seated clip (read from the source, not run)
   bench      the pelvis of a walking body stays on the bench in Sit, except for the listed large bodies, whose limit is their own
@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
 import author_tavern_seats as seats
-import author_tavern_drink as drink
+import check_tavern_drink_834 as drink
 import author_rest_poses as rest
 import fix_walk_feet as feet
 from check_animation_assets import export
@@ -119,7 +119,7 @@ def check_skeleton(name, mesh_name, out):
         assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the furniture', depth)
     has_mount = seats.MUG_BONE in skeleton.idx
     assert has_mount == (name not in seats.NO_MUG_MOUNT), (name, 'mug mount', has_mount)
-    # Decision 901: SitDrink is one calm sip of tools/author_tavern_drink.py for every skeleton; the rim at the mouth of every
+    # Decision 901: SitDrink is one calm sip of the independent drink authoring recipe for every skeleton; the rim at the mouth of every
     # body (Kreatur and Scarab included, which had their own limb drink here) is checked by check_tavern_drink_834.py
     assert abs(skeleton.clips['SitDrink'].length - drink.CYCLE) < 1e-6, (name, 'SitDrink is not the sip of 5 s')
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))

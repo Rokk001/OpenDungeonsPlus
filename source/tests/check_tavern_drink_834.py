@@ -282,7 +282,7 @@ def check_drink_cycle(out):
     import fix_walk_feet as feet
     import author_rest_poses as rest
     import author_tavern_seats as seats
-    import author_tavern_drink as drink
+    drink = sys.modules[__name__]
     rooms = block_values(read('config/rooms.cfg'), 'Rooms')
     tavern = block_values(read('config/global.cfg'), 'Tavern')
     for clip in ('Drink', 'SitDrink'):
@@ -529,7 +529,7 @@ def point_to_triangle_distance(point, triangle):
 def check_physical_mug_geometry(mesh_path):
     """Require the material-defined bowl, foam and actual wooden contact edges to match the attachment contract."""
     import author_rest_poses as rest
-    import author_tavern_drink as drink
+    drink = sys.modules[__name__]
     assert drink.MUG_FOOT == 0.009 and drink.MUG_RIM == -0.171, 'mug contact coordinates changed'
     vertices, faces, _ = rest.mesh_data(mesh_path)
     expected_triangles = {'TavernWood': 1868, 'TavernIron': 768, 'TavernFoam': 3744}
@@ -581,7 +581,7 @@ def check_mouth_anchors(out):
     from check_animation_assets import export
     import fix_walk_feet as feet
     import author_rest_poses as rest
-    import author_tavern_drink as drink
+    drink = sys.modules[__name__]
     assert set(drink.MOUTHS) == set(EXPECTED_MOUTHS)
     meshes = {skeleton_of(mesh): mesh for mesh in visiting_meshes()}
     export('TavernMug.mesh', out)
@@ -607,6 +607,291 @@ def check_mouth_anchors(out):
         assert np.allclose(head.mouths(skeleton, moved)[0], turn @ np.asarray(expected) + shift,
                            atol=1e-5, rtol=0.0), (name, 'mouth changed surface during a turn')
     print('mouth anchors ok: six measured anatomical openings follow their rig through a rigid turn')
+
+
+
+
+# Independent native geometry measurements retained with the strict asset check.
+import author_rest_poses as rest
+import author_tavern_seats as seats
+import fix_walk_feet as feet
+
+CYCLE = 5.0
+
+
+MUG_FOOT = 0.009
+
+
+MUG_RIM = -0.171
+
+
+MUG_GIRTH = 1.8
+
+
+MUG_GRIP_SHIFT = 0.1
+
+
+MUG_BOTTOM = -0.07
+
+
+FACE_DEPTH = 0.01
+
+
+FACE_CELL = 0.02
+
+
+BENCH_OFFSET = 0.4116
+
+
+LIMBS = {
+    'lich': ('shoulderRight', 'ellbowRight', 'wristRight'),
+    'Rat': ('FrontLeg_R', 'FrontLeg_R.001', 'FrontLeg_R.002', 'FrontLeg_R.003'),
+    'Kreatur': ('tentafr1_r', 'tentafr2_r', 'tentafr3_r', 'tentafr4_r'),
+    'Scarab': ('Bone.001_R', 'Bone.001_R.001', 'Bone.001_R.002', 'Bone.001_R.003', 'Bone.001_R.004', 'Bone.001_R.005'),
+    'Roach': ('ArmRootR', 'ArmR', 'ForearmFrontR', 'ClawFrontR'),
+}
+
+
+HEADS = {
+    'Cultist': (('neck',), 0.0),
+    'Goblin': (('Spine1',), 0.06),
+    'Scarab': (('Bone.004',), None),
+    'Spider': (('Zahn_R', 'Zahn_L', 'Body'), None, False),
+    'lich': (('spine3', 'crown'), 0.05),
+    'Kreatur': (('head',), None),
+    'RunelordDwarf': (('head.cr',), None),
+    'Slime': (('slime_head',), None),
+}
+
+
+MOUTHS = {
+    'CaveHornet': ((249, (0.0016052, -0.189098, 0.061582)), (1299, (-0.0016052, -0.189098, 0.061582))),
+    'Dragon': ((80, (0.0, -0.708788, 0.961628)), (72, (0.0, -0.703024, 0.954036))),
+    'Spider': ((14, (-0.00848184, -0.142194, 0.131078)), (69, (0.00848184, -0.142194, 0.131078))),
+    'Rat': ((462, (0.0, -0.430011, 0.145937)),),
+    'Slime': ((16, (0.0, -0.274409, 0.27)),),
+    'Tentacle': ((121, (0.0, -0.0146598, 0.511544)),),
+}
+
+
+def read_limb_mounts():
+    """Evaluate the physical rig using its native attachment and geometry contract."""
+    render = (ROOT / 'source' / 'render' / 'RenderManager.cpp').read_text(encoding='utf-8')
+    table = render[render.index('const TavernMugLimbMount TAVERN_MUG_LIMB_MOUNTS[] ='):]
+    table = table[:table.index('};')]
+    number = r'(-?[0-9.]+)f'
+    rows = re.findall(r'\{ "([^"]+)", "([^"]+)", ' + ', '.join([number] * 8) + r' \}', table)
+    return {skeleton[:-len('.skeleton')]: (bone, np.array([float(v) for v in values[:4]]), np.array([float(v) for v in values[4:7]]),
+                                          float(values[7])) for skeleton, bone, *values in rows}
+
+
+def quaternion_matrix(q):
+    """Evaluate the physical rig using its native attachment and geometry contract."""
+    w, x, y, z = q / np.linalg.norm(q)
+    return np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                     [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                     [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
+
+
+PASSIVE_MOUNTS = ('skeleton', 'lich', 'PitDemon', 'Kreatur', 'Scarab')
+
+
+class Mug(object):
+    """The mug as the render manager attaches it: the bone, the mesh points, its foot and its axis in the frame of the bone."""
+
+    def __init__(self, skeleton, name, mesh_points, limb_mounts):
+        self.on_weapon = seats.MUG_BONE in skeleton.idx
+        self.passive = self.on_weapon and name in PASSIVE_MOUNTS
+        if self.on_weapon:
+            self.bone = seats.MUG_BONE
+            turn, offset, scale = seats.MUG_TURN, np.array([MUG_GRIP_SHIFT, 0.0, 0.0]), 1.0
+        else:
+            bone, rotation, offset, scale = limb_mounts[name]
+            self.bone = bone
+            turn = quaternion_matrix(rotation)
+        wide = mesh_points * scale * np.array([1.0, MUG_GIRTH, MUG_GIRTH])
+        self.points = wide @ turn.T + offset
+        self.foot = turn @ np.array([MUG_FOOT * scale, 0.0, 0.0]) + offset
+        self.axis = turn @ np.array([-1.0, 0.0, 0.0])
+        self.length = (MUG_FOOT - MUG_RIM) * scale
+        self.radius = float(np.abs(mesh_points[:, 1:]).max()) * scale * MUG_GIRTH
+        # The bottom of the mug, which stands on the table
+        bottom = mesh_points[mesh_points[:, 0] > MUG_BOTTOM]
+        self.base_radius = float(np.abs(bottom[:, 1:]).max()) * scale * MUG_GIRTH
+        self.scale = scale
+        # From the foot of the mug to the origin of the bone along its axis (Weapon_R holds the mug at its middle)
+        self.grip = (MUG_FOOT + MUG_GRIP_SHIFT) * scale
+        if self.passive:
+            # The mug in the frame of the parent of Weapon_R, through the rest pose of Weapon_R, which no clip moves
+            index = skeleton.idx[seats.MUG_BONE]
+            position, turn, size = skeleton.rest_pos[index], quaternion_matrix(skeleton.rest_q[index]), skeleton.rest_s[index]
+            self.points = (self.points * size) @ turn.T + position
+            self.foot = turn @ (self.foot * size) + position
+            self.axis = turn @ self.axis
+            self.bone = skeleton.names[skeleton.parent[index]]
+            self.on_weapon = False
+
+    def world(self, frames, skeleton):
+        """Foot, axis (foot to rim) and points of the mug in every frame."""
+        index = skeleton.idx[self.bone]
+        position, rotation, scale = frames[index]
+        foot = position + np.einsum('nij,nj->ni', rotation, self.foot[None] * scale)
+        axis = np.einsum('nij,j->ni', rotation, self.axis)
+        axis /= np.linalg.norm(axis, axis=1)[:, None]
+        points = position[:, None, :] + np.einsum('nij,nmj->nmi', rotation, self.points[None] * scale[:, None, :])
+        return foot, axis, points
+
+
+def limb_of(skeleton, name, mug):
+    """Evaluate the physical rig using its native attachment and geometry contract."""
+    if name in LIMBS:
+        limb = list(LIMBS[name])
+        # The limb ends in the bone that carries the mug (the item bone of the hand of the lich)
+        tail = []
+        walk = skeleton.idx[mug.bone]
+        while skeleton.names[walk] not in limb and walk >= 0:
+            tail.append(skeleton.names[walk])
+            walk = skeleton.parent[walk]
+        return limb + list(reversed(tail)) if walk >= 0 else limb
+    carrier = skeleton.idx[mug.bone]
+    if mug.bone == seats.MUG_BONE:
+        carrier = skeleton.parent[carrier]
+    chain = [carrier]
+    while len(chain) < 3 and skeleton.parent[chain[-1]] >= 0:
+        chain.append(skeleton.parent[chain[-1]])
+    return [skeleton.names[index] for index in reversed(chain)]
+
+
+def head_vertices(skeleton, name, weights, limb_root_z, posed, limb=()):
+    """Indices of the vertices of the head. The limb that holds the mug is never part of it (a head bone that also carries
+    the arm, like the spine of the lich, would count the raised hand as head)."""
+    children = True
+    if name in HEADS:
+        bones, above = HEADS[name][:2]
+        children = HEADS[name][2] if len(HEADS[name]) > 2 else True
+    else:
+        candidates = [bone for bone in skeleton.names if bone.lower() == 'head']
+        counts = {bone: sum(1 for row in weights if any(b == skeleton.idx[bone] and w >= 0.5 for b, w in row)) for bone in candidates}
+        bones, above = ((max(counts, key=counts.get),) if counts else ()), None
+    selected = {skeleton.idx[bone] for bone in bones if bone in skeleton.idx}
+    for index in (skeleton.topo if children else ()):
+        if skeleton.parent[index] in selected and skeleton.names[index] != seats.MUG_BONE and skeleton.names[index] not in limb:
+            selected.add(index)
+    found = [index for index, row in enumerate(weights) if sum(w for b, w in row if b in selected) >= 0.5]
+    if above is not None:
+        found = [index for index in found if posed[index, 2] >= limb_root_z + above]
+    assert found, (name, 'no head')
+    return np.array(found)
+
+
+class Face(object):
+    """The front of the head: per cell across (x) and up (z), how far forward (-y) the head reaches and how far back."""
+
+    def __init__(self, points, mouth=None):
+        """Build collision cells and optionally carry the skinned anatomical mouth point."""
+        self.cells = {}
+        for x, y, z in points:
+            key = (int(math.floor(x / FACE_CELL)), int(math.floor(z / FACE_CELL)))
+            front, back = self.cells.get(key, (y, y))
+            self.cells[key] = (min(front, y), max(back, y))
+        self.points = points
+        self.material_mouth = mouth
+
+    def inside(self, points):
+        """Share of the points that lie in the head."""
+        count = 0
+        for x, y, z in points:
+            key = (int(math.floor(x / FACE_CELL)), int(math.floor(z / FACE_CELL)))
+            if key in self.cells:
+                front, back = self.cells[key]
+                if front + FACE_DEPTH < y < back:
+                    count += 1
+        return count / max(1, len(points))
+
+    def mouth(self):
+        """Return the material mouth, or estimate the front of the lower half of an unannotated head."""
+        if self.material_mouth is not None:
+            return self.material_mouth
+        p = self.points
+        low, high = np.percentile(p[:, 2], 15), np.percentile(p[:, 2], 55)
+        part = p[(p[:, 2] >= low) & (p[:, 2] <= high)]
+        front = part[part[:, 1] <= np.percentile(part[:, 1], 8)]
+        return np.array([float(np.median(front[:, 0])), float(front[:, 1].min()), float(np.median(front[:, 2]))])
+
+
+def rotation_matrix(axis, angle):
+    """Evaluate the physical rig using its native attachment and geometry contract."""
+    return feet.q2m(feet.rv2q(np.asarray(axis)[None] * angle))[0]
+
+
+def copy_pose(local):
+    """Evaluate the physical rig using its native attachment and geometry contract."""
+    return [(p.copy(), q.copy(), s.copy()) for p, q, s in local]
+
+
+def stool_depth(points):
+    """How far points of a guest on a stool reach into the furniture: the table top, its pedestals, the benches and their
+    legs, seen from the stool (TAVERN_STOOL_DISTANCE along the table from its middle; the guest looks along -y to the end of
+    the table). The boxes are those of furniture_depth in check_tavern_stools_863.py."""
+    table = np.stack([points[:, 0], STOOL_DISTANCE + points[:, 1], points[:, 2]], axis=1)
+    boxes = [((-0.323, 0.323), (-0.588, 0.588), (0.37, 0.4425))]
+    for s in (1, -1):
+        boxes.append(((-0.193, 0.193), (0.135, 0.521) if s > 0 else (-0.521, -0.135), (0.0, 0.38)))
+        boxes.append(((0.3236, 0.4986) if s > 0 else (-0.4986, -0.3236), (-0.656, 0.656), (0.202, 0.2575)))
+        for e in (1, -1):
+            boxes.append(((s * BENCH_OFFSET - 0.042, s * BENCH_OFFSET + 0.042), (0.515, 0.588) if e > 0 else (-0.588, -0.515), (0.0, 0.21)))
+    worst = 0.0
+    for (x0, x1), (y0, y1), (z0, z1) in boxes:
+        low, high = np.array([x0, y0, z0]), np.array([x1, y1, z1])
+        inside = np.all((table > low) & (table < high), axis=1)
+        if inside.any():
+            q = table[inside]
+            worst = max(worst, float(np.minimum(q - low, high - q).min(axis=1).max()))
+    return worst
+
+
+class Head(object):
+    """The head surface, anatomical mouth anchors and the bone that bows it."""
+
+    def __init__(self, skeleton, name, vertices, weights, limb, start):
+        """Identify the head and verify annotated mouths against the original mesh topology."""
+        world = skeleton.fk(start)
+        posed = rest.skin_vertices(skeleton, start, vertices, weights)[0]
+        self.indices = head_vertices(skeleton, name, weights, world[skeleton.idx[limb[0]]][0][0][2], posed, limb)
+        self.vertices = np.asarray(vertices)[self.indices]
+        self.weights = [weights[index] for index in self.indices]
+        anchors = MOUTHS.get(name, ())
+        for index, expected in anchors:
+            assert np.allclose(vertices[index], expected, atol=1e-5, rtol=0.0), (name, 'mouth topology changed', index)
+        self.mouth_vertices = np.asarray([vertices[index] for index, _ in anchors])
+        self.mouth_weights = [weights[index] for index, _ in anchors]
+        self.drink_turns = ()
+        totals = {}
+        for index in self.indices:
+            for bone, weight in weights[index]:
+                totals[bone] = totals.get(bone, 0.0) + weight
+        bone = max(totals, key=totals.get)
+        # A head bows at its neck: the parent of the bone of the head, unless that parent also carries the limb
+        ancestors = set()
+        walk = skeleton.idx[limb[0]]
+        while walk >= 0:
+            ancestors.add(walk)
+            walk = skeleton.parent[walk]
+        parent = skeleton.parent[bone]
+        pivot = parent if parent >= 0 and parent not in ancestors else bone
+        self.pivot = skeleton.names[pivot]
+        self.movable = (pivot not in ancestors) and (self.pivot not in limb)
+
+    def face(self, skeleton, local):
+        """Return the posed collision surface with its anatomical mouth when annotated."""
+        mouth = self.mouths(skeleton, local)[0] if len(self.mouth_vertices) else None
+        return Face(rest.skin_vertices(skeleton, local, self.vertices, self.weights)[0], mouth)
+
+    def mouths(self, skeleton, local):
+        """Follow the same lip vertices through skinning in every frame of a clip."""
+        if len(self.mouth_vertices):
+            return rest.skin_vertices(skeleton, local, self.mouth_vertices, self.mouth_weights).mean(axis=1)
+        return np.asarray([Face(points).mouth() for points in rest.skin_vertices(skeleton, local, self.vertices, self.weights)])
 
 
 def main():

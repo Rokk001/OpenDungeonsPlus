@@ -38,7 +38,7 @@ for line in block.splitlines():
             pass
 
 # The plan lengths in seconds. Decision 901: one calm sip of 5 s standing and seated (Drink and SitDrink), so a water of
-# 10 s is two sips and a beer of 30 s six (the clips are authored with 5 s by tools/author_tavern_drink.py)
+# 10 s is two sips and a beer of 30 s six (the independently authored clips each last 5 s)
 CLIPS = {'Scared': 1, 'Beam': 1, 'Throw': 1, 'Empty': 1, 'RubHands': 2, 'Drink': 5, 'SitDrink': 5, 'Dice': 2, 'ArmWrestle': 2,
          'KnockedOut': 2, 'Vomit': 2, 'Hangover': 2}
 tavern_values = re.search(r'^\[Tavern\]\s*$(.*?)^\[/Tavern\]', global_cfg, re.M | re.S).group(1)
