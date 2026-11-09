@@ -4119,7 +4119,7 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             figure->attachObject(ent);
         }
         else
-            node->attachObject(ent); 
+            node->attachObject(ent);
         if(renderedMovableEntity->getObjectType() == GameEntityType::ghostEntity)
         {
             ent->setMaterialName("GhostGlow");
