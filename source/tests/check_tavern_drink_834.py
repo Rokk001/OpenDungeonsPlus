@@ -87,10 +87,13 @@ MAX_MUG_IN_FACE = 0.05
 MAX_RIM_TO_MOUTH = 0.06
 MAX_STAND_GAP = 0.015
 # Independently measured centres of the annotated mouth openings in the original mesh coordinates.
-EXPECTED_MOUTHS = {'Dragon': (0.0, -0.705906, 0.957832), 'Spider': (0.0, -0.142194, 0.131078),
-                   'Rat': (0.0, -0.430011, 0.145937), 'Slime': (0.0, -0.274409, 0.27)}
+EXPECTED_MOUTHS = {'CaveHornet': (0.0, -0.189098, 0.061582),
+                   'Dragon': (0.0, -0.705906, 0.957832), 'Spider': (0.0, -0.142194, 0.131078),
+                   'Rat': (0.0, -0.430011, 0.145937), 'Slime': (0.0, -0.274409, 0.27),
+                   'Tentacle': (0.0, -0.0146598, 0.511544)}
 # Fixed distance of a stool from the table centre (decision 863).
 STOOL_DISTANCE = 0.8
+STOOL_TABLE_HALF_WIDTH = 0.323
 # Decision 901(2) applies to every creature: a short limb, a held mug or a path cut short by furniture is a failed cycle.
 
 
@@ -352,6 +355,8 @@ def check_drink_cycle(out):
                     base = foot[frame] - axis[frame] * drink.MUG_FOOT * mug.scale
                     assert 0.0 <= base[2] - surface <= MAX_STAND_GAP, (name, 'the mug does not stand on its support', base, surface)
                     assert base[1] + mug.base_radius <= edge + 1e-3, (name, 'the mug stands beyond the table edge', base)
+                    if name in seats.RESTING_MODELS:
+                        assert abs(base[0]) + mug.base_radius <= STOOL_TABLE_HALF_WIDTH + 1e-3, (name, 'the mug stands beside the tabletop', base)
     print('drink cycle ok: one sip of %.0f s per clip (water %d, beer %d sips), pause and drink of at least %.1f s, mug at most '
           '%.2f body heights per second, at most %.0f %% of it in the head, rim within %.3f of the mouth'
           % (SIP_SECONDS, sips[0], sips[1], MIN_PAUSE, worst['speed'], 100 * worst['face'], worst['mouth']))
@@ -525,7 +530,7 @@ def check_mouth_anchors(out):
             moved[index] = (position @ turn.T + shift, rotation, scale)
         assert np.allclose(head.mouths(skeleton, moved)[0], turn @ np.asarray(expected) + shift,
                            atol=1e-5, rtol=0.0), (name, 'mouth changed surface during a turn')
-    print('mouth anchors ok: four measured anatomical openings follow their rig through a rigid turn')
+    print('mouth anchors ok: six measured anatomical openings follow their rig through a rigid turn')
 
 
 def main():

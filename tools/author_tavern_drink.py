@@ -22,6 +22,7 @@ import json
 import math
 import re
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 import numpy as np
 
@@ -132,6 +133,8 @@ SEAT = {'stool': False, 'envelope': None, 'side': None, 'inset': TABLE_INSET}
 # its SitDrink took before decision 901 (0.501)
 SIDE_LIMITS = {'lich': 0.505}
 STOOL_DISTANCE = 0.8
+# Half width of the actual tabletop in the stool frame (the same box used by stool_depth).
+STOOL_TABLE_HALF_WIDTH = 0.323
 ENVELOPE_SAMPLES = 41
 ENVELOPE_MARGIN = 0.0
 # A body may leave its room by this little (check_tavern_stools_863 allows 1e-6); a pose beyond it, or one that reaches
@@ -142,7 +145,7 @@ STOOL_TOP = 0.2575
 STOOL_RADIUS = 0.16
 STOOL_POST_RADIUS = 0.034
 MAX_STOOL_SINK = 0.025
-BENCH_REACH_ACROSS = 1.50
+BENCH_REACH_ACROSS = 1.49
 BENCH_REACH_ALONG = 1.48
 BENCH_OFFSET = 0.4116
 # Bench places a large body takes (LARGE_BENCH_PLACES of check_tavern_stools_863.py)
@@ -180,18 +183,32 @@ HEADS = {
 
 # Anatomically identified material points, in the original mesh vertex order. A turned head keeps the same mouth:
 # selecting its global front again would move the target onto another part of the head. Dragon uses the opening between
-# its upper and lower centre lips, Spider the midpoint between its inner fangs, Rat its muzzle centre and Slime its front.
+# its upper and lower centre lips, Spider the midpoint between its inner fangs, Rat its muzzle centre, Slime its front,
+# Tentacle the lower inner lip of its terminal oral ring, and CaveHornet the oral cleft between its proboscis bases.
 MOUTHS = {
+    'CaveHornet': ((249, (0.0016052, -0.189098, 0.061582)), (1299, (-0.0016052, -0.189098, 0.061582))),
     'Dragon': ((80, (0.0, -0.708788, 0.961628)), (72, (0.0, -0.703024, 0.954036))),
     'Spider': ((14, (-0.00848184, -0.142194, 0.131078)), (69, (0.00848184, -0.142194, 0.131078))),
     'Rat': ((462, (0.0, -0.430011, 0.145937)),),
     'Slime': ((16, (0.0, -0.274409, 0.27)),),
+    'Tentacle': ((121, (0.0, -0.0146598, 0.511544)),),
 }
 
 # The seated dragon brings its long muzzle around the right shoulder with its independent neck joints. The hip, legs
 # and seat stay fixed. The mug approaches the front of the turned muzzle, whose forward direction is (-0.5, sqrt(0.75)).
 DRINK_NECK_TURNS = {('Dragon', 'SitDrink'): (('Spine_3', -60.0), ('Spine_4', -90.0))}
 DRINK_APPROACHES = {('Dragon', 'SitDrink'): (('neck-front', (0.5, -math.sqrt(0.75), 0.0)),)}
+# The rat balances on its unchanged hips/rear supports, raises its forebody at the table, and turns its muzzle to its paw
+# while standing. These are supported anatomical poses, applied before finding a resting mug placement.
+DRINK_START_TURNS = {
+    ('Rat', 'SitDrink'): (('Backbone', (0.0, 0.0, 1.0), -60.0), ('Backbone', (1.0, 0.0, 0.0), -45.0)),
+    ('Rat', 'Drink'): (('Head', (1.0, 0.0, 0.0), -45.0), ('Head', (0.0, 0.0, 1.0), -30.0)),
+}
+DRINK_APPROACHES[('Rat', 'Drink')] = (('muzzle-side', (math.sqrt(0.5), math.sqrt(0.5), 0.0)),)
+DRINK_BULGES = {('Rat', 'Drink'): (0.12,)}
+# This native bone carries only the embedded spear, never hand/body vertices. Hide the spear while its hand holds a mug;
+# validate the material/weight mask before authoring, and preserve every non-drink clip and the original weapon mesh.
+HIDDEN_DRINK_WEAPONS = {'Defender': ('RightFingerBase', 'DefenderWeapon', 395)}
 
 
 def read_limb_mounts():
@@ -538,6 +555,12 @@ def rest_targets(skeleton, start, limb, mug, seated, reach, still_points):
         edge = -(STOOL_DISTANCE - seats.LONG_TABLE_HALF_LENGTH) if SEAT['stool'] else seats.TABLE_NEAR_EDGE
         near_edge = (edge - SEAT['inset']) / SCALE - mug.base_radius
         across = root[0] + np.arange(-PLACE_SPAN, PLACE_SPAN + 1e-9, PLACE_STEP)
+        if SEAT['stool']:
+            limit = STOOL_TABLE_HALF_WIDTH / SCALE - mug.base_radius
+            across = across[np.abs(across) <= limit]
+            if not len(across):
+                # A wide shoulder still reaches for the real tabletop, never an imaginary extension beside it.
+                across = np.arange(-limit, limit + 1e-9, PLACE_STEP)
         return places(across, near_edge - np.arange(0.0, PLACE_DEPTH + 1e-9, PLACE_STEP),
                       seats.TABLE_TOP / SCALE + TABLE_CLEARANCE + lift, 'table')
 
@@ -758,6 +781,12 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     SEAT['inset'] = TABLE_INSETS.get(name, TABLE_INSET)
     old = skeleton.clips[clip]
     start = skeleton.locals_at(old, np.zeros(1))
+    for bone, axis, degrees in DRINK_START_TURNS.get((name, clip), ()):
+        rest.rotate_joint(skeleton, start, bone, np.asarray(axis), np.array([math.radians(degrees)]))
+    if name in HIDDEN_DRINK_WEAPONS:
+        index = skeleton.idx[HIDDEN_DRINK_WEAPONS[name][0]]
+        position, rotation, scale = start[index]
+        start[index] = (position, rotation, scale * 1e-4)
     # The mug shows at its own size: a clip that shrank the weapon bone to hide a weapon (Troll) does not shrink the mug
     index = skeleton.idx[mug.bone]
     if not mug.passive:
@@ -868,7 +897,7 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
     # bows with it; on a way that passes through the face the mug keeps further forward
     shares = np.linspace(0.0, 1.0, WAY_STEPS)
     best_way = None
-    for arc, bulge in [(arc, bulge) for arc in WAY_ARCS for bulge in WAY_BULGES]:
+    for arc, bulge in [(arc, bulge) for arc in WAY_ARCS for bulge in DRINK_BULGES.get((name, clip), WAY_BULGES)]:
         poses = [resting]
         for share in shares[1:]:
             pose = copy_pose(poses[-1])
@@ -883,7 +912,8 @@ def author_clip(skeleton, name, clip, mug, vertices, weights, body_rig):
             leaning = smooth((share - 0.3) / 0.7)
             axis = up + (drink_axis[0] - up) * leaning
             axis /= np.linalg.norm(axis)
-            rim = rim_rest + (rim_drink - rim_rest) * share + (rise + np.array([0.0, -bulge, 0.0])) * 6.75 * share * (1.0 - share) ** 2
+            # Bulge away from the approached face, including a muzzle turned to a side, rather than always along world -y.
+            rim = rim_rest + (rim_drink - rim_rest) * share + (rise - towards * bulge) * 6.75 * share * (1.0 - share) ** 2
             foot = rim - axis * mug.length
             solve(skeleton, pose, limb, mug, foot, axis)
             poses.append(pose)
@@ -1019,11 +1049,22 @@ def validate_report(name, report):
 
 # Author both clips and publish their skeleton XML only when both complete the required cycle.
 def author(source, mesh, mug_mesh, destination):
+    """Verify any weapon-only mask and author both complete clips before publishing their XML."""
     skeleton = feet.Skel(str(source))
     name = source.name.removesuffix('.skeleton.xml')
     globals().update(NORMAL_WAY)
     globals().update(FINE_WAYS.get(name, {}))
     vertices, _, weights = rest.mesh_data(mesh)
+    if name in HIDDEN_DRINK_WEAPONS:
+        bone, material, expected = HIDDEN_DRINK_WEAPONS[name]
+        selected = {skeleton.idx[bone]}
+        for index in skeleton.topo:
+            if skeleton.parent[index] in selected:
+                selected.add(index)
+        weighted = {index for index, row in enumerate(weights) if any(b in selected and w > 0.0 for b, w in row)}
+        weapon = {int(face.get(axis)) for submesh in ET.parse(mesh).getroot().find('submeshes')
+                  if submesh.get('material') == material for face in submesh.find('faces') for axis in ('v1', 'v2', 'v3')}
+        assert len(weapon) == expected and weighted == weapon, (name, 'hidden weapon bone includes body geometry')
     mug_points = rest.mesh_data(mug_mesh)[0]
     mug = Mug(skeleton, name, mug_points, read_limb_mounts())
     blocks = []
