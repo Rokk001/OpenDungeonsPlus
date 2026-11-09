@@ -290,6 +290,7 @@ def check_drink_cycle(out):
     sips = [round(float(tavern[key]) / TURNS_PER_SECOND / SIP_SECONDS, 6) for key in ('WaterDrinkTurns', 'BeerDrinkTurns')]
     assert sips == [2.0, 6.0], sips
     export('TavernMug.mesh', out)
+    check_physical_mug_geometry(out / 'TavernMug.mesh.xml')
     mug_points = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
     mounts = drink.read_limb_mounts()
     times = np.linspace(0.0, SIP_SECONDS, CYCLE_SAMPLES)
@@ -499,6 +500,81 @@ def check_lying_models(out):
     print('lying models ok: %d bodies inside their measured floor' % checked)
 
 
+# Material geometry keeps the contact proxies on actual wood rather than a misleading bounding-box edge.
+def point_to_triangle_distance(point, triangle):
+    """Measure contact with actual material, including an edge between mesh vertices."""
+    a, b, c = triangle
+    normal = np.cross(b - a, c - a)
+    length = float(np.linalg.norm(normal))
+    assert length > 1e-12, 'degenerate physical mug end triangle'
+    normal /= length
+    signed = float(np.dot(point - a, normal))
+    projected = point - normal * signed
+    first, second = b - a, c - a
+    aa, ab, bb = float(np.dot(first, first)), float(np.dot(first, second)), float(np.dot(second, second))
+    pa, pb = float(np.dot(projected - a, first)), float(np.dot(projected - a, second))
+    denominator = aa * bb - ab * ab
+    u = (pa * bb - pb * ab) / denominator
+    v = (pb * aa - pa * ab) / denominator
+    if u >= -1e-8 and v >= -1e-8 and u + v <= 1.0 + 1e-8:
+        return abs(signed)
+    closest = float('inf')
+    for start, end in ((a, b), (b, c), (c, a)):
+        edge = end - start
+        share = float(np.clip(np.dot(point - start, edge) / np.dot(edge, edge), 0.0, 1.0))
+        closest = min(closest, float(np.linalg.norm(point - (start + edge * share))))
+    return closest
+
+
+def check_physical_mug_geometry(mesh_path):
+    """Require the material-defined bowl, foam and actual wooden contact edges to match the attachment contract."""
+    import author_rest_poses as rest
+    import author_tavern_drink as drink
+    assert drink.MUG_FOOT == 0.009 and drink.MUG_RIM == -0.171, 'mug contact coordinates changed'
+    vertices, faces, _ = rest.mesh_data(mesh_path)
+    expected_triangles = {'TavernWood': 1868, 'TavernIron': 768, 'TavernFoam': 3744}
+    assert len(vertices) == 8412, ('mug vertices', len(vertices))
+    materials = {material: [] for material in expected_triangles}
+    for face, material in faces:
+        assert material in materials, ('unexpected mug material', material)
+        materials[material].append(face)
+    assert {material: len(triangles) for material, triangles in materials.items()} == expected_triangles
+    points = {material: np.unique(vertices[sorted({index for face in triangles for index in face})], axis=0)
+              for material, triangles in materials.items()}
+    foam = points['TavernFoam']
+    values, directions = np.linalg.eigh(np.cov(foam.T))
+    foam_normal = directions[:, 0]
+    assert abs(float(foam_normal[0])) >= math.cos(math.radians(2.0)), ('foam is sideways', foam_normal)
+    assert np.allclose((float(foam[:, 0].min()), float(foam[:, 0].max())), (-0.171, -0.14508),
+                       atol=2e-5, rtol=0.0), ('foam axial bounds', foam.min(axis=0), foam.max(axis=0))
+    assert float(values[0]) < 0.3 * float(values[1]), ('foam does not have a cup-facing plane', values)
+    wood = points['TavernWood']
+    assert np.allclose(wood.min(axis=0), (-0.171, -0.0384, -0.0756), atol=2e-5, rtol=0.0), ('wood minimum', wood.min(axis=0))
+    assert np.allclose(wood.max(axis=0), (0.009, 0.0384, 0.0324), atol=2e-5, rtol=0.0), ('wood maximum', wood.max(axis=0))
+    centres = []
+    for label, axial in (('base', 0.009), ('rim', -0.171)):
+        ring = wood[np.abs(wood[:, 0] - axial) <= 2e-5]
+        assert len(ring) == 48, (label, 'physical wood ring vertices', len(ring))
+        centre = ring.mean(axis=0)
+        assert np.allclose(centre, (axial, 0.0, -0.0372), atol=2e-5, rtol=0.0), (label, 'physical ring centre', centre)
+        centres.append(centre)
+        triangles = [vertices[face] for face in materials['TavernWood']
+                     if np.max(np.abs(vertices[face, 0] - axial)) <= 2e-5]
+        assert len(triangles) == 24, (label, 'physical wood end triangles', len(triangles))
+        contact = np.array([axial, 0.0, 0.0])
+        distance = min(point_to_triangle_distance(contact, triangle) for triangle in triangles)
+        assert distance <= 2e-5, (label, 'attachment proxy misses actual wood', distance)
+        if label == 'rim':
+            # The centre is an opening, not a lip: measuring only distance to its plane would give a false contact.
+            assert min(point_to_triangle_distance(centre, triangle) for triangle in triangles) > 0.025, 'rim hole treated as wood'
+    assert np.allclose(centres[1] - centres[0], (-0.18, 0.0, 0.0), atol=2e-5, rtol=0.0), 'physical bowl axis changed'
+    iron = points['TavernIron']
+    assert np.allclose((float(iron[:, 0].min()), float(iron[:, 0].max())), (-0.14364, -0.01404),
+                       atol=2e-5, rtol=0.0), ('iron hoops are sideways', iron.min(axis=0), iron.max(axis=0))
+    assert np.allclose(iron.mean(axis=0)[1:], (0.0, -0.0372), atol=2e-5, rtol=0.0), 'iron hoop centre changed'
+    print('physical mug geometry ok: foam and wooden bowl face -x, actual base/lip contacts match the attachment contract')
+
+
 # A head turn must transport the same mouth opening rather than select a new global-front surface point.
 def check_mouth_anchors(out):
     """Check fixed anatomical centres and their movement under a rigid turn and translation of each actual rig."""
@@ -545,6 +621,9 @@ def main():
     else:
         out = ROOT / 'out' / 'tavern-drink-834'
         out.mkdir(parents=True, exist_ok=True)
+        from check_animation_assets import export
+        export('TavernMug.mesh', out)
+        check_physical_mug_geometry(out / 'TavernMug.mesh.xml')
         check_mug_models(out)
         check_mouth_anchors(out)
         check_drink_cycle(out)
