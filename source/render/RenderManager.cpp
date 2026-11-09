@@ -8067,6 +8067,8 @@ void RenderManager::rrAddOutliner(Creature* creature)
             myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewProjectionMatrix", Ogre::GpuProgramParameters::ACT_VIEWPROJ_MATRIX);
             myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewMatrix", Ogre::GpuProgramParameters::ACT_VIEW_MATRIX);
             myPass1->getVertexProgramParameters()->setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4);
+            // OGRE 14 keeps the bone matrices in object space; the world matrix moves the skinned contour into the world
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldMatrix", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX);
             myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewportSize", Ogre::GpuProgramParameters::ACT_VIEWPORT_SIZE);
 
             Ogre::HighLevelGpuProgramPtr fragment_program;
