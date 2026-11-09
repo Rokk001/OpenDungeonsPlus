@@ -1,3 +1,5 @@
+OGRE 14 prerequisite patch. Preserve LF line endings for git apply --recount.
+
 diff --git a/CMake/Dependencies.cmake b/CMake/Dependencies.cmake
 index 980d408..19471bb 100644
 --- a/CMake/Dependencies.cmake

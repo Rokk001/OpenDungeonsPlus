@@ -81,6 +81,8 @@ class ODSocketClient
         virtual void disconnect(bool keepReplay = false);
 
         /*! \brief This function should be called periodically. It will
+         * process every server message that has arrived. Each read waits up to miliseconds for a message;
+         * 0 polls the socket without waiting (used once per frame).
          */
         void processClientSocketMessages(int miliseconds=5);
 
@@ -190,6 +192,7 @@ class ODSocketClient
         Timer mGameClock;
     
     private :
+        //! \brief Receives and processes one server message; 0 or less polls without waiting.
         bool processOneClientSocketMessage(int miliseconds=5);
 
         ODSource mSource;

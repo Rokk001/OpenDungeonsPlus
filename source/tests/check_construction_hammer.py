@@ -72,6 +72,13 @@ const Ogre::uint8 OD_RENDER_QUEUE_ID_GUI = 101;
 namespace Random { unsigned choice=0; unsigned Uint(unsigned low,unsigned high) {
     if(low!=0 || high!=1) throw std::runtime_error("idle random range"); return choice;
 } }
+//! Supplies the frame-listener service while the fixture exercises the normal drawing path.
+struct ODFrameListener {
+    //! Returns the fixture's frame-listener service.
+    static ODFrameListener& getSingleton() { static ODFrameListener listener; return listener; }
+    //! Uses the no-window fallback to preserve full animation updates in the fixture.
+    Ogre::RenderWindow* getRenderWindow() const { return nullptr; }
+};
 HELPERS
 struct Creature {
     Ogre::AnimationState* getAnimationState() const { return nullptr; }

@@ -2,6 +2,8 @@ $ErrorActionPreference = 'Stop'
 $taskRepo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $taskBuild = Join-Path $taskRepo 'build\windows'
 . (Join-Path $PSScriptRoot 'windows-paths.ps1')
+. (Join-Path $PSScriptRoot 'ogre-prereq-provenance.ps1')
+Assert-OgrePrereqProvenance -DependencyRoot $taskDependencyRoot
 $taskPrefix = "$taskDependencyRoot\install"
 $taskResourcesFile = Join-Path $taskBuild 'resources.cfg'
 

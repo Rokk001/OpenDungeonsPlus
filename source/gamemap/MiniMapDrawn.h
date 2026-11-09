@@ -82,7 +82,7 @@ public:
     Ogre::uint getHeight() const
     { return mHeight; }
 
-    //! \brief Updates visible map colours and keeps unexplored ground on the HUD stone surface.
+    //! \brief Updates map colours and overlays, uploading pixels only when their bytes or texture state change.
     void update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles) override;
 
     Ogre::Vector2 camera_2dPositionFromClick(int xx, int yy) override;
@@ -103,6 +103,11 @@ private:
     //!brief Vector containing colours to be drawn.
     //NOTE: The tiles are laid out Y,X in the vector to iterate in the right order when drawing.
     std::vector<Color> mTiles;
+
+    //! \brief Exact pixels of the last successful upload; empty until the first upload.
+    std::vector<Color> mUploadedTiles;
+    //! \brief Resource generation of that upload, invalidated by a texture reload.
+    size_t mUploadedTextureState;
 
     Ogre::PixelBox mPixelBox;
     Ogre::TexturePtr mMiniMapOgreTexture;
