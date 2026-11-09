@@ -15,6 +15,7 @@ What is checked (fixed values of this branch, counted once)
   mug        every skeleton has the mount Weapon_R for the mug except the listed ones; SitDrink is the calm sip of 5 s of
              the independent drink authoring recipe (decision 901; the rim at the mouth is checked by check_tavern_drink_834.py); a
              guest of a stool is measured in all seven clips against the actual table-end furniture and must rest on its stool
+  transition actual joint blends from Sit to SitDrink retain body support and furniture clearance on a stool
   weapons    attached weapon models are hidden during a seated clip (read from the source, not run)
   bench      the pelvis of a walking body stays on the bench in Sit, except for the listed large bodies, whose limit is their own
   floor      the feet of a sitting body stand on the floor in Sit
@@ -119,6 +120,28 @@ def has_stool_surface_support(points, triangles):
     return False
 
 
+def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, out):
+    """Measure the actual joint blend from sitting to grasping, retaining body support and furniture clearance."""
+    first = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
+    second = skeleton.locals_at(skeleton.clips['SitDrink'], np.zeros(1))
+    shares = np.linspace(0.0, 1.0, TABLE_SAMPLES)
+    local = []
+    for (first_p, first_q, first_s), (second_p, second_q, second_s) in zip(first, second):
+        local.append((first_p + shares[:, None] * (second_p - first_p),
+                      seats.slerp(first_q, second_q, shares),
+                      first_s + shares[:, None] * (second_s - first_s)))
+    body = rest.skin_vertices(skeleton, local, vertices, weights)
+    mug = drink.Mug(skeleton, name, rest.mesh_data(out / (seats.MUG_MESH + '.xml'))[0], drink.read_limb_mounts())
+    _, _, mug_points = mug.world(skeleton.fk(local), skeleton)
+    both = np.concatenate((body, mug_points), axis=1)
+    for frame in range(len(shares)):
+        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
+            assert has_stool_surface_support(body[frame] * level, triangles), (
+                name, 'Sit to SitDrink loses actual stool support', frame, level)
+            depth = drink.stool_depth(both[frame] * level)
+            assert depth <= MAX_TABLE_DEPTH, (name, 'Sit to SitDrink reaches into furniture', frame, level, depth)
+
+
 def check_skeleton(name, mesh_name, out):
     """Check native seated geometry in its actual stool or bench frame, including body support."""
     export(name + '.skeleton', out)
@@ -176,6 +199,7 @@ def check_skeleton(name, mesh_name, out):
     if on_stool:
         for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
             assert has_stool_surface_support(points[0] * level, triangles), (name, 'Sit has no actual stool support', level)
+        check_stool_drink_transition(name, skeleton, vertices, weights, triangles, out)
     elif name in seats.RESTING_MODELS:
         half, near, far = seats.BENCH[:3]
         reach = half if seats.SCENE['whole_bench'] else half + seats.SEAT_SIDE
