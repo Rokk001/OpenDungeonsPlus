@@ -162,8 +162,9 @@ material GhostPackRubber
     }
 }
 
-// The flexible hose from the backpack to the capture cannon (decisions 894 and 936): dark ribbed rubber matching the pack,
-// with physical corrugations and steel couplings, lit from both sides because the tube is shaped every frame.
+// The flexible hose from the backpack to the capture cannon (decisions 894, 936 and 998): dark ribbed rubber matching the
+// pack, with physical corrugations and steel couplings. Unlit, so it never reads white in a bright room: shapeGhostHose
+// in Creature.cpp gives every vertex the shaded GhostHoseColour of config/rooms.cfg, which tints the rubber texture.
 material GhostHose
 {
     receive_shadows off
@@ -172,15 +173,32 @@ material GhostHose
         pass
         {
             cull_hardware none
-            ambient 0.38 0.38 0.38
-            diffuse 0.38 0.38 0.38 1
-            specular 0.12 0.12 0.12 1 12
+            lighting off
+            ambient vertexcolour
+            diffuse vertexcolour
             texture_unit
             {
                 texture GhostPackRubber.png
                 tex_address_mode wrap
                 filtering trilinear
             }
+        }
+    }
+}
+
+// The coloured wires wound round the hose from the pack to the cannon (decision 998): unlit vertex colours
+// (GhostHoseWireColour1 to GhostHoseWireColour<GhostHoseWireCount> in config/rooms.cfg, shaded by shapeGhostHose).
+material GhostHoseWire
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            cull_hardware none
+            lighting off
+            ambient vertexcolour
+            diffuse vertexcolour
         }
     }
 }
