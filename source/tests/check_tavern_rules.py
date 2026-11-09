@@ -1238,7 +1238,8 @@ types_start = tavern_h.index('//! \\brief Who pays for the beer a tavern serves.
 types_end = tavern_h.index('//! \\brief A room where creatures quench their thirst.')
 room_types = tavern_h[types_start:types_end]
 constants = '\n'.join(find_line(room_cpp, r'^const (?:int32_t|uint32_t|double) ' + name + r' = [^;]+;$') for name in (
-    'TURN_EPSILON', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER'))
+    'TURN_EPSILON', 'DONE_WAIT_TURNS', 'PERCENT_SCALE', 'DIRECTION_EPSILON', 'NB_GAMES_WITHOUT_BEER', 'NB_GAMES_WITH_BEER',
+    'KNOCK_OUT_TURN'))
 constants += '\n' + find_line(room_cpp, r'^const float TAVERN_SEAT_SPACING = [^;]+;$')
 constants += '\n' + '\n'.join(find_line(room_cpp, r'^const std::string ' + name + r' = "[^"]+";$') for name in ('SOUND_POUR', 'SOUND_SLAP', 'SOUND_CHEER'))
 helpers = '\n'.join(extract(room_cpp, h) for h in ['double getTavernValue(', 'int32_t getUpTurns(', 'int32_t randomDuelTurns(', 'Ogre::Vector3 directionTo('])
