@@ -12,6 +12,35 @@ enum class GhostState : uint32_t
     rising, floating, beamed, boxed, dissolving
 };
 
+//! \brief The path of a ghost flowing from the trap in the cauldron's seat into the ectoplasm (decision 936 point 4): a
+//! smooth function of the transfer share, so a share that grows every frame moves the ghost without jumps or stops. It
+//! rises out of the trap onto a circle around the middle of the mouth, circles it with one even angular speed while it
+//! comes down at an even rate, and the circle closes until it is sucked into the ectoplasm.
+struct GhostTransferPath
+{
+    //! \brief Position and visibility (0 to 1) of the ghost at a share.
+    struct Point { Ogre::Vector3 position; double visible; };
+    //! Radius in tiles of the circle around the middle of the mouth (inside the rim of 0.68).
+    static constexpr double RADIUS = 0.42;
+    //! Turns round the circle over the whole transfer.
+    static constexpr double TURNS = 5.0;
+    //! Share in which the ghost rises out of the trap onto the circle.
+    static constexpr double APPROACH = 0.15;
+    //! Share from which the circle closes to the middle, until it is sucked in at the end.
+    static constexpr double CLOSE = 0.7;
+    //! Share over which the circling starts from rest.
+    static constexpr double EASE_IN = 0.06;
+    //! Tiles the ghost rises over the higher of trap and ectoplasm, and tiles it sinks into the ectoplasm at the end.
+    static constexpr double RISE = 0.45;
+    static constexpr double SINK = 0.2;
+    //! \brief The point at a share (0 to 1) for the trap position and the middle of the ectoplasm surface.
+    static Point at(double share, const Ogre::Vector3& trap, const Ogre::Vector3& mouth);
+    //! \brief Smooth step from 0 at a to 1 at b, with zero speed at both ends.
+    static double ease(double a, double b, double t);
+    //! \brief 0 to 1 from a to b at one constant speed, only the first and last `soft` share eased.
+    static double even(double a, double b, double soft, double t);
+};
+
 //! \brief An untouchable spirit that floats over open terrain and frightens timid creatures.
 class GhostEntity : public RenderedMovableEntity
 {

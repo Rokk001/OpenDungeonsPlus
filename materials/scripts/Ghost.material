@@ -162,8 +162,8 @@ material GhostPackRubber
     }
 }
 
-// The flexible hose from the backpack to the capture cannon (decision 894): the ribbed rubber of the pack, drawn bright so
-// that it stands out against the hunter's body, lit from both sides because the tube is shaped every frame.
+// The flexible hose from the backpack to the capture cannon (decisions 894 and 936): dark ribbed rubber matching the pack,
+// with physical corrugations and steel couplings, lit from both sides because the tube is shaped every frame.
 material GhostHose
 {
     receive_shadows off
@@ -172,8 +172,8 @@ material GhostHose
         pass
         {
             cull_hardware none
-            ambient 1 1 1
-            diffuse 1 1 1 1
+            ambient 0.38 0.38 0.38
+            diffuse 0.38 0.38 0.38 1
             specular 0.12 0.12 0.12 1 12
             texture_unit
             {
