@@ -102,6 +102,9 @@ public:
     //! \brief True when the creature already lies in its death pose (a knocked-out creature, a corpse): a death
     //! that follows must not play the death clip again (the body would stand up and fall once more).
     bool rrIsCreatureDown(const Creature* creature) const;
+    //! \brief Ends the procedural fall of a creature at once (the lying-down fallback and the death variant): a body
+    //! that already lay when the game was saved lies on the next frame instead of falling over again (decision 991).
+    void rrSettleCreatureFall(const Creature* creature);
 
     //! \brief Loop through the render requests in the queue and process them
     //! Advances hand animations in real time and world animations in unpaused game time.

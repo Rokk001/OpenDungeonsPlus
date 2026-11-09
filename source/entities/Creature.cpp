@@ -415,6 +415,9 @@ static const int32_t ARENA_WATCH_GRACE_TURNS = 2;
 static const std::string KO_SAVE_OPEN = "[Ko]";
 //! \brief Tag that closes the optional arena knock-out state.
 static const std::string KO_SAVE_CLOSE = "[/Ko]";
+//! \brief Clip time in seconds far past the end of every death clip: a loaded body that lies starts in the last frame
+//! of its clip (a clip that does not loop stops there) instead of falling over once more (decision 991).
+static const double LOADED_LYING_CLIP_SECONDS = 1000.0;
 //! \brief Tag that opens the optional block of the captivity state (prison mood, torture mood, broken turns in the
 //! prison and in the torture chamber) at the end of a saved creature. Missing means all 0.
 static const std::string CAPTIVITY_SAVE_OPEN = "[Captivity]";
@@ -1116,10 +1119,14 @@ void Creature::removeFromGameMap(GameMap* gameMap)
     getGameMap()->removeActiveObject(this);
 }
 
-//! \brief Restores the base visual state, then seeks a decaying body to its authoritative phase counter.
+//! \brief Restores the base visual state, then seeks a decaying body to its authoritative phase counter and lays a
+//! body loaded lying (death clip time past every clip, see LOADED_LYING_CLIP_SECONDS) down at once.
 void Creature::restoreEntityState()
 {
     MovableGameEntity::restoreEntityState();
+    if(!getIsOnServerMap() && getAnimationStateName() == EntityAnimation::die_anim &&
+       getAnimationTime() >= LOADED_LYING_CLIP_SECONDS)
+        RenderManager::getSingleton().rrSettleCreatureFall(this);
     if(!getIsOnServerMap() && mDecayTurns >= 0.0 &&
        getAnimationStateName() == EntityAnimation::rot_anim && getAnimationState() != nullptr)
         getAnimationState()->setTimePosition(static_cast<Ogre::Real>(mDecayTurns));
@@ -1248,8 +1255,9 @@ void Creature::exportToStream(std::ostream& os) const
         os << " " << ROOM_LOCKS_SAVE_CLOSE;
     }
 
-    // Preserve an arena knockout or a death knockout, including one interrupted by a load.
-    if(mArenaKnockOut || mKoTurnCounter < 0)
+    // Preserve an arena knockout, a death knockout and a temporary knockout, including one interrupted by a load: a
+    // creature that lies when the game is saved lies again after loading (decision 991).
+    if(mArenaKnockOut || mKoTurnCounter != 0)
         os << "\t" << KO_SAVE_OPEN << " " << mKoTurnCounter << " " << (mArenaKnockOut ? 1 : 0) << " " << KO_SAVE_CLOSE;
 
     // Optional captivity block; missing in old saves and when all its values are 0
@@ -4390,6 +4398,13 @@ double Creature::getMoveSpeed(Tile* tile) const
     {
         const CreatureDefinition* workerDefinition = ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker();
         double workerSpeed = (workerDefinition != nullptr) ? workerDefinition->getMoveSpeedGround() : 1.0;
+        // The worker that really pulls (known on the server and the clients by mDragWorkerName) gets faster with its
+        // level, skills, items and spells. Measured against the base worker type only, the body fell behind it tile by
+        // tile on a long way to the crypt and lay three tiles back (decision 991): it follows the faster of both
+        const Creature* worker = (!mDragWorkerName.empty() && (getGameMap() != nullptr)) ?
+            getGameMap()->getCreature(mDragWorkerName) : nullptr;
+        if((worker != nullptr) && (worker != this))
+            workerSpeed = std::max(workerSpeed, worker->getMoveSpeedGround());
         ConfigManager& config = ConfigManager::getSingleton();
         return workerSpeed * getDragWorkerSpeedFactor() *
             std::max(1.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragFollowSpeedFactor", WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT));
@@ -9307,6 +9322,23 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             const std::string& animation = mDecayTurns >= 0.0 ? EntityAnimation::rot_anim : EntityAnimation::die_anim;
             clearDestinations(animation, false, false);
             setAnimationState(animation, false, Ogre::Vector3::ZERO, false);
+            // A body lies at once: its death clip starts at the last frame (the decay clip seeks its own time)
+            if(animation == EntityAnimation::die_anim)
+                setAnimationTime(LOADED_LYING_CLIP_SECONDS);
+        }
+        else if(isAlive() && (mKoTurnCounter != 0))
+        {
+            // A creature that was knocked out or lay dying when the game was saved lies at once after loading. It used
+            // to stand until it got up or died and only then fell over (decision 991). An arena loser that was already
+            // getting up goes on getting up.
+            const double getUpTurns = std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
+                * ODApplication::turnsPerSecond);
+            const bool gettingUp = mArenaKnockOut && (mKoTurnCounter > 0.0) && (mKoTurnCounter <= getUpTurns);
+            const std::string& animation = gettingUp ? EntityAnimation::getup_anim : EntityAnimation::die_anim;
+            clearDestinations(animation, false, false);
+            setAnimationState(animation, false, Ogre::Vector3::ZERO, false);
+            if(!gettingUp)
+                setAnimationTime(LOADED_LYING_CLIP_SECONDS);
         }
 
         // The mana comes from the save, or the pool is full (old saves and creatures from a level file)
