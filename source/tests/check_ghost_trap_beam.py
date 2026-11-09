@@ -21,11 +21,15 @@ import re
 import struct
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import resolve  # noqa: E402
 
 
 # Read a tracked source using the repository root rather than the caller's directory.
 def read(path):
-    return (repo / path).read_text(encoding="utf-8")
+    return resolve(repo, path).read_text(encoding="utf-8")
 
 
 # Return a complete brace-delimited body that starts at the signature.

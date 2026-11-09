@@ -33,8 +33,9 @@ def check_floor(points, floor, height):
     assert float(error.max()) <= author.MAX_CONTACT_ERROR_RATIO + 2e-5, ('floor contact', float(error.max()))
 
 
-# Require every original rest track while verifying the three new unweighted mounts remain passive.
+# Require every original rest track and keep unweighted mounts passive outside their exact authored clips.
 def rest_track_names(skeleton, skeleton_name, weighted):
+    """Require original rest tracks and exactly two animated Scarab drinking mount clips."""
     required = set(skeleton.names)
     parent = {'skeleton.skeleton': 'itemRightHand', 'lich.skeleton': 'itemRightHand',
               'PitDemon.skeleton': 'Hand_R', 'Kreatur.skeleton': 'tentafr4_r', 'Scarab.skeleton': 'Bone.001_R.005'}.get(skeleton_name)
@@ -43,7 +44,16 @@ def rest_track_names(skeleton, skeleton_name, weighted):
         mount = skeleton.idx['Weapon_R']
         assert mount not in weighted, (skeleton_name, 'passive mount deforms creature')
         assert skeleton.names[skeleton.parent[mount]] == parent, (skeleton_name, 'wrong weapon parent')
-        assert all('Weapon_R' not in clip.tracks for clip in skeleton.clips.values()), (skeleton_name, 'animated passive mount')
+        animated = {name for name, clip in skeleton.clips.items() if 'Weapon_R' in clip.tracks}
+        expected = {'Drink', 'SitDrink'} if skeleton_name == 'Scarab.skeleton' else set()
+        assert animated == expected, (skeleton_name, 'unexpected animated mount clips', animated)
+        if skeleton_name == 'Scarab.skeleton':
+            # Original native attachment: only the two drinking clips may move held items.
+            assert np.allclose(skeleton.rest_pos[mount], (0.0, 0.0, 0.0), atol=1e-7, rtol=0.0)
+            original_turn = np.array((0.6978285179755769, -0.5362445049233607,
+                                      -0.11414896591829919, 0.4609199540259597))
+            assert abs(float(np.dot(skeleton.rest_q[mount], original_turn))) >= 1.0 - 1e-8
+            assert np.allclose(skeleton.rest_s[mount], (1.0, 1.0, 1.0), atol=1e-7, rtol=0.0)
         required.remove('Weapon_R')
     return required
 

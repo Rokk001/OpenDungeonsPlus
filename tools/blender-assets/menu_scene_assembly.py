@@ -1040,6 +1040,9 @@ def main():
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
     repo = args.repo.resolve()
     sys.path.insert(0,str(repo/"tools/blender-assets"))
+    # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+    sys.path.insert(0,str(repo/"scripts"))
+    from assets_src import assets_src_dir
     output = args.output.resolve()
     assembly = output / "MenuSceneAssembly.blend"
     rendered = output / "menu-scene-eevee-1920x1080.png"
@@ -1084,7 +1087,7 @@ def main():
     prototypes = {}
     source_families = set()
     for filename in filenames:
-        with bpy.data.libraries.load(str(repo / "assets-src/menu-scene" / filename), link=False) as (available, loaded):
+        with bpy.data.libraries.load(str(assets_src_dir(repo) / "menu-scene" / filename), link=False) as (available, loaded):
             loaded.objects = list(available.objects)
         objects = [obj for obj in loaded.objects if obj is not None]
         meshes = [obj for obj in objects if obj.type == "MESH"]
@@ -1207,9 +1210,9 @@ def main():
     scene.render.filepath = str(rendered)
     if not args.save_only:
         bpy.ops.render.render(write_still=True)
-    destination = repo / "assets-src/menu-scene/MenuSceneAssembly.blend"
+    destination = assets_src_dir(repo) / "menu-scene/MenuSceneAssembly.blend"
     if destination.exists():
-        assert (repo / "assets-src/menu-scene/MenuSceneAssembly.blend").stat().st_size > 0
+        assert (assets_src_dir(repo) / "menu-scene/MenuSceneAssembly.blend").stat().st_size > 0
     shutil.copyfile(assembly, destination)
     assert assembly.read_bytes() == destination.read_bytes()
     print("ASSEMBLY_DONE", json.dumps({"models": len(filenames), "families": len(source_families), "entities": len(entities), "lights": len(lights), "render": str(rendered)}), flush=True)

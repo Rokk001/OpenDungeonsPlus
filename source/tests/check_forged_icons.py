@@ -12,6 +12,9 @@ import numpy as np
 from PIL import Image
 
 repo = Path(__file__).resolve().parents[2]
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import assets_src_dir  # noqa: E402
 text = (repo / 'gui/ODIcons.imageset').read_text()
 icon_images = ET.fromstring(text)
 rects = {node.get('name'): tuple(int(node.get(key)) for key in ('xPos', 'yPos', 'width', 'height'))
@@ -48,7 +51,7 @@ for name, (x, y, w, h) in rects.items():
     tile = atlas[y:y + h, x:x + w]
     opaque = tile[..., 3] > 200
     assert opaque.sum() > w * h * 0.04, name + ' has no body'
-    source_image = Image.open(repo / 'assets-src/gui/icons/tiles' / (name + '.png')).convert('RGBA')
+    source_image = Image.open(assets_src_dir(repo) / 'gui/icons/tiles' / (name + '.png')).convert('RGBA')
     if source_image.size == (2 * w, 2 * h):
         # A cell that shows its painted source at half size (the ghost room button) holds the downscaled motif;
         # a wrong motif differs by tens of levels on average, the downscale by well under one.
@@ -81,7 +84,7 @@ assert (bar[..., 3] > 200).mean() > 0.6 and bar[..., :3].std() > 2, 'painted iro
 game = (repo / 'gui/ModeGame.layout').read_text()
 assert game.count('OpenDungeonsSkin/ForgedBar') == 2 and 'FFB98B56' not in game
 # The approved bar is a chipped painted iron edge, replacing the old repeated vent segments.
-bar_source = Image.open(repo / 'assets-src/gui/skin/frame-0-0.png').convert('RGBA')
+bar_source = Image.open(assets_src_dir(repo) / 'gui/skin/frame-0-0.png').convert('RGBA')
 assert np.array_equal(bar, np.array(bar_source.crop((0, 0, 512, 88)).resize((w, h), Image.Resampling.LANCZOS)))
 # Research tiles: material states instead of flat colour squares.
 # Return the actual registered skin rectangle, independent of XML attribute order.

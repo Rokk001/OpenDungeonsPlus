@@ -13,12 +13,15 @@ import sys
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import assets_src_dir, resolve  # noqa: E402
 sys.dont_write_bytecode = True
 
 
 def read(path):
     """Return the text of a tracked file."""
-    return (repo / path).read_text(encoding='utf-8')
+    return resolve(repo, path).read_text(encoding='utf-8')
 
 
 NUMBER = r'(-?\d+(?:\.\d+)?)'
@@ -492,7 +495,7 @@ from PIL import Image
 
 def visible_box(png):
     """Width and height of the visible (not transparent) part of a 256 pixel picture, as fractions of the picture."""
-    image = Image.open(repo / 'assets-src/gui/icons/tiles' / (png + '.png')).convert('RGBA')
+    image = Image.open(assets_src_dir(repo) / 'gui/icons/tiles' / (png + '.png')).convert('RGBA')
     box = image.split()[3].point(lambda v: 255 if v > 40 else 0).getbbox()
     return (box[2] - box[0]) / image.width, (box[3] - box[1]) / image.height
 
@@ -627,7 +630,7 @@ assert 'check->setProperty("NormalImage", checkImage);' in code and 'WorkerCheck
 assert 'getChild("GoldLabel")->setProperty("TextColours", settings.goldFirst != 0 ? COLOUR_LIT : COLOUR_NORMAL)' in code, \
     'the ticked state also lights the label'
 for tile in ('WorkerCheckboxEmpty', 'WorkerCheckboxChecked'):
-    assert (repo / 'assets-src/gui/icons/tiles' / (tile + '.png')).exists()
+    assert (assets_src_dir(repo) / 'gui/icons/tiles' / (tile + '.png')).exists()
 
 # --- dragging tablets and carry entries (R4): the event wiring, the layout properties and the drop mapping
 down_up = re.findall(r'subscribeEvent\(CEGUI::Window::EventMouseButton(Down|Up),\s*CEGUI::Event::Subscriber\(&WorkersWindow::(\w+), this\)\)',

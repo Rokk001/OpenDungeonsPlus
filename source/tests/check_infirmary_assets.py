@@ -7,16 +7,20 @@ import struct
 import xml.etree.ElementTree as ET
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import assets_src_dir, resolve  # noqa: E402
 
 
 # Read one registered text asset with consistent Unicode handling.
 def read(path):
-    return (repo / path).read_text(encoding="utf-8")
+    return resolve(repo, path).read_text(encoding="utf-8")
 
 
 # Verify referenced assets exist and have their own source/licence entry.
 def credited(path, credits):
-    asset = repo / path
+    asset = resolve(repo, path)
     assert asset.is_file() and asset.stat().st_size > 0, "missing asset: " + path
     rows = [line for line in credits.splitlines() if path in line]
     assert rows and any("GPL" in line or "CC0" in line for line in rows), "missing licence: " + path
@@ -82,7 +86,7 @@ def main():
     for name in ("Admit", "Discharge", "Chant", "Rattle"):
         path = "sounds/Rooms/Infirmary/" + name + ".ogg"
         credited(path, credits)
-        assert (repo / path).read_bytes().startswith(b"OggS"), path
+        assert resolve(repo, path).read_bytes().startswith(b"OggS"), path
         row = next(line for line in credits.splitlines() if path in line)
         assert "CC0" in row and "https://freesound.org/" in row, path
     ambience = read("config/roomAmbience.cfg")
@@ -116,7 +120,7 @@ def main():
     icon_width, icon_height = int(image.get("width")), int(image.get("height"))
     assert (icon_width, icon_height) == (int(slot["width"]) * 2, int(slot["height"]) * 2)
     assert (int(image.get("xPos")), int(image.get("yPos"))) == (int(slot["xPos"]) * 2, int(slot["yPos"]) * 2)
-    source = (repo / "assets-src/gui/icons" / slot["source"]).read_bytes()
+    source = (assets_src_dir(repo) / "gui/icons" / slot["source"]).read_bytes()
     assert source[:8] == bytes([137, 80, 78, 71, 13, 10, 26, 10])
     assert struct.unpack_from(">II", source, 16) == (icon_width, icon_height)
     atlas = (repo / "gui" / imageset.get("imagefile")).read_bytes()
