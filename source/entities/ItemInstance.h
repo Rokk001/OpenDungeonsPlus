@@ -6,6 +6,7 @@
 #include <memory>
 
 class GameMap;
+class Weapon;
 
 //! \brief The ghost room goods that travel as items; the level crystal is the soul crystal (mSoulCrystal).
 enum class GhostItem : uint32_t { none = 0, ectoplasm = 1, manaCrystal = 2, researchBook = 3 };
@@ -48,10 +49,10 @@ public:
     double getPrice(const GameMap* map = nullptr) const;
     //! \brief Returns the minimum required level.
     uint32_t getLevelMin(const GameMap* map = nullptr) const;
-    //! \brief Returns the ItemImages entry for this instance.
-    std::string getImageName() const;
-    //! \brief Builds the shared quality-coloured name, bonus and effect tooltip.
-    std::string describe(const GameMap* map = nullptr) const;
+    //! \brief Returns the ItemImages entry, using actual held equipment for a spawn fallback when supplied.
+    std::string getImageName(const Weapon* heldWeapon = nullptr) const;
+    //! \brief Builds the shared tooltip, including actual base values for a supplied spawn fallback.
+    std::string describe(const GameMap* map = nullptr, const Weapon* heldWeapon = nullptr) const;
 
     //! \brief Catalogue id of the item line, or the potion id for a consumable.
     std::string mDefinitionId;

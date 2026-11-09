@@ -395,14 +395,17 @@ void ODFrameListener::exitApplication()
 }
 
 //! \brief Keeps interface time independent while advancing world effects at the game speed.
+//! Advances world poses before resolving animated drag contacts.
 void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
 {
     updateMenuScene(timeSinceLastFrame);
     MusicPlayer::getSingleton().update(static_cast<float>(timeSinceLastFrame));
+    mRenderManager->rrResetDragContacts();
     mRenderManager->updateRenderAnimations(timeSinceLastFrame);
     mGameMap->processDeletionQueues();
 
     mGameMap->updateAnimations(timeSinceLastFrame);
+    mRenderManager->rrUpdateDragContacts();
 
     const Ogre::Real gameTime = timeSinceLastFrame * static_cast<Ogre::Real>(mGameMap->getGameSpeedFactor());
 
@@ -429,6 +432,8 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     RunLevelTest::recordFrame(evt.timeSinceLastFrame);
     
 
+    // A dialog that rose above the tooltip since the last frame must not hide it (owner decision 920)
+    Gui::keepTooltipInFront();
     CEGUI::System::getSingleton().injectTimePulse(evt.timeSinceLastFrame);
     CEGUI::System::getSingleton().getDefaultGUIContext().injectTimePulse(evt.timeSinceLastFrame);
 

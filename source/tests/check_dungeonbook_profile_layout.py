@@ -519,7 +519,7 @@ creature_text = (repo / 'source/entities/Creature.cpp').read_text()
 fill = creature_text[creature_text.index('void Creature::fillItemSlotWindows('):]
 fill = fill[:fill.index('\n}\n')]
 for fragment in ('creature->mEquipment[slot]', 'creature->mPotionSlots[slot - 6]', 'creature->mInventory[slot - 9]',
-                 'slot >= VISIBLE_ITEM_HAND_SLOTS', 'ItemDrops::poorWeapon(*weapon)', 'item->describe(creature->getGameMap())',
+                 'slot >= VISIBLE_ITEM_HAND_SLOTS', 'ItemDrops::poorWeapon(*weapon)', 'item->describe(creature->getGameMap(), heldWeapon)',
                  'slotType->setVisible(item == nullptr)', 'slot - 6 >= creature->mPotionSlots.size()',
                  'image->getChild("Lock")->setVisible(locked)', '"PotionSlotLevel2"', '"PotionSlotLevel3"'):
     assert fragment in fill, fragment

@@ -40,8 +40,29 @@ assert '"CorpseDecay"' in down
 # (b) The corpse was pulled at the configured gap of 0.9 tiles, less than the half length of a lying Troll or Dragon
 #     plus the worker: the body lay over the small worker (Kobold, 0.3 high) and hid it. The gap now covers both bodies.
 assert 'double dragGap(Creature& worker, Creature& dragged)' in action
-assert 'RoomObjectNavigation::clearance(worker) + RoomObjectNavigation::clearance(dragged)' in action
-assert action.count('dragGap(mCreature, *dragged)') == 2 and 'getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap"' in action.split('double dragGap')[1].split('}')[0]
+creature = (root / 'source/entities/Creature.cpp').read_text(encoding='utf-8')
+gap = creature.split('double Creature::getDragGap')[1].split(chr(10) + '}' + chr(10))[0]
+assert 'RoomObjectNavigation::clearance(worker) + RoomObjectNavigation::clearance(dragged)' in gap
+assert 'getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap"' in gap
+assert 'Creature::getDragGap(worker, dragged)' in action.split('double dragGap')[1].split(chr(10) + '}' + chr(10))[0]
+assert action.count('dragGap(mCreature, *dragged)') == 2
+# Decision 892: render contact follows both animated poses after every creature has moved.
+frame = (root / 'source/render/ODFrameListener.cpp').read_text(encoding='utf-8')
+assert frame.index('mGameMap->updateAnimations(timeSinceLastFrame);') < frame.index('rrUpdateDragContacts();')
+tether = creature.split('void Creature::updateDragTether()')[1].split(chr(10) + '}' + chr(10))[0]
+assert 'getIsOnServerMap()' in tether and 'mDragWorkerName.empty()' in tether
+assert 'getCreature(mDragWorkerName)' in tether and 'getCreatures()' not in tether
+assert 'rrApplyDragContact(*this, *worker)' in tether and 'getDragGap' not in tether
+assert creature.count('os << mDragWorkerName;') == 2
+assert creature.count('is >> mDragWorkerName') == 2
+assert 'mDragWorkerName = worker.getName();' in creature
+assert 'mDragWorkerName.clear();' in creature
+contact = render.split('void RenderManager::rrApplyDragContact')[1].split('void RenderManager::rrUpdateDragContacts')[0]
+assert 'dragBonePoint(puller,' in contact and 'dragBonePoint(body,' in contact
+assert 'getBoundingBox()' in contact and 'bounds.isNull() || bounds.isInfinite()' in contact
+assert 'entity->_updateAnimation();' in render.split('static bool dragBonePoint')[1].split('void RenderManager::rrApplyDragContact')[0]
+assert 'convertLocalToWorldPosition' in render.split('static bool dragBonePoint')[1].split('void RenderManager::rrApplyDragContact')[0]
+# the gap works for big bodies too (same function for small and big)
 # the lying body of the biggest creatures needs more than the old gap of 0.9
 import re
 bounds = (root / 'source/gamemap/RoomObjectBounds.h').read_text(encoding='utf-8')
