@@ -42,12 +42,25 @@
 
 const std::string SAVEGAME_EXTENSION = ".level";
 
-//! \brief Orders files by modification time, breaking ties by path.
-static bool newerLoadFile(const std::string& left, const std::string& right)
+//! \brief Collects every loadable saved game (not multiplayer) and replay with its kind.
+static std::vector<LoadEntry> collectLoadEntries()
 {
-    std::time_t a = boost::filesystem::last_write_time(left);
-    std::time_t b = boost::filesystem::last_write_time(right);
-    return a == b ? left < right : a > b;
+    std::vector<LoadEntry> entries;
+    std::vector<std::string> saves;
+    std::vector<std::string> replays;
+    Helper::fillFilesList(ResourceManager::getSingleton().getSaveGamePath(), saves, SAVEGAME_EXTENSION);
+    Helper::fillFilesList(ResourceManager::getSingleton().getReplayDataPath(), replays, ".odr");
+    for(const std::string& file : saves)
+    {
+        LevelInfo info;
+        bool valid = MapHandler::getMapInfo(file, info);
+        int kind = classifyLoadSave(boost::filesystem::path(file).filename().string(), valid, info, Campaign::getSingleton());
+        if(kind >= 0)
+            entries.push_back({file, boost::filesystem::last_write_time(file), kind});
+    }
+    for(const std::string& file : replays)
+        entries.push_back({file, boost::filesystem::last_write_time(file), 3});
+    return entries;
 }
 
 //! \brief Sets up the unified save and replay browser.
@@ -158,33 +171,7 @@ void MenuModeLoad::activate()
     }
 
     CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(sheet->getChild("LevelWindowFrame/KindFilter"));
-    std::vector<std::string> saves;
-    std::vector<std::string> replays;
-    Helper::fillFilesList(ResourceManager::getSingleton().getSaveGamePath(), saves, SAVEGAME_EXTENSION);
-    Helper::fillFilesList(ResourceManager::getSingleton().getReplayDataPath(), replays, ".odr");
-    size_t newestKind = 0;
-    std::time_t newestTime = 0;
-    for(size_t i = 0; i < saves.size() + replays.size(); ++i)
-    {
-        bool replay = i >= saves.size();
-        const std::string& file = replay ? replays[i - saves.size()] : saves[i];
-        std::string filename = boost::filesystem::path(file).filename().string();
-        int kind = 3;
-        if(!replay)
-        {
-            LevelInfo info;
-            bool valid = MapHandler::getMapInfo(file, info);
-            kind = classifyLoadSave(filename, valid, info, Campaign::getSingleton());
-            if(kind < 0)
-                continue;
-        }
-        std::time_t modified = boost::filesystem::last_write_time(file);
-        if(modified > newestTime)
-        {
-            newestTime = modified;
-            newestKind = static_cast<size_t>(kind);
-        }
-    }
+    size_t newestKind = static_cast<size_t>(openingLoadKind(collectLoadEntries()));
     filter->setItemSelectState(newestKind, true);
     filter->setText(filter->getListboxItemFromIndex(newestKind)->getText());
     updateFilesList();
@@ -210,23 +197,8 @@ bool MenuModeLoad::updateFilesList(const CEGUI::EventArgs&)
     mFilesList.clear();
     sheet->getChild("LevelWindowFrame/MapDescriptionText")->setText("");
     sheet->getChild("LoadingText")->hide();
-    std::vector<std::string> files;
-    Helper::fillFilesList(kind == 3 ? ResourceManager::getSingleton().getReplayDataPath() :
-        ResourceManager::getSingleton().getSaveGamePath(), files, kind == 3 ? ".odr" : SAVEGAME_EXTENSION);
-    for(size_t i = 0; i < files.size(); ++i)
-    {
-        std::string filename = boost::filesystem::path(files[i]).filename().string();
-        if(kind != 3)
-        {
-            LevelInfo info;
-            bool valid = MapHandler::getMapInfo(files[i], info);
-            int fileKind = classifyLoadSave(filename, valid, info, Campaign::getSingleton());
-            if(fileKind < 0 || static_cast<size_t>(fileKind) != kind)
-                continue;
-        }
-        mFilesList.push_back(files[i]);
-    }
-    std::sort(mFilesList.begin(), mFilesList.end(), newerLoadFile);
+    for(const LoadEntry& entry : visibleLoadEntries(collectLoadEntries(), static_cast<int>(kind)))
+        mFilesList.push_back(entry.mPath);
     for(size_t i = 0; i < mFilesList.size(); ++i)
     {
         CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(boost::filesystem::path(mFilesList[i]).filename().string());
@@ -256,7 +228,7 @@ bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         return true;
     const std::string level = mFilesList[id];
     CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LevelWindowFrame/KindFilter"));
-    if(filter->getItemIndex(filter->getSelectedItem()) == 3)
+    if(loadConfirmAction(static_cast<int>(filter->getItemIndex(filter->getSelectedItem())), true) == 2)
     {
         std::string description;
         std::string error;
