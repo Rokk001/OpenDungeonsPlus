@@ -42,3 +42,4 @@ shaderCache
 config/editorsettings.cfg
 source/tests/BoostTestTargetConfig.h
 source/tests/CTestTestfile.cmake
+/assets-src

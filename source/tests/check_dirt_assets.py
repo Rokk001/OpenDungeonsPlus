@@ -10,18 +10,22 @@ import re
 import struct
 
 root = Path(__file__).resolve().parents[2]
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(root / 'scripts'))
+from assets_src import assets_src_dir, resolve  # noqa: E402
 
 # Width and height of a pile texture
 PILE_TEXTURE_SIZE = 64
 
 
 def read(path):
-    return (root / path).read_text(encoding='utf-8')
+    return resolve(root, path).read_text(encoding='utf-8')
 
 
 # Returns (width, height) of a PNG file from its header.
 def png_size(path):
-    data = (root / path).read_bytes()
+    data = resolve(root, path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     return struct.unpack('>II', data[16:24])
 
@@ -45,7 +49,7 @@ credits = read('CREDITS')
 # 1. Pile models and textures: one per creature type, a material each, 64 x 64 textures
 for name in types:
     assert (root / 'models' / ('Pile_' + name + '.mesh')).is_file(), 'models/Pile_' + name + '.mesh missing'
-    assert (root / 'assets-src' / 'dirt' / ('Pile_' + name + '.blend')).is_file(), 'assets-src/dirt/Pile_' + name + '.blend missing'
+    assert (assets_src_dir(root) / 'dirt' / ('Pile_' + name + '.blend')).is_file(), 'assets-src/dirt/Pile_' + name + '.blend missing'
     assert png_size('materials/textures/Pile_' + name + '.png') == (PILE_TEXTURE_SIZE, PILE_TEXTURE_SIZE), name + ' texture size'
     assert re.search(r'^material Pile_' + name + r'\b', materials, re.M), 'material Pile_' + name + ' missing'
 # Level-specific classes keep their explicitly declared species mesh, including its unchanged pile geometry.
@@ -67,7 +71,7 @@ for name, source in [('BloodStain', 'assets-src/dirt/BloodStain.blend'), ('DirtS
                      ('ToiletSeat', 'assets-src/rooms/ToiletSeat.blend')]:
     assert (root / 'models' / (name + '.mesh')).is_file(), name + '.mesh missing'
     assert (root / 'materials' / 'textures' / (name + '.png')).is_file(), name + '.png missing'
-    assert (root / source).is_file(), source + ' missing'
+    assert resolve(root, source).is_file(), source + ' missing'
     assert re.search(r'^material ' + name + r'\b', materials, re.M), 'material ' + name + ' missing'
 
 # 3. Particle, icon and the sounds

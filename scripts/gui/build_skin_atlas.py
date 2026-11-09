@@ -10,7 +10,11 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCES = ROOT / "assets-src/gui/skin"
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(ROOT / 'scripts'))
+from assets_src import assets_src_dir  # noqa: E402
+SOURCES = assets_src_dir(ROOT) / "gui/skin"
 SCALE = 4
 STATES = {"Hover": 1, "Pushed": 2, "Disabled": 3}
 PIECES = {
