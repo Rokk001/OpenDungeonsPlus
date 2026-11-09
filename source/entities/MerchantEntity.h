@@ -39,8 +39,8 @@ private:
     bool mFacedRoom = false;
     //! brief True while the current stop is a wall shelf (arranging goods) instead of a sales table.
     bool mAtShelf = false;
-    //! brief Returns the direction from a table tile into the room, with the back to any wall, or zero.
-    Ogre::Vector3 getRoomFacing(Tile* tile, Room* room) const;
+    //! brief The table or shelf tile the figure stands beside and faces at the current stop (decision 901).
+    Tile* mStopTile = nullptr;
 };
 
 #endif // MERCHANTENTITY_H

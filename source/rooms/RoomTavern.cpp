@@ -74,7 +74,7 @@ const float TAVERN_STOOL_DISTANCE = 0.8f;
 //! table along it and across it, at the largest creature scale (1.1); a stool guest of another table keeps its footprint
 //! outside. Measured on all visiting models that sit on benches; checked by check_tavern_stools_863.py.
 const float TAVERN_BENCH_REACH_ALONG = 1.48f;
-const float TAVERN_BENCH_REACH_ACROSS = 1.51f;
+const float TAVERN_BENCH_REACH_ACROSS = 1.49f;
 //! \brief The footprint of a stool guest is tested on points this far apart (and on its edges), in tiles.
 const float FOOTPRINT_SAMPLE_STEP = 0.25f;
 //! \brief A creature that sits on a stool and the floor its seated clips cover there (decision 863). The models are those
@@ -97,13 +97,13 @@ const TavernStoolBody TAVERN_STOOL_BODIES[] =
     { "CaveHornet.mesh", 1, 0.13f, 0.12f, 0.26f },
     { "Kreatur.mesh", 4, 0.66f, 1.23f, 0.70f },
     { "LavaSpawn.mesh", 4, 0.42f, 0.96f, 0.98f },
-    { "Rat.mesh", 1, 0.12f, 0.47f, 0.37f },
+    { "Rat.mesh", 2, 0.34f, 0.47f, 0.37f },
     { "Roach.mesh", 2, 0.15f, 0.57f, 0.39f },
     { "Scarab.mesh", 2, 0.23f, 0.86f, 0.43f },
     { "Slime.mesh", 1, 0.14f, 0.30f, 0.23f },
     { "Spider.mesh", 1, 0.20f, 0.56f, 0.42f },
-    { "TentacleAlbine.mesh", 2, 0.35f, 0.24f, 0.33f },
-    { "TentacleGreen.mesh", 2, 0.35f, 0.24f, 0.33f },
+    { "TentacleAlbine.mesh", 2, 0.35f, 0.24f, 0.31f },
+    { "TentacleGreen.mesh", 2, 0.35f, 0.24f, 0.31f },
     { "Wyvern.mesh", 2, 0.38f, 0.69f, 0.49f }
 };
 //! \brief Scale of the table mesh: across, the table with its two benches is 1.19 tiles wide unscaled and so ends at the
@@ -179,6 +179,9 @@ int32_t randomDuelTurns(const std::string& minKey, const std::string& maxKey)
 }
 //! \brief Turns a guest stays done after its last drink while a game partner may be found.
 const int32_t DONE_WAIT_TURNS = 1;
+//! \brief The turn of the knock-out itself: upkeepSpots counts it down in the same upkeep as upkeepGames knocks the loser
+//! out, so the lying count starts this much above DuelKoTurns (decision 897: 42 turns lying, exactly 30 s)
+const int32_t KNOCK_OUT_TURN = 1;
 //! \brief The floor a knocked-out guest covers in its KnockedOut clip, in tiles at level scale 1, in the frame of the
 //! creature (it looks along -y): from mBehindMin to mBehindMax along +y (behind it) and mHalfWidth to either side. Measured
 //! on all 33 frames of the clip of every model that visits the tavern and is not large (decision 833: the lying body
@@ -2255,7 +2258,9 @@ void RoomTavern::abortGame(std::map<RoomTavernSeat, RoomTavernGame>::iterator it
 void RoomTavern::knockOut(RoomTavernSpot& spot)
 {
     spot.mSleepAfter = true;
-    setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")));
+    // Decision 897: the loser lies exactly DuelKoTurns turns (42 turns, 30 s). The knock-out comes from upkeepGames, and
+    // upkeepSpots counts the same turn down right after it, so the count starts one turn higher
+    setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")) + KNOCK_OUT_TURN);
     if(!fallNextToBench(spot))
         showSpotState(nullptr, spot);
 }
