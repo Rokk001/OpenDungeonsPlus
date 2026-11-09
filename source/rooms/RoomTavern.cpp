@@ -94,17 +94,17 @@ struct TavernStoolBody
 
 const TavernStoolBody TAVERN_STOOL_BODIES[] =
 {
-    { "CaveHornet.mesh", 1, 0.13f, 0.12f, 0.26f },
+    { "CaveHornet.mesh", 2, 0.34f, 0.21f, 0.14f },
     { "Kreatur.mesh", 4, 0.66f, 1.23f, 0.70f },
-    { "LavaSpawn.mesh", 4, 0.42f, 0.96f, 0.98f },
+    { "LavaSpawn.mesh", 4, 0.72f, 0.55f, 0.99f },
     { "Rat.mesh", 2, 0.34f, 0.47f, 0.37f },
-    { "Roach.mesh", 2, 0.15f, 0.57f, 0.39f },
-    { "Scarab.mesh", 2, 0.23f, 0.86f, 0.43f },
-    { "Slime.mesh", 1, 0.14f, 0.30f, 0.23f },
-    { "Spider.mesh", 1, 0.20f, 0.56f, 0.42f },
-    { "TentacleAlbine.mesh", 2, 0.35f, 0.24f, 0.31f },
-    { "TentacleGreen.mesh", 2, 0.35f, 0.24f, 0.31f },
-    { "Wyvern.mesh", 2, 0.38f, 0.69f, 0.49f }
+    { "Roach.mesh", 2, 0.33f, 0.57f, 0.39f },
+    { "Scarab.mesh", 2, 0.36f, 0.86f, 0.43f },
+    { "Slime.mesh", 3, 0.35f, 0.32f, 0.25f },
+    { "Spider.mesh", 2, 0.32f, 0.37f, 0.32f },
+    { "TentacleAlbine.mesh", 2, 0.36f, 0.24f, 0.28f },
+    { "TentacleGreen.mesh", 2, 0.36f, 0.24f, 0.28f },
+    { "Wyvern.mesh", 3, 0.57f, 0.69f, 0.49f }
 };
 //! \brief Scale of the table mesh: across, the table with its two benches is 1.19 tiles wide unscaled and so ends at the
 //! edges of its tiles; along, the two tiles long table is 1.56 tiles unscaled.
@@ -217,8 +217,8 @@ const TavernLyingBody TAVERN_LYING_BODIES[] =
     { "RunelordDwarf.mesh", -0.02f, 0.78f, 0.29f },
     { "Slime.mesh", -0.25f, 0.21f, 0.15f },
     { "Spider.mesh", -0.45f, 0.43f, 0.42f },
-    { "TentacleAlbine.mesh", -0.26f, 0.26f, 0.24f },
-    { "TentacleGreen.mesh", -0.26f, 0.26f, 0.24f },
+    { "TentacleAlbine.mesh", -0.28f, 0.26f, 0.24f },
+    { "TentacleGreen.mesh", -0.28f, 0.26f, 0.24f },
     { "Wizard.mesh", -0.03f, 1.05f, 0.26f },
     { "Wyvern.mesh", -0.02f, 0.83f, 0.49f },
     { "lich.mesh", -0.04f, 1.54f, 0.52f }

@@ -211,13 +211,12 @@ struct TavernMugLimbMount
 
 const TavernMugLimbMount TAVERN_MUG_LIMB_MOUNTS[] =
 {
-    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0000f, 0.0810f, 0.8172f, -0.0012f, 0.0104f, -0.0002f, 0.67f },
+    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0f, 0.081f, 0.8172f, -0.00927217250429f, 0.02282818196546f, -0.02555186825649f, 0.67f },
     { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, -0.0998f, 0.0000f, 0.0069f, 1.00f },
     { "Rat.skeleton", "FrontLeg_R.003", 0.7071f, 0.0000f, -0.7071f, 0.0000f, 0.0011f, 0.0260f, 0.0028f, 0.67f },
-    { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0000f, -0.0561f, 0.4743f, -0.0002f, 0.0557f, -0.0080f, 0.90f },
-    { "Slime.skeleton", "slime_head", 0.7071f, 0.0000f, -0.3376f, -0.6213f, 0.0000f, 0.1018f, 0.0001f, 0.67f },
-    { "Spider.skeleton", "FU_3_R", 0.7487f, 0.0000f, -0.5237f, 0.4064f, -0.0201f, -0.0652f, -0.1277f, 0.67f },
-    { "Tentacle.skeleton", "ForeTentacle3_R", 0.5427f, 0.0000f, -0.7964f, 0.2670f, 0.0074f, 0.1346f, -0.0365f, 1.00f }
+    { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0f, -0.0561f, 0.4743f, 0.05803043732464f, 0.16537449933524f, -0.04501090019113f, 0.9f },
+    { "Spider.skeleton", "sip_tip", 0.707106781187f, 0.0f, 0.707106781187f, 0.0f, -0.02412f, 0.0f, -0.0603f, 0.67f },
+    { "Tentacle.skeleton", "ForeTentacle3_R", 0.5427f, 0.0f, -0.7964f, 0.267f, 0.00721508267503f, 0.202350441975f, -0.05217924144684f, 1.0f }
 };
 
 //! \brief Finds the limb mount of the mug for a skeleton without a Weapon_R bone: the entry of the skeleton, or else the

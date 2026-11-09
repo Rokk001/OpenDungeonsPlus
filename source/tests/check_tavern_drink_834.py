@@ -64,7 +64,7 @@ MUG_HEIGHT = 0.18
 # Decision 863: the mug of a limb mount is at least this share of the mesh, 0.12 tiles tall (0.06 on the spider before)
 MIN_LIMB_MUG_SCALE = 0.67
 # Decision 901: the limb mounts that are hands hold the mug at its middle, this far above its foot like Weapon_R
-HAND_MOUNTS = ('Defender.skeleton',)
+HAND_MOUNTS = ('Defender.skeleton', 'Spider.skeleton', 'Roach.skeleton')
 GRIP_SHIFT = 0.1
 # Decision 901: Drink and SitDrink are one calm sip of SIP_SECONDS (ClipSecondsDrink, ClipSecondsSitDrink), measured at
 # CYCLE_SAMPLES times. The mug pauses at least MIN_PAUSE (its rim moves less than STILL, tiles), upright within
@@ -90,7 +90,13 @@ MAX_STAND_GAP = 0.015
 EXPECTED_MOUTHS = {'CaveHornet': (0.0, -0.189098, 0.061582),
                    'Dragon': (0.0, -0.705906, 0.957832), 'Spider': (0.0, -0.142194, 0.131078),
                    'Rat': (0.0, -0.430011, 0.145937), 'Slime': (0.0, -0.274409, 0.27),
-                   'Tentacle': (0.0, -0.0146598, 0.511544)}
+                   'Tentacle': (0.0, -0.0146598, 0.511544),
+    'Kreatur': (0.0, -0.317763, 0.472901),
+    'LavaSpawn': (-5.75e-06, -0.4630071, 0.60245494),
+    'Roach': (0.0, -0.20523333333333335, 0.19490566666666667),
+    'Scarab': (0.0019446, -0.24109942111655863, 1.0398758589264896),
+    'Wyvern': (0.0, -0.169624, 0.646443),
+}
 # Fixed distance of a stool from the table centre (decision 863).
 STOOL_DISTANCE = 0.8
 STOOL_TABLE_HALF_WIDTH = 0.323
@@ -606,7 +612,7 @@ def check_mouth_anchors(out):
             moved[index] = (position @ turn.T + shift, rotation, scale)
         assert np.allclose(head.mouths(skeleton, moved)[0], turn @ np.asarray(expected) + shift,
                            atol=1e-5, rtol=0.0), (name, 'mouth changed surface during a turn')
-    print('mouth anchors ok: six measured anatomical openings follow their rig through a rigid turn')
+    print('mouth anchors ok: eleven measured anatomical openings follow their rig through a rigid turn')
 
 
 
@@ -649,6 +655,8 @@ LIMBS = {
     'Kreatur': ('tentafr1_r', 'tentafr2_r', 'tentafr3_r', 'tentafr4_r'),
     'Scarab': ('Bone.001_R', 'Bone.001_R.001', 'Bone.001_R.002', 'Bone.001_R.003', 'Bone.001_R.004', 'Bone.001_R.005'),
     'Roach': ('ArmRootR', 'ArmR', 'ForearmFrontR', 'ClawFrontR'),
+    'Slime': ('sip_root', 'sip_bend1', 'sip_bend2', 'sip_bend3', 'sip_bend4', 'sip_tip'),
+    'Spider': ('sip_shoulder', 'sip_elbow', 'sip_palm', 'sip_tip'),
 }
 
 
@@ -661,6 +669,7 @@ HEADS = {
     'Kreatur': (('head',), None),
     'RunelordDwarf': (('head.cr',), None),
     'Slime': (('slime_head',), None),
+    'Roach': (('Head', 'JawR', 'JawL', 'Tongue'), None),
 }
 
 
@@ -671,6 +680,14 @@ MOUTHS = {
     'Rat': ((462, (0.0, -0.430011, 0.145937)),),
     'Slime': ((16, (0.0, -0.274409, 0.27)),),
     'Tentacle': ((121, (0.0, -0.0146598, 0.511544)),),
+    'Kreatur': ((18, (0.0, -0.317763, 0.472901)),),
+    'LavaSpawn': ((2075, (-5.75e-06, -0.46090289110446825, 0.59545494)),
+     (2102, (-5.75e-06, -0.4651113088955317, 0.60945494))),
+    'Roach': ((91, (0.0, -0.217098, 0.206459)),
+     (1391, (-0.0131999, -0.199301, 0.189129)),
+     (1387, (0.0131999, -0.199301, 0.189129))),
+    'Scarab': ((481, (0.0019446, -0.24109942111655863, 1.0398758589264896)),),
+    'Wyvern': ((223, (0.0, -0.169624, 0.646443)),),
 }
 
 
@@ -693,7 +710,7 @@ def quaternion_matrix(q):
                      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
 
 
-PASSIVE_MOUNTS = ('skeleton', 'lich', 'PitDemon', 'Kreatur', 'Scarab')
+PASSIVE_MOUNTS = ('skeleton', 'lich', 'PitDemon', 'Kreatur')
 
 
 class Mug(object):

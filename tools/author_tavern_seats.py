@@ -196,7 +196,7 @@ MUG_GIRTH = 1.8
 MUG_WAY_STEPS = 65
 TABLE_SAMPLES_COARSE = 97
 # The skeletons that have no hand or limb for the mug mount: the mug is not shown for them in SitDrink.
-NO_MUG_MOUNT = ('CaveHornet', 'Defender', 'Rat', 'Roach', 'Slime', 'Spider', 'Tentacle')
+NO_MUG_MOUNT = ('CaveHornet', 'Defender', 'Rat', 'Roach', 'Spider', 'Tentacle')
 MUG_TURN = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]])
 # Share of a clip at each end in which the upper body goes from the seat pose to the source clip and back.
 BLEND_SHARE = 0.12
