@@ -6,6 +6,10 @@ import numpy as np
 from PIL import Image
 
 repo = Path(__file__).resolve().parents[2]
+import sys
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(repo / 'scripts'))
+from assets_src import assets_src_dir  # noqa: E402
 gui = (repo / 'source/render/Gui.cpp').read_text()
 game = (repo / 'source/modes/GameMode.cpp').read_text()
 
@@ -36,7 +40,7 @@ tile = np.array(Image.open(repo / 'gui/ODIcons.png').convert('RGBA'), dtype=np.f
 opaque = tile[..., 3] > 200
 assert (x, y, w, h) == (1536, 1280, 256, 256), 'same logical slot at double source resolution'
 assert opaque.sum() > 0.6 * w * h, 'painted worker tile has a visible body'
-source = np.array(Image.open(repo / 'assets-src/gui/icons/tiles/SummonWorkerButton.png').convert('RGBA'))
+source = np.array(Image.open(assets_src_dir(repo) / 'gui/icons/tiles/SummonWorkerButton.png').convert('RGBA'))
 assert np.array_equal(tile, source), 'registered slot contains the painted worker, not a different emblem'
 centre = tile[h // 4:3 * h // 4, w // 4:3 * w // 4, :3]
 assert centre.std(axis=(0, 1)).max() > 12, 'worker motif remains visible at the centre'

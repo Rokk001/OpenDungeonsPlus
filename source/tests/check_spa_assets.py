@@ -34,6 +34,9 @@ import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
+# ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+sys.path.insert(0, str(root / 'scripts'))
+from assets_src import assets_src_dir, resolve  # noqa: E402
 
 # The bath clips every creature skeleton gets and the clips of the pool attendant
 BATH_CLIPS = ['Bathe', 'Jump']
@@ -47,19 +50,19 @@ SOUND_RATE = 22050
 
 # Returns the text of a repository file.
 def read(path):
-    return (root / path).read_text(encoding='utf-8', errors='replace')
+    return resolve(root, path).read_text(encoding='utf-8', errors='replace')
 
 
 # Returns (width, height) of a PNG file from its header.
 def png_size(path):
-    data = (root / path).read_bytes()
+    data = resolve(root, path).read_bytes()
     assert data[:8] == b'\x89PNG\r\n\x1a\n', path + ' is not a PNG'
     return struct.unpack('>II', data[16:24])
 
 
 # Returns (channels, rate) of an Ogg Vorbis file from its identification header.
 def vorbis_format(path):
-    data = (root / path).read_bytes()
+    data = resolve(root, path).read_bytes()
     assert data[:4] == b'OggS', path + ' is not an Ogg file'
     at = data.index(b'\x01vorbis')
     channels = data[at + 11]
@@ -98,7 +101,7 @@ MODELS = {name: 'assets-src/rooms/spa/' + name + '.blend'
 for name, source in MODELS.items():
     mesh = root / 'models' / (name + '.mesh')
     assert mesh.is_file() and mesh.stat().st_size > 0, 'models/' + name + '.mesh missing'
-    assert (root / source).is_file(), source + ' missing'
+    assert resolve(root, source).is_file(), source + ' missing'
     for used in set(re.findall(rb'Spa[A-Za-z]+', mesh.read_bytes())):
         assert re.search(r'^material ' + used.decode('ascii') + r'\b', materials, re.M), \
             'models/' + name + '.mesh uses the material ' + used.decode('ascii') + ' which no material script defines'
@@ -209,9 +212,9 @@ for skeleton in unique_skeletons:
     # The clips of the tavern and the older ones are still there
     for clip in ('Idle', 'Walk', 'Drink', 'Hangover'):
         assert (clip + '\n').encode('ascii') in data, skeleton + ' lost its clip ' + clip
-    assert (root / 'assets-src' / 'rooms' / 'spa' / 'creatures' / (skeleton[:-len('.skeleton')] + '.blend')).is_file(), \
+    assert (assets_src_dir(root) / 'rooms' / 'spa' / 'creatures' / (skeleton[:-len('.skeleton')] + '.blend')).is_file(), \
         'no Blender source for ' + skeleton
-sources = sorted(p.name for p in (root / 'assets-src' / 'rooms' / 'spa' / 'creatures').glob('*.blend'))
+sources = sorted(p.name for p in (assets_src_dir(root) / 'rooms' / 'spa' / 'creatures').glob('*.blend'))
 assert len(sources) == 32, 'one Blender source per skeleton, found ' + str(len(sources))
 
 # 8. CREDITS: a row for every file of the spa assets and for every skeleton with new clips

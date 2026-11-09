@@ -1869,10 +1869,13 @@ def main():
     arguments=sys.argv[sys.argv.index("--")+1:]
     repo,private=map(Path,arguments[:2])
     sys.path.insert(0,str(repo/"tools/blender-assets"))
+    # ODP_ASSETS_SRC (else <repo>/assets-src) holds the asset sources, see scripts/assets_src.py
+    sys.path.insert(0,str(repo/"scripts"))
+    from assets_src import assets_src_dir
     import odp_ogre_io as exporter
     from menu_scene_assembly import configure_material, material_values
     material_text=(repo/"materials/scripts/MenuScene.material").read_text(encoding="utf-8")
-    source=repo/"assets-src/menu-scene"
+    source=assets_src_dir(repo) / "menu-scene"
     work=repo/"out/menu-scene/xml"
     for folder in (source,work,private):
         folder.mkdir(parents=True,exist_ok=True)
