@@ -94,7 +94,7 @@ assert '"SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)' in in
 
 # 3. The shared fill and the creature card stay as they are
 fill = function_of(creature, 'void Creature::fillItemSlotWindows(')
-assert 'image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap()));' in fill
+assert 'image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap(), heldWeapon));' in fill
 assert 'image->setTooltipText("Potion slot locked: it opens at level "' in fill
 assert 'getParent()' not in fill, 'the shared fill does not touch the parents of the card slots'
 assert 'fillItemSlotWindows(this, slotWindows, false);' in creature, 'the creature card keeps its slots'

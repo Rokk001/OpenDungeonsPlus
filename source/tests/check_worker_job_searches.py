@@ -54,7 +54,8 @@ drop = creature.split('void Creature::drop(const Ogre::Vector3& v)', 1)[1].split
 assert 'CreatureActionSearchEntityToCarry>(*this, true)' in drop
 save = creature.split('void Creature::exportToStream(', 1)[1].split('bool Creature::importFromStream(', 1)[0]
 assert '[WorkerJob]' in save and 'CreatureActionSearchEntityToCarry' not in save
-assert 'mArenaKnockOut || mKoTurnCounter < 0' in save
+# Every knockout is saved, the temporary one too (decision 991), so a lying creature is not picked up as standing
+assert 'mArenaKnockOut || mKoTurnCounter != 0' in save
 assert 'mIsCarried && !mCorpseCarrierName.empty()' in save
 streams = read('source/rooms/RoomInfirmaryStreams.cpp')
 assert 'isForcedTransport(patient.reservedBy)' in streams and 'savedPatients' in streams

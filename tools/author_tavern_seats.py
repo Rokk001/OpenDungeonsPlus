@@ -188,11 +188,15 @@ MUG_MESH = 'TavernMug.mesh'
 MUG_POINTS = 200
 # How far the mug stands along its bone from the bottom to the rim, in tiles (the mesh reaches from 0.009 to -0.171 along x).
 MUG_HEIGHT = 0.17
+# Decision 901: the hand holds the mug at its middle; the render manager shifts it this far along the x axis of Weapon_R
+# (TAVERN_MUG_GRIP_SHIFT) and makes it this much wider (TAVERN_MUG_GIRTH_SCALE)
+MUG_GRIP_SHIFT = 0.1
+MUG_GIRTH = 1.8
 # Steps along the way of the foot of the mug that the limb is solved for
 MUG_WAY_STEPS = 65
 TABLE_SAMPLES_COARSE = 97
 # The skeletons that have no hand or limb for the mug mount: the mug is not shown for them in SitDrink.
-NO_MUG_MOUNT = ('CaveHornet', 'Defender', 'Rat', 'Roach', 'Slime', 'Spider', 'Tentacle')
+NO_MUG_MOUNT = ('CaveHornet', 'Defender', 'Rat', 'Roach', 'Spider', 'Tentacle')
 MUG_TURN = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]])
 # Share of a clip at each end in which the upper body goes from the seat pose to the source clip and back.
 BLEND_SHARE = 0.12
@@ -1279,11 +1283,18 @@ def hammer_arms(skeleton, local, seated, times, length, hammer):
         aim_bone(skeleton, local, forearm, hand, directions[1])
 
 
-# Solve a chain of joints for a point by moving it from the tip to the root and back; the root stays and the lengths stay.
+# Solve a chain of joints without stretching; stop converged iterations and directly handle targets beyond full reach.
 def reach_chain(joints, target, rounds=80):
+    """Keep the root and segment lengths while reaching the target, including the straight unreachable case."""
     lengths = [float(np.linalg.norm(joints[index + 1] - joints[index])) for index in range(len(joints) - 1)]
     points = [joint.copy() for joint in joints]
     root = points[0].copy()
+    distance = float(np.linalg.norm(target - root))
+    if distance >= sum(lengths) and distance > 1e-12:
+        direction = (target - root) / distance
+        for index, length in enumerate(lengths):
+            points[index + 1] = points[index] + direction * length
+        return points
     for _ in range(rounds):
         points[-1] = target.copy()
         for index in range(len(points) - 2, -1, -1):
@@ -1293,6 +1304,8 @@ def reach_chain(joints, target, rounds=80):
         for index in range(1, len(points)):
             step = points[index] - points[index - 1]
             points[index] = points[index - 1] + step / np.linalg.norm(step) * lengths[index - 1]
+        if np.linalg.norm(points[-1] - target) <= 1e-10:
+            break
     return points
 
 
@@ -1301,7 +1314,7 @@ def mug_rim_distance(skeleton, clip, mug):
     played = skeleton.clips[clip]
     world = skeleton.fk(skeleton.locals_at(played, np.linspace(0.0, played.length, TABLE_SAMPLES_COARSE)))
     holder = world[skeleton.idx[MUG_BONE]]
-    rim = holder[0] - MUG_HEIGHT * holder[1][:, :, 0]
+    rim = holder[0] - (MUG_HEIGHT - MUG_GRIP_SHIFT) * holder[1][:, :, 0] * holder[2][:, :1]
     head = world[skeleton.idx[mug['head']]]
     mouth = head[0] + np.einsum('nij,j->ni', head[1], np.array(mug['mouth']))
     return float(np.linalg.norm(rim - mouth, axis=1).min())
@@ -1395,8 +1408,9 @@ def with_mug(skeleton, vertices, weights, mesh):
     bone = skeleton.idx[MUG_BONE]
     bind = skeleton.fk([(skeleton.rest_pos[index][None], skeleton.rest_q[index][None], skeleton.rest_s[index][None])
                         for index in range(len(skeleton.names))])[bone]
-    # The mesh of an attached item is turned from the upright of its file to the axes of the bone
-    turned = mug @ MUG_TURN.T
+    # The mesh of an attached item is turned from the upright of its file to the axes of the bone; the mug is wide and held at
+    # its middle as the render manager attaches it
+    turned = (mug * np.array([1.0, MUG_GIRTH, MUG_GIRTH])) @ MUG_TURN.T + np.array([MUG_GRIP_SHIFT, 0.0, 0.0])
     placed = (turned * bind[2][0]) @ bind[1][0].T + bind[0][0]
     return np.concatenate((np.asarray(vertices), placed)), list(weights) + [[(bone, 1.0)] for _ in range(len(placed))]
 

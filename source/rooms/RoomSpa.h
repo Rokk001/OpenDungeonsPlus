@@ -52,7 +52,13 @@ enum class SpaBatherState
     //! The bather is in the air after a jump from the springboard.
     jumping = 1,
     //! The bather sits in the mud and its spa mood rises.
-    bathing = 2
+    bathing = 2,
+    //! The paid guest settles into its seated bathing pose.
+    sitting = 3,
+    //! The guest rises after its full seated bath.
+    standing = 4,
+    //! The guest wades back to the rim before releasing its place.
+    leaving = 5
 };
 
 //! \brief The bath place of one bather in a lava spa: the block of pool tiles it has reserved, what it is doing and how
@@ -66,6 +72,7 @@ struct RoomSpaBather
         mBlock(),
         mState(SpaBatherState::reserved),
         mTurnsDone(0.0),
+        mTransitionTurns(0.0),
         mJump(false),
         mDone(false)
     {}
@@ -78,6 +85,8 @@ struct RoomSpaBather
     SpaBatherState mState;
     //! Turns of the bath that are counted already (fractions are kept).
     double mTurnsDone;
+    //! Remaining sitting or standing turns, saved independently of seated bath progress.
+    double mTransitionTurns;
     //! True when the bather jumps from the springboard before the bath starts.
     bool mJump;
     //! True when the bath is over (relaxation given); the bather leaves at its next action turn. Not saved.
@@ -92,6 +101,7 @@ struct RoomSpaPendingBather
         mBlock(),
         mState(SpaBatherState::reserved),
         mTurnsDone(0.0),
+        mTransitionTurns(0.0),
         mJump(false)
     {}
 
@@ -101,6 +111,8 @@ struct RoomSpaPendingBather
     SpaBatherState mState;
     //! Turns of the bath that were counted.
     double mTurnsDone;
+    //! Remaining sitting or standing turns.
+    double mTransitionTurns;
     //! True when the bather was to jump before the bath.
     bool mJump;
 };
@@ -164,6 +176,15 @@ public:
     //! bath place of its bed size exists and the payer can pay the price of a bath.
     //! \param creature The creature that wants to bathe.
     bool canAccept(const Creature& creature) const;
+
+    //! \brief Returns a reachable dry rim tile; ordinary navigation approaches it through open terrain.
+    Tile* getArrivalTile(const Creature& creature) override;
+
+    //! \brief Assigns a dropped guest a normal paid bath, irrespective of its mood.
+    void creatureDropped(Creature& creature) override;
+
+    //! \brief Keeps an assigned bath and its exit intact when routine needs or mood change.
+    bool keepGuestUntilItLeft(Creature& creature) override;
 
     //! \brief Reserves the bath place of the creature (the place it had when the room was saved, or the first free
     //! one of its bed size).
@@ -337,6 +358,12 @@ private:
     //! \param bather Its place.
     //! \return True when the bather's action ended.
     bool walkToPlace(Creature& creature, RoomSpaBather& bather);
+
+    //! \brief Walks cardinal terrain-checked room steps, preferring the rim to wading through mud.
+    bool walkBather(Creature& creature, Tile* target, const Ogre::Vector3& endpoint);
+
+    //! \brief Starts a paid 3-5 second settling transition before counting seated bath time.
+    void sitDown(RoomSpaBather& bather);
 
     //! \brief Starts the bath of a bather that stands in the middle of its block.
     //! \param bather The place of the bather.

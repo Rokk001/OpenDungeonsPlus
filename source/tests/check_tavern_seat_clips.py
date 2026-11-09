@@ -11,9 +11,11 @@ What is checked (fixed values of this branch, counted once)
   furniture  no clip reaches more than 0.04 tiles into the table top, the pedestal, the bench or its legs at any of 385 samples,
              also between its keys, on every seat the guest can take, at the smallest and the largest creature scale of the
              level; the bench counts below the 0.015 tiles a body presses into it; the mug counts in SitDrink
-  resting    the bodies that do not sit on legs lie on the bench: the lowest part above the seat rests on it
-  mug        every skeleton has the mount Weapon_R for the mug except the listed ones; on Kreatur and Scarab a limb brings the rim of
-             the mug to within 0.03 tiles of the mouth in SitDrink
+  resting    the bodies that do not sit on legs rest on their actual stool or bench surface; a mug cannot supply body support
+  mug        every skeleton has the mount Weapon_R for the mug except the listed ones; SitDrink is the calm sip of 5 s of
+             the independent drink authoring recipe (decision 901; the rim at the mouth is checked by check_tavern_drink_834.py); a
+             guest of a stool is measured in all seven clips against the actual table-end furniture and must rest on its stool
+  transition actual joint blends from Sit to SitDrink retain body support and furniture clearance on a stool
   weapons    attached weapon models are hidden during a seated clip (read from the source, not run)
   bench      the pelvis of a walking body stays on the bench in Sit, except for the listed large bodies, whose limit is their own
   floor      the feet of a sitting body stand on the floor in Sit
@@ -32,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'source' / 'tests'))
 import author_tavern_seats as seats
+import check_tavern_drink_834 as drink
 import author_rest_poses as rest
 import fix_walk_feet as feet
 from check_animation_assets import export
@@ -53,10 +56,14 @@ MAX_ROOT_SCALE = 0.01
 MAX_REST_GAP = 0.03
 # Mesh below the floor in Sit, in tiles: the foot of a rig stands in the floor by this little in its own rest pose
 MIN_FLOOR = -0.1
-# The rim of the mug of a body that drinks on a limb comes this close to its mouth in SitDrink, in tiles
-MAX_MUG_REACH = 0.03
 # First and last frame of a clip may differ by this share of the height of the body
 MAX_SEAM = 1e-3
+
+
+# Returns the meshes of the guests of a stool (TAVERN_STOOL_BODIES of RoomTavern.cpp).
+def stool_meshes():
+    room = (ROOT / 'source' / 'rooms' / 'RoomTavern.cpp').read_text(encoding='utf-8')
+    return set(re.findall(r'\{ "([^"]+)", [0-9]+, ', room.split('TAVERN_STOOL_BODIES[] =')[1].split('};')[0]))
 
 
 # Returns the skeleton names of the creature types with a tavern line other than 0 0, and their mesh names.
@@ -75,13 +82,76 @@ def visitors():
 
 
 # Checks the clips of one skeleton and returns the number of clips checked.
+def has_stool_surface_support(points, triangles):
+    """Require a native body triangle over the circular stool within the existing resting-gap bound."""
+    radius = 0.16
+    lower, upper = seats.BENCH_TOP - MAX_REST_GAP, seats.BENCH_TOP + MAX_REST_GAP
+    surfaces = points[triangles]
+    low, high = surfaces.min(axis=1), surfaces.max(axis=1)
+    near = ((low[:, 2] <= upper) & (high[:, 2] >= lower) & (low[:, 0] <= radius) &
+            (high[:, 0] >= -radius) & (low[:, 1] <= radius) & (high[:, 1] >= -radius))
+    for triangle in surfaces[near]:
+        polygon = list(triangle)
+        for height, keep_above in ((lower, True), (upper, False)):
+            clipped = []
+            for start, end in zip(polygon, polygon[1:] + polygon[:1]):
+                start_inside = start[2] >= height if keep_above else start[2] <= height
+                end_inside = end[2] >= height if keep_above else end[2] <= height
+                if start_inside:
+                    clipped.append(start)
+                if start_inside != end_inside:
+                    clipped.append(start + (end - start) * ((height - start[2]) / (end[2] - start[2])))
+            polygon = clipped
+            if not polygon:
+                break
+        if not polygon:
+            continue
+        xy = np.asarray(polygon)[:, :2]
+        following = np.roll(xy, -1, axis=0)
+        crosses = xy[:, 0] * following[:, 1] - xy[:, 1] * following[:, 0]
+        if abs(float(crosses.sum())) > 1e-14 and (np.all(crosses >= 0.0) or np.all(crosses <= 0.0)):
+            return True
+        edges = following - xy
+        squared = np.einsum('ij,ij->i', edges, edges)
+        share = np.clip(-np.einsum('ij,ij->i', xy, edges) / np.maximum(squared, 1e-30), 0.0, 1.0)
+        closest = xy + share[:, None] * edges
+        if float(np.einsum('ij,ij->i', closest, closest).min()) <= radius * radius:
+            return True
+    return False
+
+
+def check_stool_drink_transition(name, skeleton, vertices, weights, triangles, out):
+    """Measure the actual joint blend from sitting to grasping, retaining body support and furniture clearance."""
+    first = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
+    second = skeleton.locals_at(skeleton.clips['SitDrink'], np.zeros(1))
+    shares = np.linspace(0.0, 1.0, TABLE_SAMPLES)
+    local = []
+    for (first_p, first_q, first_s), (second_p, second_q, second_s) in zip(first, second):
+        local.append((first_p + shares[:, None] * (second_p - first_p),
+                      seats.slerp(first_q, second_q, shares),
+                      first_s + shares[:, None] * (second_s - first_s)))
+    body = rest.skin_vertices(skeleton, local, vertices, weights)
+    mug = drink.Mug(skeleton, name, rest.mesh_data(out / (seats.MUG_MESH + '.xml'))[0], drink.read_limb_mounts())
+    _, _, mug_points = mug.world(skeleton.fk(local), skeleton)
+    both = np.concatenate((body, mug_points), axis=1)
+    for frame in range(len(shares)):
+        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
+            assert has_stool_surface_support(body[frame] * level, triangles), (
+                name, 'Sit to SitDrink loses actual stool support', frame, level)
+            depth = drink.stool_depth(both[frame] * level)
+            assert depth <= MAX_TABLE_DEPTH, (name, 'Sit to SitDrink reaches into furniture', frame, level, depth)
+
+
 def check_skeleton(name, mesh_name, out):
+    """Check native seated geometry in its actual stool or bench frame, including body support."""
     export(name + '.skeleton', out)
     export(mesh_name, out)
     export(seats.MUG_MESH, out)
     seats.SCENE['whole_bench'] = name in seats.LARGE_MODELS
     skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
     vertices, faces, weights = rest.mesh_data(out / (mesh_name + '.xml'))
+    triangles = np.asarray([triangle for triangle, _ in faces], dtype=int)
+    on_stool = mesh_name in stool_meshes()
     idle = skeleton.locals_at(skeleton.clips['Idle'], np.zeros(1))
     height = float(np.ptp(rest.skin_vertices(skeleton, idle, vertices, weights)[0, :, 2]))
     for clip in SEAT_CLIPS:
@@ -100,18 +170,37 @@ def check_skeleton(name, mesh_name, out):
                 assert np.abs(locals_fine[index][2] / idle[index][2][0] - 1.0).max() < MAX_ROOT_SCALE, (name, clip, 'a root is scaled', skeleton.names[index])
         clip_vertices, clip_weights = (seats.with_mug(skeleton, vertices, weights, out / (mesh_name + '.xml')) if clip == 'SitDrink' else (vertices, weights))
         points = rest.skin_vertices(skeleton, locals_fine, clip_vertices, clip_weights)
-        depth = seats.level_depth(points)
+        if on_stool:
+            # Decision 901: every clip of a stool guest uses the table-end geometry (decision 863); the mug of a
+            # limb mount counts too while drinking.
+            both = points
+            if clip == 'SitDrink':
+                mug = drink.Mug(skeleton, name, rest.mesh_data(out / (seats.MUG_MESH + '.xml'))[0], drink.read_limb_mounts())
+                _, _, mug_points = mug.world(skeleton.fk(locals_fine), skeleton)
+                both = np.concatenate((points, mug_points), axis=1)
+                for frame in range(len(fine)):
+                    for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
+                        assert has_stool_surface_support(points[frame, :len(vertices)] * level, triangles), (
+                            name, clip, 'body has no actual stool support', frame, level)
+            depth = max(drink.stool_depth(both[frame] * level) for frame in range(len(fine))
+                        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH))
+        else:
+            depth = seats.level_depth(points)
         assert depth <= MAX_TABLE_DEPTH, (name, clip, 'reaches into the furniture', depth)
     has_mount = seats.MUG_BONE in skeleton.idx
     assert has_mount == (name not in seats.NO_MUG_MOUNT), (name, 'mug mount', has_mount)
-    drink = seats.PLAY_MUGS.get((name, 'SitDrink'))
-    if drink is not None:
-        assert seats.mug_rim_distance(skeleton, 'SitDrink', drink) <= MAX_MUG_REACH, (name, 'the mug does not reach the mouth')
+    # Decision 901: SitDrink is one calm sip of the independent drink authoring recipe for every skeleton; the rim at the mouth of every
+    # body (Kreatur and Scarab included, which had their own limb drink here) is checked by check_tavern_drink_834.py
+    assert abs(skeleton.clips['SitDrink'].length - drink.CYCLE) < 1e-6, (name, 'SitDrink is not the sip of 5 s')
     sit = skeleton.locals_at(skeleton.clips['Sit'], np.zeros(1))
     points = rest.skin_vertices(skeleton, sit, vertices, weights)
     assert float(points[0, :, 2].max()) > seats.BENCH_TOP, (name, 'Sit lies below the seat of the bench')
     body_rig = seats.rig.config(name, seats.rig.Skeleton(str(out / (name + '.skeleton.xml'))))
-    if name in seats.RESTING_MODELS:
+    if on_stool:
+        for level in (seats.LEVEL_SCALE_LOW, seats.LEVEL_SCALE_HIGH):
+            assert has_stool_surface_support(points[0] * level, triangles), (name, 'Sit has no actual stool support', level)
+        check_stool_drink_transition(name, skeleton, vertices, weights, triangles, out)
+    elif name in seats.RESTING_MODELS:
         half, near, far = seats.BENCH[:3]
         reach = half if seats.SCENE['whole_bench'] else half + seats.SEAT_SIDE
         over = (np.abs(points[0, :, 0]) < reach) & (points[0, :, 1] > near) & (points[0, :, 1] < far)
