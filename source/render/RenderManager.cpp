@@ -7548,6 +7548,21 @@ float RenderManager::getBuriedLift(RenderedMovableEntity* entity, bool settleAtO
     return it->second.mCurrent;
 }
 
+//! \brief Moves both procedural falls of the creature to their end; the next frame update applies the lying pose.
+void RenderManager::rrSettleCreatureFall(const Creature* creature)
+{
+    for(CreatureDropAnimation& dropAnimation : mCreatureDropAnimations)
+    {
+        if(dropAnimation.mCreature == creature)
+            dropAnimation.mElapsed = std::max(dropAnimation.mElapsed, CREATURE_DROP_ANIMATION_DURATION);
+    }
+    for(CreatureDeathVariant& variant : mCreatureDeathVariants)
+    {
+        if(variant.mCreature == creature)
+            variant.mElapsed = std::max(variant.mElapsed, variant.mDuration);
+    }
+}
+
 bool RenderManager::rrIsCreatureDown(const Creature* creature) const
 {
     if(creature == nullptr)
