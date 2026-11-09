@@ -4,8 +4,8 @@ from the shipped configuration, the rules are worked out here with the same form
 visit, the buff and the locks of Creature.cpp), and the source wiring is pinned by tokens.
 
 What is checked
-  rooms.cfg               PleasureVisitMax 200, PleasureBuffMood 100, SpaMoodJump 50, SpaMoodPerTurn 10.5, SpaBathTurns 14.2857,
-                          SpaRelaxTurns 252, the lock keys of tavern / casino / temple / arena 600, the room rates (temple 10.5,
+  rooms.cfg               PleasureVisitMax 200, PleasureBuffMood 100, SpaMoodJump 50, SpaMoodPerTurn 3.5714285714285714, SpaBathTurns 42,
+                          SpaRelaxTurns 252, SpaRelaxWorkFactor 1.0567, the lock keys of tavern / casino / temple / arena 600, the room rates (temple 10.5,
                           casino 14.7 / -2.25 per second, arena 14 / -11 per second), Make Unhappy -200 and -300 over 504, all
                           documented; global.cfg [Tavern] beer / games / no coin / hangover, BeerMoodTurns and NoCoinMoodTurns gone
   bath                    an Upset creature at 500 takes a bath: +50, +150 over the bath, +100 over 252 turns, 800 in total
@@ -79,8 +79,8 @@ TURNS_PER_SECOND = 1.4
 
 # ---- Values (Global Constraint 13: every value is a documented config key) ------------------------------------------------
 VALUES = {
-    "PleasureVisitMax": 200.0, "PleasureBuffMood": 100.0, "SpaMoodJump": 50.0, "SpaMoodPerTurn": 10.5,
-    "SpaBathTurns": 14.2857, "SpaRelaxTurns": 252.0, "TavernLeisureCooldownTurns": 600.0,
+    "PleasureVisitMax": 200.0, "PleasureBuffMood": 100.0, "SpaMoodJump": 50.0, "SpaMoodPerTurn": 3.5714285714285714,
+    "SpaBathTurns": 42.0, "SpaRelaxTurns": 252.0, "SpaRelaxWorkFactor": 1.0567, "TavernLeisureCooldownTurns": 600.0,
     "CasinoVisitLockTurns": 600.0, "TempleVisitLockTurns": 600.0, "ArenaVisitLockTurns": 600.0,
     "TemplePrayerReliefPerTurn": 10.5, "CasinoMoodSmiles": 14.7, "CasinoMoodMoney": -2.25,
     "PitMoodSpectator": 14.0, "PitMoodSolitary": -11.0, "PitMoodVictor": 250.0,
@@ -101,8 +101,10 @@ for gone in ("SpaMoodDecayPerTurn", "SpaMoodMax", "CasinoMoodDecay", "CasinoMood
              "TemplePrayerReliefDecayPerTurn", "TemplePrayerReliefMax"):
     check(gone not in rooms_cfg, gone + " must stay removed")
 
-# 50 + 14.2857 x 10.5 fills the visit limit; the visit and the buff make the 300 of the design (D6)
-near(rooms_f := float(rooms["SpaMoodJump"]) + float(rooms["SpaMoodPerTurn"]) * float(rooms["SpaBathTurns"]), 200.0, "bath fills the limit", 0.01)
+# 50 + 42 x (150 / 42) fills the visit limit; the visit and the buff make the 300 of the design (D6)
+near(rooms_f := float(rooms["SpaMoodJump"]) + float(rooms["SpaMoodPerTurn"]) * float(rooms["SpaBathTurns"]), 200.0, "bath fills the limit")
+near(float(rooms["SpaBathTurns"]) / TURNS_PER_SECOND, 30.0, "bath: 30 seated seconds")
+near(float(rooms["SpaMoodPerTurn"]) * 42.0, 150.0, "bath: 150 over 42 seated turns")
 near(float(rooms["PleasureVisitMax"]) + float(rooms["PleasureBuffMood"]), 300.0, "visit plus buff")
 # 10.5 per turn is the 14.7 per second of the casino at 1.4 turns per second
 near(float(rooms["CasinoMoodSmiles"]) / TURNS_PER_SECOND, float(rooms["TemplePrayerReliefPerTurn"]), "casino rate per turn")
@@ -230,9 +232,20 @@ c = Creature(stored=500.0)
 c.begin(Creature.SPA)
 c.add_pleasure(Creature.SPA, float(rooms["SpaMoodJump"]))
 near(c.stored, 550.0, "bath: the jump when it starts")
+# The penultimate turn must not finish the visit early or reach its mood cap.
 c = Creature(stored=500.0)
-check(bath(c) == 15, "the counted turns reach 14.2857 in the 15th turn")
-near(c.stored, 700.0, "bath: 200 inside the room (the 15th turn is cut at the limit)")
+c.begin(Creature.SPA)
+c.add_pleasure(Creature.SPA, float(rooms["SpaMoodJump"]))
+for _ in range(41):
+    c.add_pleasure(Creature.SPA, float(rooms["SpaMoodPerTurn"]))
+near(c.stored, 696.4285714285714, "bath: mood after 41 seated turns")
+check(not c.full(Creature.SPA), "bath: the visit is not full one turn early")
+c.add_pleasure(Creature.SPA, float(rooms["SpaMoodPerTurn"]))
+near(c.stored, 700.0, "bath: the final seated turn fills the visit")
+check(c.full(Creature.SPA), "bath: the visit is full after 42 seated turns")
+c = Creature(stored=500.0)
+check(bath(c) == 42, "the bath lasts exactly 42 seated turns")
+near(c.stored, 700.0, "bath: 200 inside the room after 42 seated turns")
 check(c.visit_kind == -1, "the visit ends with the bath")
 check(len(c.effects) == 1 and c.effects[0][0] == "Relaxed", "the buff Relaxed starts at the end of the bath")
 near(c.effects[0][1] * c.effects[0][2], 100.0, "the buff gives 100 in total")
@@ -252,9 +265,9 @@ c = Creature(stored=500.0)
 c.begin(Creature.SPA)
 c.add_pleasure(Creature.SPA, 50.0)
 for _ in range(10):
-    c.add_pleasure(Creature.SPA, 10.5)
+    c.add_pleasure(Creature.SPA, float(rooms["SpaMoodPerTurn"]))
 c.finish(Creature.SPA, 252.0, 252.0, False)
-near(c.stored, 655.0, "broken bath: the mood so far stays")
+near(c.stored, 585.7142857142857, "broken bath: 50 plus ten seated turns stays")
 check(c.has_buff() and c.relax == 252.0, "broken bath: buff and lock as after a bath that gained mood")
 c = Creature(stored=500.0)
 c.begin(Creature.SPA)

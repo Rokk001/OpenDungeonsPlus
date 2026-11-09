@@ -5,7 +5,7 @@ One check per fault
   shelf rotation      RoomMerchant::notifyActiveSpotCreated turns wall shelves by place: left 90, right 270,
                       bottom 180, top 0 (the convention of Library, Casino, Crypt, Alchemy lab ...), not a fixed 0
   other wall objects  every room that places objects on wall spots (left/right/top/bottom) turns them per place
-  merchant facing     MerchantEntity turns to the open room side (back to the wall) while it idles at a table
+  merchant facing     MerchantEntity stands on a free tile beside the table or shelf and turns to it (decision 901)
 
 Call (from the repository root): python source/tests/check_merchant_wall_facing.py
 """
@@ -36,10 +36,10 @@ for rel in ("RoomLibrary", "RoomCasino", "RoomCrypt", "RoomPrison", "RoomTorture
             fails.append("other wall objects: %s lacks %s degrees for the %s wall" % (rel, angle, place))
 
 ent = text("source/entities/MerchantEntity.cpp")
-if "getRoomFacing" not in ent or not re.search(r"setAnimationState\((mAtShelf \? \"Idle\" : )?\"CountGold\",\s*true,\s*facing\)", ent):
-    fails.append("merchant facing: the idling merchant is not turned to the open room side")
-if not re.search(r"!open\[index\]\s*&&\s*open\[opposite\]", ent):
-    fails.append("merchant facing: the back to the wall rule is missing")
+if "getRoomFacing" in ent or "mStopTile" not in ent or not re.search(r"setAnimationState\(mAtShelf \? \"Idle\" : \"CountGold\",\s*true,\s*facing\)", ent):
+    fails.append("merchant facing: the idling merchant is not turned to the table or shelf he stands beside (decision 901)")
+if not re.search(r"mStopTile->getX\(\) - stop->getX\(\)", ent):
+    fails.append("merchant facing: the direction to the stop tile is missing")
 
 if fails:
     print("FAIL"); [print(" -", f) for f in fails]; sys.exit(1)

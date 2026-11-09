@@ -8,6 +8,7 @@ repo = Path(__file__).resolve().parents[2]
 NL = chr(10)
 
 
+# Read production source independently of the current working directory.
 def read(path):
     return (repo / path).read_text(encoding='utf-8')
 
@@ -31,13 +32,14 @@ assert 'mGoldCarried = 0; mGoldStolen = 0;' in header
 assert 'mGoldCarried -= deposited;' not in creature and 'addGoldCarried(-deposited);' in creature
 assert 'mGoldCarried = capacity;\n    clampGoldStolen();' in creature
 
-# Saved and loaded with the creature, and sent as the last field of both creature packets.
+# Saved and loaded with the creature, and sent before the live drag worker in both creature packets.
 assert 'os << "\\t[Stolen] " << mGoldStolen << " [/Stolen]";' in creature
 assert 'if(appearanceToken == "[Stolen]")' in creature and 'setGoldStolen(stolenLoaded);' in creature
-ghost_out = ('mGhostThrowTarget << mGhostThrowTurns;' + NL + '    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)' + NL
-             + '    os << mGoldStolen;' + NL + '}')
+ghost_out = ('mGhostThrowTarget << mGhostThrowTurns;' + NL + '    // The stolen part of the carried gold sizes the thief sack; the live drag worker follows it.' + NL
+             + '    os << mGoldStolen;' + NL + '    os << mDragWorkerName;' + NL + '}')
 assert creature.count(ghost_out) == 2
-ghost_in = ('mGhostThrowClientTurns=mGhostThrowTurns;' + NL + '    OD_ASSERT_TRUE(is >> mGoldStolen);' + NL + '    clampGoldStolen();')
+ghost_in = ('mGhostThrowClientTurns=mGhostThrowTurns;' + NL + '    OD_ASSERT_TRUE(is >> mGoldStolen);' + NL
+            + '    OD_ASSERT_TRUE(is >> mDragWorkerName);' + NL + '    clampGoldStolen();')
 assert creature.count(ghost_in) == 2
 
 # The sack follows the stolen gold only, for every creature (not only the ones with a steal rate), and hangs at the belt.

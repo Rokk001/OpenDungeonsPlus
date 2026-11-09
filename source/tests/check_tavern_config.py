@@ -105,19 +105,32 @@ for key, seconds in (('HangoverTurns', 180), ('DuelKoTurns', 30), ('BeerDrinkTur
 assert abs(float(tavern['DuelKoTurns']) / turns_per_second - 30.0) < 1e-9, 'DuelKoTurns must last exactly 30 s'
 room_source = read('source/rooms/RoomTavern.cpp')
 knock_out = room_source[room_source.index('void RoomTavern::knockOut('):room_source.index('bool RoomTavern::fallNextToBench(')]
-assert 'setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")));' in knock_out, 'the knock-out lasts DuelKoTurns'
+# Decision 897: the count starts one turn higher, because upkeepSpots counts the turn of the knock-out down right after
+# upkeepGames knocked the loser out
+assert 'setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")) + KNOCK_OUT_TURN);' in knock_out, 'the knock-out lasts DuelKoTurns'
+assert re.search(r'^const int32_t KNOCK_OUT_TURN = 1;$', room_source, re.M), 'the turn of the knock-out is counted once'
 upkeep = room_source[room_source.index('void RoomTavern::doUpkeep()'):]
 upkeep = upkeep[:upkeep.index('\n}\n')]
 assert upkeep.count('upkeepSpots();') == 1, 'the lying time counts one turn per room upkeep'
+assert upkeep.index('upkeepGames();') < upkeep.index('upkeepSpots();'), 'the knock-out comes before the count of its turn'
+games = room_source[room_source.index('void RoomTavern::upkeepGames('):room_source.index('void RoomTavern::knockOut(')]
+assert 'knockOut(' in games and room_source.count('knockOut(loserSpot->second);') == 1, 'the knock-out only comes from upkeepGames'
 spots = room_source[room_source.index('void RoomTavern::upkeepSpots()'):room_source.index('bool RoomTavern::payForBeer(')]
 ko_case = spots[spots.index('case TavernGuestState::ko:'):spots.index('case TavernGuestState::getUp:')]
 assert ko_case.count('--spot.mTurnsLeft;') == 1 and 'setSpotState(spot, TavernGuestState::getUp, getUpTurns());' in ko_case, \
     'the lying counts down one turn per upkeep and then the loser gets up'
-# The model: a loser knocked out in one upkeep turn lies DuelKoTurns upkeeps, then gets up
-left, lying = int(tavern['DuelKoTurns']), 0
-while left > 0:
-    left -= 1
+# The model of doUpkeep: in the turn of the knock-out upkeepGames sets DuelKoTurns + KNOCK_OUT_TURN and upkeepSpots counts
+# that turn down; every turn after it is one more turn lying, until the count reaches 0 and the get-up starts (decision
+# 897: 42 turns, 30 s; before, 41 turns, 29.3 s)
+left = int(tavern['DuelKoTurns']) + 1
+left -= 1
+lying = 0
+while True:
     lying += 1
+    left -= 1
+    if left <= 0:
+        break
+assert lying == 42, lying
 assert abs(lying / turns_per_second - 30.0) < 1e-9, 'the loser lies 30 real seconds'
 
 # The slap duel (decisions 856 and 858): one slap 4 to 10 s, the pause after it 3 to 6 s, drawn anew every time

@@ -88,6 +88,28 @@ struct Weapon {
     const std::string& getWeaponType() const { return type; }
     //! \brief Returns how many hands this spawn weapon occupies.
     uint32_t getHands() const { return hands; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getPhysicalDamageMin() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getPhysicalDamage() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getMagicalDamageMin() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getMagicalDamage() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getElementDamageMin() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getElementDamage() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getPhysicalDefense() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getMagicalDefense() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getElementDefense() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getAttackRating() const { return 0.0; }
+    //! \brief Supplies neutral base equipment values outside presentation probes.
+    double getDefenseRating() const { return 0.0; }
 };
 namespace CreatureSkillTree {
 //! \brief Supplies creature group/family identity to the real drop and rating methods.

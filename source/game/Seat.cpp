@@ -2432,6 +2432,12 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
         case TileVisual::spaRoom:
         // The ghost room owner is remembered for humans too: the ghost hunters button needs the own room tiles
         case TileVisual::ghostRoom:
+        // The owner of the merchant, herb garden, alchemy laboratory and infirmary is remembered for humans too: a
+        // room without owner flashes in changing colours on the minimap like an unclaimed one (decision 991)
+        case TileVisual::merchantRoom:
+        case TileVisual::herbGardenRoom:
+        case TileVisual::alchemyLabRoom:
+        case TileVisual::infirmaryRoom:
             if(tile->getSeat() == nullptr)
             {
                 OD_LOG_ERR("Tile=" + Tile::displayAsString(tile));
@@ -2454,13 +2460,6 @@ void Seat::updateTileStateForSeat(Tile* tile, bool hideSeatId)
                     jj->second.mSeatIdOwner = tile->getSeat()->getId();
                 }
             }
-            break;
-        case TileVisual::merchantRoom:
-        case TileVisual::herbGardenRoom:
-        case TileVisual::alchemyLabRoom:
-        case TileVisual::infirmaryRoom:
-            jj->second.mSeatIdOwner = (mPlayer != nullptr && !mPlayer->getIsHuman() && tile->getSeat() != nullptr)
-                ? tile->getSeat()->getId() : -1;
             break;
         default:
             jj->second.mSeatIdOwner = -1;
@@ -2570,6 +2569,16 @@ void Seat::exportTileToPacket(ODPacket& os, Tile* tile,
             case TileVisual::ghostRoom:
                 tileSeatId = tileState.mSeatIdOwner;
                 if(tileSeatId == -1 && tile->getSeat() == this && tile->getTileVisual() == TileVisual::ghostRoom)
+                    tileSeatId = getId();
+                break;
+            // The owner of these rooms is sent like that of the other rooms (decision 991); a state stored before the
+            // owner was remembered for humans still has -1, the own room is always known
+            case TileVisual::merchantRoom:
+            case TileVisual::herbGardenRoom:
+            case TileVisual::alchemyLabRoom:
+            case TileVisual::infirmaryRoom:
+                tileSeatId = tileState.mSeatIdOwner;
+                if(tileSeatId == -1 && tile->getSeat() == this && tile->getTileVisual() == tileState.mTileVisual)
                     tileSeatId = getId();
                 break;
             case TileVisual::waterGround:
