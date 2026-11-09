@@ -2127,6 +2127,40 @@ void Gui::setUserScalePercent(float scalePercent)
     applyScale(CEGUI::System::getSingleton().getRenderer()->getDisplaySize());
 }
 
+//! \brief Fits every editor construction button into two rows on its tab page.
+void Gui::arrangeEditorActionButtons(CEGUI::Window* editorSheet)
+{
+    const char* pages[] = {"MainTabControl/Rooms", "MainTabControl/Traps", "MainTabControl/Spells"};
+    const float scale = getLayoutScale();
+    if(scale <= 0.0f)
+        return;
+    for(const char* path : pages)
+    {
+        CEGUI::Window* panel = editorSheet->getChild(path);
+        std::vector<CEGUI::Window*> buttons;
+        for(size_t i = 0; i < panel->getChildCount(); ++i)
+        {
+            CEGUI::Window* child = panel->getChildAtIdx(i);
+            if(child->getType() == "OD/GameTabButton")
+                buttons.push_back(child);
+        }
+        if(buttons.empty())
+            continue;
+        const size_t columns = (buttons.size() + 1) / 2;
+        const float width = panel->getPixelSize().d_width / scale;
+        const float height = panel->getPixelSize().d_height / scale;
+        const float side = std::max(0.0f, std::min(52.0f, std::min(
+            (width - 8.0f) / static_cast<float>(columns) - 4.0f, (height - 12.0f) / 2.0f)));
+        for(size_t i = 0; i < buttons.size(); ++i)
+        {
+            const float x = 4.0f + static_cast<float>(i / 2) * (side + 4.0f);
+            const float y = 4.0f + static_cast<float>(i % 2) * (side + 4.0f);
+            setScaledArea(buttons[i], CEGUI::URect(CEGUI::UDim(0, x), CEGUI::UDim(0, y),
+                CEGUI::UDim(0, x + side), CEGUI::UDim(0, y + side)));
+        }
+    }
+}
+
 void Gui::arrangeActionButtonPanels(CEGUI::Window* gameSheet)
 {
     arrangeRoomButtons(gameSheet->getChild(TAB_ROOMS));
@@ -2230,6 +2264,10 @@ void Gui::applyScale(const CEGUI::Sizef& displaySize)
         arrangeActionButtonPanels(gameSheet->second);
         layoutMiniMapButtons(gameSheet->second);
     }
+
+    const std::map<guiSheet, CEGUI::Window*>::iterator editorSheet = mSheets.find(editorModeGui);
+    if(editorSheet != mSheets.end())
+        arrangeEditorActionButtons(editorSheet->second);
 
     for(const std::pair<CEGUI::Window* const, WindowScaleData>& scaledWindow : mScaledWindows)
     {
