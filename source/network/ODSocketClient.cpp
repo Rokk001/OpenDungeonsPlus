@@ -240,15 +240,30 @@ void ODSocketClient::processClientSocketMessages(int miliseconds)
     while(isConnected() && processOneClientSocketMessage(miliseconds));
 }
 
+//! \brief Receives and processes one server message. A timeout of 0 or less polls the socket without waiting.
 bool ODSocketClient::processOneClientSocketMessage(int miliseconds)
 {
-    if(!isDataAvailable(miliseconds))
-        return false;
-
     ODPacket packetReceived;
+    ODComStatus comStatus;
+    if((miliseconds <= 0) && (mSource == ODSource::network))
+    {
+        // Poll without any wait. A selector wait of zero would block until data comes, and even a very short
+        // wait lasts at least one tick of the system timer. The socket is non blocking for this receive only;
+        // SFML keeps a packet that has arrived only in part until the rest comes with a later call.
+        mSockClient.setBlocking(false);
+        comStatus = recv(packetReceived);
+        mSockClient.setBlocking(true);
+        if(comStatus == ODComStatus::NotReady)
+            return false;
+    }
+    else
+    {
+        if(!isDataAvailable(miliseconds))
+            return false;
 
-    // Check if data available
-    ODComStatus comStatus = recv(packetReceived);
+        // Check if data available
+        comStatus = recv(packetReceived);
+    }
     if(comStatus != ODComStatus::OK)
     {
         playerDisconnected();

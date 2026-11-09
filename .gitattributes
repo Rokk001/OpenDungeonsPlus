@@ -13,6 +13,9 @@ art/ export-ignore
 *.txt text eol=lf
 *.md text eol=lf
 
+# Keep the prerequisite patch sequence consistent for recount and reverse checks.
+scripts/win32/patches/ogre14-*.patch text eol=lf
+
 # NOTE: We no more automatically change the line endings of such windows files
 # as it is triggering random line-endings changes on utf8 linux systems, for instance.
 # See: https://github.com/OpenDungeons/OpenDungeons/issues/40

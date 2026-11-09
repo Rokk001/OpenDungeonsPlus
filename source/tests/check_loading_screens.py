@@ -128,7 +128,10 @@ def main():
     assert "window.update()" not in present, "do not render a partially initialized menu"
     assert "presentStartup();" in source.split("void LoadingScreen::scriptParseEnded", 1)[1].split("void LoadingScreen::finishStartup", 1)[0], "resource initialization must refresh the picture"
     for stage in ("resMgr.setupOgreResources(", "Ogre::ResourceGroupManager::getSingletonPtr()->initialiseAllResourceGroups();", "SoundEffectsManager soundEffectsManager;", "pybind11::gil_scoped_release pythonMainThreadRelease;", "Gui gui("):
-        start = application.index("\n    " + stage, startup)
+        # Visual owners live in a nested scope; retain the same immediate-present assertion.
+        match = re.search(r"(?m)^ +" + re.escape(stage), application[startup:])
+        assert match is not None, f"missing initialization stage: {stage}"
+        start = startup + match.start() - 1
         following = application[start:].splitlines()[2].strip()
         assert following.startswith("LoadingScreen::presentStartup("), f"missing startup present after {stage}"
     groups = (root / "source/renderscene/RenderSceneGroup.cpp").read_text(encoding="utf-8")

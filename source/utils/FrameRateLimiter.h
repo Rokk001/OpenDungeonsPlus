@@ -28,13 +28,26 @@ class FrameRateLimiter
 {
 public:
     FrameRateLimiter(std::int64_t frameRate);
-    //! \brief Sleep if there is time left since last time the function was called.
+    ~FrameRateLimiter();
+    FrameRateLimiter(const FrameRateLimiter&) = delete;
+    FrameRateLimiter& operator=(const FrameRateLimiter&) = delete;
+    //! \brief Sleep until the frame's minimum time and report requested versus actual sleep once per minute.
     void sleepIfEarly();
     unsigned int getFrameRate();
     void setFrameRate(unsigned int frameRate);
 private:
+    //! \brief Waits the requested microseconds, on Windows with a high-resolution waitable timer.
+    void waitFor(std::int64_t microseconds);
     std::int64_t mMinFrameTime;
+    //! Windows high-resolution waitable timer (a HANDLE), or null where it is unavailable.
+    void* mWaitTimer;
     sf::Clock mClock;
+    //! Aggregated sleep observations; the global timer resolution is not changed.
+    std::int64_t mReportElapsed;
+    std::int64_t mSleepCount;
+    std::int64_t mRequestedSleep;
+    std::int64_t mActualSleep;
+    std::int64_t mMaxOversleep;
 };
 
 #endif // FPSLIMITER_H
