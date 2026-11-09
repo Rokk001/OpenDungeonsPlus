@@ -174,6 +174,12 @@ def pinned_source_check(source):
     paths = set()
     for patch in patches:
         paths.update(re.findall(r'^--- a/(.+)$', patch.read_text(), re.MULTILINE))
+    # Binary patches have no --- header; bind their preimage to the fixed target.
+    binary_target = 'RenderSystems/GL3Plus/src/OgreGL3PlusHardwareBuffer.cpp'
+    binary_stats = subprocess.check_output(
+        ['git', 'apply', '--numstat', str(patches[3])], text=True).splitlines()
+    assert binary_stats == ['-\t-\t' + binary_target], binary_stats
+    paths.add(binary_target)
     with tempfile.TemporaryDirectory(prefix='pinned-ogre-patches-') as temporary:
         directory = Path(temporary) / 'src/ogre'
         directory.mkdir(parents=True)
