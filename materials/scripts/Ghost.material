@@ -334,6 +334,68 @@ material GhostEctoplasm
     }
 }
 
+// Ectoplasm in the ghost cauldron mouth and in the window fill (owner decision 998 point 6): a swirl texture that turns
+// slowly round the middle of the mouth, glowing (emissive) and wet (tight bright specular), with two additive layers of
+// light wisps and bubble rings drifting across it in different directions and scales so the surface keeps moving.
+// tools/gen_ghost_cauldron_ectoplasm.py paints both textures and gives the meshes planar UVs centred on the mouth.
+material GhostCauldronEctoplasm
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            ambient 0.35 0.55 0.35
+            diffuse 0.55 0.75 0.55
+            emissive 0.50 0.72 0.50
+            specular 0.85 1.0 0.85 1 64
+            texture_unit
+            {
+                texture GhostCauldronEctoplasm.png
+                tex_address_mode wrap
+                filtering trilinear
+                rotate_anim 0.012
+            }
+        }
+        pass
+        {
+            scene_blend add
+            depth_write off
+            ambient 0 0 0
+            diffuse 0 0 0
+            specular 0 0 0 1 1
+            emissive 0.30 0.55 0.32
+            texture_unit
+            {
+                texture GhostCauldronEctoGlint.png
+                tex_address_mode wrap
+                filtering trilinear
+                scale 1.4 1.4
+                scroll_anim 0.025 0.04
+                rotate_anim -0.008
+            }
+        }
+        pass
+        {
+            scene_blend add
+            depth_write off
+            ambient 0 0 0
+            diffuse 0 0 0
+            specular 0 0 0 1 1
+            emissive 0.16 0.30 0.18
+            texture_unit
+            {
+                texture GhostCauldronEctoGlint.png
+                tex_address_mode wrap
+                filtering trilinear
+                scale 0.7 0.7
+                scroll_anim -0.035 0.02
+                wave_xform scroll_y sine 0.0 0.4 0.0 0.03
+            }
+        }
+    }
+}
+
 material GhostCrystal
 {
     receive_shadows off

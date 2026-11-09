@@ -59,7 +59,8 @@ def cauldron_delivery(credits, chunks_module):
     mesh = (repo/'models/GhostCauldron.mesh').read_bytes()
     assert b'GhostCauldron.skeleton\n' in mesh, 'cauldron rig link'
     materials = sorted(set(name.decode() for name in re.findall(rb'(Ghost[A-Za-z]+)\n', mesh)))
-    assert materials == ['GhostBrass','GhostCoal','GhostEctoplasm','GhostEmbers','GhostIron','GhostWindow'], materials
+    assert materials == ['GhostBrass','GhostCauldronEctoplasm','GhostCoal','GhostEctoplasm','GhostEmbers','GhostIron',
+        'GhostWindow'], materials
     material_script = read('materials/scripts/Ghost.material')
     for name in materials:
         assert re.search(r'^material '+name+r'\s*$', material_script, re.M), name
@@ -113,9 +114,10 @@ def cauldron_delivery(credits, chunks_module):
         assert abs(duration-expected)<1e-5, (name,duration)
         _, tracks = chunks_module.animation_children(data)
         assert {bone for kind,bone,track in tracks if kind == 0x4100} == {1,2}, (name,'socket/glow tracks')
-    # The independent client-controlled inspection-window fill is retained byte for byte.
+    # The independent client-controlled inspection-window fill: the decision 845 geometry with the textured, moving
+    # GhostCauldronEctoplasm and planar UVs of decision 998 point 6 (check_ghost_cauldron_ectoplasm.py), byte for byte.
     assert hashlib.sha256((repo/'models/GhostCauldronFill.mesh').read_bytes()).hexdigest() == \
-        '4bae03b231fed2dae105a0bc965e3c2e6ea98cefe8f5b0df1eeed4841f190a2c', 'inspection fill changed'
+        '86f6e60d854a391752facbf6e4c3eb330188df0ba654df3235d6a62924b474d7', 'inspection fill changed'
 
 
 # Check the assigned asset families and exact existing generator registration without running its writing path.
