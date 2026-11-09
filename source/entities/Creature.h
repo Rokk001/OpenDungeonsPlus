@@ -952,6 +952,8 @@ public:
     void updateGhostHuntVisuals(double seconds);
     //! \brief Destroys this hunter's cosmetic scene objects and looping sound.
     void clearGhostHuntVisuals();
+    //! \brief Ends the generated pose layer of decision 936 (pick-up or put-in) and restores the skeleton blend mode.
+    void stopGhostPose();
     //! \brief Pins all saved occupied cauldrons before the global equipment rebind pass.
     void restoreGhostHuntLayout();
     //! \brief Rebinds saved hunt reservations after every entity and crypt has loaded.
@@ -2302,6 +2304,26 @@ private:
     double mGhostDeliveryClock = 0.0;
     std::string mGhostDeliveryGhost;
     Ogre::Vector3 mGhostDeliveryMouth = Ogre::Vector3::ZERO;
+    //! \brief Decision 936 point 4: the client clock of the flow of the ghost now in the trap seat, in seconds since its
+    //! delivery began, advanced every frame (the server sends its share only 1.4 times a second); mGhostFlowSeen is the
+    //! last server share taken in, mGhostFlowCorrection the remaining difference to it, worked off gently over a second.
+    std::string mGhostFlowGhost;
+    double mGhostFlowClock = 0.0;
+    double mGhostFlowCorrection = 0.0;
+    double mGhostFlowSeen = -1.0;
+    //! \brief Decision 936 points 2 and 3: the generated pose layer over the hunter's Idle clip (bending down to the trap on
+    //! the floor, mode 7, or reaching out to the trap seat, mode 5), its clip name on the shared skeleton, the box mode it
+    //! belongs to, its client clock in seconds, the hunter's turn it was built for and the skeleton blend mode to restore.
+    Ogre::AnimationState* mGhostPose = nullptr;
+    std::string mGhostPoseName;
+    uint32_t mGhostPoseMode = 0;
+    double mGhostPoseClock = -1.0;
+    Ogre::Quaternion mGhostPoseFacing = Ogre::Quaternion::IDENTITY;
+    int mGhostPoseBlend = 0;
+    //! \brief Decision 936 point 2, state 8: the previously dropped lying box (GhostBoxEntity) this hunter lifts from the
+    //! floor, hidden while his own trap shows the lift in its place, and where it lay (the lift starts there).
+    std::string mGhostHiddenBox;
+    Ogre::Vector3 mGhostPickFloor = Ogre::Vector3::ZERO;
     //! \brief The running mood effects (buffs and debuffs). Saved on the server, sent to the keeper for the effect line.
     //! Declared before mActions, so that it is still alive when the actions of the creature end a pleasure visit (the
     //! pleasure buff starts then).

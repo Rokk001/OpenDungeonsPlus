@@ -12726,12 +12726,19 @@ void Creature::refreshGhostHuntVisuals()
                 const double transfer=hunt->getTransferTurns();
                 turns=transfer>0.0?std::min(1.0,turns/transfer):1.0;
             }
+            // While he lifts the box from the floor the clock is the share of the pick-up already done (decision 936):
+            // a loaded game or a keeper who looks on late starts the lift there
+            else if(boxMode==7)
+            {
+                const double pickUp=CreatureActionHuntGhost::getPickUpTurns();
+                turns=pickUp>0.0?std::min(1.0,turns/pickUp):1.0;
+            }
             break;
         }
     // The throw (1) and the snap (4) send their own step clock, the beam (3) the pulled-in share, the transfer (5) the
-    // transferred share.
+    // transferred share, the pick-up (7) the share of the lift.
     if(backpack!=mGhostBackpack || target!=mGhostBeamTarget || boxMode!=mGhostBoxMode || thrown!=mGhostThrowTarget ||
-       ((boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5) && turns!=mGhostThrowTurns))
+       ((boxMode==1 || boxMode==3 || boxMode==4 || boxMode==5 || boxMode==7) && turns!=mGhostThrowTurns))
     {
         mGhostBackpack=backpack;mGhostBeamTarget=target;mGhostBoxMode=boxMode;
         mGhostThrowTarget=thrown;mGhostThrowTurns=turns;mNeedFireRefresh=true;
@@ -12828,13 +12835,13 @@ static void aimGhostCannon(Ogre::Entity& body, Ogre::Entity& cannon, Ogre::TagPo
         handNode->setOrientation(handNode->getParentSceneNode()->_getDerivedOrientation().Inverse()*wanted);
 }
 
-//! Number of rings along the hose and of sides round it (decision 894); the vertex count of the dynamic hose never changes.
-static const size_t GHOST_HOSE_RINGS=16;
+//! Four rings per corrugation (32 ribs, decision 936); the vertex count of the dynamic hose never changes.
+static const size_t GHOST_HOSE_RINGS=128;
 static const size_t GHOST_HOSE_SIDES=8;
 
 //! \brief Re-shapes the flexible hose (decision 894) as a tube along a cubic curve from the pack's port to the rear end of
 //! the cannon. Both ends leave along the given directions and the middle sags, so the hose follows every movement of the
-//! hunter and of the cannon; the textured tube has the given radius in world units.
+//! hunter and of the cannon; the textured corrugations reach the given radius in world units.
 static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, const Ogre::Vector3& portOut,
     const Ogre::Vector3& rear, const Ogre::Vector3& rearOut, Ogre::Real radius)
 {
@@ -12844,7 +12851,6 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
     const Ogre::Vector3 control1=port+portOut*reach+sag,control2=rear+rearOut*reach+sag;
     if(hose.getNumSections()==0) hose.begin("GhostHose",Ogre::RenderOperation::OT_TRIANGLE_LIST);
     else hose.beginUpdate(0);
-    Ogre::Real along=0.0f;Ogre::Vector3 previous=port;
     for(size_t ring=0;ring<=GHOST_HOSE_RINGS;++ring)
     {
         const Ogre::Real t=static_cast<Ogre::Real>(ring)/static_cast<Ogre::Real>(GHOST_HOSE_RINGS),u=1.0f-t;
@@ -12857,14 +12863,14 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
         if(side.squaredLength()<1.0e-6f) side=tangent.crossProduct(Ogre::Vector3::UNIT_X);
         side.normalise();
         const Ogre::Vector3 up=tangent.crossProduct(side);
-        along+=(centre-previous).length();previous=centre;
+        const Ogre::Real ribRadius=radius*(0.86f+0.14f*std::cos(2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(ring)/4.0f));
         for(size_t k=0;k<=GHOST_HOSE_SIDES;++k)
         {
             const Ogre::Real angle=2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_SIDES);
             const Ogre::Vector3 normal=side*std::cos(angle)+up*std::sin(angle);
-            hose.position(centre+normal*radius);
+            hose.position(centre+normal*ribRadius);
             hose.normal(normal);
-            hose.textureCoord(static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_SIDES),along/(4.0f*radius));
+            hose.textureCoord(static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_SIDES),t);
         }
     }
     for(size_t ring=0;ring<GHOST_HOSE_RINGS;++ring)
@@ -12905,9 +12911,182 @@ static void setGhostHunterWeaponsVisible(Ogre::SceneManager* scene, const Creatu
     }
 }
 
+//! \brief Returns the first bone of the skeleton with one of the names, or nullptr.
+static Ogre::Bone* ghostPoseBone(Ogre::Skeleton& skeleton, std::initializer_list<const char*> names)
+{
+    for(const char* name : names)
+        if(skeleton.hasBone(name)) return skeleton.getBone(name);
+    return nullptr;
+}
+
+//! \brief True if the bone lies in the subtree of the ancestor (or is it).
+static bool ghostPoseBelow(const Ogre::Node* bone, const Ogre::Node* ancestor)
+{
+    for(const Ogre::Node* node=bone;node!=nullptr;node=node->getParent())
+        if(node==ancestor) return true;
+    return false;
+}
+
+//! \brief Smooth step 0 to 1 from a to b with zero speed at both ends.
+static double ghostEase(double a, double b, double t)
+{
+    const double x=b>a?std::max(0.0,std::min(1.0,(t-a)/(b-a))):(t>=b?1.0:0.0);
+    return x*x*x*(x*(x*6.0-15.0)+10.0);
+}
+
+//! \brief Weight of a generated hunter pose (decision 936) at share p of its time: it eases in up to `in`, holds the full
+//! pose until `out` and eases back to the Idle clip by the end, with zero speed at every turning point.
+static Ogre::Real ghostPoseWeight(double p, double in, double out)
+{ return static_cast<Ogre::Real>(ghostEase(0.0,in,p)*(1.0-ghostEase(out,1.0,p))); }
+
+//! \brief One arm of a hunter skeleton for the generated poses: upper arm, forearm and hand (decision 936).
+struct GhostPoseArm { Ogre::Bone* upper; Ogre::Bone* lower; Ogre::Bone* tip; };
+
+//! \brief Builds the generated pose of decision 936 as a clip on the shared skeleton of the hunter (one per hunter, named
+//! after it), to be laid over his Idle clip with the cumulative blend mode and eased in and out by its weight. It is taken
+//! from his live pose, so every rotation is a turn in the space of the mesh, whatever the axes of the single bones:
+//! bending (pickUp) he bows 70 degrees at the waist towards the point, bends his knees 50 degrees with his hips lowered so
+//! that his feet stay where they are, looks at the point and stretches both arms to it; reaching (put-in) he bows 15
+//! degrees and stretches the arm holding the trap (holdingBone) to the point. A skeleton without the bones keeps Idle.
+static Ogre::AnimationState* buildGhostPose(Ogre::Entity& body, const std::string& name, const Ogre::Vector3& point,
+    bool pickUp, const std::string& holdingBone)
+{
+    if(!body.hasSkeleton() || body.getParentNode()==nullptr) return nullptr;
+    Ogre::SkeletonInstance& live=*body.getSkeleton();
+    Ogre::Skeleton& shared=*body.getMesh()->getSkeleton();
+    if(body.getAllAnimationStates()->hasAnimationState(name)) body.getAllAnimationStates()->removeAnimationState(name);
+    if(shared.hasAnimation(name)) shared.removeAnimation(name);
+    // The live pose of this frame, without the pose layer
+    live.setAnimationState(*body.getAllAnimationStates());
+    live._updateTransforms();
+    Ogre::Bone* waist=ghostPoseBone(live,{"Spine_1","spine","belly","spine.01","LowerBack","Spine","Spine1","TorsoUpper","spine1"});
+    if(waist==nullptr) return nullptr;
+    Ogre::Bone* head=ghostPoseBone(live,{"Head","head","crown"});
+    const GhostPoseArm arms[2]={
+        {ghostPoseBone(live,{"ArmUpper.L","arm_l","LeftArm","Arm_L","upper_arm.L","upperhand.L","shoulderJointLeft","Upperarm_L"}),
+         ghostPoseBone(live,{"ArmLower.L","forearm_l","LeftForeArm","Forearm_L","ForeArm_L","forearm.L","arm.L","ellbowLeft"}),
+         ghostPoseBone(live,{"Hand.L","hand_l","LeftHand","Hand_L","hand.L","indexf1.L","wristLeft"})},
+        {ghostPoseBone(live,{"ArmUpper.R","arm_r","RightArm","Arm_R","upper_arm.R","upperhand.R","shoulderJointRight","Upperarm_R"}),
+         ghostPoseBone(live,{"ArmLower.R","forearm_r","RightForeArm","Forearm_R","ForeArm_R","forearm.R","arm.R","ellbowRight"}),
+         ghostPoseBone(live,{"Hand.R","hand_r","RightHand","Hand_R","hand.R","indexf1.R","handJointRight"})}};
+    const GhostPoseArm legs[2]={
+        {ghostPoseBone(live,{"LegUpper.L","leg_l","LeftUpLeg","thigh.L","leg1.L","hipLeft","UpLeg_L","Thigh_L","Leg_1_L","Leg_L","Upperleg_L"}),
+         ghostPoseBone(live,{"LegLower.L","lowleg_l","LeftLeg","Shin_L","shin.L","leg2.L","kneeLeft","Lowerleg_L"}),
+         ghostPoseBone(live,{"Foot.L","foot_l","LeftFoot","Foot_L","foot.L","ankleLeft","tarsal.L","Feet_L"})},
+        {ghostPoseBone(live,{"LegUpper.R","leg_r","RightUpLeg","thigh.R","leg1.R","hipRight","UpLeg_R","Thigh_R","Leg_1_R","Leg_R","Upperleg_R"}),
+         ghostPoseBone(live,{"LegLower.R","lowleg_r","RightLeg","Shin_R","shin.R","leg2.R","kneeRight","Lowerleg_R"}),
+         ghostPoseBone(live,{"Foot.R","foot_r","RightFoot","Foot_R","foot.R","ankleRight","tarsal.R","Feet_R"})}};
+    // The point in the space of the mesh; his front is -y, up is +z
+    const Ogre::Vector3 target=body.getParentNode()->_getFullTransform().inverse()*point;
+    const Ogre::Vector3 pivot=waist->_getDerivedPosition();
+    Ogre::Vector3 forward(target.x-pivot.x,target.y-pivot.y,0.0f);
+    if(forward.squaredLength()<1.0e-6f) forward=Ogre::Vector3::NEGATIVE_UNIT_Y;
+    forward.normalise();
+    // Turning about this axis by a positive angle tips the upper body towards the point
+    const Ogre::Vector3 axis=Ogre::Vector3::UNIT_Z.crossProduct(forward).normalisedCopy();
+    const Ogre::Quaternion bow(Ogre::Degree(pickUp?70.0f:15.0f),axis);
+    std::map<Ogre::Bone*,Ogre::Quaternion> turns;
+    turns[waist]=bow;
+    // Bent knees: the thigh swings the knee forward, the shin swings back twice as far, the foot stays flat; the hips
+    // go down (and back) by as much as the feet would rise, so the feet keep their place on the floor
+    Ogre::Vector3 shift=Ogre::Vector3::ZERO;
+    Ogre::Bone* hips=nullptr;
+    if(pickUp && legs[0].upper!=nullptr && legs[0].lower!=nullptr && legs[0].tip!=nullptr &&
+       legs[1].upper!=nullptr && legs[1].lower!=nullptr && legs[1].tip!=nullptr)
+    {
+        // The bone that carries both the waist and the legs
+        for(Ogre::Node* node=waist;node!=nullptr && hips==nullptr;node=node->getParent())
+            if(ghostPoseBelow(legs[0].upper,node) && ghostPoseBelow(legs[1].upper,node)) hips=static_cast<Ogre::Bone*>(node);
+        const Ogre::Quaternion thigh(Ogre::Degree(-50.0f),axis),shin(Ogre::Degree(100.0f),axis),foot(Ogre::Degree(-50.0f),axis);
+        Ogre::Vector3 rise=Ogre::Vector3::ZERO;
+        for(const GhostPoseArm& leg : legs)
+        {
+            turns[leg.upper]=thigh;turns[leg.lower]=shin;
+            if(ghostPoseBelow(leg.tip,leg.lower)) turns[leg.tip]=foot;
+            const Ogre::Vector3 hip=leg.upper->_getDerivedPosition(),knee=leg.lower->_getDerivedPosition(),ankle=leg.tip->_getDerivedPosition();
+            const Ogre::Vector3 bentKnee=hip+thigh*(knee-hip);
+            rise+=bentKnee+(thigh*shin)*(ankle-knee)-ankle;
+        }
+        if(hips!=nullptr) shift=rise*-0.5f;
+    }
+    if(pickUp && head!=nullptr && ghostPoseBelow(head,waist)) turns[head]=Ogre::Quaternion(Ogre::Degree(-30.0f),axis);
+    // The arms stretch from the bowed shoulders straight to the point: upper arm and forearm in one line
+    for(const GhostPoseArm& arm : arms)
+    {
+        if(arm.upper==nullptr || arm.lower==nullptr || arm.tip==nullptr || !ghostPoseBelow(arm.upper,waist)) continue;
+        if(!pickUp && (holdingBone.empty() || !live.hasBone(holdingBone) || !ghostPoseBelow(live.getBone(holdingBone),arm.upper))) continue;
+        const Ogre::Vector3 shoulder=arm.upper->_getDerivedPosition(),elbow=arm.lower->_getDerivedPosition(),hand=arm.tip->_getDerivedPosition();
+        const Ogre::Vector3 bowedShoulder=pivot+shift+bow*(shoulder-pivot);
+        const Ogre::Vector3 aim=(target-bowedShoulder).normalisedCopy();
+        const Ogre::Vector3 upperNow=(elbow-shoulder).normalisedCopy(),lowerNow=(hand-elbow).normalisedCopy();
+        if(upperNow.squaredLength()<0.5f || lowerNow.squaredLength()<0.5f) continue;
+        const Ogre::Quaternion upper=upperNow.getRotationTo(bow.Inverse()*aim);
+        turns[arm.upper]=upper;
+        turns[arm.lower]=lowerNow.getRotationTo((bow*upper).Inverse()*aim);
+    }
+    // The clip: every turn is the same turn of the mesh space at its bone (basis of the live pose), as a local key
+    Ogre::Animation* clip=shared.createAnimation(name,1.0f);
+    for(const std::pair<Ogre::Bone* const,Ogre::Quaternion>& turn : turns)
+    {
+        Ogre::NodeAnimationTrack* track=clip->createNodeTrack(turn.first->getHandle());
+        const Ogre::Quaternion basis=turn.first->_getDerivedOrientation();
+        const Ogre::Quaternion local=basis.Inverse()*turn.second*basis;
+        Ogre::Vector3 move=Ogre::Vector3::ZERO;
+        if(turn.first==hips)
+            move=hips->getParent()==nullptr?shift:
+                (hips->getParent()->_getDerivedOrientation().Inverse()*shift)/hips->getParent()->_getDerivedScale();
+        for(const Ogre::Real time : {0.0f,1.0f})
+        {
+            Ogre::TransformKeyFrame* key=track->createNodeKeyFrame(time);
+            key->setRotation(local);key->setTranslate(move);
+        }
+    }
+    if(hips!=nullptr && turns.find(hips)==turns.end())
+    {
+        Ogre::NodeAnimationTrack* track=clip->createNodeTrack(hips->getHandle());
+        const Ogre::Vector3 move=hips->getParent()==nullptr?shift:
+            (hips->getParent()->_getDerivedOrientation().Inverse()*shift)/hips->getParent()->_getDerivedScale();
+        for(const Ogre::Real time : {0.0f,1.0f}) track->createNodeKeyFrame(time)->setTranslate(move);
+    }
+    Ogre::AnimationState* state=body.getAllAnimationStates()->createAnimationState(name,0.0f,1.0f,0.0f,false);
+    state->setLoop(false);
+    return state;
+}
+
+void Creature::stopGhostPose()
+{
+    mGhostPoseMode=0;
+    if(mGhostPoseName.empty()) return;
+    Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
+    const std::string bodyName=getOgreNamePrefix()+getName();
+    if(scene!=nullptr && scene->hasEntity(bodyName))
+    {
+        Ogre::Entity* body=scene->getEntity(bodyName);
+        if(body->hasSkeleton())
+        {
+            if(body->getAllAnimationStates()->hasAnimationState(mGhostPoseName))
+                body->getAllAnimationStates()->removeAnimationState(mGhostPoseName);
+            body->getSkeleton()->setBlendMode(static_cast<Ogre::SkeletonAnimationBlendMode>(mGhostPoseBlend));
+            Ogre::Skeleton& shared=*body->getMesh()->getSkeleton();
+            if(shared.hasAnimation(mGhostPoseName)) shared.removeAnimation(mGhostPoseName);
+        }
+    }
+    mGhostPose=nullptr;mGhostPoseName.clear();
+}
+
+//! \brief Shows or hides the mesh of a lying box entity (GhostBoxEntity) by its name, if it still exists (decision 936).
+static void showGhostBoxEntity(GameMap& map, const std::string& name, bool shown)
+{
+    if(name.empty()) return;
+    GameEntity* box=map.getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,name);
+    if(box!=nullptr && box->getEntityNode()!=nullptr) box->getEntityNode()->setVisible(shown);
+}
+
 void Creature::clearGhostHuntVisuals()
 {
     if(getIsOnServerMap()) return;
+    stopGhostPose();
+    showGhostBoxEntity(*getGameMap(),mGhostHiddenBox,true);mGhostHiddenBox.clear();
     Ogre::SceneManager* scene=RenderManager::getSingleton().getSceneManager();
     if(!mGhostShrinkTarget.empty())
     {
@@ -12954,7 +13133,16 @@ void Creature::clearGhostHuntVisuals()
     mGhostDeliveryGhost.clear();mGhostDeliveryClock=0.0;
     // The hose from the pack to the cannon goes with the hunt (decision 894)
     if(mGhostHose!=nullptr) { mGhostHose->detachFromParent();scene->destroyManualObject(mGhostHose);mGhostHose=nullptr; }
-    if(mGhostHoseNode!=nullptr) { scene->destroySceneNode(mGhostHoseNode);mGhostHoseNode=nullptr; }
+    if(mGhostHoseNode!=nullptr)
+    {
+        for(size_t end=0;end<2;++end)
+        {
+            const std::string name=getName()+"_GhostHoseCoupling"+std::to_string(end);
+            if(scene->hasEntity(name)) scene->destroyEntity(name);
+        }
+        mGhostHoseNode->removeAndDestroyAllChildren();
+        scene->destroySceneNode(mGhostHoseNode);mGhostHoseNode=nullptr;
+    }
     // The light of the open trap goes with the box
     if(mGhostTrapGlow!=nullptr) { scene->destroyBillboardSet(mGhostTrapGlow);mGhostTrapGlow=nullptr; }
     if(mGhostTrapCone!=nullptr) { scene->destroyBillboardChain(mGhostTrapCone);mGhostTrapCone=nullptr; }
@@ -13104,6 +13292,13 @@ void Creature::updateGhostHuntVisuals(double seconds)
             mGhostHose->setDynamic(true);mGhostHose->setCastShadows(false);mGhostHose->setQueryFlags(0);
             mGhostHoseNode=scene->getRootSceneNode()->createChildSceneNode(getName()+"_GhostHoseNode");
             mGhostHoseNode->attachObject(mGhostHose);
+            for(size_t end=0;end<2;++end)
+            {
+                const std::string name=getName()+"_GhostHoseCoupling"+std::to_string(end);
+                Ogre::Entity* coupling=scene->createEntity(name,"GhostHoseCoupling.mesh");
+                coupling->setCastShadows(false);coupling->setQueryFlags(0);
+                mGhostHoseNode->createChildSceneNode(name+"Node")->attachObject(coupling);
+            }
         }
         const Ogre::AxisAlignedBox packBounds=scene->getEntity(getName()+"_GhostBackpack")->getMesh()->getBounds();
         const Ogre::Vector3 port=mGhostBackpackNode->_getFullTransform()*Ogre::Vector3(packBounds.getMinimum().x,packBounds.getCenter().y,
@@ -13115,20 +13310,52 @@ void Creature::updateGhostHuntVisuals(double seconds)
         const Ogre::Vector3 barrel=gunTransform*Ogre::Vector3::UNIT_Z-gunTransform*Ogre::Vector3::ZERO;
         const Ogre::Real radius=0.025f*body->getBoundingBox().getSize().z*getEntityNode()->_getDerivedScale().z;
         shapeGhostHose(*mGhostHose,port,portOut,rear,barrel.squaredLength()>1.0e-8f?-barrel.normalisedCopy():Ogre::Vector3::NEGATIVE_UNIT_Z,radius);
+        // The steel fittings follow the actual endpoint tangents, including the hose's downward sag (decision 936).
+        const Ogre::Real span=(rear-port).length(),reach=0.4f*span+4.0f*radius;
+        const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);
+        const Ogre::Vector3 rearOut=barrel.squaredLength()>1.0e-8f?-barrel.normalisedCopy():Ogre::Vector3::NEGATIVE_UNIT_Z;
+        for(size_t end=0;end<2;++end)
+        {
+            Ogre::SceneNode* coupling=scene->getSceneNode(getName()+"_GhostHoseCoupling"+std::to_string(end)+"Node");
+            const Ogre::Vector3 direction=(end==0?portOut:rearOut)*reach+sag;
+            coupling->setPosition(end==0?port:rear);
+            coupling->setOrientation(Ogre::Vector3::UNIT_Z.getRotationTo(direction));
+            coupling->setScale(Ogre::Vector3(radius,radius,radius));
+        }
     }
     if(beaming) { setGhostHunterWeaponsVisible(scene,*this,false);mGhostOwnWeaponsHidden=true; }
     else if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
     // The thrown box leaves from the hand it was held in.
     const Ogre::Vector3 hand=mGhostHeldBox->getWorldBoundingBox(true).getCenter();
+    // Where and how the trap in the hand stands this frame (also while it is hidden): the pick-up ends in it and the
+    // put-in starts from it, so the trap changes between hand and floor or seat without a jump (decision 936)
+    const Ogre::Vector3 heldOrigin=mGhostHeldBox->_getParentNodeFullTransform()*Ogre::Vector3::ZERO;
+    // (a tag point on a hand bone already includes the turn of the hunter's node)
+    const Ogre::Quaternion heldTurn=mGhostHeldBox->getParentNode()==nullptr?Ogre::Quaternion::IDENTITY:
+        mGhostHeldBox->getParentNode()->_getDerivedOrientation();
+    const Ogre::Real boxHeight=mGhostHeldBox->getMesh()->getBounds().getSize().z*getEntityNode()->getScale().z;
+    // The generated pose of this frame (decision 936): none, the pick-up (7) or the put-in (5), its weight and target
+    uint32_t poseMode=0;Ogre::Real poseWeight=0.0f;Ogre::Vector3 poseTarget=Ogre::Vector3::ZERO;
+    Ogre::Quaternion boxTurn=Ogre::Quaternion::IDENTITY;
     // The box also stands shut in the delivery device beside the hunter at the cauldron during the transfer (5,
-    // decisions 845 and 865) and lies shut under the caught ghost until it is picked up (6, decision 865).
-    const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6;
+    // decisions 845 and 865), lies shut under the caught ghost until it is picked up (6, decision 865) and comes off
+    // the floor into the hand of the bending hunter (7, decision 936).
+    const bool lyingBox=mGhostBoxMode==1 || mGhostBoxMode==3 || mGhostBoxMode==4 || mGhostBoxMode==5 || mGhostBoxMode==6 || mGhostBoxMode==7;
     if(mGhostBoxMode!=5)
     {
         // The delivery is over (or not begun): the next delivery starts with its put-in
         mGhostTransferShown=0.0;
         mGhostDeliveryGhost.clear();mGhostDeliveryClock=0.0;
+        mGhostFlowGhost.clear();mGhostFlowClock=0.0;mGhostFlowCorrection=0.0;mGhostFlowSeen=-1.0;
     }
+    // The client clock of the pick-up, advanced every frame; it starts at the share the server has already done (0 for
+    // a fresh pick-up, more after loading a game in the middle of it, decision 936)
+    if(mGhostBoxMode==7)
+    {
+        if(mGhostPoseClock<0.0) mGhostPoseClock=mGhostThrowTurns*ConfigManager::getSingleton().getRoomConfigDouble("GhostPickUpSeconds");
+        else mGhostPoseClock+=seconds*getGameMap()->getGameSpeedFactor();
+    }
+    else mGhostPoseClock=-1.0;
     if(lyingBox && mGhostBoxNode==nullptr)
     {
         Ogre::Entity* box=scene->createEntity(getName()+"_ThrownGhostBox","GhostBox.mesh");
@@ -13144,10 +13371,27 @@ void Creature::updateGhostHuntVisuals(double seconds)
     {
         mGhostBoxNode->setVisible(lyingBox);
         GhostEntity* ghost=static_cast<GhostEntity*>(getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostThrowTarget));
-        if(ghost!=nullptr && lyingBox)
+        // Decision 936 point 2, state 8: the hunter lifts a previously dropped lying box (GhostBoxEntity) from the floor.
+        // Its own mesh is hidden while his trap shows the lift from the place where it lay; once the server has taken
+        // it away the lift goes on from that place, and an interrupted lift shows the lying box again.
+        bool droppedBox=false;
+        if(mGhostBoxMode==7 && ghost==nullptr)
         {
-            // The box lands on the floor under the ghost, never in the air.
-            const Ogre::Vector3 floor(ghost->getPosition().x,ghost->getPosition().y,0.0f);
+            GameEntity* dropped=getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostBoxEntity,mGhostThrowTarget);
+            if(dropped!=nullptr)
+            {
+                if(mGhostHiddenBox!=dropped->getName()) { showGhostBoxEntity(*getGameMap(),mGhostHiddenBox,true);mGhostHiddenBox=dropped->getName(); }
+                mGhostPickFloor=dropped->getPosition();
+                if(dropped->getEntityNode()!=nullptr) dropped->getEntityNode()->setVisible(false);
+            }
+            droppedBox=!mGhostHiddenBox.empty();
+        }
+        else if(!mGhostHiddenBox.empty()) { showGhostBoxEntity(*getGameMap(),mGhostHiddenBox,true);mGhostHiddenBox.clear(); }
+        if(mGhostBoxMode==7 && ghost==nullptr && !droppedBox) mGhostBoxNode->setVisible(false);
+        if((ghost!=nullptr || droppedBox) && lyingBox)
+        {
+            // The box lands on the floor under the ghost, never in the air; a dropped box starts where it lies.
+            const Ogre::Vector3 floor=ghost==nullptr?mGhostPickFloor:Ogre::Vector3(ghost->getPosition().x,ghost->getPosition().y,0.0f);
             Ogre::Vector3 position=floor;
             if(mGhostBoxMode==1)
             {
@@ -13185,15 +13429,17 @@ void Creature::updateGhostHuntVisuals(double seconds)
             {
                 // Decision 894: the hunter stands on his place at the cauldron. The trap seat on the cauldron's rim
                 // (RoomGhostRoom::getTrapSocketPosition) lies within reach of his hand, where the server keeps the
-                // ghost. Over the first GhostPutInSeconds the hunter puts the shut trap from his hand into the seat (his
-                // one-second Empty clip); then the ghost flows out of the trap over the rim into the cauldron
-                // (GhostEntity::updateLook). The trap stays shut, the glow of the seat shines. The whole delivery of one
-                // ghost is the transfer time, GhostTransferSeconds times the CatchTime research (20, 16, 13.3 s). Further
-                // ghosts of the pack follow without a new put-in.
+                // ghost. Over the first GhostPutInSeconds the hunter reaches out with the shut trap and sets it down onto
+                // the seat by hand (decision 936 point 3: his generated reach pose, the trap leaves his hand only near the
+                // seat and comes down onto it from above, eased, bottom on the seat); then the ghost flows out of the
+                // trap over the rim into the cauldron (GhostEntity::updateLook). The trap stays shut, the glow of the
+                // seat shines. The whole delivery of one ghost is the transfer time, GhostTransferSeconds times the
+                // CatchTime research (20, 16, 13.3 s). Further ghosts of the pack follow without a new put-in.
                 const Ogre::Vector3 seat=ghost->getPosition();
                 const double putIn=config.getRoomConfigDouble("GhostPutInSeconds");
                 const double transferSeconds=SkillManager::getResearchValue(getSeat(),SkillType::roomGhostRoom,
                     config.getRoomConfigDouble("GhostTransferSeconds"),"CatchTime");
+                const double frame=seconds*getGameMap()->getGameSpeedFactor();
                 if(mGhostDeliveryGhost.empty())
                 {
                     // A new delivery. One that is already past its put-in (a loaded game, a keeper who looks on late)
@@ -13202,24 +13448,69 @@ void Creature::updateGhostHuntVisuals(double seconds)
                     mGhostDeliveryClock=mGhostThrowTurns*transferSeconds>=putIn?putIn:0.0;
                     mGhostDeliveryMouth=ghostCauldronMouthNear(*getGameMap(),seat);
                 }
-                else mGhostDeliveryClock+=seconds*getGameMap()->getGameSpeedFactor();
-                // The trap goes from the hand down into the seat in a short arc.
-                const float inserted=static_cast<float>(putIn>0.0?std::max(0.0,std::min(1.0,mGhostDeliveryClock/putIn)):1.0);
-                position=hand+(seat-hand)*inserted;
-                position.z+=0.12f*4.0f*inserted*(1.0f-inserted);
-                // Only the ghost that came first waits for the put-in; its flow takes the rest of the transfer time. A
-                // new ghost of the pack starts again at 0.
-                double share=mGhostThrowTurns;
+                else mGhostDeliveryClock+=frame;
+                const double placed=putIn>0.0?std::max(0.0,std::min(1.0,mGhostDeliveryClock/putIn)):1.0;
+                const float inserted=static_cast<float>(placed);
+                // The trap stays in the hand while the arm reaches out, then goes on one curve from the hand over a point
+                // just above the seat down onto it (a quadratic curve, eased: no jump, no stop on the way)
+                const float release=static_cast<float>(ghostEase(0.3,0.62,placed));
+                const Ogre::Vector3 above=seat+Ogre::Vector3(0.0f,0.0f,0.08f);
+                position=heldOrigin*((1.0f-release)*(1.0f-release))+above*(2.0f*(1.0f-release)*release)+seat*(release*release);
+                boxTurn=Ogre::Quaternion::Slerp(release,heldTurn,Ogre::Quaternion::IDENTITY,true);
+                if(placed<1.0)
+                {
+                    poseMode=5;poseWeight=ghostPoseWeight(placed,0.35,0.6);
+                    poseTarget=seat+Ogre::Vector3(0.0f,0.0f,0.5f*boxHeight);
+                }
+                // Decision 936 point 4: the flow runs on a client clock advanced every frame, the server's share (sent
+                // 1.4 times a second) only corrects it gently; a new ghost of the pack starts its own clock at 0.
+                const double serverSeconds=mGhostThrowTurns*transferSeconds;
+                if(mGhostFlowGhost!=mGhostThrowTarget)
+                {
+                    mGhostFlowGhost=mGhostThrowTarget;mGhostFlowClock=serverSeconds;
+                    mGhostFlowCorrection=0.0;mGhostFlowSeen=mGhostThrowTurns;mGhostTransferShown=0.0;
+                }
+                else
+                {
+                    mGhostFlowClock+=frame;
+                    if(mGhostThrowTurns!=mGhostFlowSeen)
+                    {
+                        mGhostFlowSeen=mGhostThrowTurns;
+                        const double error=serverSeconds-mGhostFlowClock;
+                        if(std::fabs(error)>1.5) { mGhostFlowClock=serverSeconds;mGhostFlowCorrection=0.0; }
+                        else mGhostFlowCorrection=error;
+                    }
+                    // At most half the speed of time is added or taken away, so the ghost never stops or turns back
+                    const double step=std::max(-0.5*frame,std::min(0.5*frame,mGhostFlowCorrection*std::min(1.0,seconds)));
+                    mGhostFlowClock+=step;mGhostFlowCorrection-=step;
+                }
+                // Only the ghost that came first waits for the put-in; its flow takes the rest of the transfer time.
+                double share=transferSeconds>0.0?mGhostFlowClock/transferSeconds:1.0;
                 if(mGhostThrowTarget==mGhostDeliveryGhost && transferSeconds>putIn)
-                    share=std::max(0.0,(mGhostThrowTurns*transferSeconds-putIn)/(transferSeconds-putIn));
+                    share=(mGhostFlowClock-putIn)/(transferSeconds-putIn);
                 if(inserted<1.0f) share=0.0;
-                if(share<mGhostTransferShown-0.5) mGhostTransferShown=share;
-                mGhostTransferShown+=(share-mGhostTransferShown)*std::min(1.0,seconds*6.0);
+                mGhostTransferShown=std::max(mGhostTransferShown,std::max(0.0,std::min(1.0,share)));
                 // Once shut the trap stays shut (decision 865); the glow of the seat shines while the ghost flows
                 mGhostLidShown=0.0;
                 trapLight=inserted>=1.0f?1.0:0.0;
                 mGhostCaptureShown=0.0;
                 ghost->setTransferTarget(mGhostDeliveryMouth);
+            }
+            else if(mGhostBoxMode==7)
+            {
+                // Decision 936 point 2: the hunter stands before the shut trap and bends down to it (his generated
+                // pick-up pose, GhostPickUpSeconds); while his hands are down at it the trap comes off the floor into
+                // his hand, then he straightens up with it. At the end it is the trap in his hand (mode 2), in the same
+                // place and turn.
+                const double pickUp=config.getRoomConfigDouble("GhostPickUpSeconds");
+                const double lifted=pickUp>0.0?std::min(1.0,mGhostPoseClock/pickUp):1.0;
+                const float grip=static_cast<float>(ghostEase(0.38,0.52,lifted));
+                position=floor+(heldOrigin-floor)*grip;
+                boxTurn=Ogre::Quaternion::Slerp(grip,Ogre::Quaternion::IDENTITY,heldTurn,true);
+                poseMode=7;poseWeight=ghostPoseWeight(lifted,0.4,0.6);
+                poseTarget=floor+Ogre::Vector3(0.0f,0.0f,0.5f*boxHeight);
+                mGhostLidShown=0.0;
+                mGhostCaptureShown=1.0;
             }
             else if(mGhostBoxMode==6)
             {
@@ -13248,10 +13539,13 @@ void Creature::updateGhostHuntVisuals(double seconds)
                 mGhostCaptureShown+=(pulled-mGhostCaptureShown)*std::min(1.0,seconds*6.0);
             }
             // Only the snap rocks the box; thrown, lying and delivered boxes stand upright (the seat takes the trap as it is).
-            if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(Ogre::Quaternion::IDENTITY);
+            if(mGhostBoxMode!=4) mGhostBoxNode->setOrientation(boxTurn);
             mGhostBoxNode->setPosition(position);
-            ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
-            ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);
+            if(ghost!=nullptr)
+            {
+                ghost->setCaptureProgress(mGhostCaptureShown);mGhostShrinkTarget=mGhostThrowTarget;
+                ghost->setTransferProgress(mGhostBoxMode==5?mGhostTransferShown:0.0);
+            }
             // The hinged lid of the box mesh turns open on its "Open" clip: 0 shut, the clip end fully open.
             Ogre::Entity* trap=static_cast<Ogre::Entity*>(mGhostBoxNode->getAttachedObject(static_cast<unsigned short>(0)));
             if(trap->hasSkeleton() && trap->hasAnimationState("Open"))
@@ -13302,6 +13596,32 @@ void Creature::updateGhostHuntVisuals(double seconds)
         }
     }
     if(trapLight<=0.0 && mGhostTrapNode!=nullptr) mGhostTrapNode->setVisible(false);
+    // Decision 936 points 2 and 3: the generated pose layer over the Idle clip, built when its phase begins (again if the
+    // hunter has turned since), eased in and out by its weight every frame, removed when its phase ends
+    // (the state is looked up by its name every frame: a hunter entity built anew has lost it and gets it again)
+    const bool poseLost=mGhostPose!=nullptr && !body->getAllAnimationStates()->hasAnimationState(mGhostPoseName);
+    if(poseLost) mGhostPose=nullptr;
+    if(poseMode!=mGhostPoseMode || poseLost || (mGhostPose!=nullptr &&
+       !getEntityNode()->_getDerivedOrientation().equals(mGhostPoseFacing,Ogre::Radian(Ogre::Degree(1.0f)))))
+    {
+        stopGhostPose();
+        if(poseMode!=0 && body->hasSkeleton())
+        {
+            mGhostPoseBlend=static_cast<int>(body->getSkeleton()->getBlendMode());
+            mGhostPoseName=getName()+"_GhostPose";
+            mGhostPose=buildGhostPose(*body,mGhostPoseName,poseTarget,poseMode==7,
+                ghostBoxHandBone(body->getSkeleton(),getWeaponL()==nullptr));
+            if(mGhostPose!=nullptr) body->getSkeleton()->setBlendMode(Ogre::ANIMBLEND_CUMULATIVE);
+            mGhostPoseFacing=getEntityNode()->_getDerivedOrientation();
+        }
+        mGhostPoseMode=poseMode;
+    }
+    if(mGhostPose!=nullptr)
+    {
+        // Another clip request disables every other clip of the entity; the layer comes back on the next frame
+        Ogre::AnimationState* pose=body->getAnimationState(mGhostPoseName);
+        pose->setEnabled(true);pose->setTimePosition(0.0f);pose->setWeight(poseWeight);
+    }
     if(target==nullptr || mGhostBeamTarget.empty())
     {
         if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
