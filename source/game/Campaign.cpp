@@ -45,11 +45,52 @@ std::string trim(const std::string& text)
 }
 } // namespace
 
+//! \brief Initializes metadata without claiming campaign membership.
+CampaignSave::CampaignSave():
+    mPresent(false), mValid(false), mDifficulty(0), mHeartstoneComplete(false), mKeptLevel(0)
+{
+}
+
+//! \brief Parses one versioned save record without interpreting missing records as malformed.
+bool CampaignSave::importInfoLine(const std::string& line)
+{
+    const std::string prefix = "Campaign\t";
+    if(line.compare(0, prefix.size(), prefix) != 0)
+        return false;
+    *this = CampaignSave();
+    mPresent = true;
+    std::istringstream input(line.substr(prefix.size()));
+    uint32_t version = 0;
+    uint32_t heartstone = 0;
+    std::string trailing;
+    mValid = static_cast<bool>(input >> version >> mLevelFile >> mDifficulty >> heartstone >> mKeptClass >> mKeptLevel)
+        && (version == 1) && (mDifficulty < static_cast<uint32_t>(KeeperAIType::nbAI))
+        && (heartstone <= 1) && !(input >> trailing);
+    mHeartstoneComplete = (heartstone == 1);
+    if(mKeptClass == "-")
+        mKeptClass.clear();
+    return true;
+}
+
+//! \brief Emits the complete, versioned campaign state as an optional Info line.
+void CampaignSave::exportInfo(std::ostream& os) const
+{
+    if(!mPresent || !mValid)
+        return;
+    os << "Campaign\t1 " << mLevelFile << " " << mDifficulty << " " << (mHeartstoneComplete ? 1 : 0)
+        << " " << (mKeptClass.empty() ? "-" : mKeptClass) << " " << mKeptLevel << "\n";
+}
+
+//! \brief Creates campaign progress and inactive level context.
 Campaign::Campaign():
     mActive(false),
     mPlayedLevel(0),
     mPlayedLevelWon(false),
     mDifficulty(getDefaultDifficulty()),
+    mLevelDifficulty(getDefaultDifficulty()),
+    mRestoredLevel(false),
+    mLoadedCampaignSave(false),
+    mSavedHeartstoneComplete(false),
     mKeptPendingLevel(0),
     mKeptLevel(0)
 {
@@ -482,6 +523,92 @@ uint32_t Campaign::getDifficulty() const
     return mDifficulty;
 }
 
+//! \brief Returns the saved level difficulty without changing the menu's selection.
+uint32_t Campaign::getLevelDifficulty() const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mActive ? mLevelDifficulty : mDifficulty;
+}
+
+//! \brief Uses the saved Heartstone state for recorded saves and live progress for other starts.
+bool Campaign::isLevelHeartstoneComplete() const
+{
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        if(mActive && mLoadedCampaignSave)
+            return mSavedHeartstoneComplete;
+    }
+    return isHeartstoneComplete();
+}
+
+//! \brief Captures only running campaign games; the already spawned creature remains in the map.
+CampaignSave Campaign::getSaveState() const
+{
+    CampaignSave saved;
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        if(!mActive || (mPlayedLevel >= mLevels.size()))
+            return saved;
+        saved.mPresent = true;
+        saved.mValid = true;
+        saved.mLevelFile = mLevels[mPlayedLevel].mFile;
+        saved.mDifficulty = mLevelDifficulty;
+        saved.mKeptClass = mKeptPendingClass;
+        saved.mKeptLevel = mKeptPendingLevel;
+    }
+    saved.mHeartstoneComplete = isLevelHeartstoneComplete();
+    return saved;
+}
+
+//! \brief Finds a recorded file exactly, or the original basename retained in legacy SK save names.
+size_t Campaign::findSavedLevelNoLock(const CampaignSave& saved, const std::string& saveFilename) const
+{
+    size_t slash = saveFilename.find_last_of("/\\");
+    std::string filename = saveFilename.substr(slash == std::string::npos ? 0 : slash + 1);
+    size_t skirmish = filename.find("SK-");
+    size_t multiplayer = filename.find("MP-");
+    if((multiplayer != std::string::npos) && ((skirmish == std::string::npos) || (multiplayer < skirmish)))
+        return mLevels.size();
+    if(saved.mPresent && !saved.mValid)
+        return mLevels.size();
+    if(!saved.mPresent && (skirmish != std::string::npos))
+        filename = filename.substr(skirmish + 3);
+    for(size_t i = 0; i < mLevels.size(); ++i)
+    {
+        const std::string& file = mLevels[i].mFile;
+        size_t separator = file.find_last_of("/\\");
+        std::string basename = file.substr(separator == std::string::npos ? 0 : separator + 1);
+        bool matches = saved.mPresent ? (saved.mLevelFile == file) : (filename == basename);
+        if(matches && isUnlockedNoLock(i))
+            return i;
+    }
+    return mLevels.size();
+}
+
+//! \brief Shares the exact load eligibility decision with save-list classification.
+size_t Campaign::findSavedLevel(const CampaignSave& saved, const std::string& saveFilename) const
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    return findSavedLevelNoLock(saved, saveFilename);
+}
+
+//! \brief Restores the running level without importing or overwriting campaign progress.
+bool Campaign::restoreSavedLevel(const CampaignSave& saved, const std::string& saveFilename)
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    mPlayedLevel = findSavedLevelNoLock(saved, saveFilename);
+    mActive = (mPlayedLevel < mLevels.size());
+    mRestoredLevel = mActive;
+    mPlayedLevelWon = false;
+    mLevelSummary.clear();
+    mLoadedCampaignSave = mActive && saved.mPresent;
+    mLevelDifficulty = mLoadedCampaignSave ? saved.mDifficulty : mDifficulty;
+    mSavedHeartstoneComplete = mLoadedCampaignSave && saved.mHeartstoneComplete;
+    mKeptPendingClass = mLoadedCampaignSave ? saved.mKeptClass : std::string();
+    mKeptPendingLevel = mLoadedCampaignSave ? saved.mKeptLevel : 0;
+    return mActive;
+}
+
 void Campaign::setDifficulty(uint32_t difficulty)
 {
     if(difficulty >= static_cast<uint32_t>(KeeperAIType::nbAI))
@@ -499,10 +626,14 @@ uint32_t Campaign::getDefaultDifficulty()
     return static_cast<uint32_t>(KeeperAIType::normal);
 }
 
+//! \brief Starts a menu level using current progress and clears any loaded snapshot.
 void Campaign::startLevel(size_t index)
 {
     std::lock_guard<std::mutex> lock(mMutex);
     mActive = true;
+    mLevelDifficulty = mDifficulty;
+    mRestoredLevel = false;
+    mLoadedCampaignSave = false;
     mPlayedLevel = index;
     mPlayedLevelWon = false;
     mLevelSummary.clear();
@@ -569,9 +700,9 @@ bool Campaign::onLevelWon()
 
         mCompleted[mPlayedLevel] = true;
         if(getCurrentLevelNoLock() == mLevels.size())
-            mFinishedDifficulties.insert(KeeperAITypes::nameOf(static_cast<KeeperAIType>(mDifficulty)));
+            mFinishedDifficulties.insert(KeeperAITypes::nameOf(static_cast<KeeperAIType>(mLevelDifficulty)));
         mPlayedLevelWon = true;
-        if(!mKeptPendingClass.empty())
+        if(!mKeptPendingClass.empty() || mRestoredLevel)
         {
             mKeptClass = mKeptPendingClass;
             mKeptLevel = mKeptPendingLevel;

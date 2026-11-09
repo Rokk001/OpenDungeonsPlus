@@ -102,7 +102,9 @@ assert 'type == "keepminion"' in script and 'os << "keepminion' in script
 assert 'takeKeptMinion(' in runner and 'KeptMinion' in campaign
 
 # The campaign pieces are called Heartstone pieces
-assert 'isHeartstoneComplete()' in read('source/network/ODServer.cpp')
+assert 'isLevelHeartstoneComplete()' in read('source/network/ODServer.cpp')
+assert 'SkillType::spellSummonChampion, championAvailable, championAvailable' in read('source/network/ODServer.cpp')
+assert 'return mSavedHeartstoneComplete;' in campaign and 'return isHeartstoneComplete();' in campaign
 assert 'getHeartstonePieces()' in read('source/modes/MenuModeCampaign.cpp')
 
 # Failed spawns and named corpses cannot receive a newly attached transport stone.

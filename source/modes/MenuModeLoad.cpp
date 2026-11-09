@@ -98,8 +98,10 @@ bool MenuModeLoad::closeBrowser(const CEGUI::EventArgs&)
     return true;
 }
 
+//! \brief Opens the save browser with current campaign eligibility available to its file list.
 void MenuModeLoad::activate()
 {
+    MapHandler::loadCampaignProgress();
     // Loads the corresponding Gui sheet.
     getModeManager().getGui().loadGuiSheet(Gui::guiSheet::loadSavedGameMenu);
 
