@@ -446,7 +446,7 @@ PRODUCTION_MENU_CODE
 PRODUCTION_PROJECTION
 
 //! \brief Existing menu destinations used by the extracted callbacks.
-struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY, ADVERTISMENT};};
+struct AbstractModeManager {enum ModeType {NONE, MENU_MAIN, MENU_REPLAY, MENU_LOAD_SAVEDGAME, ADVERTISMENT};};
 //! \brief Supplies only the existing menu-sheet lookup used by the real callbacks.
 class Gui
 {
@@ -539,7 +539,7 @@ void finishMenuFlight(RenderSceneMenu& menu, CameraManager& camera, RenderManage
     {
         navigation.onFrameStarted(frame);
         for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER,
-            BUTTON_LOAD_GAME, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+            BUTTON_LOAD_GAME, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
             check(!navigation.mManager.mGui.mRoot->getChild(name)->isVisible(),
                 "overview entries stay hidden for every flight frame: " + name);
         menu.updateMenu(camera, render, frame.timeSinceLastFrame);
@@ -729,7 +729,7 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
     CEGUI::Window* menuRoot = windows.createWindow("DefaultWindow", "MenuProbeRoot");
     CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(menuRoot);
     for(const std::string& name : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS,
-        BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER, BUTTON_LOAD_GAME, BUTTON_START_REPLAY, BUTTON_MAPEDITOR,
+        BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER, BUTTON_LOAD_GAME, BUTTON_MAPEDITOR,
         BUTTON_SETTINGS, BUTTON_QUIT})
         menuRoot->addChild(windows.createWindow("DefaultWindow", name));
     for(const std::string& name : {WINDOW_CAMPAIGN, WINDOW_SKIRMISH, WINDOW_MULTIPLAYER, WINDOW_EDITOR, WINDOW_SETTINGS})
@@ -755,14 +755,14 @@ void checkMenuPose(RenderSceneMenu& menu, CameraManager& camera, const std::stri
         finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
         checkMenuPose(menuScene, menuCamera, "overview");
         for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH, BUTTON_MULTIPLAYER,
-            BUTTON_LOAD_GAME, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+            BUTTON_LOAD_GAME, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
             check(menuRoot->getChild(name)->isVisible(), "overview entries return after arrival: " + name);
     }
-    navigation.changeModeAfterFlight(AbstractModeManager::MENU_REPLAY, CEGUI::EventArgs());
-    check(navigation.mLastMode == AbstractModeManager::NONE && menuScene.isFlightActive(), "replay mode waits for its archive flight");
+    navigation.changeModeAfterFlight(AbstractModeManager::MENU_LOAD_SAVEDGAME, CEGUI::EventArgs());
+    check(navigation.mLastMode == AbstractModeManager::NONE && menuScene.isFlightActive(), "load mode waits for its archive flight");
     finishMenuFlight(menuScene, menuCamera, menuRenderer, navigation);
     checkMenuPose(menuScene, menuCamera, "replay");
-    check(navigation.mLastMode == AbstractModeManager::MENU_REPLAY, "replay pane is requested at archive arrival");
+    check(navigation.mLastMode == AbstractModeManager::MENU_LOAD_SAVEDGAME, "load pane is requested at archive arrival");
     AbstractApplicationMode replayMode;
     navigation.mManager.mCurrentApplicationMode = &replayMode;
     navigation.mManager.mPreviousModeTypes.push_back(AbstractModeManager::MENU_MAIN);
