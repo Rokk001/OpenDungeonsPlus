@@ -429,6 +429,8 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     RunLevelTest::recordFrame(evt.timeSinceLastFrame);
     
 
+    // A dialog that rose above the tooltip since the last frame must not hide it (owner decision 920)
+    Gui::keepTooltipInFront();
     CEGUI::System::getSingleton().injectTimePulse(evt.timeSinceLastFrame);
     CEGUI::System::getSingleton().getDefaultGUIContext().injectTimePulse(evt.timeSinceLastFrame);
 

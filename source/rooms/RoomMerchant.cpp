@@ -213,12 +213,40 @@ RoomMerchant* RoomMerchant::getForSeat(GameMap& map, const Seat* seat)
     return nullptr;
 }
 
+//! \brief True when a sales table or a wall shelf stands on the tile.
+bool RoomMerchant::isFurnitureTile(const Tile* tile) const
+{
+    if(std::find(mCentralActiveSpotTiles.begin(), mCentralActiveSpotTiles.end(), tile) != mCentralActiveSpotTiles.end())
+        return true;
+    for(const Tile* shelf : getShelfTiles())
+        if(shelf == tile) return true;
+    return false;
+}
+
+//! \brief The merchant figure is drawn at the tile centre (RenderManager cancels the rig offset of the mesh), so he
+//! stands on a free floor tile next to a table or shelf, never on the furniture or in a wall.
+Tile* RoomMerchant::getStandTileBeside(const Tile* stop) const
+{
+    if(stop == nullptr) return nullptr;
+    // Orthogonal neighbours first, then the corners
+    static const int NEIGHBOURS[][2] = {{0,-1},{1,0},{-1,0},{0,1},{1,-1},{-1,-1},{1,1},{-1,1}};
+    for(const int (&step)[2] : NEIGHBOURS)
+    {
+        Tile* next = getGameMap()->getTile(stop->getX() + step[0], stop->getY() + step[1]);
+        if(next != nullptr && next->getCoveringRoom() == this && !next->isFullTile() && !isFurnitureTile(next))
+            return next;
+    }
+    return nullptr;
+}
+
 //! \brief Creates the one seat merchant only after a usable centre table exists.
 void RoomMerchant::ensureMerchant()
 {
     if(!getIsOnServerMap() || getSeat() == nullptr || getSeat()->getMerchant() != nullptr || mCentralActiveSpotTiles.empty())
         return;
-    Ogre::Vector3 position = mCentralActiveSpotTiles.front()->getPosition();
+    // He starts on a free tile beside the first table, not in it
+    Tile* standTile = getStandTileBeside(mCentralActiveSpotTiles.front());
+    Ogre::Vector3 position = (standTile != nullptr ? standTile : mCentralActiveSpotTiles.front())->getPosition();
     if(mSavedMerchantPosition)
     {
         Tile* saved = getGameMap()->getTile(Helper::round(mMerchantPosition.x), Helper::round(mMerchantPosition.y));

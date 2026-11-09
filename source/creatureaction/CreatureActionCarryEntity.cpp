@@ -55,10 +55,7 @@ static const double DRAG_FOLLOW_MIN_ARC_GAIN = 0.001;
 //! bodies need (walking radii), so a big body (Troll, Dragon) does not lie over the small worker and hide it
 double dragGap(Creature& worker, Creature& dragged)
 {
-    const double configured = std::max(0.0, ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap",
-        Creature::WOUNDED_DRAG_GAP_DEFAULT));
-    const double bodies = static_cast<double>(RoomObjectNavigation::clearance(worker) + RoomObjectNavigation::clearance(dragged)) + 0.1;
-    return std::max(configured, bodies);
+    return Creature::getDragGap(worker, dragged);
 }
 
 //! \brief Appends the part of the trail between the two lengths to the path: the points of the trail that lie

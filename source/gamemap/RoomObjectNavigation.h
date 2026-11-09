@@ -23,8 +23,8 @@ std::vector<RoomObjectPath::Obstacle> collect(GameMap& map, float clearance,
 std::vector<RoomObjectPath::Obstacle> bodyObstacles(Creature& creature,
     const BuildingObject* interaction = nullptr);
 //! \brief The mud pieces of the spa pools as solid obstacles widened by the clearance (decision 837: nobody walks over
-//! the pool). The pieces of the tiles of start and goal are left out, so that a bather wades to its place and out again.
-//! refine() uses them and falls back to wading through the mud when there is no way around the pool.
+//! the pool). Only the starting tile is left out, so a dropped creature can leave it.
+//! refine() keeps failed detours blocked; assigned bath routes wade through RoomSpa instead (decision 902).
 std::vector<RoomObjectPath::Obstacle> spaPoolObstacles(GameMap& map, float clearance, const Ogre::Vector2& start,
     const Ogre::Vector2& goal);
 // Finds the point nearest to the wanted one where nothing blocks a creature; returns

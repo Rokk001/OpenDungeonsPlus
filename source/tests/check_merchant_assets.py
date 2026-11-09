@@ -11,6 +11,11 @@ textures had blue at only 0.70-0.74 x green and the yellow cursor hand light on 
 1.0 / 0.94 / 0.64) made them ochre-khaki (robe front 91/63/30) with large hard dark blotches; about 14 long rag strips
 and deep pointed hems all round; the skin (149/122/102) came out as a white blob.
 
+Decision 901(4), build 53: still a light brown shaggy heap. Revision 5 uses darker cloth
+(43/39/46 luminance targets), three short strips, separate geometric hems, a compact
+open hood and subdued ordinary teeth around the single gold tooth. The older fault
+descriptions below explain the retained texture hue, face and furniture checks.
+
 One check per fault
   furniture textures   SalesTable and MerchantShelf use only materials with a texture (the flat ItemWood, ItemWoodLight,
                        MerchantClothTrim and the herb and bag colours turned bright orange under the warm room light);
@@ -84,14 +89,17 @@ MIN_LUMINANCE = {'MerchantLeather': 60,    # (39)
 # The table cloth stays a dark stained linen, not the light beige cloth of build 41 (73)
 MAX_CLOTH_LUMINANCE = 70
 # Dark brown cloth (decision 836): mean luminance range, hue and contrast; build 41 / build 48 values in brackets
-CLOTH_LUMINANCE = {'MerchantRobe': (52, 72),    # (49 near black / 96 beige)
-                   'MerchantCloak': (48, 68),   # (- / 80 pink)
-                   'MerchantHood': (54, 76)}    # (52 / 114 beige)
+# Decision 901(4): build 53 still read light brown. Fixed targets for the darker revision
+# are 43 / 39 / 46, with separate geometric hems rather than repeating texture bands.
+CLOTH_LUMINANCE = {'MerchantRobe': (40, 46),
+                   'MerchantCloak': (36, 42),
+                   'MerchantHood': (43, 49)}
 CLOTH_MIN_RED_OVER_GREEN = 1.35       # (decision 836: 1.2; build 51 hood 1.28)
 # Blue against green: below 0.82 the yellow front light turns the cloth khaki-olive (build 51: 0.70-0.74), above 0.95
 # it reads pink (build 48 cloak 0.94 at a much higher luminance)
 CLOTH_BLUE_OVER_GREEN = (0.82, 0.95)
-CLOTH_MIN_STD = 10.0
+# Keep at least the former relative contrast (10 / 58), independent of darker dye.
+CLOTH_MIN_RELATIVE_STD = 0.18
 # Decision 863: screen / texture factors of the yellow cursor hand light on the robe front in build 51 (sRGB, red = 1)
 FRONT_LIGHT = (1.0, 0.94, 0.64)
 CLOTH_MAX_LIT_HUE = 28.0               # degrees; build 51 robe 32, cloak 33, hood 35
@@ -108,8 +116,10 @@ RAG_MATERIALS = ('MerchantRobe', 'MerchantCloak')
 RAG_MAX_TOP = 0.5
 RAG_MAX_WIDTH = 0.1
 RAG_MIN_LENGTH = 0.05
-RAG_MAX_COUNT = 6
-RAG_MAX_LENGTH = 0.2
+RAG_MAX_COUNT = 3
+RAG_MAX_LENGTH = 0.12
+HOOD_MAX_WIDTH = 0.30
+LAYER_HEM_SEPARATION = (0.12, 0.30)
 # Belt height above the feet for belt, buckle, pouch and the scales hook
 BELT_LOW, BELT_HIGH = 0.5, 0.72
 SCALES_PARENTS = ('Pelvis',)
@@ -395,6 +405,15 @@ assert 'ItemBrass' not in figure_used, 'the scales must use MerchantBrass, not t
 assert re.search(r'^\s*emissive\s+0*\.0*[1-9]', material_block('MerchantBrass'), re.M), 'MerchantBrass needs its self-light'
 layers = [material_texture(m) for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
 assert len(set(layers)) == 3, 'robe, over-cloak and hood need three different textures (layered cloak)'
+# Decision 901(4): distinct cloth silhouettes, with a compact hood exposing the face.
+cloth_pts = [submesh_positions(trees['Merchant'], m) for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
+hems = [min(p[2] for p in max(mesh_pieces(trees['Merchant'], (m,)), key=len))
+        for m in ('MerchantRobe', 'MerchantCloak', 'MerchantHood')]
+for i, gap in enumerate(LAYER_HEM_SEPARATION):
+    assert hems[i + 1] - hems[i] >= gap, 'merchant cloth layers merge into one long silhouette: %s' % hems
+hood_top = [p for p in cloth_pts[2] if p[2] > 1.10]
+assert max(p[0] for p in hood_top) - min(p[0] for p in hood_top) <= HOOD_MAX_WIDTH, 'hood still reads as a bulky sack'
+assert max(material_diffuse('MerchantEye')) <= 0.45, 'ordinary teeth must stay dimmer than the single gold tooth'
 skeleton_tree = skeleton_xml('Merchant')
 parents = {}
 for bp in skeleton_tree.iter('boneparent'):
@@ -497,7 +516,7 @@ for mat, (low_value, high_value) in CLOTH_LUMINANCE.items():
     assert blue <= CLOTH_BLUE_OVER_GREEN[1] * green, '%s.png reads pink or grey (blue %.0f, green %.0f)' % (mat, blue, green)
     assert blue >= CLOTH_BLUE_OVER_GREEN[0] * green, \
         '%s.png turns khaki-olive under the yellow room light (blue %.0f, green %.0f)' % (mat, blue, green)
-    assert std >= CLOTH_MIN_STD, '%s.png is a smooth cloth without folds and wear (contrast %.1f)' % (mat, std)
+    assert std / value >= CLOTH_MIN_RELATIVE_STD, '%s.png is a smooth cloth without folds and wear (relative contrast %.2f)' % (mat, std / value)
     olive, block_std = png_analyse(path)[5:]
     hue = hue_saturation(red * FRONT_LIGHT[0], green * FRONT_LIGHT[1], blue * FRONT_LIGHT[2])[0]
     assert hue <= CLOTH_MAX_LIT_HUE, '%s.png reads ochre-olive under the front light (hue %.0f, at most %.0f)' % (

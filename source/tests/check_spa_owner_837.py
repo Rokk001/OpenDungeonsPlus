@@ -217,12 +217,11 @@ assert re.search(r'texture_unit\s*\{\s*colour_op_ex source1 src_manual', glow)
 assert 'std::vector<RoomObjectPath::Obstacle> spaPoolObstacles(GameMap& map, float clearance' in navigation_h
 pool_obstacles = body(navigation, 'std::vector<RoomObjectPath::Obstacle> RoomObjectNavigation::spaPoolObstacles(')
 assert 'room->getType() != RoomType::spa' in pool_obstacles and 'RoomObjectPath::SPA_POOL_MESH' in pool_obstacles
-assert '(tile->getX() == startX) && (tile->getY() == startY)' in pool_obstacles and \
-    '(tile->getX() == goalX) && (tile->getY() == goalY)' in pool_obstacles, 'bathers wade into their place and out'
+assert '(tile->getX() == startX) && (tile->getY() == startY)' in pool_obstacles, 'a dropped creature can leave its starting tile'
+assert '(tile->getX() == goalX)' not in pool_obstacles, 'ordinary destinations cannot open the mud to traffic'
 wrapper = body(navigation, 'bool RoomObjectNavigation::refine(Creature& creature, std::vector<Ogre::Vector2>& path, RouteCache& cache)')
-assert wrapper.index('refineAround(creature, around, poolCache, pool)') < \
-    wrapper.index('return refineAround(creature, path, cache, std::vector<RoomObjectPath::Obstacle>());'), \
-    'refine() tries the way around the pool first and wades only when there is none'
+assert 'path.swap(around);' in wrapper and 'return refined;' in wrapper, 'failed pool detours stay blocked'
+assert 'if(!around.empty())' not in wrapper, 'no fallback through mud after a failed detour'
 around = body(navigation, 'static bool refineAround(')
 assert 'for(RoomObjectPath::Obstacle piece : pool)' in around and 'withWalkingBody(creature, pool)' in around, \
     'the pool pieces are solid in the nearby test and in the route search'
