@@ -16,6 +16,8 @@
  */
 
 #include "modes/MenuModeLoad.h"
+#include "modes/MenuModeReplay.h"
+#include "modes/LoadGameFilter.h"
 
 #include "utils/Helper.h"
 #include "render/Gui.h"
@@ -34,16 +36,38 @@
 
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/widgets/Scrollbar.h>
+#include <algorithm>
+#include <ctime>
 #include "boost/filesystem.hpp"
 
 const std::string SAVEGAME_EXTENSION = ".level";
 
+//! \brief Orders files by modification time, breaking ties by path.
+static bool newerLoadFile(const std::string& left, const std::string& right)
+{
+    std::time_t a = boost::filesystem::last_write_time(left);
+    std::time_t b = boost::filesystem::last_write_time(right);
+    return a == b ? left < right : a > b;
+}
+
+//! \brief Sets up the unified save and replay browser.
 MenuModeLoad::MenuModeLoad(ModeManager *modeManager, bool inGame, const std::string& savedGame):
     AbstractApplicationMode(modeManager, ModeManager::MENU_LOAD_SAVEDGAME),
     mInGame(inGame),
     mSavedGame(savedGame)
 {
     CEGUI::Window* window = modeManager->getGui().getGuiSheet(Gui::guiSheet::loadSavedGameMenu);
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(window->getChild("LevelWindowFrame/KindFilter"));
+    filter->resetList();
+    const char* names[] = {"Campaign", "Skirmish", "Sandbox", "Replays"};
+    for(size_t i = 0; i < 4; ++i)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(names[i]);
+        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+        filter->addItem(item);
+    }
+    addEventConnection(filter->subscribeEvent(CEGUI::Combobox::EventListSelectionAccepted,
+        CEGUI::Event::Subscriber(&MenuModeLoad::updateFilesList, this)));
     addEventConnection(
         window->getChild("LevelWindowFrame/BackButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
@@ -133,27 +157,37 @@ void MenuModeLoad::activate()
         }
     }
 
-    CEGUI::Window* tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LevelWindowFrame/SaveGameSelect");
-    CEGUI::Listbox* levelSelectList = static_cast<CEGUI::Listbox*>(tmpWin);
-
-    tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
-    tmpWin->hide();
-    mFilesList.clear();
-    levelSelectList->resetList();
-    sheet->getChild("LevelWindowFrame/MapDescriptionText")->setText("");
-
-    std::string levelPath = ResourceManager::getSingleton().getSaveGamePath();
-    if(Helper::fillFilesList(levelPath, mFilesList, SAVEGAME_EXTENSION))
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(sheet->getChild("LevelWindowFrame/KindFilter"));
+    std::vector<std::string> saves;
+    std::vector<std::string> replays;
+    Helper::fillFilesList(ResourceManager::getSingleton().getSaveGamePath(), saves, SAVEGAME_EXTENSION);
+    Helper::fillFilesList(ResourceManager::getSingleton().getReplayDataPath(), replays, ".odr");
+    size_t newestKind = 0;
+    std::time_t newestTime = 0;
+    for(size_t i = 0; i < saves.size() + replays.size(); ++i)
     {
-        for (uint32_t n = 0; n < mFilesList.size(); ++n)
+        bool replay = i >= saves.size();
+        const std::string& file = replay ? replays[i - saves.size()] : saves[i];
+        std::string filename = boost::filesystem::path(file).filename().string();
+        int kind = 3;
+        if(!replay)
         {
-            std::string filename = boost::filesystem::path(mFilesList[n]).filename().string();
-            CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(filename);
-            item->setID(n);
-            item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
-            levelSelectList->addItem(item);
+            LevelInfo info;
+            bool valid = MapHandler::getMapInfo(file, info);
+            kind = classifyLoadSave(filename, valid, info, Campaign::getSingleton());
+            if(kind < 0)
+                continue;
+        }
+        std::time_t modified = boost::filesystem::last_write_time(file);
+        if(modified > newestTime)
+        {
+            newestTime = modified;
+            newestKind = static_cast<size_t>(kind);
         }
     }
+    filter->setItemSelectState(newestKind, true);
+    filter->setText(filter->getListboxItemFromIndex(newestKind)->getText());
+    updateFilesList();
     if(!mSavedGame.empty())
     {
         const std::string filename = mSavedGame;
@@ -163,6 +197,47 @@ void MenuModeLoad::activate()
 
 }
 
+//! \brief Shows only the selected kind, ordered by modification time, newest first.
+bool MenuModeLoad::updateFilesList(const CEGUI::EventArgs&)
+{
+    CEGUI::Window* sheet = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu);
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(sheet->getChild("LevelWindowFrame/KindFilter"));
+    if(!filter->getSelectedItem())
+        return true;
+    size_t kind = filter->getItemIndex(filter->getSelectedItem());
+    CEGUI::Listbox* list = static_cast<CEGUI::Listbox*>(sheet->getChild("LevelWindowFrame/SaveGameSelect"));
+    list->resetList();
+    mFilesList.clear();
+    sheet->getChild("LevelWindowFrame/MapDescriptionText")->setText("");
+    sheet->getChild("LoadingText")->hide();
+    std::vector<std::string> files;
+    Helper::fillFilesList(kind == 3 ? ResourceManager::getSingleton().getReplayDataPath() :
+        ResourceManager::getSingleton().getSaveGamePath(), files, kind == 3 ? ".odr" : SAVEGAME_EXTENSION);
+    for(size_t i = 0; i < files.size(); ++i)
+    {
+        std::string filename = boost::filesystem::path(files[i]).filename().string();
+        if(kind != 3)
+        {
+            LevelInfo info;
+            bool valid = MapHandler::getMapInfo(files[i], info);
+            int fileKind = classifyLoadSave(filename, valid, info, Campaign::getSingleton());
+            if(fileKind < 0 || static_cast<size_t>(fileKind) != kind)
+                continue;
+        }
+        mFilesList.push_back(files[i]);
+    }
+    std::sort(mFilesList.begin(), mFilesList.end(), newerLoadFile);
+    for(size_t i = 0; i < mFilesList.size(); ++i)
+    {
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(boost::filesystem::path(mFilesList[i]).filename().string());
+        item->setID(static_cast<uint32_t>(i));
+        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+        list->addItem(item);
+    }
+    return true;
+}
+
+//! \brief Starts the selected saved game or replay.
 bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LevelWindowFrame/SaveGameSelect");
@@ -180,6 +255,19 @@ bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
     if(id >= mFilesList.size())
         return true;
     const std::string level = mFilesList[id];
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LevelWindowFrame/KindFilter"));
+    if(filter->getItemIndex(filter->getSelectedItem()) == 3)
+    {
+        std::string description;
+        std::string error;
+        CEGUI::Window* loading = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
+        if(!MenuModeReplay::checkReplayValid(level, description, error) || !ODClient::getSingleton().replay(level))
+        {
+            loading->setText("Error: Couldn't launch replay!");
+            loading->show();
+        }
+        return true;
+    }
     if(mInGame)
     {
         getModeManager().requestSavedGame(level);
@@ -226,6 +314,7 @@ bool MenuModeLoad::launchSavedGame(const std::string& level)
     return true;
 }
 
+//! \brief Deletes the selected file while retaining the current filter.
 bool MenuModeLoad::deleteSelectedButtonPressed(const CEGUI::EventArgs&)
 {
     CEGUI::Window* tmpWin = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LevelWindowFrame/SaveGameSelect");
@@ -252,10 +341,11 @@ bool MenuModeLoad::deleteSelectedButtonPressed(const CEGUI::EventArgs&)
         return true;
     }
 
-    activate();
+    updateFilesList();
     return true;
 }
 
+//! \brief Shows the selected save or replay description.
 bool MenuModeLoad::updateDescription(const CEGUI::EventArgs&)
 {
     // Get the level corresponding id
@@ -277,6 +367,15 @@ bool MenuModeLoad::updateDescription(const CEGUI::EventArgs&)
 
     std::string filename = mFilesList[id];
 
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LevelWindowFrame/KindFilter"));
+    if(filter->getItemIndex(filter->getSelectedItem()) == 3)
+    {
+        std::string description;
+        std::string error;
+        bool valid = MenuModeReplay::checkReplayValid(filename, description, error);
+        descTxt->setText(reinterpret_cast<const CEGUI::utf8*>((valid ? description : error).c_str()));
+        return true;
+    }
     LevelInfo levelInfo;
     std::string mapDescription;
     if(MapHandler::getMapInfo(filename, levelInfo))
