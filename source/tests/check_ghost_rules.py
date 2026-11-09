@@ -815,7 +815,7 @@ int main(){
  // Decision 845: every ghost goes into the trap socket and takes 20 s (28 turns) into the cauldron, also at efficiency three
  for(int tick=0;tick<84;++tick){map.turn=100+tick;empty.step();double before=empty.mTurns;empty.step();near(empty.mTurns,before,"transfer clock increments once per world turn");
   // Decision 894: the first ghost waits in the permanent trap seat on the rim of the cauldron, offset (0.5, 0.82, 1.1) from the middle of the block
-  if(tick==0){const Tile& anchor=*room.floor.back();check(ghost.teleports>0&&std::fabs(ghost.socket.x-(anchor.x+1.0f))<1e-5f&&std::fabs(ghost.socket.y-(anchor.y+1.32f))<1e-5f&&std::fabs(ghost.socket.z-1.1f)<1e-5f,"the first ghost waits in the trap seat of the cauldron at its exact offset");check(hunter.animation=="Empty","the hunter puts the trap in with the Empty clip on arrival");}
+  if(tick==0){const Tile& anchor=*room.floor.back();check(ghost.teleports>0&&std::fabs(ghost.socket.x-(anchor.x+1.0f))<1e-5f&&std::fabs(ghost.socket.y-(anchor.y+1.32f))<1e-5f&&std::fabs(ghost.socket.z-1.1f)<1e-5f,"the first ghost waits in the trap seat of the cauldron at its exact offset");check(hunter.animation=="Idle","decision 936: the hunter turns to the seat with his Idle clip on arrival, the client lays the reach pose over it");}
   if(tick==26)check(empty.mGhosts.size()==3,"the first ghost is still being transferred after 27 turns");
   if(tick==27)check(empty.mGhosts.size()==2,"the first ghost reaches the cauldron after exactly 28 turns");
   if(tick==28)check(extra1.teleports>0,"the next ghost comes into the socket");}
