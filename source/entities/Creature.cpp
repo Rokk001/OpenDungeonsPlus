@@ -12909,7 +12909,7 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
     const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);
     const Ogre::Vector3 control1=port+portOut*reach+sag,control2=rear+rearOut*reach+sag;
     // The centre of the curve at t and the two axes across it
-    auto frame=[&](Ogre::Real t,Ogre::Vector3& tangent,Ogre::Vector3& side,Ogre::Vector3& up)
+    std::function<Ogre::Vector3(Ogre::Real, Ogre::Vector3&, Ogre::Vector3&, Ogre::Vector3&)> frame=[&](Ogre::Real t,Ogre::Vector3& tangent,Ogre::Vector3& side,Ogre::Vector3& up)
     {
         const Ogre::Real u=1.0f-t;
         tangent=(control1-port)*(3.0f*u*u)+(control2-control1)*(6.0f*u*t)+(rear-control2)*(3.0f*t*t);
