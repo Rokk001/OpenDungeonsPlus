@@ -2232,6 +2232,10 @@ models/GhostBox.skeleton    AI-generated with Claude Code    GPLv3+    Original 
 models/GhostCauldron.mesh    AI-generated with Claude Code    GPLv3+    Ghost cauldron reworked so it no longer reads as a press (owner decision 845): open bellied iron pot with rolled rim and glowing ectoplasm surface, side ring handles, four clawed feet over a fire grate with coals and embers, green inspection window, worn pipes and a brass trap socket on three curved arms over the mouth as the delivery point for ghost traps; two-tile footprint; original export of the Blender source GhostCauldron.blend kept outside Git (the tracked assets-src/rooms/ghostroom/GhostCauldron.blend stays the old press source), 2026-11-07
 assets-src/gui/icons/tiles/GhostHuntersButton.png    AI-generated with Claude Code    GPLv3+    Original ghost hunters HUD tile (owner decisions 800 and 825): painted open iron ghost trap with bronze bands and rivets, its green-white light cone and a ghost wisp pulled in, on the painted cracked stone inset of the project's own ItemSlotEmpty tile inside the painted iron frame of the project's own MerchantButton tile; painted at 512 pixels by a script and downsampled to the 256-pixel source, 2026-11-07
 gui/ODIcons.png (GhostHuntersButton)    AI-generated with Claude Code    GPLv3+    256-pixel atlas entry copied from assets-src/gui/icons/tiles/GhostHuntersButton.png into the free cell at 1280,4352; all prior entries preserved pixel for pixel, 2026-11-07
+materials/textures/GhostCauldronEctoplasm.png    AI-generated with Claude Code    GPLv3+    Original procedurally painted ectoplasm swirl for the ghost cauldron mouth and window fill (owner decision 998 point 6): green arms and veins round a glowing middle, darker meniscus and sunk bubbles, the mouth spans the inscribed circle so the material can turn it; written by tools/gen_ghost_cauldron_ectoplasm.py, 512 pixels, 2026-11-09
+materials/textures/GhostCauldronEctoGlint.png    AI-generated with Claude Code    GPLv3+    Original procedurally painted tileable glint layer for the cauldron ectoplasm (owner decision 998 point 6): light wisps, bubble rings and sparkles on black, added and scrolled by the material; written by tools/gen_ghost_cauldron_ectoplasm.py, 256 pixels, 2026-11-09
+models/GhostCauldron.mesh    AI-generated with Claude Code    GPLv3+    Cauldron mouth surface moved into its own GhostCauldronEctoplasm submesh with planar UVs centred on the mouth (owner decision 998 point 6); positions, normals, the trap seat glow (still GhostEctoplasm), bones and bounds unchanged; done on the export by tools/gen_ghost_cauldron_ectoplasm.py, 2026-11-09
+models/GhostCauldronFill.mesh    AI-generated with Claude Code    GPLv3+    Window fill given the textured GhostCauldronEctoplasm material and planar UVs at the scale of the mouth (owner decision 998 point 6); geometry and floor origin for the height scaling unchanged; done on the export by tools/gen_ghost_cauldron_ectoplasm.py, 2026-11-09
 models/Dragon.skeleton (Drink and SitDrink)    AI-generated animation with Codex    GPLv3+ for added animation data; original model and rig licences retained above    Original calm five-second table-to-mouth-to-table seated sip with articulated neck turn and anatomical lip contact, plus standing sip; unchanged seating, bones and unrelated clips, 2026-11-09.
 models/Lizardman.skeleton (Drink and SitDrink)    AI-generated animation with Codex    GPLv3+ for added animation data; original model and rig licences retained above    Original calm five-second drink cycles; seated mug rests farther onto the table and follows a complete clear path to the muzzle and back, retaining seating and every unrelated skeleton chunk, 2026-11-09.
 models/Rat.skeleton (Drink and SitDrink)    AI-generated animation with Codex    GPLv3+ for added animation data; original model and rig licences retained above    Original supported five-second drink cycles with raised forebody on the stool and muzzle turned to the paw while standing; hip and rear supports preserved, all unrelated skeleton chunks unchanged, 2026-11-09.
@@ -2276,3 +2280,35 @@ models/Wyvern.skeleton    AI-generated modification with Codex    GPLv3+ for add
 models/lich.skeleton    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Complete calm five-second standing and table-supported seated cup cycles, retaining native rig and unrelated clips. 2026-11-09.
 
 materials/textures/menu/MenuCrowFeather.png, materials/textures/menu/MenuCrowFeatherNormal.png OD Team GPLv3+ Original AI-generated feather albedo and tangent-space normal map created with the built-in image generator for the menu crow; fine charcoal-black barbs and central rachis, no external source.
+gui/RoomCentreIcons/alchemy-lab.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/arena.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/casino.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/crypt.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/dormitory.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/ghost-room.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/guard-room.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/hatchery.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/herb-garden.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/infirmary.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/library.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/merchant.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/prayer-temple.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/prison.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/spa.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/stone-bridge.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/tavern.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/temple.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/toilet.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/torture-chamber.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/training-hall.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/treasury.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/wooden-bridge.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreIcons/workshop.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreArtwork/spa-bath.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreArtwork/ghost-mana-crystal.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreArtwork/ghost-research-book.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreArtwork/ghost-level-crystal.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+
+gui/RoomCentreArtwork/ghost-vessel.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreArtwork/casino-smiles.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
+gui/RoomCentreArtwork/casino-money.png  AI-generated with Codex  GPLv3+  Painted for this project (2026-11-10)
