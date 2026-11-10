@@ -171,7 +171,7 @@ for i, a in enumerate(names):
             assert not overlap(book_boxes[a], book_boxes[b]), ('the profile page of the book overlaps', a, b)
 holder = book_boxes['SocialHolder']
 assert book_boxes['KeeperText'][3] <= holder[1] and book_boxes['NameText'][3] <= book_boxes['KeeperText'][1]
-assert book_boxes['Portrait'][2] <= holder[0] and holder[2] <= book_boxes['ColumnRule'][0]
+assert book_boxes['Portrait'][2] <= holder[0] and book_boxes['ColumnRule'][2] <= holder[0]
 
 # 2. The shared page in the book (compact) and on the card, on every screen and UI scale
 skin = ET.parse(repo / 'gui/ODSkin.imageset').getroot()

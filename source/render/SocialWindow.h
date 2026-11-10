@@ -51,7 +51,7 @@ public:
 
     //! \brief Shows the window on top of the other ones and draws the shown page.
     void show();
-    //! \brief Same, with the profile page of the given creature (all creatures are listed then).
+    //! \brief Same, with the inventory page of the given creature (all creatures are listed then).
     void showCreature(const std::string& creatureName);
     void hide();
     bool isVisible() const;
@@ -89,18 +89,18 @@ private:
         Inventory
     };
 
-    //! \brief One of the four filter buttons of the start page (user string "Filter").
+    //! \brief The filter dropdown returns to the overview.
     bool onFilterClicked(const CEGUI::EventArgs& e);
-    //! \brief A creature of the list (user string "Row"): opens its profile page.
+    //! \brief A creature of the list (user string "Row"): opens its inventory page.
     bool onListRowClicked(const CEGUI::EventArgs& e);
     //! \brief A button of the navigation bar (user string "Page").
     bool onNavClicked(const CEGUI::EventArgs& e);
-    //! \brief The back arrow: returns to the start page, the creature stays selected.
+    //! \brief The back arrow: returns to the start page and clears the selection.
     bool onBackClicked(const CEGUI::EventArgs& e);
     //! \brief The arrows around the name: the previous or next creature of the list, on the same page.
     bool onPreviousClicked(const CEGUI::EventArgs& e);
     bool onNextClicked(const CEGUI::EventArgs& e);
-    //! \brief A friend or foe name in the profile: shows the profile of that creature.
+    //! \brief A friend or foe name in the profile: shows the inventory of that creature.
     bool onLinkClicked(const CEGUI::EventArgs& e);
     //! \brief The scrollbars of the list and of the feeds move the shown rows.
     bool onListScrolled(const CEGUI::EventArgs& e);

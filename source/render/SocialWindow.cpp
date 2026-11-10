@@ -43,6 +43,8 @@
 #include <CEGUI/ImageManager.h>
 #include <CEGUI/InputEvent.h>
 #include <CEGUI/PropertyHelper.h>
+#include <CEGUI/widgets/Combobox.h>
+#include <CEGUI/widgets/ListboxTextItem.h>
 #include <CEGUI/widgets/PushButton.h>
 #include <CEGUI/widgets/Scrollbar.h>
 #include <CEGUI/Window.h>
@@ -84,8 +86,7 @@ const char* const FEED_NAME_COLOUR = "[colour='FFF2C860']";
 const char* const FEED_TIME_COLOUR = "[colour='FFB8AC90']";
 const char* const FEED_TEXT_COLOUR = "[colour='FFE8DCC0']";
 
-//! Names of the filter buttons and of the navigation buttons, in the order of the filters and of the pages
-const char* const FILTER_BUTTONS[] = {"FilterAll", "FilterWorkers", "FilterFighters", "FilterUnhappy"};
+//! Labels of the filter choices and names of the navigation buttons, in their displayed order
 const char* const FILTER_LABELS[] = {"All", "Workers", "Fighters", "Unhappy"};
 const char* const NAV_BUTTONS[] = {"NavFeed", "NavProfile", "NavValues", "NavInventory"};
 //! Digits between two thousands commas of a value ("42,600", book-variant-2)
@@ -469,6 +470,7 @@ void setNavState(CEGUI::Window* button, bool active)
 }
 }
 
+//! \brief Connects the persistent roster, filter, feed links and creature page controls.
 SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mGameMap(gameMap),
     mWindow(rootWindow->getChild("SocialWindow")),
@@ -484,11 +486,17 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
     mSinceProfileRefresh(0.0f)
 {
     CEGUI::Window* home = mWindow->getChild("HomePage");
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(home->getChild("Filter"));
     for(std::size_t i = 0; i < 4; ++i)
     {
-        CEGUI::Window* filter = home->getChild(FILTER_BUTTONS[i]);
-        filter->setUserString("Filter", std::to_string(i));
-        connect(filter, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onFilterClicked, this));
+        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(FILTER_LABELS[i], static_cast<CEGUI::uint>(i));
+        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
+        filter->addItem(item);
+    }
+    filter->setText(FILTER_LABELS[0]);
+    connect(filter, CEGUI::Combobox::EventListSelectionAccepted, CEGUI::Event::Subscriber(&SocialWindow::onFilterClicked, this));
+    for(std::size_t i = 0; i < 4; ++i)
+    {
         CEGUI::Window* nav = mWindow->getChild(std::string("NavBar/") + NAV_BUTTONS[i]);
         // The pages of one creature follow the start page in the order of the navigation buttons
         nav->setUserString("Page", std::to_string(i + 1));
@@ -520,6 +528,11 @@ SocialWindow::SocialWindow(CEGUI::Window* rootWindow, GameMap& gameMap) :
         connect(page->getChild("FeedRows"), CEGUI::Window::EventMouseWheel,
             CEGUI::Event::Subscriber(&SocialWindow::onFeedWheel, this));
         propagateMouseInput(page->getChild("FeedRows"));
+        for(std::size_t i = 0; i < FEED_ROWS; ++i)
+        {
+            CEGUI::Window* link = page->getChild("FeedRows/Row" + std::to_string(i) + "/ProfileLink");
+            connect(link, CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&SocialWindow::onLinkClicked, this));
+        }
     }
 }
 
@@ -553,6 +566,13 @@ bool SocialWindow::isVisible() const
 //! \brief Opens the Dungeonbook and subscribes to its allied roster.
 void SocialWindow::show()
 {
+    if(!mWindow->isVisible())
+    {
+        mFilter = CreatureFilter::All;
+        CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
+        filter->setItemSelectState(static_cast<std::size_t>(0), true);
+        filter->setText(FILTER_LABELS[0]);
+    }
     if(!mWindow->isVisible() && !useLocalCreatureRoster())
     {
         social::PostLog::getSingleton().clearDungeonbookRoster();
@@ -565,11 +585,15 @@ void SocialWindow::show()
     mSinceRefreshCheck = 0.0f;
 }
 
+//! \brief Opens a creature on its inventory and resets the roster filter.
 void SocialWindow::showCreature(const std::string& creatureName)
 {
     mFilter = CreatureFilter::All;
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
+    filter->setItemSelectState(static_cast<std::size_t>(0), true);
+    filter->setText(FILTER_LABELS[0]);
     mSelectedCreature = creatureName;
-    mPage = Page::Profile;
+    mPage = Page::Inventory;
     show();
 }
 
@@ -634,21 +658,23 @@ bool SocialWindow::onCloseClicked(const CEGUI::EventArgs& /*e*/)
     return true;
 }
 
-bool SocialWindow::onFilterClicked(const CEGUI::EventArgs& e)
+//! \brief Filters the roster and returns to the all-creature feed.
+bool SocialWindow::onFilterClicked(const CEGUI::EventArgs& /*e*/)
 {
-    const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
-    const std::string index = args.window->getUserString("Filter").c_str();
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
+    const CEGUI::ListboxItem* item = filter->getSelectedItem();
+    if(item == nullptr || item->getID() >= 4)
+        return true;
     const CreatureFilter filters[] = {CreatureFilter::All, CreatureFilter::Workers, CreatureFilter::Fighters,
         CreatureFilter::Unhappy};
-    for(std::size_t i = 0; i < 4; ++i)
-    {
-        if(index == std::to_string(i))
-            mFilter = filters[i];
-    }
+    mFilter = filters[item->getID()];
+    mSelectedCreature.clear();
     rebuildCreatureList();
+    showPage(Page::Home);
     return true;
 }
 
+//! \brief Opens the clicked roster creature on its inventory.
 bool SocialWindow::onListRowClicked(const CEGUI::EventArgs& e)
 {
     const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
@@ -659,9 +685,9 @@ bool SocialWindow::onListRowClicked(const CEGUI::EventArgs& e)
 
     CEGUI::Scrollbar* bar = static_cast<CEGUI::Scrollbar*>(mWindow->getChild("HomePage/ListScroll"));
     const std::size_t index = static_cast<std::size_t>(bar->getScrollPosition() + 0.5f) + row;
-    // Selecting a creature shows its profile right away
+    // Selecting a creature shows its inventory right away
     if(index < mListedCreatures.size())
-        selectCreature(mListedCreatures[index], Page::Profile);
+        selectCreature(mListedCreatures[index], Page::Inventory);
     return true;
 }
 
@@ -689,8 +715,10 @@ bool SocialWindow::onNavClicked(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Clears the selected creature and returns to the overview.
 bool SocialWindow::onBackClicked(const CEGUI::EventArgs& /*e*/)
 {
+    mSelectedCreature.clear();
     showPage(Page::Home);
     return true;
 }
@@ -707,11 +735,12 @@ bool SocialWindow::onNextClicked(const CEGUI::EventArgs& /*e*/)
     return true;
 }
 
+//! \brief Opens a linked creature on its inventory.
 bool SocialWindow::onLinkClicked(const CEGUI::EventArgs& e)
 {
     const CEGUI::WindowEventArgs& args = static_cast<const CEGUI::WindowEventArgs&>(e);
     if(args.window->isUserStringDefined("Creature"))
-        selectCreature(std::string(args.window->getUserString("Creature").c_str()), Page::Profile);
+        selectCreature(std::string(args.window->getUserString("Creature").c_str()), Page::Inventory);
     return true;
 }
 
@@ -752,12 +781,16 @@ bool SocialWindow::onFeedWheel(const CEGUI::EventArgs& e)
     return true;
 }
 
+//! \brief Selects a creature, making it visible in the roster if necessary.
 void SocialWindow::selectCreature(const std::string& creatureName, Page page)
 {
     if((mFilter != CreatureFilter::All) &&
        (std::find(mListedCreatures.begin(), mListedCreatures.end(), creatureName) == mListedCreatures.end()))
     {
         mFilter = CreatureFilter::All;
+        CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
+        filter->setItemSelectState(static_cast<std::size_t>(0), true);
+        filter->setText(FILTER_LABELS[0]);
     }
     mSelectedCreature = creatureName;
     rebuildCreatureList();
@@ -781,6 +814,7 @@ void SocialWindow::stepCreature(int direction)
     showPage(mPage);
 }
 
+//! \brief Shows the overview or creature page while retaining the roster.
 void SocialWindow::showPage(Page page)
 {
     // Right after opening, the server roster is still on its way; the page of the creature is filled when it arrives
@@ -791,8 +825,17 @@ void SocialWindow::showPage(Page page)
     mPage = page;
     const char* const pageNames[] = {"HomePage", "FeedPage", "ProfilePage", "ValuesPage", "InventoryPage"};
     const Page pages[] = {Page::Home, Page::Feed, Page::Profile, Page::Values, Page::Inventory};
-    for(std::size_t i = 0; i < 5; ++i)
+    mWindow->getChild("HomePage")->setVisible(true);
+    for(std::size_t i = 1; i < 5; ++i)
+    {
         mWindow->getChild(pageNames[i])->setVisible(pages[i] == page);
+        if(pages[i] == page)
+            mWindow->getChild(pageNames[i])->moveToFront();
+    }
+    const char* const overviewFeed[] = {"FeedPanel", "FeedTitle", "FeedTitleRule", "FeedRows", "FeedScroll", "FeedEmpty"};
+    for(const char* child : overviewFeed)
+        mWindow->getChild(std::string("HomePage/") + child)->setVisible(page == Page::Home);
+    mWindow->getChild("NavBar")->setVisible(page != Page::Home);
     mWindow->getChild("Header")->setVisible(page != Page::Home);
     // The start page is the feed of all creatures, so its feed button is the active one there
     const Page navPages[] = {Page::Feed, Page::Profile, Page::Values, Page::Inventory};
@@ -961,12 +1004,6 @@ void SocialWindow::rebuildCreatureList()
         mSelectedCreature.clear();
 
     CEGUI::Window* home = mWindow->getChild("HomePage");
-    for(std::size_t i = 0; i < 4; ++i)
-    {
-        const CreatureFilter filters[] = {CreatureFilter::All, CreatureFilter::Workers, CreatureFilter::Fighters,
-            CreatureFilter::Unhappy};
-        setTabState(home->getChild(FILTER_BUTTONS[i]), FILTER_LABELS[i], filters[i] == mFilter);
-    }
     std::ostringstream label;
     label << (localRoster ? "Known creatures (" : "Creatures (") << mListedCreatures.size();
     if(mListedCreatures.size() != mEntries.size())
@@ -1057,6 +1094,8 @@ void SocialWindow::rebuildFeed()
             continue;
 
         const social::Post& post = *posts[index];
+        row->getChild("ProfileLink")->setUserString("Creature", post.mCreature);
+        row->getChild("ProfileLink")->setEnabled(findEntry(post.mCreature) != nullptr);
         const social::CreatureProfile& profile = cache.getProfile(post.mCreature, post.mClassName, post.mIsWorker);
         const std::string text = renderPostText(post, profile);
         setImage(row->getChild("Portrait"), findPortrait(post.mCreature, post.mClassName, post.mIsWorker, false));

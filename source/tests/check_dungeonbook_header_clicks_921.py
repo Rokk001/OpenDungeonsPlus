@@ -6,7 +6,8 @@ anywhere on a page raises that page above its siblings (Window::onMouseButtonDow
 click). After the first click on a page the page lay over the head, and CEGUI hit testing (front window first) gave
 the click on an arrow to the page. The head and the navigation bar are now always on top of the pages.
 Checked here:
-1. Header and NavBar are AlwaysOnTop children of the book, the pages are not; the pages do overlap the head.
+1. Header and NavBar are AlwaysOnTop children of the book, the pages are not; the scrollable values viewport starts
+   below the head, while the other pages overlap it.
 2. A model of CEGUI drawing order and hit testing: after a click on every page the centre of each arrow still hits the
    arrow (without the fix the raised page takes it).
 3. The arrows are connected: back shows the start page, previous and next step through the listed creatures with wrap.
@@ -61,7 +62,10 @@ for name in PAGES:
     assert props(page).get('AlwaysOnTop') != 'True', name
     assert props(page).get('MousePassThroughEnabled') != 'True', 'the page takes the clicks on its free space'
     box = area(page, client)
-    assert box[1] < header_box[3], name + ' overlaps the head; without AlwaysOnTop a raised page covers the arrows'
+    if name == 'ValuesPage':
+        assert box[1] == header_box[3], 'scrolling values must remain below the head'
+    else:
+        assert box[1] < header_box[3], name + ' overlaps the head; without AlwaysOnTop a raised page covers the arrows'
 
 # 2. Drawing order and hit testing with rise on click (CEGUI Window::addWindowToDrawList)
 def build_order(use_layout_flags):
@@ -100,7 +104,7 @@ for fixed in (False, True):
             box = area(child(header, arrow), header_box)
             centre = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
             target = hit(order, centre, {page, 'Header', 'NavBar'})
-            if fixed:
+            if fixed or page == 'ValuesPage':
                 assert target == 'Header', '%s after a click on %s: %s takes the click' % (arrow, page, target)
             else:
                 assert target == page, 'the model shows the reported fault for %s on %s' % (arrow, page)
