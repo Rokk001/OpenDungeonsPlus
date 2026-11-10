@@ -3265,7 +3265,7 @@ bool GameMode::updateTrapProductionButtons(const CEGUI::EventArgs&)
 {
     CEGUI::MultiColumnList* orders = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders"));
     CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
-    const bool valid = !mProductionRequestPending && selected != nullptr &&
+    const bool valid = selected != nullptr &&
         selected->getID() < mTrapProductionData.orders.size();
     mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/MoveUp")->setEnabled(valid && selected->getID() > 0);
     mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/MoveDown")->setEnabled(valid && selected->getID() + 1 < mTrapProductionData.orders.size());
@@ -6048,7 +6048,7 @@ bool GameMode::hideGhostRoomWindow(const CEGUI::EventArgs&)
     return true;
 }
 
-//! \brief Cycles the unlocked apparatuses (mana still, ghost press, soul forge) the next ectoplasm is carried to.
+//! \brief Selects the unlocked apparatus picture the next ectoplasm is carried to.
 bool GameMode::cycleGhostProduct(const CEGUI::EventArgs& args)
 {
     Player* player = mGameMap->getLocalPlayer();
@@ -6130,6 +6130,7 @@ void GameMode::refreshGhostRoomWindow()
         button->setEnabled(unlocked);
         button->getChild("Lock")->setVisible(!unlocked);
         button->getChild("Image")->setAlpha(unlocked ? 1.0f : 0.35f);
+        button->getChild("Image")->setProperty("ImageColours", unlocked ? "FFFFFFFF" : "FF707070");
         button->getChild("Image")->setProperty("FrameEnabled", chosen == kinds[index] ? "True" : "False");
     }
     mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/Ratio2")->setText(

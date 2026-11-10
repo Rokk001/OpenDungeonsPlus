@@ -12,6 +12,7 @@
             <Property name="Text" value="Trap production" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Listbox" name="Workshops">
             <Property name="Area" value="{{0.03,0},{0.12,0},{0.97,0},{0.63,0}}" />
@@ -26,6 +27,7 @@
             <Property name="Text" value="Priority" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/MultiColumnList" name="Orders">
             <Property name="Area" value="{{0.03,0},{0.73,0},{0.83,0},{0.97,0}}" />

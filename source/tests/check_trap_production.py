@@ -43,9 +43,10 @@ namespace CEGUI {
 struct EventArgs {};
 struct ListboxItem {uint32_t id=0;uint32_t getID()const{return id;}};
 struct Window {bool enabled=false;virtual ~Window(){};void setEnabled(bool v){enabled=v;}};
-struct Listbox:Window {ListboxItem item;bool selected=true;ListboxItem* getFirstSelectedItem(){return selected?&item:nullptr;}};
+//! \brief The icon priority grid exposes the same selected-item interface as the earlier list.
+struct MultiColumnList:Window {ListboxItem item;bool selected=true;ListboxItem* getFirstSelectedItem(){return selected?&item:nullptr;}};
 }
-struct Root {CEGUI::Listbox orders;CEGUI::Window up,down;CEGUI::Window* getChild(const std::string& path){return path=="RoomManagerWindow/Pages/WorkshopPage/Orders"?&orders:(path=="RoomManagerWindow/Pages/WorkshopPage/MoveUp"?&up:&down);}};
+struct Root {CEGUI::MultiColumnList orders;CEGUI::Window up,down;CEGUI::Window* getChild(const std::string& path){return path=="RoomManagerWindow/Pages/WorkshopPage/Orders"?&orders:(path=="RoomManagerWindow/Pages/WorkshopPage/MoveUp"?&up:&down);}};
 enum class ClientNotificationType {askTrapProductionQueue,askMoveTrapProductionOrder};
 struct ClientNotification {ClientNotificationType type;ODPacket mPacket;ClientNotification(ClientNotificationType t):type(t){}};
 struct ODClient {int queries=0,moves=0;std::string name;bool earlier=false;static ODClient& getSingleton(){static ODClient c;return c;}void queueClientNotification(ClientNotification* n){if(n->type==ClientNotificationType::askTrapProductionQueue)++queries;else{++moves;n->mPacket>>name>>earlier;}delete n;}};

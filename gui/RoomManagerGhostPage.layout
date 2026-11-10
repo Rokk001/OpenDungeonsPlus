@@ -12,6 +12,7 @@
             <Property name="Text" value="Ghost room" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticImage" name="Vessel">
             <Property name="Area" value="{{0.04,0},{0.12,0},{0.47,0},{0.79,0}}" />
@@ -21,6 +22,7 @@
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Image" value="RoomArtworkGhostVessel/Image" />
             <Property name="AspectMode" value="Shrink" />
+            <Property name="FrameColours" value="FFF2C860" />
         </Window>
         <Window type="OD/ProgressBar" name="EctoplasmProgress">
             <Property name="Area" value="{{0.07,0},{0.8,0},{0.44,0},{0.84,0}}" />
@@ -35,6 +37,7 @@
             <Property name="Text" value="0 / 10" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticText" name="Path0">
             <Property name="Area" value="{{0.45,0},{0.2,0},{0.67,0},{0.26,0}}" />
@@ -45,6 +48,7 @@
             <Property name="Text" value="---" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Button" name="GhostProductButton">
             <Property name="Area" value="{{0.65,0},{0.13,0},{0.88,0},{0.30000000000000004,0}}" />
@@ -59,6 +63,7 @@
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="RoomArtworkGhostManaCrystal/Image" />
                 <Property name="AspectMode" value="Shrink" />
+                <Property name="FrameColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Lock">
                 <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
@@ -69,6 +74,7 @@
                 <Property name="Image" value="DungeonbookIcons/Lock" />
                 <Property name="AspectMode" value="Shrink" />
                 <Property name="Visible" value="False" />
+                <Property name="FrameColours" value="FFF2C860" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Ratio0">
@@ -80,6 +86,7 @@
             <Property name="Text" value="1 : 1" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticText" name="Path1">
             <Property name="Area" value="{{0.45,0},{0.44,0},{0.67,0},{0.5,0}}" />
@@ -90,6 +97,7 @@
             <Property name="Text" value="---" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Button" name="Product1">
             <Property name="Area" value="{{0.65,0},{0.37,0},{0.88,0},{0.54,0}}" />
@@ -104,6 +112,7 @@
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="RoomArtworkGhostResearchBook/Image" />
                 <Property name="AspectMode" value="Shrink" />
+                <Property name="FrameColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Lock">
                 <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
@@ -114,6 +123,7 @@
                 <Property name="Image" value="DungeonbookIcons/Lock" />
                 <Property name="AspectMode" value="Shrink" />
                 <Property name="Visible" value="False" />
+                <Property name="FrameColours" value="FFF2C860" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Ratio1">
@@ -125,6 +135,7 @@
             <Property name="Text" value="1 : 1" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticText" name="Path2">
             <Property name="Area" value="{{0.45,0},{0.6799999999999999,0},{0.67,0},{0.74,0}}" />
@@ -135,6 +146,7 @@
             <Property name="Text" value="---" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Button" name="Product2">
             <Property name="Area" value="{{0.65,0},{0.61,0},{0.88,0},{0.78,0}}" />
@@ -149,6 +161,7 @@
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="RoomArtworkGhostLevelCrystal/Image" />
                 <Property name="AspectMode" value="Shrink" />
+                <Property name="FrameColours" value="FFF2C860" />
             </Window>
             <Window type="OD/StaticImage" name="Lock">
                 <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
@@ -159,6 +172,7 @@
                 <Property name="Image" value="DungeonbookIcons/Lock" />
                 <Property name="AspectMode" value="Shrink" />
                 <Property name="Visible" value="False" />
+                <Property name="FrameColours" value="FFF2C860" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="Ratio2">
@@ -170,6 +184,7 @@
             <Property name="Text" value="1 : 1" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Checkbox" name="GhostReviveButton">
             <Property name="Area" value="{{0.04,0},{0.93,0},{0.48,0},{0.995,0}}" />

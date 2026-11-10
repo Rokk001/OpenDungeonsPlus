@@ -7,6 +7,7 @@
 #include <CEGUI/ImageManager.h>
 #include <CEGUI/widgets/ListboxTextItem.h>
 #include <algorithm>
+#include <cstdint>
 #include <vector>
 #include "traps/TrapType.h"
 
@@ -21,12 +22,13 @@ public:
     {
         setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
         setTextParsingEnabled(false);
+        setTextColours(CEGUI::Colour(0xFFF2C860));
     }
     //! \brief Scales row and priority tile height with their owning page.
     CEGUI::Sizef getPixelSize() const override
     {
         const float width = getOwnerWindow() == nullptr ? 480.0f : getOwnerWindow()->getPixelSize().d_width;
-        return CEGUI::Sizef(mTile ? width * 0.22f : width - 24.0f, width * (mTile ? 0.22f : 0.17f));
+        return CEGUI::Sizef(mTile ? width * 0.22f : width * 0.95f, width * (mTile ? 0.22f : 0.17f));
     }
     //! \brief Draws portraits and item pictures beside the values, with progress below.
     void draw(CEGUI::GeometryBuffer& buffer, const CEGUI::Rectf& target, float alpha,

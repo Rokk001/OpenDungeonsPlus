@@ -12,6 +12,7 @@
             <Property name="Text" value="Casino" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Button" name="CasinoPayoutButton">
             <Property name="Area" value="{{0.04,0},{0.24,0},{0.48,0},{0.7,0}}" />
@@ -26,6 +27,7 @@
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="RoomArtworkCasinoSmiles/Image" />
                 <Property name="AspectMode" value="Shrink" />
+                <Property name="FrameColours" value="FFF2C860" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="SmilesLabel">
@@ -37,6 +39,7 @@
             <Property name="Text" value="Smiles" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Button" name="MoneyButton">
             <Property name="Area" value="{{0.52,0},{0.24,0},{0.96,0},{0.7,0}}" />
@@ -51,6 +54,7 @@
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="Image" value="RoomArtworkCasinoMoney/Image" />
                 <Property name="AspectMode" value="Shrink" />
+                <Property name="FrameColours" value="FFF2C860" />
             </Window>
         </Window>
         <Window type="OD/StaticText" name="MoneyLabel">
@@ -62,6 +66,7 @@
             <Property name="Text" value="Money" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
     </Window>
 </GUILayout>

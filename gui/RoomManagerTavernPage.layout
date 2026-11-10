@@ -12,6 +12,7 @@
             <Property name="Text" value="Tavern" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticImage" name="Beer">
             <Property name="Area" value="{{0.36,0},{0.13,0},{0.64,0},{0.48,0}}" />
@@ -21,6 +22,7 @@
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Image" value="OpenDungeonsIcons/BeerButton" />
             <Property name="AspectMode" value="Shrink" />
+            <Property name="FrameColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticImage" name="BeerLock">
             <Property name="Area" value="{{0.52,0},{0.35,0},{0.64,0},{0.48,0}}" />
@@ -30,6 +32,7 @@
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Image" value="DungeonbookIcons/Lock" />
             <Property name="AspectMode" value="Shrink" />
+            <Property name="FrameColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticText" name="BeerText">
             <Property name="Area" value="{{0.32,0},{0.49,0},{0.68,0},{0.57,0}}" />
@@ -40,6 +43,7 @@
             <Property name="Text" value="" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticImage" name="Keeper">
             <Property name="Area" value="{{0.1,0},{0.64,0},{0.25,0},{0.8,0}}" />
@@ -49,6 +53,7 @@
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Image" value="OpenDungeonsIcons/SeatIcon" />
             <Property name="AspectMode" value="Shrink" />
+            <Property name="FrameColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticText" name="KeeperLabel">
             <Property name="Area" value="{{0.03,0},{0.8,0},{0.32,0},{0.88,0}}" />
@@ -59,6 +64,7 @@
             <Property name="Text" value="Keeper" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticImage" name="Creature">
             <Property name="Area" value="{{0.75,0},{0.64,0},{0.9,0},{0.8,0}}" />
@@ -68,6 +74,7 @@
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Image" value="OpenDungeonsIcons/CreaturesIcon" />
             <Property name="AspectMode" value="Shrink" />
+            <Property name="FrameColours" value="FFF2C860" />
         </Window>
         <Window type="OD/StaticText" name="CreatureLabel">
             <Property name="Area" value="{{0.68,0},{0.8,0},{0.97,0},{0.88,0}}" />
@@ -78,6 +85,7 @@
             <Property name="Text" value="Creature" />
             <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="TextColours" value="FFF2C860" />
         </Window>
         <Window type="OD/Button" name="PayerButton">
             <Property name="Area" value="{{0.35,0},{0.68,0},{0.65,0},{0.79,0}}" />
