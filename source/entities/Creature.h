@@ -2273,8 +2273,12 @@ private:
     //! \brief The mount of the cannon on the hand bone (decision 894): its orientation is set every frame of the beam so
     //! that the barrel points at the ghost, whatever pose the Beam clip holds the hand in.
     Ogre::TagPoint* mGhostCaptureGrip = nullptr;
+    //! \brief The world direction the cannon's barrel points in this frame of the beam (decision 998): it follows the
+    //! ghost smoothly and never pitches below GhostCannonMaxDownDegrees; zero while no beam is on.
+    Ogre::Vector3 mGhostCannonAim = Ogre::Vector3::ZERO;
     //! \brief The flexible hose from the pack to the cannon (decision 894): a textured tube re-shaped every frame between
-    //! the pack's port and the rear end of the cannon, wherever the cannon is (holster or hand).
+    //! the pack's port and the rear end of the cannon, wherever the cannon is (holster or hand), wound with coloured wires
+    //! (decision 998).
     Ogre::SceneNode* mGhostHoseNode = nullptr;
     Ogre::ManualObject* mGhostHose = nullptr;
     bool mGhostOwnWeaponsHidden = false;

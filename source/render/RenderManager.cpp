@@ -4256,7 +4256,12 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
             ent->setQueryFlags(0);
         }
         // Chickens, doors, beds and the other animated objects: skin on the GPU, after their final material is set.
-        useShaderSkinning(ent);
+        // Not a ghost (owner decision 998): GhostEntity::updateLook sets its opacity every frame, and every opacity
+        // swaps in a "_alpha_" copy of the material (setEntityOpacity) that useShaderSkinning never prepared; a ghost
+        // was seen collapsed into a flat spiky heap on the floor. Skinned on the CPU, as before GPU skinning came,
+        // the ghost keeps its figure whatever material copy it shows.
+        if(renderedMovableEntity->getObjectType() != GameEntityType::ghostEntity)
+            useShaderSkinning(ent);
         if(meshName == "Cauldron" && ent->hasSkeleton() && ent->getSkeleton()->hasBone("FireAnchor"))
         {
             Ogre::ParticleSystem* fire = mSceneManager->createParticleSystem(tempString + "_CauldronFire", "RoomAmbAltarFlame");

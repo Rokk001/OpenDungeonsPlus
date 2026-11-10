@@ -6,8 +6,9 @@ ectoplasm surface, ring handles, clawed feet over a fire grate with coals and em
 brass trap socket over the mouth (the delivery point of decision 845 item 5). Owner decision 894 rebuilt the pot: the
 centre funnel and its arms are gone, an open trap seat sits on the rim at the corner and the mesh has the rig
 models/GhostCauldron.skeleton (the later parts of the exported mesh are checked in check_ghost_assets.py). The exported
-models/GhostCauldron.mesh uses exactly these six materials and keeps its two-tile footprint (2.0 x 2.0 x 1.14, read from
-the mesh bounds chunk; the old 1.6 high mesh had the funnel);
+models/GhostCauldron.mesh uses exactly these seven materials (decision 998 point 6 gave the mouth surface its own
+GhostCauldronEctoplasm, see check_ghost_cauldron_ectoplasm.py) and keeps its two-tile footprint (2.0 x 2.0 x 1.14,
+read from the mesh bounds chunk; the old 1.6 high mesh had the funnel);
 the client fill sits behind the new glass; the CREDITS line names the rework. Fixed values measured once on the
 export of this branch.
 """
@@ -33,7 +34,8 @@ assert "'GhostCauldron'}" in generator.split('OUTSIDE_GIT = ')[1].split('\n')[0]
 
 mesh = (repo / 'models/GhostCauldron.mesh').read_bytes()
 materials = sorted(set(m.decode() for m in re.findall(rb'(Ghost[A-Za-z]+)\n', mesh)))
-assert materials == ['GhostBrass', 'GhostCoal', 'GhostEctoplasm', 'GhostEmbers', 'GhostIron', 'GhostWindow'], materials
+assert materials == ['GhostBrass', 'GhostCauldronEctoplasm', 'GhostCoal', 'GhostEctoplasm', 'GhostEmbers', 'GhostIron',
+                     'GhostWindow'], materials
 bounds = None
 position = 0
 while True:
