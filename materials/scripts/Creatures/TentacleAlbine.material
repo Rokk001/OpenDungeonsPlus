@@ -11,6 +11,7 @@ vertex_program myTentacleAlbineVertexShader glsl
         param_named_auto viewProjectionMatrix viewproj_matrix
         param_named_auto lightMatrix texture_viewproj_matrix 0
         param_named_auto boneMatrices world_matrix_array_3x4
+        param_named_auto worldMatrix world_matrix
     }
   
 }

@@ -7,9 +7,11 @@ layout (location = 1) in vec4 blendWeights;
 layout (location = 2)  in vec4 normal;
 layout (location = 7) in vec4 blendIndices;
 
-// Hardware skinning: the bone matrices (world_matrix_array_3x4) contain the world transform.
+// Hardware skinning: the bone matrices (world_matrix_array_3x4) are in object space in OGRE 14,
+// so the skinned position and normal are moved into world space with worldMatrix.
 uniform    mat4 viewProjectionMatrix;
 uniform    mat4 viewMatrix;
+uniform    mat4 worldMatrix;
 uniform    vec4 boneMatrices[768];
 // width, height, 1/width, 1/height of the viewport in pixels
 uniform    vec4 viewportSize;
@@ -31,8 +33,8 @@ void main(void)
       P += weights[i] * vec3(dot(boneMatrices[idx], pos), dot(boneMatrices[idx + 1], pos), dot(boneMatrices[idx + 2], pos));
       N += weights[i] * vec3(dot(boneMatrices[idx], nrm), dot(boneMatrices[idx + 1], nrm), dot(boneMatrices[idx + 2], nrm));
   }
-  vec4 clip = viewProjectionMatrix * vec4(P, 1.0);
-  vec2 dir = (viewMatrix * vec4(N, 0.0)).xy;
+  vec4 clip = viewProjectionMatrix * (worldMatrix * vec4(P, 1.0));
+  vec2 dir = (viewMatrix * (worldMatrix * vec4(N, 0.0))).xy;
   float len = length(dir);
   dir = len > 0.0001 ? dir / len : vec2(0.0);
   clip.xy += dir * pixelWidth * 2.0 * viewportSize.zw * clip.w;

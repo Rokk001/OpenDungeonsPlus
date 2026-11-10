@@ -20,6 +20,7 @@
 
 #include <OgreVector.h>
 #include <OgreSingleton.h>
+#include <OISMouse.h>
 
 #include <memory>
 
@@ -77,6 +78,10 @@ public:
     //! window position (clamped to the window) and drops motion accumulated before the call.
     void setMousePosition(int x, int y);
     void setCurrentAMode(AbstractApplicationMode& mode);
+    //! \brief Captures the mouse. On Windows (OIS/DirectInput) the game pointer is the position of the
+    //! Windows pointer inside the game window (1:1, also over remote desktop) and no mouse input is
+    //! processed while the window is not in the foreground. Elsewhere it only captures the OIS mouse.
+    void capturePointer();
     void handleSFMLEvent(const sf::Event& evt);
     //! \brief Recreates the input devices if the mouse or keyboard capture setting changed.
     //! Must not be called from an input callback.
@@ -123,6 +128,36 @@ public:
     void createInputDevices(bool mouseGrab, bool keyboardGrab);
     //! \brief Destroys the mouse and keyboard; safe to call when they do not exist
     void destroyInputDevices();
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+    //! \brief Hands the OIS mouse events to the current mode with the position of the Windows pointer
+    class PointerForwarder: public OIS::MouseListener
+    {
+    public:
+        PointerForwarder(InputManager& inputManager): mInputManager(inputManager) {}
+        virtual bool mouseMoved(const OIS::MouseEvent& arg) override;
+        virtual bool mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id) override;
+        virtual bool mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id) override;
+    private:
+        InputManager& mInputManager;
+    };
+    friend class PointerForwarder;
+    //! \brief Reads the Windows pointer as game pointer position. Returns false if not possible.
+    bool readSystemPointer(int& x, int& y, bool& inside);
+    //! \brief Writes the game pointer position to the OIS state and the GUI
+    void applyPointerToState(int x, int y);
+    //! \brief Clips and hides the Windows pointer (mouse grab) or frees it
+    void updateCursorGrab(bool grab);
+    //! \brief Moves the Windows pointer to the given game pointer position (clamped)
+    void moveSystemPointer(int x, int y);
+    PointerForwarder mPointerForwarder;
+    bool mWasForeground;
+    bool mCursorHidden;
+    bool mCursorClipped;
+    //! \brief Position set by the game while the window was in the background
+    bool mHasPendingPosition;
+    int mPendingX, mPendingY;
+    int mLastPointerX, mLastPointerY;
+#endif
 #ifdef OD_USE_SFML_WINDOW
     std::unique_ptr<SFMLToOISListener> mListener;
 #endif
