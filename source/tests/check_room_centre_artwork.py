@@ -22,8 +22,8 @@ ARTWORK = (
     ('ghost-research-book.png', (39, 33)),
     ('ghost-level-crystal.png', (38, 40)),
     ('ghost-vessel.png', (173, 233)),
-    ('casino-smiles.png', (128, 100)),
-    ('casino-money.png', (128, 100)),
+    ('casino-smiles.png', (128, 110)),
+    ('casino-money.png', (128, 110)),
 )
 
 
