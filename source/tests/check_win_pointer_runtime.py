@@ -195,11 +195,9 @@ int count(const AbstractApplicationMode& mode, char kind)
         if(it->kind == kind) ++result;
     return result;
 }
-//! Handles mouse messages as the game does, without STATIC control app commands.
+//! Preserves normal Windows processing beneath the production subclass.
 LRESULT CALLBACK baseWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    if(message >= WM_MOUSEFIRST && message <= WM_MOUSELAST)
-        return 0;
     return DefWindowProcW(hwnd, message, wParam, lParam);
 }
 //! Uses real Win32 messages, actual subclass/capture and the actual CEGUI titlebar.
