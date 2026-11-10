@@ -1,4 +1,4 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<Imageset version="2" name="RoomArtworkSpaBath" imagefile="RoomCentreArtwork/spa-bath.png" autoScaled="false" nativeHorzRes="1024" nativeVertRes="768">
+<Imageset version="2" name="RoomArtworkSpaBath" imagefile="spa-bath.png" autoScaled="false" nativeHorzRes="1024" nativeVertRes="768">
     <Image name="Image" xPos="0" yPos="0" width="118" height="118" />
 </Imageset>

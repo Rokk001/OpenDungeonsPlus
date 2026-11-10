@@ -1,4 +1,4 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<Imageset version="2" name="RoomArtworkCasinoSmiles" imagefile="RoomCentreArtwork/casino-smiles.png" autoScaled="false" nativeHorzRes="1024" nativeVertRes="768">
+<Imageset version="2" name="RoomArtworkCasinoSmiles" imagefile="casino-smiles.png" autoScaled="false" nativeHorzRes="1024" nativeVertRes="768">
     <Image name="Image" xPos="0" yPos="0" width="128" height="110" />
 </Imageset>

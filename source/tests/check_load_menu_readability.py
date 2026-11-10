@@ -9,6 +9,9 @@ prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 source = (repo / 'source/modes/MenuModeLoad.cpp').read_text()
 start = source.index('    sheet->getChild("LevelWindowFrame")->setLookNFeel(')
 block = source[start:source.index('    if(mInGame)', start)]
+# The probe registers exactly the GUI folders the game reads from resources.cfg.in, non-recursively like ResourceManager.
+gui_section = (repo / 'cmake/config/resources.cfg.in').read_text().split('[GUI]', 1)[1].split('[', 1)[0]
+gui_folders = ','.join('"%s"' % line.split('=', 1)[1].strip() for line in gui_section.splitlines() if line.startswith('FileSystem='))
 probe = r'''
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/RendererModules/Null/Renderer.h>
@@ -23,7 +26,7 @@ void check(bool ok){++checks;if(!ok)++failures;}
 int main(int argc,char** argv){try{
  Ogre::Root ogre("","","load-menu-Ogre.log");ogre.loadPlugin(std::string(argv[2])+"/bin/Codec_STBI");
  Ogre::ResourceGroupManager& resources=Ogre::ResourceGroupManager::getSingleton();
- for(const char* path:{"gui","gui/fonts","gui/schemas"})resources.addResourceLocation(std::string(argv[1])+"/"+path,"FileSystem","GUI");
+ for(const char* path:{GUI_FOLDERS})resources.addResourceLocation(std::string(argv[1])+"/"+path,"FileSystem","GUI");
  CEGUI::OgreResourceProvider provider;provider.setDefaultResourceGroup("GUI");CEGUI::OgreImageCodec codec;codec.setImageFileDataType("png");
  CEGUI::NullRenderer& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));
  CEGUI::System& system=CEGUI::System::create(renderer,&provider,nullptr,&codec,nullptr,"","load-menu-CEGUI.log");
@@ -44,6 +47,7 @@ int main(int argc,char** argv){try{
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
 '''.replace('BLOCK', block)
+probe = probe.replace('GUI_FOLDERS', gui_folders)
 with tempfile.TemporaryDirectory(prefix='odp-load-menu-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)
