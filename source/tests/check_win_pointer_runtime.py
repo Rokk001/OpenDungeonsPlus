@@ -392,6 +392,3 @@ with tempfile.TemporaryDirectory(prefix='odp-pointer-') as directory:
     batch.write_text('@echo off\n' + command + '\nif errorlevel 1 exit /b %errorlevel%\n'
                      + f'set "PATH={deps / "install/bin"};%PATH%"\n"{directory / "probe.exe"}"\n', encoding='utf-8')
     subprocess.run(['cmd', '/d', '/c', str(batch)], cwd=directory, check=True)
-
-
-
