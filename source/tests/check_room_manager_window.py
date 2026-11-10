@@ -42,7 +42,7 @@ struct Event {
     struct Subscriber {
         std::function<bool(const EventArgs&)> callback;
         template<class T> Subscriber(bool(T::*method)(const EventArgs&), T* owner) :
-            callback([owner,method](const EventArgs& args) { return (owner->*method)(args); }) {}
+            callback(std::bind(method, owner, std::placeholders::_1)) {}
     };
 };
 class Window {
