@@ -169,8 +169,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
 
     //! \brief Shows/toggles the Dungeonbook (creature list and post feed) and closes it again
     bool toggleSocialWindow(const CEGUI::EventArgs& = {});
-    //! \brief Connects the approved merchant controls to owner-only requests.
-//! \brief Connects the single management frame and its room row buttons.
+    //! \brief Connects the single management frame and its room row buttons.
     void initializeRoomManager();
     //! \brief Synchronizes owned rows, selection, page subscriptions and status dots.
     void refreshRoomManager();
@@ -189,6 +188,7 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Page whose controls currently hold active subscriptions.
     RoomType mRoomManagerPageType = RoomType::nullRoomType;
 
+    //! \brief Connects the approved merchant controls to owner-only requests.
     void initializeMerchantWindow();
     //! \brief Opens or closes the merchant stock window and its live subscription.
     bool toggleMerchantWindow(const CEGUI::EventArgs& = {});
