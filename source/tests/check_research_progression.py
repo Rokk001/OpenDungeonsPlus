@@ -167,10 +167,25 @@ struct ODServer {
     void queueServerNotification(ServerNotification* n){sent.emplace_back(n);}
 };
 GIFTBOXENUM
+PLEASUREROOMENUMS
 enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
 //! \brief Supplies seat storage for actual research and optional shared-room save methods.
 struct Seat {
     GameMap world;GameMap* mGameMap=&world;Player player;
+    TavernPayer mTavernPayer=TavernPayer::keeper;SpaPayer mSpaPayer=SpaPayer::keeper;
+    CasinoPayout mCasinoPayout=CasinoPayout::smiles;
+    //! \brief Supplies the human keeper's shared tavern payer to the extracted save path.
+    TavernPayer getTavernPayer()const{return mTavernPayer;}
+    //! \brief Stores the shared tavern payer parsed by the production seat loader.
+    void setTavernPayer(TavernPayer payer){mTavernPayer=payer;}
+    //! \brief Supplies the human keeper's shared spa payer to the extracted save path.
+    SpaPayer getSpaPayer()const{return mSpaPayer;}
+    //! \brief Stores the shared spa payer parsed by the production seat loader.
+    void setSpaPayer(SpaPayer payer){mSpaPayer=payer;}
+    //! \brief Supplies the shared casino payout to the extracted save path.
+    CasinoPayout getCasinoPayout()const{return mCasinoPayout;}
+    //! \brief Stores the shared casino payout parsed by the production seat loader.
+    void setCasinoPayout(CasinoPayout payout){mCasinoPayout=payout;}
     WorkerJobSettings mWorkerJobSettings{{},0,{{0,1,2,3,4,5}},{{0,1,2,3,4,5,6}},0};
     int32_t mInfirmaryPayer=0,mInfirmaryThreshold=100;bool mInfirmaryHealOn=true;
     //! \brief Supplies the appended optional setting block used by the production seat save path.
@@ -342,6 +357,20 @@ int main(int argc,char** argv){try {
     std::stringstream old("[SkillDone] roomLibrary [/SkillDone] [SkillNotAllowed] [/SkillNotAllowed] [SkillPending] roomTrainingHall [/SkillPending]");
     Seat legacy;check(legacy.load(old) && legacy.getSkillLevel(SkillType::roomLibrary)==1 && legacy.mSkillPoints==0,"old save without extension");
     check(!legacy.mHadLibrary && legacy.mStoredSpecialBoxes.empty(),"old save has no lost library and no stored specials");
+    check(legacy.getTavernPayer()==TavernPayer::keeper && legacy.getSpaPayer()==SpaPayer::keeper &&
+          legacy.getCasinoPayout()==CasinoPayout::smiles,"old save keeps human keeper room defaults");
+    // Shared room settings travel through the same production save blocks as research progress.
+    {Seat keeper;keeper.setSkillsDone(all);keeper.mResearchLevels[SkillType::roomLibrary]=2;keeper.mSkillPoints=125;
+     keeper.setTavernPayer(TavernPayer::creature);keeper.setSpaPayer(SpaPayer::creature);keeper.setCasinoPayout(CasinoPayout::money);
+     std::stringstream kept;keeper.save(kept);
+     check(kept.str().find("[PleasureRoomSettings]\t1\t1\t0\t[/PleasureRoomSettings]")!=std::string::npos,"shared room settings save the configured values");
+     Seat restored;check(restored.load(kept) && restored.getTavernPayer()==TavernPayer::creature &&
+         restored.getSpaPayer()==SpaPayer::creature && restored.getCasinoPayout()==CasinoPayout::money &&
+         restored.getSkillLevel(SkillType::roomLibrary)==2 && restored.mSkillPoints==125,"shared room settings and research progress survive together");
+     for(const std::string& block:{"2 0 1 [/PleasureRoomSettings]", "0 2 1 [/PleasureRoomSettings]",
+         "0 0 2 [/PleasureRoomSettings]", "0 0 [/PleasureRoomSettings]", "0 0 1 [/WrongBlock]"}){
+      std::stringstream badSettings("[SkillDone] roomLibrary [/SkillDone] [PleasureRoomSettings] "+block+" [SkillNotAllowed] [/SkillNotAllowed] [SkillPending] [/SkillPending]");
+      Seat rejected;check(!rejected.load(badSettings),"malformed shared room settings rejected");}}
     {Seat keeper;keeper.setSkillsDone(all);keeper.mHadLibrary=true;
      keeper.addStoredSpecial(GiftBoxType::mana,50000);keeper.addStoredSpecial(GiftBoxType::healAll,0);keeper.addStoredSpecial(GiftBoxType::mana,7);
      std::stringstream kept;keeper.save(kept);Seat restored;
@@ -416,7 +445,12 @@ int main(int argc,char** argv){try {
 gift_header = (root / "source/entities/GiftBoxEntity.h").read_text(encoding="utf-8")
 gift_enum = gift_header[gift_header.index("enum class GiftBoxType"):]
 gift_enum = gift_enum[:gift_enum.index("};") + 2]
-for key, value in {"GIFTBOXENUM": gift_enum, "DEFINITIONS": definitions, "LOAD": load, "SAVE": save,
+room_enums = "\n".join(function((root / "source/rooms" / header).read_text(encoding="utf-8"),
+                                  "enum class " + name) + ";"
+                       for header, name in [("RoomTavern.h", "TavernPayer"), ("RoomSpa.h", "SpaPayer"),
+                                            ("RoomCasino.h", "CasinoPayout")])
+for key, value in {"GIFTBOXENUM": gift_enum, "PLEASUREROOMENUMS": room_enums,
+                   "DEFINITIONS": definitions, "LOAD": load, "SAVE": save,
                    "DECODE": decode, "REQUEST": request}.items():
     probe = probe.replace(key, value)
 
