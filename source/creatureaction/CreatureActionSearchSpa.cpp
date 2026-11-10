@@ -66,7 +66,7 @@ bool CreatureActionSearchSpa::handleSearchSpa(Creature& creature)
         if(!static_cast<RoomSpa*>(spa)->canAccept(creature))
             continue;
 
-        Tile* tile = spa->getCoveredTile(0);
+        Tile* tile = spa->getArrivalTile(creature);
         if(tile == nullptr)
         {
             OD_LOG_ERR("creature=" + creature.getName() + ", spa=" + spa->getName());

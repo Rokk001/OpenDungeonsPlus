@@ -226,6 +226,10 @@ public:
     static const double WOUNDED_DRAG_MAX_DISTANCE_DEFAULT;
     //! Distance in tiles the pulled creature keeps behind the worker (DormitoryWoundedDragGap)
     static const double WOUNDED_DRAG_GAP_DEFAULT;
+
+    //! Distance in tiles the pulled creature lies behind the worker (centre to centre): the configured gap, but never less
+    //! than the two bodies need. Server and clients use it (decision 892).
+    static double getDragGap(const Creature& worker, const Creature& dragged);
     //! Speed factor of the pulled creature against a worker, so that it can follow (DormitoryWoundedDragFollowSpeedFactor)
     static const double WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT;
     //! Speed factor of a worker that pulls a creature (DormitoryWoundedDragWorkerSpeedFactor)
@@ -936,7 +940,7 @@ public:
     void interruptGhostHunt();
     //! \brief Decision 658: a creature never stands on a wall. Server only. When the creature is found on a full tile (a
     //! wall) it is put on the nearest floor tile it can walk on, its path is dropped and the clients are told.
-    //! eturn true when the creature was moved
+    //! \return true when the creature was moved
     bool keepOffWalls();
     //! \brief Rebinds a hunt when its equipment or occupied cauldron moves to another room.
     void transferGhostHuntRoom(const std::string& previous, const std::string& current, bool hook, bool empty);
@@ -1032,6 +1036,9 @@ public:
 
     //! \brief Clients only: blends the tile speed ratio of the walk clips (see mClientTileSpeedRatio)
     virtual void updateClientPose(double timeSinceLastFrame) override;
+
+    //! Client: resolves animated contact after all creatures have moved (decision 892)
+    void updateDragTether();
 
     //! \brief Speed of the tile under the creature divided by its ground speed (1 when unknown), client side, no tired or hurt factor
     double getTileSpeedRatio() const;
@@ -1376,11 +1383,14 @@ public:
     //! \brief Server side. A worker starts pulling this creature by the legs: it stops what it did, stays on the
     //! map and lies on the ground (clip dragged_anim). It moves with the paths the worker gives it.
     //! \param pullerDirtFactor DirtFactor of the pulling worker, used for the trail dirt of the pulled creature
-    void notifyDragStart(double pullerDirtFactor);
+    void notifyDragStart(const Creature& worker, double pullerDirtFactor);
 
     //! \brief Server side. The worker stopped pulling (arrived, gave up, the creature died or was picked up):
     //! starts the pause before it can be pulled again
     void notifyDragEnd();
+
+    //! \brief Ends hand contact before the independent laying path begins.
+    void notifyDragLaying();
 
     //! \brief Server side. Walks the worker to the tile with the clip of a worker that pulls somebody (drag_anim)
     //! and without queuing a walk action, so the caller keeps its turn. Returns false if there is no way.
@@ -2223,6 +2233,9 @@ private:
     uint32_t        mJumpTurns;
     //! \brief Runtime only (not saved): turns of the running jump that are left (0 = no jump).
     uint32_t        mJumpTurnsLeft;
+    //! Live ground-drag worker identity, independent of saved corpse reservations.
+    std::string mDragWorkerName;
+    //! Contact history is unnecessary: the renderer samples the current animated skeletons.
     //! \brief Runtime only (not saved): turns of the running jump that have passed (fractions on a client).
     Ogre::Real      mJumpElapsed;
 

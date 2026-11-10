@@ -415,6 +415,9 @@ static const int32_t ARENA_WATCH_GRACE_TURNS = 2;
 static const std::string KO_SAVE_OPEN = "[Ko]";
 //! \brief Tag that closes the optional arena knock-out state.
 static const std::string KO_SAVE_CLOSE = "[/Ko]";
+//! \brief Clip time in seconds far past the end of every death clip: a loaded body that lies starts in the last frame
+//! of its clip (a clip that does not loop stops there) instead of falling over once more (decision 991).
+static const double LOADED_LYING_CLIP_SECONDS = 1000.0;
 //! \brief Tag that opens the optional block of the captivity state (prison mood, torture mood, broken turns in the
 //! prison and in the torture chamber) at the end of a saved creature. Missing means all 0.
 static const std::string CAPTIVITY_SAVE_OPEN = "[Captivity]";
@@ -1116,10 +1119,14 @@ void Creature::removeFromGameMap(GameMap* gameMap)
     getGameMap()->removeActiveObject(this);
 }
 
-//! \brief Restores the base visual state, then seeks a decaying body to its authoritative phase counter.
+//! \brief Restores the base visual state, then seeks a decaying body to its authoritative phase counter and lays a
+//! body loaded lying (death clip time past every clip, see LOADED_LYING_CLIP_SECONDS) down at once.
 void Creature::restoreEntityState()
 {
     MovableGameEntity::restoreEntityState();
+    if(!getIsOnServerMap() && getAnimationStateName() == EntityAnimation::die_anim &&
+       getAnimationTime() >= LOADED_LYING_CLIP_SECONDS)
+        RenderManager::getSingleton().rrSettleCreatureFall(this);
     if(!getIsOnServerMap() && mDecayTurns >= 0.0 &&
        getAnimationStateName() == EntityAnimation::rot_anim && getAnimationState() != nullptr)
         getAnimationState()->setTimePosition(static_cast<Ogre::Real>(mDecayTurns));
@@ -1248,8 +1255,9 @@ void Creature::exportToStream(std::ostream& os) const
         os << " " << ROOM_LOCKS_SAVE_CLOSE;
     }
 
-    // Preserve an arena knockout or a death knockout, including one interrupted by a load.
-    if(mArenaKnockOut || mKoTurnCounter < 0)
+    // Preserve an arena knockout, a death knockout and a temporary knockout, including one interrupted by a load: a
+    // creature that lies when the game is saved lies again after loading (decision 991).
+    if(mArenaKnockOut || mKoTurnCounter != 0)
         os << "\t" << KO_SAVE_OPEN << " " << mKoTurnCounter << " " << (mArenaKnockOut ? 1 : 0) << " " << KO_SAVE_CLOSE;
 
     // Optional captivity block; missing in old saves and when all its values are 0
@@ -2569,8 +2577,9 @@ void Creature::exportToPacket(ODPacket& os, const Seat* seat) const
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
-    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    // The stolen part of the carried gold sizes the thief sack; the live drag worker follows it.
     os << mGoldStolen;
+    os << mDragWorkerName;
 }
 
 //! \brief Reads full creature data, including the trailing rolled item slots.
@@ -2650,6 +2659,7 @@ void Creature::importFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
     OD_ASSERT_TRUE(is >> mGoldStolen);
+    OD_ASSERT_TRUE(is >> mDragWorkerName);
     clampGoldStolen();
 
     setupDefinition(*getGameMap(), *ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker());
@@ -2744,6 +2754,7 @@ bool Creature::isAlive() const
     return mHp > 0.0;
 }
 
+//! \brief Advances movement and creature visuals; animated contact runs in the late render pass.
 void Creature::update(Ogre::Real timeSinceLastFrame)
 {
     Tile* previousPositionTile = getPositionTile();
@@ -2770,6 +2781,8 @@ void Creature::update(Ogre::Real timeSinceLastFrame)
                 mJumpTurnsLeft = 0;
         }
     }
+
+    // Animated drag contact is applied by the renderer after all creatures have moved.
 
     // Update the visual debugging entities
     //if we are standing in a different tile than we were last turn
@@ -4385,6 +4398,13 @@ double Creature::getMoveSpeed(Tile* tile) const
     {
         const CreatureDefinition* workerDefinition = ConfigManager::getSingleton().getCreatureDefinitionDefaultWorker();
         double workerSpeed = (workerDefinition != nullptr) ? workerDefinition->getMoveSpeedGround() : 1.0;
+        // The worker that really pulls (known on the server and the clients by mDragWorkerName) gets faster with its
+        // level, skills, items and spells. Measured against the base worker type only, the body fell behind it tile by
+        // tile on a long way to the crypt and lay three tiles back (decision 991): it follows the faster of both
+        const Creature* worker = (!mDragWorkerName.empty() && (getGameMap() != nullptr)) ?
+            getGameMap()->getCreature(mDragWorkerName) : nullptr;
+        if((worker != nullptr) && (worker != this))
+            workerSpeed = std::max(workerSpeed, worker->getMoveSpeedGround());
         ConfigManager& config = ConfigManager::getSingleton();
         return workerSpeed * getDragWorkerSpeedFactor() *
             std::max(1.0, config.getRoomConfigDoubleOrDefault("DormitoryWoundedDragFollowSpeedFactor", WOUNDED_DRAG_FOLLOW_SPEED_FACTOR_DEFAULT));
@@ -4450,6 +4470,25 @@ double Creature::getTileSpeedRatio() const
         return 1.0;
 
     return std::max(TILE_SPEED_RATIO_MIN, std::min(TILE_SPEED_RATIO_MAX, tileSpeed / groundSpeed));
+}
+
+double Creature::getDragGap(const Creature& worker, const Creature& dragged)
+{
+    const double configured = std::max(0.0, ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap",
+        WOUNDED_DRAG_GAP_DEFAULT));
+    const double bodies = static_cast<double>(RoomObjectNavigation::clearance(worker) + RoomObjectNavigation::clearance(dragged)) + 0.1;
+    return std::max(configured, bodies);
+}
+
+//! \brief Resolves late worker visibility and applies animated contact after world poses advance.
+void Creature::updateDragTether()
+{
+    if(getIsOnServerMap() || !getIsOnMap() || mDragWorkerName.empty())
+        return;
+    const Creature* worker = getGameMap() != nullptr ? getGameMap()->getCreature(mDragWorkerName) : nullptr;
+    if(worker == nullptr || !worker->getIsOnMap() || !worker->isAlive() || worker->getKoTurnCounter() != 0)
+        return;
+    RenderManager::getSingleton().rrApplyDragContact(*this, *worker);
 }
 
 void Creature::updateClientPose(double timeSinceLastFrame)
@@ -5665,8 +5704,9 @@ void Creature::exportToPacketForUpdate(ODPacket& os, Seat* seat)
     exportMoodEffectsToPacket(os, seat);
     os << mCorpseTurns << mDecayTurns;
     os << mGhostBackpack << mGhostBeamTarget << mGhostBoxMode << mGhostThrowTarget << mGhostThrowTurns;
-    // The stolen part of the carried gold is the last field of the creature packets (it sizes the thief sack)
+    // The stolen part of the carried gold sizes the thief sack; the live drag worker follows it.
     os << mGoldStolen;
+    os << mDragWorkerName;
 }
 
 //! \brief Writes the thirst state to a packet: thirst, tavern mood, drunkenness and the turns of the hangover.
@@ -5828,6 +5868,7 @@ void Creature::updateFromPacket(ODPacket& is)
     OD_ASSERT_TRUE(is >> mGhostBackpack >> mGhostBeamTarget >> mGhostBoxMode >> mGhostThrowTarget >> mGhostThrowTurns);
     mGhostThrowClientTurns=mGhostThrowTurns;
     OD_ASSERT_TRUE(is >> mGoldStolen);
+    OD_ASSERT_TRUE(is >> mDragWorkerName);
     clampGoldStolen();
     // The thief sack follows the gold carried; the creature mesh may not exist yet
     RenderManager::getSingleton().rrRefreshCreatureGoldSack(this);
@@ -6570,7 +6611,11 @@ static std::string getProfileEffectsText(double relaxTurns, double hangoverTurns
     return effects;
 }
 
-//! \brief Shows the 13 slots of the creature (or empty slots for a null creature) with pictures, tooltips and locks.
+//! Colour of the placeholder and the slot symbol of an empty Dungeonbook slot: grey at 40 % opacity, clearly dimmed
+//! against the full colour item picture of a filled slot (owner decision 918)
+static const char* const EMPTY_ITEM_SLOT_COLOURS = "tl:66A0A0A0 tr:66A0A0A0 bl:66A0A0A0 br:66A0A0A0";
+
+//! \brief Shows actual worn items or permanent hand equipment, with pictures, quality, base values and private-slot locks.
 void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::Window*>& slots, bool showLocks)
 {
     const char* const slotTypes[] = {"Hand", "Hand", "Head", "Armour", "Boots", "Ring",
@@ -6582,6 +6627,7 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
     for(std::size_t slot = 0; (slot < 13) && (slot < slots.size()); ++slot)
     {
         std::unique_ptr<ItemInstance> spawnFallback;
+        const Weapon* heldWeapon = nullptr;
         const ItemInstance* item = nullptr;
         bool locked = false;
         if(creature != nullptr)
@@ -6603,19 +6649,20 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
                 {
                     spawnFallback = ItemDrops::poorWeapon(*weapon);
                     item = spawnFallback.get();
+                    heldWeapon = weapon;
                 }
             }
             // Every seat knows how many potion slots the creature has unlocked by its level
             locked = showLocks && slot >= 6 && slot < 9 && slot - 6 >= creature->mPotionSlots.size();
         }
         CEGUI::Window* image = slots[slot];
-        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName();
+        const std::string name = item == nullptr ? "" : "ItemImages/" + item->getImageName(heldWeapon);
         image->setProperty("Image", !name.empty() && CEGUI::ImageManager::getSingleton().isDefined(name) ?
             name : "OpenDungeonsIcons/ItemSlotEmpty");
         CEGUI::Window* slotType = image->getChild("SlotType");
         slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
         slotType->setVisible(item == nullptr);
-        image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap()));
+        image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap(), heldWeapon));
         CEGUI::Window* frame = image->getChild("QualityFrame");
         frame->setVisible(item != nullptr);
         if(item != nullptr)
@@ -6623,9 +6670,11 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
         if(!showLocks)
             continue;
 
-        // A locked potion slot keeps its symbol, greyed out, under the lock
+        // A filled slot shows the picture of its item in full colour inside the quality frame; an empty slot shows the
+        // placeholder with the slot symbol clearly dimmed, so filled and empty slots differ at a glance (owner decision
+        // 918). A locked potion slot keeps its symbol, greyed out, under the lock.
         const char* const colours = locked ? "tl:FF606060 tr:FF606060 bl:FF606060 br:FF606060" :
-            "tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF";
+            (item == nullptr ? EMPTY_ITEM_SLOT_COLOURS : "tl:FFFFFFFF tr:FFFFFFFF bl:FFFFFFFF br:FFFFFFFF");
         image->setProperty("ImageColours", colours);
         slotType->setProperty("ImageColours", colours);
         image->getChild("Lock")->setVisible(locked);
@@ -8428,6 +8477,7 @@ bool Creature::parkToWallTile(Tile* wallTile, Tile* nTile)
     return true;
 }
 
+//! \brief Finds an ordinary walking route, keeping spa mud and tavern furniture closed to fallback routes.
 bool Creature::setDestination(Tile* tile)
 {
     if(tile == nullptr)
@@ -8455,6 +8505,8 @@ bool Creature::setDestination(Tile* tile)
         // waits for a way around rather than walk through a table, keg or counter. It may only leave its own tile.
         for(Tile* step : result)
         {
+            if((step != posTile) && RoomSpa::isPoolTile(step))
+                return false;
             Room* room = step->getCoveringRoom();
             if((step != posTile) && (room != nullptr) && (room->getType() == RoomType::tavern) &&
                static_cast<RoomTavern*>(room)->hasFurnitureOn(step))
@@ -8749,9 +8801,11 @@ void Creature::notifyCorpseDragEnd()
 }
 
 //! \brief Starts a ground pull while retaining the creature's position on the map.
-void Creature::notifyDragStart(double pullerDirtFactor)
+void Creature::notifyDragStart(const Creature& worker, double pullerDirtFactor)
 {
     mIsBeingDragged = true;
+    mDragWorkerName = worker.getName();
+    mNeedFireRefresh = true;
     mDragDirtFactor = pullerDirtFactor;
 
     // The creature lies on the map and follows the worker's path; a knockout countdown continues.
@@ -8762,6 +8816,13 @@ void Creature::notifyDragStart(double pullerDirtFactor)
     }
 }
 
+//! \brief Releases animated hand contact while retaining the delivery and saved carrier reservation.
+void Creature::notifyDragLaying()
+{
+    mDragWorkerName.clear();
+    mNeedFireRefresh = true;
+}
+
 //! \brief Ends a ground pull and permits knocked-out creatures to be picked up again immediately.
 void Creature::notifyDragEnd()
 {
@@ -8769,6 +8830,8 @@ void Creature::notifyDragEnd()
         return;
 
     mIsBeingDragged = false;
+    mDragWorkerName.clear();
+    mNeedFireRefresh = true;
     mDragDirtFactor = 1.0;
 }
 
@@ -9259,6 +9322,23 @@ void Creature::setupDefinition(GameMap& dtc, const CreatureDefinition& defaultWo
             const std::string& animation = mDecayTurns >= 0.0 ? EntityAnimation::rot_anim : EntityAnimation::die_anim;
             clearDestinations(animation, false, false);
             setAnimationState(animation, false, Ogre::Vector3::ZERO, false);
+            // A body lies at once: its death clip starts at the last frame (the decay clip seeks its own time)
+            if(animation == EntityAnimation::die_anim)
+                setAnimationTime(LOADED_LYING_CLIP_SECONDS);
+        }
+        else if(isAlive() && (mKoTurnCounter != 0))
+        {
+            // A creature that was knocked out or lay dying when the game was saved lies at once after loading. It used
+            // to stand until it got up or died and only then fell over (decision 991). An arena loser that was already
+            // getting up goes on getting up.
+            const double getUpTurns = std::ceil(ConfigManager::getSingleton().getRoomConfigDouble("CreatureGetUpSeconds")
+                * ODApplication::turnsPerSecond);
+            const bool gettingUp = mArenaKnockOut && (mKoTurnCounter > 0.0) && (mKoTurnCounter <= getUpTurns);
+            const std::string& animation = gettingUp ? EntityAnimation::getup_anim : EntityAnimation::die_anim;
+            clearDestinations(animation, false, false);
+            setAnimationState(animation, false, Ogre::Vector3::ZERO, false);
+            if(!gettingUp)
+                setAnimationTime(LOADED_LYING_CLIP_SECONDS);
         }
 
         // The mana comes from the save, or the pool is full (old saves and creatures from a level file)
@@ -11618,10 +11698,10 @@ bool Creature::isHungry() const
     return (mOverlayMoodValue & CreatureMoodValues::Hungry) != 0;
 }
 
-//! \brief Detects urgent needs unless fighting, fleeing, held, knocked out, imprisoned or leaving.
+//! \brief Detects urgent needs unless fighting, fleeing, bathing, held, knocked out, imprisoned or leaving.
 bool Creature::needInterrupt(bool servingNeed) const
 {
-    if(mIsInHand || isKo() || isInPrison() || isActionInList(CreatureActionType::leaveDungeon) ||
+    if(mSpaBathing || mIsInHand || isKo() || isInPrison() || isActionInList(CreatureActionType::leaveDungeon) ||
        isActionInList(CreatureActionType::fight) || isActionInList(CreatureActionType::fightFriendly) ||
        isActionInList(CreatureActionType::flee))
         return false;
