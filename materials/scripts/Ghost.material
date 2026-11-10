@@ -162,8 +162,9 @@ material GhostPackRubber
     }
 }
 
-// The flexible hose from the backpack to the capture cannon (decisions 894 and 936): dark ribbed rubber matching the pack,
-// with physical corrugations and steel couplings, lit from both sides because the tube is shaped every frame.
+// The flexible hose from the backpack to the capture cannon (decisions 894, 936 and 998): dark ribbed rubber matching the
+// pack, with physical corrugations and steel couplings. Unlit, so it never reads white in a bright room: shapeGhostHose
+// in Creature.cpp gives every vertex the shaded GhostHoseColour of config/rooms.cfg, which tints the rubber texture.
 material GhostHose
 {
     receive_shadows off
@@ -172,15 +173,32 @@ material GhostHose
         pass
         {
             cull_hardware none
-            ambient 0.38 0.38 0.38
-            diffuse 0.38 0.38 0.38 1
-            specular 0.12 0.12 0.12 1 12
+            lighting off
+            ambient vertexcolour
+            diffuse vertexcolour
             texture_unit
             {
                 texture GhostPackRubber.png
                 tex_address_mode wrap
                 filtering trilinear
             }
+        }
+    }
+}
+
+// The coloured wires wound round the hose from the pack to the cannon (decision 998): unlit vertex colours
+// (GhostHoseWireColour1 to GhostHoseWireColour<GhostHoseWireCount> in config/rooms.cfg, shaded by shapeGhostHose).
+material GhostHoseWire
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            cull_hardware none
+            lighting off
+            ambient vertexcolour
+            diffuse vertexcolour
         }
     }
 }
@@ -312,6 +330,68 @@ material GhostEctoplasm
             ambient 0.25 0.95 0.38
             emissive 0.22 0.70 0.30
             specular 0.22 0.30 0.24 1 24
+        }
+    }
+}
+
+// Ectoplasm in the ghost cauldron mouth and in the window fill (owner decision 998 point 6): a swirl texture that turns
+// slowly round the middle of the mouth, glowing (emissive) and wet (tight bright specular), with two additive layers of
+// light wisps and bubble rings drifting across it in different directions and scales so the surface keeps moving.
+// tools/gen_ghost_cauldron_ectoplasm.py paints both textures and gives the meshes planar UVs centred on the mouth.
+material GhostCauldronEctoplasm
+{
+    receive_shadows off
+    technique
+    {
+        pass
+        {
+            ambient 0.35 0.55 0.35
+            diffuse 0.55 0.75 0.55
+            emissive 0.50 0.72 0.50
+            specular 0.85 1.0 0.85 1 64
+            texture_unit
+            {
+                texture GhostCauldronEctoplasm.png
+                tex_address_mode wrap
+                filtering trilinear
+                rotate_anim 0.012
+            }
+        }
+        pass
+        {
+            scene_blend add
+            depth_write off
+            ambient 0 0 0
+            diffuse 0 0 0
+            specular 0 0 0 1 1
+            emissive 0.30 0.55 0.32
+            texture_unit
+            {
+                texture GhostCauldronEctoGlint.png
+                tex_address_mode wrap
+                filtering trilinear
+                scale 1.4 1.4
+                scroll_anim 0.025 0.04
+                rotate_anim -0.008
+            }
+        }
+        pass
+        {
+            scene_blend add
+            depth_write off
+            ambient 0 0 0
+            diffuse 0 0 0
+            specular 0 0 0 1 1
+            emissive 0.16 0.30 0.18
+            texture_unit
+            {
+                texture GhostCauldronEctoGlint.png
+                tex_address_mode wrap
+                filtering trilinear
+                scale 0.7 0.7
+                scroll_anim -0.035 0.02
+                wave_xform scroll_y sine 0.0 0.4 0.0 0.03
+            }
         }
     }
 }

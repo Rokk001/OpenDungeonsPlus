@@ -1,8 +1,10 @@
 """Check that animated objects other than creatures and menu models are skinned on the GPU. It does not start a game.
 
-Chickens, doors, beds, ghosts, the SmallSpider and the other animated rendered objects use RTSS materials that are
+Chickens, doors, beds, the SmallSpider and the other animated rendered objects use RTSS materials that are
 shared with static meshes. They are skinned on the GPU with RenderManager::useShaderSkinning, which works on a copy
 of each material. It leaves an entity alone when a material has its own vertex program.
+Ghosts stay on the CPU (owner decision 998): their opacity changes every frame and swaps in "_alpha_" copies of the
+material that were never prepared for skinning, which flattened the skinned ghost into a heap (check_ghost_figure.py).
 """
 from pathlib import Path
 
@@ -15,6 +17,10 @@ generic = generic[:generic.index('renderedMovableEntity->setParentSceneNode')]
 assert 'ent->setMaterialName("GhostGlow");' in generic
 assert generic.index('ent->setMaterialName("GhostGlow");') < generic.index('useShaderSkinning(ent);') \
     < generic.index('meshName == "Cauldron"')
+# Every animated object but the ghost, and only through this one call
+assert 'if(renderedMovableEntity->getObjectType() != GameEntityType::ghostEntity)\n            useShaderSkinning(ent);' \
+    in generic.replace('\r\n', '\n')
+assert generic.count('useShaderSkinning(') == 1
 
 # The chicken that is eaten
 assert 'useShaderSkinning(feeding.mChickenEntity);' in render
