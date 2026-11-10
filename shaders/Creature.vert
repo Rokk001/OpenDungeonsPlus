@@ -2,10 +2,13 @@
 #extension GL_ARB_explicit_uniform_location : enable
 #extension GL_ARB_shading_language_include : enable
 
-// Hardware skinning: the bone matrices (world_matrix_array_3x4) already contain the world
-// transform of the entity, so every position and direction below is in world space.
+// Hardware skinning: OGRE 14 keeps bones in object space (MeshManager::getBonesUseObjectSpace()
+// is true by default), so world_matrix_array_3x4 holds the bone matrices WITHOUT the world
+// transform of the entity. The skinned object space position and directions are therefore
+// moved into world space with worldMatrix, exactly as the former unskinned shader did.
 uniform    mat4 viewProjectionMatrix;
 uniform    mat4 lightMatrix;
+uniform    mat4 worldMatrix;
 uniform    vec4 boneMatrices[768];
 layout (location = 0) in vec4 position;
 layout (location = 1) in vec4 blendWeights;
@@ -29,7 +32,7 @@ void main() {
     vec4 weights = vec4(blendWeights.xyz, max(0.0, 1.0 - blendWeights.x - blendWeights.y - blendWeights.z));
     vec4 pos = vec4(position.xyz, 1.0);
 
-    // blend position, normal and tangent over the (up to four) bones of the vertex
+    // blend position, normal and tangent over the (up to four) bones of the vertex (object space)
     vec3 P = vec3(0.0);
     vec3 skinNormal = vec3(0.0);
     vec3 skinTangent = vec3(0.0);
@@ -44,9 +47,10 @@ void main() {
         skinTangent += weights[i] * vec3(dot(row0.xyz, tangent), dot(row1.xyz, tangent), dot(row2.xyz, tangent));
     }
 
-    // compute world space tangent, bitangent
-    vec3 T = normalize(skinTangent);
-    vec3 B = normalize(cross(skinTangent, skinNormal));
+    // compute world space position, tangent, bitangent from the skinned object space values
+    P = (worldMatrix * vec4(P, 1.0)).xyz;
+    vec3 T = normalize(vec3(worldMatrix * vec4(skinTangent, 0.0)));
+    vec3 B = normalize(vec3(worldMatrix * vec4(cross(skinTangent, skinNormal), 0.0)));
     vec3 N = cross(B, T);
     TBN = mat3(T, B, N);
 
