@@ -139,6 +139,9 @@ void InputManager::createInputDevices(bool mouseGrab, bool keyboardGrab)
 
     //setup Mouse
     mMouse = static_cast<OIS::Mouse*>(mInputManager->createInputObject(OIS::OISMouse, true));
+#if defined OIS_WIN32_PLATFORM
+    hookWindowWheel();
+#endif
 #else
     mKeyboard.reset(new Keyboard());
 #endif
@@ -163,6 +166,7 @@ void InputManager::destroyInputDevices()
 #ifndef OD_USE_SFML_WINDOW
 #if defined OIS_WIN32_PLATFORM
     updateCursorGrab(false);
+    unhookWindowWheel();
 #endif
     if(mInputManager != nullptr)
     {
@@ -335,6 +339,7 @@ void InputManager::capturePointer()
         mMouse->setEventCallback(nullptr);
         mMouse->capture();
         mMouse->setEventCallback(listener);
+        mWheel.clear();
         return;
     }
 
@@ -342,6 +347,7 @@ void InputManager::capturePointer()
     {
         // Back in the foreground: drop the input of the background, then follow the Windows pointer at once
         mWasForeground = true;
+        mWheel.clear();
         mMouse->setEventCallback(nullptr);
         mMouse->capture();
         mMouse->setEventCallback(listener);
@@ -361,8 +367,11 @@ void InputManager::capturePointer()
             mLastPointerX = returnX;
             mLastPointerY = returnY;
             applyPointerToState(returnX, returnY);
+            // Input dropped above must not show up as motion or wheel
+            OIS::MouseState& returnState = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+            returnState.X.rel = returnState.Y.rel = returnState.Z.rel = 0;
             if(mCurrentAMode != nullptr)
-                mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, mMouse->getMouseState()));
+                mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, returnState));
         }
     }
 
@@ -383,6 +392,23 @@ void InputManager::capturePointer()
         if(mCurrentAMode != nullptr)
             mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
     }
+
+    // The wheel, one event per frame with the collected movement (OIS units, 120 per notch)
+    const int wheel = mWheel.take();
+    if(wheel != 0 && mCurrentAMode != nullptr)
+    {
+        if(readSystemPointer(x, y, inside))
+        {
+            mLastPointerX = x;
+            mLastPointerY = y;
+            applyPointerToState(x, y);
+        }
+        OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+        state.X.rel = state.Y.rel = 0;
+        state.Z.rel = wheel;
+        mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
+        state.Z.rel = 0;
+    }
 #else
     if(mMouse != nullptr)
         mMouse->capture();
@@ -394,6 +420,8 @@ bool InputManager::PointerForwarder::mouseMoved(const OIS::MouseEvent& arg)
 {
     if(mInputManager.mCurrentAMode == nullptr)
         return true;
+    // The wheel comes from the window messages (see capturePointer); the DirectInput wheel is dropped
+    const_cast<OIS::MouseState&>(arg.state).Z.rel = 0;
     int x = 0;
     int y = 0;
     bool inside = true;
@@ -528,5 +556,56 @@ void InputManager::updateCursorGrab(bool grab)
             mCursorHidden = false;
         }
     }
+}
+
+void* InputManager::sWheelOwner = nullptr;
+
+long long __stdcall InputManager::wheelWindowProc(void* window, unsigned int message, unsigned long long wParam, long long lParam)
+{
+    InputManager* owner = static_cast<InputManager*>(sWheelOwner);
+    if(owner == nullptr || owner->mOldWindowProc == nullptr)
+        return DefWindowProcW(static_cast<HWND>(window), message, wParam, lParam);
+    if(message == WM_MOUSEWHEEL)
+    {
+        const HWND hwnd = static_cast<HWND>(window);
+        owner->mWheel.add(static_cast<int>(GET_WHEEL_DELTA_WPARAM(wParam)),
+            GetForegroundWindow() == hwnd && !IsIconic(hwnd));
+    }
+    return CallWindowProcW(reinterpret_cast<WNDPROC>(owner->mOldWindowProc), static_cast<HWND>(window),
+        message, wParam, lParam);
+}
+
+void InputManager::hookWindowWheel()
+{
+    unhookWindowWheel();
+    size_t windowHandle = 0;
+    mRenderWindow->getCustomAttribute("WINDOW", &windowHandle);
+    const HWND window = reinterpret_cast<HWND>(windowHandle);
+    if(window == nullptr)
+        return;
+    mWheel.clear();
+    sWheelOwner = this;
+    LONG_PTR old = SetWindowLongPtrW(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&InputManager::wheelWindowProc));
+    if(old == 0)
+    {
+        sWheelOwner = nullptr;
+        return;
+    }
+    mOldWindowProc = reinterpret_cast<void*>(old);
+    mHookedWindow = window;
+}
+
+void InputManager::unhookWindowWheel()
+{
+    if(mOldWindowProc != nullptr && mHookedWindow != nullptr)
+    {
+        const HWND window = static_cast<HWND>(mHookedWindow);
+        if(IsWindow(window) && GetWindowLongPtrW(window, GWLP_WNDPROC) == reinterpret_cast<LONG_PTR>(&InputManager::wheelWindowProc))
+            SetWindowLongPtrW(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(mOldWindowProc));
+    }
+    if(sWheelOwner == this)
+        sWheelOwner = nullptr;
+    mOldWindowProc = nullptr;
+    mHookedWindow = nullptr;
 }
 #endif

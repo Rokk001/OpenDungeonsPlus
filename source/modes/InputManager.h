@@ -21,6 +21,7 @@
 #include <OgreVector.h>
 #include <OgreSingleton.h>
 #include <OISMouse.h>
+#include "modes/WheelAccumulator.h"
 
 #include <memory>
 
@@ -157,6 +158,15 @@ public:
     bool mHasPendingPosition;
     int mPendingX, mPendingY;
     int mLastPointerX, mLastPointerY;
+    //! rief Wheel movement taken from the window messages (see WheelAccumulator)
+    WheelAccumulator mWheel;
+    //! rief Window procedure that was replaced to see the wheel messages, and its window
+    void* mOldWindowProc = nullptr;
+    void* mHookedWindow = nullptr;
+    void hookWindowWheel();
+    void unhookWindowWheel();
+    static void* sWheelOwner;
+    static long long __stdcall wheelWindowProc(void* window, unsigned int message, unsigned long long wParam, long long lParam);
 #endif
 #ifdef OD_USE_SFML_WINDOW
     std::unique_ptr<SFMLToOISListener> mListener;
