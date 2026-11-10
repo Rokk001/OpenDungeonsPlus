@@ -361,8 +361,8 @@ void InputManager::capturePointer()
         bool returnInside = true;
         if(readSystemPointer(returnX, returnY, returnInside))
         {
-            // Outside the window: bring the Windows pointer to the nearest point inside
-            if(!returnInside)
+            // Outside the window: bring the Windows pointer to the nearest point inside (only with mouse grab)
+            if(!returnInside && mMouseGrab)
                 moveSystemPointer(returnX, returnY);
             mLastPointerX = returnX;
             mLastPointerY = returnY;
@@ -511,8 +511,8 @@ void InputManager::moveSystemPointer(int x, int y)
     const int gameHeight = static_cast<int>(mRenderWindow->getHeight());
     // Game pointer position to client position (inverse of the proportional mapping)
     POINT point;
-    point.x = PointerMapping::clampToSize(gameWidth > 0 ? static_cast<int>(static_cast<long long>(x) * clientWidth / gameWidth) : x, clientWidth);
-    point.y = PointerMapping::clampToSize(gameHeight > 0 ? static_cast<int>(static_cast<long long>(y) * clientHeight / gameHeight) : y, clientHeight);
+    point.x = PointerMapping::clampToSize(PointerMapping::scaleCoordinate(x, gameWidth, clientWidth), clientWidth);
+    point.y = PointerMapping::clampToSize(PointerMapping::scaleCoordinate(y, gameHeight, clientHeight), clientHeight);
     if(ClientToScreen(window, &point))
         SetCursorPos(point.x, point.y);
 }
