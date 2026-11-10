@@ -19,7 +19,7 @@
                     <Property name="RiseOnClickEnabled" value="False" />
                     <Window type="OD/ResearchButton" name="TreasuryButton" >
                         <Property name="Area" value="{{0.2,-25},{0,15},{0.2,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/TreasuryButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconTreasury/Icon" />
                         <Property name="TooltipText" value="Room: Treasury" />
                         <Window type="OD/ProgressBar" name="TreasuryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -36,7 +36,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="DormitoryButton" >
                         <Property name="Area" value="{{0.8,-25},{0,15},{0.8,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/DormitoryButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconDormitory/Icon" />
                         <Property name="TooltipText" value="Room: Dormitory" />
                         <Window type="OD/ProgressBar" name="DormitoryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -53,7 +53,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="HatcheryButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/HatcheryButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconHatchery/Icon" />
                         <Property name="TooltipText" value="Room: Hatchery" />
                         <Window type="OD/ProgressBar" name="HatcheryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -70,7 +70,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="InfirmaryButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/InfirmaryButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconInfirmary/Icon" />
                         <Property name="TooltipText" value="Room: Infirmary" />
                         <Window type="OD/ProgressBar" name="InfirmaryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -87,7 +87,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="LibraryButton" >
                         <Property name="Area" value="{{0.7,-25},{0,15},{0.7,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/LibraryButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconLibrary/Icon" />
                         <Property name="TooltipText" value="Room: Library" />
                         <Window type="OD/ProgressBar" name="LibraryButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -104,7 +104,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="TavernButton" >
                         <Property name="Area" value="{{0.5,-25},{0,15},{0.5,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/TavernButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconTavern/Icon" />
                         <Property name="TooltipText" value="Room: Tavern" />
                         <Window type="OD/ProgressBar" name="TavernButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -121,7 +121,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="TrainingHallButton" >
                         <Property name="Area" value="{{0.3,-25},{0,15},{0.3,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/TrainingHallButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconTrainingHall/Icon" />
                         <Property name="TooltipText" value="Room: Training Hall" />
                         <Window type="OD/ProgressBar" name="TrainingHallButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -138,7 +138,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="WorkshopButton" >
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/WorkshopButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconWorkshop/Icon" />
                         <Property name="TooltipText" value="Room: Workshop" />
                         <Window type="OD/ProgressBar" name="WorkshopButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -155,7 +155,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="WoodenBridgeButton" >
                         <Property name="Area" value="{{0.7,-25},{0,15},{0.7,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/WoodenBridgeButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconWoodenBridge/Icon" />
                         <Property name="TooltipText" value="Room: Wooden bridge" />
                         <Window type="OD/ProgressBar" name="WoodenBridgeButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -172,7 +172,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="GuardRoomButton" >
                         <Property name="Area" value="{{0.5,-25},{0,75},{0.5,25},{0,125}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/GuardRoomButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconGuardRoom/Icon" />
                         <Property name="TooltipText" value="Room: Guard room" />
                         <Window type="OD/ProgressBar" name="GuardRoomButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -189,7 +189,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="ToiletButton" >
                         <Property name="Area" value="{{0.5,-25},{0,75},{0.5,25},{0,125}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/ToiletButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconToilet/Icon" />
                         <Property name="TooltipText" value="Room: Toilet" />
                         <Window type="OD/ProgressBar" name="ToiletButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -206,7 +206,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="CasinoButton" >
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/CasinoButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconCasino/Icon" />
                         <Property name="TooltipText" value="Room: Casino" />
                         <Window type="OD/ProgressBar" name="CasinoButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -240,7 +240,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="SpaButton" >
                         <Property name="Area" value="{{0.4,-25},{0,15},{0.4,25},{0,65}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/SpaButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconSpa/Icon" />
                         <Property name="TooltipText" value="Room: Lava spa" />
                         <Window type="OD/ProgressBar" name="SpaButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -257,7 +257,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="ArenaButton" >
                         <Property name="Area" value="{{0.5,-25},{0,135},{0.5,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/ArenaButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconArena/Icon" />
                         <Property name="TooltipText" value="Room: Arena" />
                         <Window type="OD/ProgressBar" name="ArenaButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -274,7 +274,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="PrisonButton" >
                         <Property name="Area" value="{{0.8,-25},{0,75},{0.8,25},{0,125}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/PrisonButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconPrison/Icon" />
                         <Property name="TooltipText" value="Room: Prison" />
                         <Window type="OD/ProgressBar" name="PrisonButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -291,7 +291,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="CryptButton" >
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/CryptButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconCrypt/Icon" />
                         <Property name="TooltipText" value="Room: Crypt" />
                         <Window type="OD/ProgressBar" name="CryptButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -308,7 +308,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="GhostRoomButton" >
                         <Property name="Area" value="{{0.2,-25},{0,75},{0.2,25},{0,125}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/GhostRoomButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconGhostRoom/Icon" />
                         <Property name="TooltipText" value="Room: Ghost room" />
                         <Window type="OD/ProgressBar" name="GhostRoomButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -325,7 +325,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="StoneBridgeButton" >
                         <Property name="Area" value="{{0.2,-25},{0,135},{0.2,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/StoneBridgeButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconStoneBridge/Icon" />
                         <Property name="TooltipText" value="Room: Stone bridge" />
                         <Window type="OD/ProgressBar" name="StoneBridgeButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -342,7 +342,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="TortureButton" >
                         <Property name="Area" value="{{0.5,-25},{0,195},{0.5,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/TortureButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconTortureChamber/Icon" />
                         <Property name="TooltipText" value="Room: Torture" />
                         <Window type="OD/ProgressBar" name="TortureButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -359,7 +359,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="PrayerTempleButton" >
                         <Property name="Area" value="{{0.89,-25},{0,195},{0.89,25},{0,245}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/PrayerTempleButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconPrayerTemple/Icon" />
                         <Property name="TooltipText" value="Room: Temple" />
                         <Window type="OD/ProgressBar" name="PrayerTempleButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -393,7 +393,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="MerchantButton" >
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/MerchantButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconMerchant/Icon" />
                         <Property name="TooltipText" value="Room: Merchant" />
                         <Window type="OD/ProgressBar" name="MerchantButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -410,7 +410,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="HerbGardenButton" >
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/HerbGardenButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconHerbGarden/Icon" />
                         <Property name="TooltipText" value="Room: Herb Garden" />
                         <Window type="OD/ProgressBar" name="HerbGardenButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />
@@ -427,7 +427,7 @@
                     </Window>
                     <Window type="OD/ResearchButton" name="AlchemyLabButton" >
                         <Property name="Area" value="{{0.8,-25},{0,135},{0.8,25},{0,185}}" />
-                        <Property name="ButtonImage" value="OpenDungeonsIcons/AlchemyLabButton" />
+                        <Property name="ButtonImage" value="RoomCentreIconAlchemyLab/Icon" />
                         <Property name="TooltipText" value="Room: Alchemy Lab" />
                         <Window type="OD/ProgressBar" name="AlchemyLabButtonProgressBar" >
                             <Property name="Area" value="{{0.0,-20},{0.0,0},{1.0,20},{1.0,0}}" />

@@ -96,10 +96,10 @@ rooms_layout = read('gui/WindowTabRooms.layout')
 skill_layout = read('gui/WindowSkillTree.layout')
 button = re.search(r'name="TavernButton" >(.*?)</Window>', rooms_layout, re.S)
 assert button is not None, 'TavernButton missing in WindowTabRooms.layout'
-assert 'OpenDungeonsIcons/TavernButton' in button.group(1) and '"Visible" value="False"' in button.group(1)
+assert 'RoomCentreIconTavern/Icon' in button.group(1) and '"Visible" value="False"' in button.group(1)
 research = re.search(r'name="TavernButton" >(.*?)<Window type="OD/ProgressBar" name="TavernButtonProgressBar"', skill_layout, re.S)
 assert research is not None, 'TavernButton missing in WindowSkillTree.layout'
-assert 'OpenDungeonsIcons/TavernButton' in research.group(1) and 'Room: Tavern' in research.group(1)
+assert 'RoomCentreIconTavern/Icon' in research.group(1) and 'Room: Tavern' in research.group(1)
 beer = re.search(r'name="BeerButton" >(.*?)<Window type="OD/ProgressBar" name="BeerButtonProgressBar"', skill_layout, re.S)
 assert beer is not None, 'BeerButton missing in WindowSkillTree.layout'
 assert 'OpenDungeonsIcons/BeerButton' in beer.group(1) and 'Tavern: Beer' in beer.group(1)

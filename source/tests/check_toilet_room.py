@@ -89,10 +89,10 @@ rooms_layout = read('gui/WindowTabRooms.layout')
 skill_layout = read('gui/WindowSkillTree.layout')
 button = re.search(r'name="ToiletButton" >(.*?)</Window>', rooms_layout, re.S)
 assert button is not None, 'ToiletButton missing in WindowTabRooms.layout'
-assert 'OpenDungeonsIcons/ToiletButton' in button.group(1) and '"Visible" value="False"' in button.group(1)
+assert 'RoomCentreIconToilet/Icon' in button.group(1) and '"Visible" value="False"' in button.group(1)
 research = re.search(r'name="ToiletButton" >(.*?)<Window type="OD/ProgressBar" name="ToiletButtonProgressBar"', skill_layout, re.S)
 assert research is not None, 'ToiletButton missing in WindowSkillTree.layout'
-assert 'OpenDungeonsIcons/ToiletButton' in research.group(1) and 'Room: Toilet' in research.group(1)
+assert 'RoomCentreIconToilet/Icon' in research.group(1) and 'Room: Toilet' in research.group(1)
 assert 'name="ToiletButton"' in read('gui/ODIcons.imageset') or 'ToiletButton' in read('gui/ODIcons.imageset')
 gui_cpp = read('source/render/Gui.cpp')
 arrange = gui_cpp[gui_cpp.index('void Gui::arrangeRoomButtons('):]

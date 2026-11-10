@@ -5,6 +5,30 @@
     <Imageset filename="DungeonbookFrame.imageset" name="DungeonbookFrame" />
     <Imageset filename="DungeonbookIcons.imageset" name="DungeonbookIcons" />
     <Imageset filename="ODIcons.imageset" name="OpenDungeonsIcons" />
+    <Imageset filename="RoomCentreIconAlchemyLab.imageset" name="RoomCentreIconAlchemyLab" />
+    <Imageset filename="RoomCentreIconArena.imageset" name="RoomCentreIconArena" />
+    <Imageset filename="RoomCentreIconCasino.imageset" name="RoomCentreIconCasino" />
+    <Imageset filename="RoomCentreIconCrypt.imageset" name="RoomCentreIconCrypt" />
+    <Imageset filename="RoomCentreIconDormitory.imageset" name="RoomCentreIconDormitory" />
+    <Imageset filename="RoomCentreIconGhostRoom.imageset" name="RoomCentreIconGhostRoom" />
+    <Imageset filename="RoomCentreIconGuardRoom.imageset" name="RoomCentreIconGuardRoom" />
+    <Imageset filename="RoomCentreIconHatchery.imageset" name="RoomCentreIconHatchery" />
+    <Imageset filename="RoomCentreIconHerbGarden.imageset" name="RoomCentreIconHerbGarden" />
+    <Imageset filename="RoomCentreIconInfirmary.imageset" name="RoomCentreIconInfirmary" />
+    <Imageset filename="RoomCentreIconLibrary.imageset" name="RoomCentreIconLibrary" />
+    <Imageset filename="RoomCentreIconMerchant.imageset" name="RoomCentreIconMerchant" />
+    <Imageset filename="RoomCentreIconPrayerTemple.imageset" name="RoomCentreIconPrayerTemple" />
+    <Imageset filename="RoomCentreIconPrison.imageset" name="RoomCentreIconPrison" />
+    <Imageset filename="RoomCentreIconSpa.imageset" name="RoomCentreIconSpa" />
+    <Imageset filename="RoomCentreIconStoneBridge.imageset" name="RoomCentreIconStoneBridge" />
+    <Imageset filename="RoomCentreIconTavern.imageset" name="RoomCentreIconTavern" />
+    <Imageset filename="RoomCentreIconTemple.imageset" name="RoomCentreIconTemple" />
+    <Imageset filename="RoomCentreIconToilet.imageset" name="RoomCentreIconToilet" />
+    <Imageset filename="RoomCentreIconTortureChamber.imageset" name="RoomCentreIconTortureChamber" />
+    <Imageset filename="RoomCentreIconTrainingHall.imageset" name="RoomCentreIconTrainingHall" />
+    <Imageset filename="RoomCentreIconTreasury.imageset" name="RoomCentreIconTreasury" />
+    <Imageset filename="RoomCentreIconWoodenBridge.imageset" name="RoomCentreIconWoodenBridge" />
+    <Imageset filename="RoomCentreIconWorkshop.imageset" name="RoomCentreIconWorkshop" />
     <Imageset filename="Items.imageset" name="ItemImages" />
     <Imageset filename="SlotTypes.imageset" name="SlotTypes" />
     <Imageset filename="ODNavigation.imageset" name="OpenDungeonsNavigation" />

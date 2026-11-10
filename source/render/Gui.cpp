@@ -1551,7 +1551,7 @@ float imagePixelDensity(const CEGUI::String& ceguiName)
         return HUD_SURFACE_IMAGE_PIXEL_DENSITY;
     if(name == "OpenDungeonsIcons/Prohibition")
         return DEFAULT_IMAGE_PIXEL_DENSITY;
-    if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "OpenDungeonsNavigation/"))
+    if(startsWith(name, "OpenDungeonsIcons/") || startsWith(name, "RoomCentreIcon") || startsWith(name, "OpenDungeonsNavigation/"))
         return ICON_IMAGE_PIXEL_DENSITY;
     return DEFAULT_IMAGE_PIXEL_DENSITY;
 }
@@ -1562,6 +1562,7 @@ bool shouldScaleImage(const CEGUI::String& ceguiName)
     const std::string name(ceguiName.c_str());
     return startsWith(name, "OpenDungeonsSkin/")
         || startsWith(name, "OpenDungeonsIcons/")
+        || startsWith(name, "RoomCentreIcon")
         || startsWith(name, "OpenDungeonsNavigation/")
         || startsWith(name, "GoalStatus/")
         || startsWith(name, "ODMainMenuButton/")

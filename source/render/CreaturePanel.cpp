@@ -130,14 +130,15 @@ CreaturePanel::CreaturePanel(GameMap& gameMap, Gui& gui, CEGUI::Window* parent) 
     mWindow->setArea(CEGUI::URect(CEGUI::UDim(0, 0), CEGUI::UDim(0, PANEL_TOP),
         CEGUI::UDim(1, PANEL_RIGHT_MARGIN), CEGUI::UDim(0, PANEL_BOTTOM)));
     mWindow->setUserString("AllowEdgeScrolling", "true");
-    const char* workerIcons[] = {"WorkerButton", "HourglassIcon", "HammerAnvilIcon", "TrainingHallButton"};
+    const char* workerIcons[] = {"OpenDungeonsIcons/WorkerButton", "OpenDungeonsIcons/HourglassIcon",
+        "OpenDungeonsIcons/HammerAnvilIcon", "RoomCentreIconTrainingHall/Icon"};
     for(size_t i = 0; i < mWorkerCounts.size(); ++i)
     {
         CEGUI::Window* icon = createWindow(mWindow, "OD/StaticImage", "WorkerIcon" + std::to_string(i),
             WORKER_ICON_X, static_cast<float>(i) * WORKER_ROW_PITCH + WORKER_ICON_Y, WORKER_ICON_SIZE, WORKER_ICON_SIZE);
         icon->setProperty("FrameEnabled", "False");
         icon->setProperty("BackgroundEnabled", "False");
-        icon->setProperty("Image", "OpenDungeonsIcons/" + std::string(workerIcons[i]));
+        icon->setProperty("Image", workerIcons[i]);
         icon->setMousePassThroughEnabled(true);
         CEGUI::Window* count = createWindow(mWindow, "OD/StaticText", "WorkerCount" + std::to_string(i),
             WORKER_COUNT_X, static_cast<float>(i) * WORKER_ROW_PITCH, WORKER_COUNT_WIDTH, COUNT_HEIGHT);
