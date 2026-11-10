@@ -42,7 +42,6 @@
 const std::string BUTTON_CAMPAIGN = "StartCampaignButton";
 const std::string BUTTON_SKIRMISH = "StartSkirmishButton";
 const std::string BUTTON_LOAD_GAME = "LoadGameButton";
-const std::string BUTTON_START_REPLAY = "StartReplayButton";
 const std::string BUTTON_MAPEDITOR = "MapEditorButton";
 const std::string BUTTON_MULTIPLAYER = "MultiplayerModeButton";
 const std::string BUTTON_SETTINGS = "SettingsButton";
@@ -64,7 +63,6 @@ const std::string BUTTON_CONTINUE_CAMPAIGN = "ContinueCampaignButton";
 const std::string BUTTON_NEW_CAMPAIGN_CONFIRM = "NewCampaignConfirmButton";
 const std::string TEXT_NEW_CAMPAIGN_CONFIRM = "NewCampaignConfirmText";
 const std::string BUTTON_START_SKIRMISH = "StartSkirmishButton";
-const std::string BUTTON_LOAD_SKIRMISH = "LoadSkirmishButton";
 const std::string BUTTON_START_SANDBOX = "StartSandboxButton";
 const std::string BUTTON_MASTERSERVER_JOIN = "MasterServerJoinButton";
 const std::string BUTTON_MASTERSERVER_HOST = "MasterServerHostButton";
@@ -109,7 +107,6 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
     OD_ASSERT_TRUE(rootWin != nullptr);
 
     connectModeChangeEvent(BUTTON_LOAD_GAME, AbstractModeManager::ModeType::MENU_LOAD_SAVEDGAME);
-    connectModeChangeEvent(BUTTON_START_REPLAY, AbstractModeManager::ModeType::MENU_REPLAY);
 
     connectModeChangeEvent(rootWin->getChild(BUTTON_QUIT),
                            AbstractModeManager::ModeType::ADVERTISMENT);
@@ -155,8 +152,6 @@ MenuModeMain::MenuModeMain(ModeManager *modeManager):
     OD_ASSERT_TRUE(skirmishWin != nullptr);
     connectModeChangeEvent(skirmishWin->getChild(BUTTON_START_SKIRMISH),
                            AbstractModeManager::ModeType::MENU_SKIRMISH);
-    connectModeChangeEvent(skirmishWin->getChild(BUTTON_LOAD_SKIRMISH),
-                           AbstractModeManager::ModeType::MENU_LOAD_SAVEDGAME);
     addEventConnection(
         skirmishWin->getChild(BUTTON_START_SANDBOX)->subscribeEvent(
             CEGUI::PushButton::EventClicked,
@@ -305,7 +300,7 @@ void MenuModeMain::onFrameStarted(const Ogre::FrameEvent& /*evt*/)
     }
 }
 
-//! \brief Keeps Quit immediate and delays only the replay pane until its archive flight arrives.
+//! \brief Keeps Quit immediate and delays the load browser until its archive flight arrives.
 bool MenuModeMain::changeModeAfterFlight(AbstractModeManager::ModeType mode, const CEGUI::EventArgs& e)
 {
     if(mode == AbstractModeManager::ADVERTISMENT)
@@ -319,7 +314,7 @@ bool MenuModeMain::changeModeAfterFlight(AbstractModeManager::ModeType mode, con
     ODFrameListener& listener = ODFrameListener::getSingleton();
     if(listener.isMainMenuFlightActive())
         return true;
-    if(mode == AbstractModeManager::MENU_REPLAY && listener.getMainMenuPlace() != PLACE_REPLAY)
+    if(mode == AbstractModeManager::MENU_LOAD_SAVEDGAME && listener.getMainMenuPlace() != PLACE_REPLAY)
     {
         if(listener.flyMainMenuTo(PLACE_REPLAY))
         {
@@ -454,7 +449,7 @@ void MenuModeMain::showMainMenuButtons(bool visible)
 {
     CEGUI::Window* mainWin = getModeManager().getGui().getGuiSheet(Gui::mainMenu);
     for(const std::string& name : {BUTTON_START_CAMPAIGN, BUTTON_SKIRMISH,
-        BUTTON_MULTIPLAYER, BUTTON_LOAD_GAME, BUTTON_START_REPLAY, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
+        BUTTON_MULTIPLAYER, BUTTON_LOAD_GAME, BUTTON_MAPEDITOR, BUTTON_SETTINGS, BUTTON_QUIT})
         mainWin->getChild(name)->setVisible(visible);
 }
 

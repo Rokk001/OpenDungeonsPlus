@@ -475,7 +475,7 @@ def check_menu_entries(root):
     main_menu = buttons("MenuMain.layout")
     assert list(main_menu.values()).count("Multiplayer") == 1 and main_menu.get("LoadGameButton") == "Load Game", "main menu needs one Multiplayer and one Load Game entry"
     assert "connectModeChangeEvent(BUTTON_LOAD_GAME, AbstractModeManager::ModeType::MENU_LOAD_SAVEDGAME);" in source, "Load Game must open the existing load dialog"
-    assert "BUTTON_LOAD_GAME, BUTTON_START_REPLAY" in source.split("void MenuModeMain::showMainMenuButtons", 1)[1], "Load Game must hide with the other entries during flights"
+    assert "BUTTON_MULTIPLAYER, BUTTON_LOAD_GAME, BUTTON_MAPEDITOR" in source.split("void MenuModeMain::showMainMenuButtons", 1)[1], "Load Game must hide with the other entries during flights"
     print("OK: one multiplayer entry with four actions; Load Game opens the existing dialog")
 
 

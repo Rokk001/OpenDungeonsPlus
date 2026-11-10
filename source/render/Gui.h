@@ -138,6 +138,9 @@ public:
     //! fraction (0 to 1) of the dungeon heart and its painted background glows while under attack.
     void updateHeartBadge(float healthFraction, bool underAttack);
 
+    //! \brief Fits editor construction buttons into their available tab pages.
+    void arrangeEditorActionButtons(CEGUI::Window* editorSheet);
+
     //! \brief Arranges the room, trap and spell buttons of the in game sheet.
     void arrangeActionButtonPanels(CEGUI::Window* gameSheet);
     //! \brief Arranges visible gameplay actions and retains their scaled layout.

@@ -70,7 +70,10 @@ manager = read("source/game/SkillManager.cpp")
 assert manager.count("isRewardSkill") >= 2, "random and all-done research skip the reward skill"
 assert "isRewardSkill" in read("source/game/Seat.cpp"), "the server refuses to queue it"
 server = read("source/network/ODServer.cpp")
-assert "isHeartstoneComplete()" in server and "SkillType::spellSummonChampion" in server, "the Heartstone unlocks it"
+assert "isLevelHeartstoneComplete()" in server and "SkillType::spellSummonChampion" in server, "the saved or current Heartstone unlocks it"
+assert "SkillType::spellSummonChampion, championAvailable, championAvailable" in server, "loading applies both available and unavailable champion states"
+campaign_state = read("source/game/Campaign.cpp")
+assert "return mSavedHeartstoneComplete;" in campaign_state and "return isHeartstoneComplete();" in campaign_state
 
 # The buttons exist in both windows, the tree node stays hidden
 spells_tab = ET.parse(repo / "gui/WindowTabSpells.layout").find('.//Window[@name="SummonChampionButton"]')
