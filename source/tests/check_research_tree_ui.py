@@ -52,6 +52,9 @@ initializers = '\n'.join('data[SkillType::%s] = {SkillType::%s, "%s", {%s}, %d, 
     (key, key, path, ','.join('&data[SkillType::'+parent+']' for parent in parents), tier, tab)
     for key, (path, parents, tier, tab) in model.items())
 initializers += '\n' + '\n'.join('SkillManager::order.push_back(SkillType::%s);' % key for key in order)
+# The probe registers exactly the GUI folders the game reads from resources.cfg.in, non-recursively like ResourceManager.
+gui_section = (repo / 'cmake/config/resources.cfg.in').read_text().split('[GUI]', 1)[1].split('[', 1)[0]
+gui_folders = ','.join('"%s"' % line.split('=', 1)[1].strip() for line in gui_section.splitlines() if line.startswith('FileSystem='))
 probe = r'''
 #include <CEGUI/CEGUI.h>
 #include <CEGUI/RendererModules/Null/Renderer.h>
@@ -110,7 +113,7 @@ METHODS
 int main(int argc,char** argv){try{
  Ogre::Root ogre("","","research-tree-Ogre.log");ogre.loadPlugin(std::string(argv[2])+"/bin/Codec_STBI");
  auto& resources=Ogre::ResourceGroupManager::getSingleton();
- for(const char* path:{"gui","gui/fonts","gui/schemas"})resources.addResourceLocation(std::string(argv[1])+"/"+path,"FileSystem","GUI");
+ for(const char* path:{GUI_FOLDERS})resources.addResourceLocation(std::string(argv[1])+"/"+path,"FileSystem","GUI");
  CEGUI::OgreResourceProvider provider;provider.setDefaultResourceGroup("GUI");CEGUI::OgreImageCodec codec;codec.setImageFileDataType("png");
  auto& renderer=CEGUI::NullRenderer::create();renderer.setDisplaySize(CEGUI::Sizef(1920,1200));
  auto& system=CEGUI::System::create(renderer,&provider,nullptr,&codec,nullptr,"","research-tree-CEGUI.log");
@@ -303,6 +306,7 @@ if args.render:
  renderer.setDefaultRootRenderTarget(*window);target->removeAllViewports();Ogre::TextureManager::getSingleton().remove(texture->getHandle());
  windows.destroyWindow(root);''')
     probe = probe.replace('CEGUI::NullRenderer::destroy(renderer);', 'CEGUI::OgreRenderer::destroy(renderer);shaders->removeSceneManager(scene);ogre.destroySceneManager(scene);Ogre::MaterialManager::getSingleton().removeListener(&listener);Ogre::RTShader::ShaderGenerator::destroy();')
+probe = probe.replace('GUI_FOLDERS', gui_folders)
 with tempfile.TemporaryDirectory(prefix='odp-research-tree-') as directory:
     work = Path(directory)
     (work / 'check.cpp').write_text(probe)

@@ -1,4 +1,4 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<Imageset version="2" name="RoomArtworkGhostManaCrystal" imagefile="RoomCentreArtwork/ghost-mana-crystal.png" autoScaled="false" nativeHorzRes="1024" nativeVertRes="768">
+<Imageset version="2" name="RoomArtworkGhostManaCrystal" imagefile="ghost-mana-crystal.png" autoScaled="false" nativeHorzRes="1024" nativeVertRes="768">
     <Image name="Image" xPos="0" yPos="0" width="52" height="45" />
 </Imageset>

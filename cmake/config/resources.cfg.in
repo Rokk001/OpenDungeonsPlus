@@ -19,6 +19,8 @@ FileSystem=@OD_OGRE_MEDIA_DIR@/RTShaderLib/../Main
 FileSystem=gui
 FileSystem=gui/fonts
 FileSystem=gui/schemas
+FileSystem=gui/RoomCentreArtwork
+FileSystem=gui/RoomCentreIcons
 
 [Music]
 FileSystem=music

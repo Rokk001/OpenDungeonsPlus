@@ -53,6 +53,10 @@ def main():
     icon_names = {path.name for path in icon_root.glob('*.png')}
     assert icon_names == {value[0] for value in MAPPINGS.values()}, 'all 24 chosen A1 files are mapped once'
 
+    # The game registers each [GUI] folder non-recursively, so an imagefile must be a bare name in exactly one of them.
+    gui_section = (ROOT / 'cmake/config/resources.cfg.in').read_text(encoding='utf-8').split('[GUI]', 1)[1].split('[', 1)[0]
+    gui_folders = [ROOT / line.split('=', 1)[1].strip() for line in gui_section.splitlines() if line.startswith('FileSystem=')]
+    assert icon_root in gui_folders, 'icon folder is a GUI resource location'
     scheme = ET.parse(ROOT / 'gui' / 'ODSkin.scheme').getroot()
     imagesets = {node.get('name'): node.get('filename') for node in scheme.findall('Imageset')}
     distinct_pixels = set()
@@ -61,7 +65,8 @@ def main():
         assert imageset_name in imagesets, button + ': imageset registered in ODSkin.scheme'
         imageset_path = ROOT / 'gui' / imagesets[imageset_name]
         imageset = ET.parse(imageset_path).getroot()
-        assert imageset.get('imagefile') == 'RoomCentreIcons/' + filename, button + ': selected A1 PNG is the source'
+        assert imageset.get('imagefile') == filename, button + ': selected A1 PNG is the source'
+        assert [folder for folder in gui_folders if (folder / filename).is_file()] == [icon_root], button + ': PNG resolves only in the icon folder'
         image = imageset.find("Image[@name='" + image_name + "']")
         assert image is not None, button + ': mapped CEGUI image exists'
         picture_path = icon_root / filename
