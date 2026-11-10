@@ -40,6 +40,7 @@
 #include <windows.h>
 #endif
 
+//! \brief Creates input devices and initialises absolute pointer tracking for the render window.
 InputManager::InputManager(Ogre::RenderWindow* renderWindow):
     mInputManager(nullptr),
     mKeyboard(nullptr),
@@ -96,6 +97,7 @@ InputManager::InputManager(Ogre::RenderWindow* renderWindow):
                        config.getInputValue(Config::KEYBOARD_GRAB, "No", false) == "Yes");
 }
 
+//! \brief Creates OIS devices and installs the ordered Windows pointer hook when available.
 void InputManager::createInputDevices(bool mouseGrab, bool keyboardGrab)
 {
 #ifndef OD_USE_SFML_WINDOW
@@ -160,6 +162,7 @@ InputManager::~InputManager()
     destroyInputDevices();
 }
 
+//! \brief Releases cursor grab and the Windows hook before destroying the input devices.
 void InputManager::destroyInputDevices()
 {
 #ifndef OD_USE_SFML_WINDOW
