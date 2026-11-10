@@ -115,10 +115,16 @@ int main()
     }
     catch(const std::exception& error) { std::cerr << error.what() << std::endl; return 1; }
 }
-""".replace('@@SCALER@@', scaler).replace('@@GUI@@', (repo / 'gui').as_posix() + '/').replace('@@FONTS@@', (repo / 'gui/fonts').as_posix() + '/')
+""".replace('@@SCALER@@', scaler).replace('@@FONTS@@', (repo / 'gui/fonts').as_posix() + '/')
 
 with tempfile.TemporaryDirectory(prefix='odp-editor-headers-') as directory:
     work = Path(directory)
+    gui_resources = work / 'gui'
+    shutil.copytree(repo / 'gui', gui_resources)
+    for resource_directory in (repo / 'gui/RoomCentreArtwork', repo / 'gui/RoomCentreIcons'):
+        for resource in resource_directory.iterdir():
+            if resource.is_file():
+                shutil.copy2(resource, gui_resources / resource.name)
     header_dir = work / 'CEGUI/RendererModules/Null'
     header_dir.mkdir(parents=True)
     for header in null_include.glob('*.h'):
@@ -128,6 +134,7 @@ with tempfile.TemporaryDirectory(prefix='odp-editor-headers-') as directory:
         shutil.copy(source, work / source.name)
         sources.append(source.name)
     shutil.copy(null_source / 'RenderTarget.inl', work / 'RenderTarget.inl')
+    probe = probe.replace('@@GUI@@', gui_resources.as_posix() + '/')
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING', '/DCEGUINULLRENDERER_EXPORTS',
                     '/I', str(work), '/I', str(deps / 'install/include/cegui-0'), 'check.cpp'] + sources +

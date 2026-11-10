@@ -110,7 +110,13 @@ def main():
     centre_refs = re.findall(r'"([^"]+)"', icon_array.group(1))
     expected_refs = [MAPPINGS[button][1] for button in ROOM_CENTRE]
     assert centre_refs == expected_refs, 'room centre list uses the matching selected icon for all eight rows'
-    assert 'setProperty("Image", ROOM_ICONS[index])' in manager, 'room centre rows display their mapped icon'
+    refresh = re.search(r'void GameMode::refreshRoomManager\(\)(.*?)\n\}', manager, re.S)
+    assert refresh is not None, 'room centre runtime refresh exists'
+    runtime = refresh.group(1)
+    assert 'row->setVisible(counts[index] > 0)' in runtime, 'runtime shows a row only when its room type is owned'
+    assert 'if(counts[index] == 0)\n            continue;' in runtime, 'runtime skips unowned room types without shifting their icon index'
+    assert 'row->getChild("Icon")->setProperty("Image", ROOM_ICONS[index])' in runtime, \
+        'runtime assigns each visible row the icon at its fixed room type index'
     traps = (ROOT / 'gui' / 'WindowTabTraps.layout').read_text(encoding='utf-8')
     assert "image='" + MAPPINGS['WorkshopButton'][1] + "'" in traps, 'workshop room icon use in traps tab is replaced'
 
