@@ -5,6 +5,7 @@ OgreRTShaderSystem.dll exit-time destructors -> Material::~Material -> GpuProgra
 RenderManager stores CreatureShadowCaster in HardwareSkinningFactory's static MaterialPtr arrays; they
 must be emptied while Root still owns the material and GPU program managers.
 """
+import os
 from pathlib import Path
 import re
 
@@ -62,7 +63,7 @@ check_release(application)
 check_registration_still_needs_release(renderer)
 
 # The four arrays released here must be the only static MaterialPtr holders of the pinned RTSS source.
-ogre = Path('C:/Users/mario/build-deps/src/ogre/Components/RTShaderSystem/src/OgreShaderExHardwareSkinning.cpp')
+ogre = Path(os.environ.get('BUILD_DEPS_ROOT') or Path(os.environ['USERPROFILE']) / 'build-deps') / 'src/ogre/Components/RTShaderSystem/src/OgreShaderExHardwareSkinning.cpp'
 if ogre.exists():
     statics = re.findall(r'^static MaterialPtr (\w+)\[', ogre.read_text(encoding='utf-8'), re.M)
     assert sorted(statics) == sorted(['mCustomShadowCasterMaterialsLinear', 'mCustomShadowCasterMaterialsDualQuaternion',

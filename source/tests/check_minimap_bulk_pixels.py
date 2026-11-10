@@ -6,6 +6,7 @@ round trip is replaced by one PixelUtil::bulkPixelConversion from PF_BYTE_RGBA. 
 paths with Ogre's own arithmetic (float32 floatToFixed / fixedToFloat, the A8B8G8R8->R8G8B8A8 converter)
 for every byte value and proves equal output bytes, then guards the source contract. No compile, no game.
 """
+import os
 from pathlib import Path
 import random
 import re
@@ -70,7 +71,7 @@ for _ in range(20000):
 assert any(old_bytes(r, 0, b, 255) != new_bytes(b, 0, r, 255) for r, b in ((10, 200), (255, 0)))
 
 # Ogre facts the emulation relies on (pinned source / installed headers).
-ogre_src = Path('C:/Users/mario/build-deps/src/ogre/OgreMain')
+ogre_src = Path(os.environ.get('BUILD_DEPS_ROOT') or Path(os.environ['USERPROFILE']) / 'build-deps') / 'src/ogre/OgreMain'
 if ogre_src.exists():
     conv = (ogre_src / 'src/OgrePixelConversions.h').read_text(encoding='utf-8')
     block = conv.split('struct A8B8G8R8toR8G8B8A8', 1)[1].split('};', 1)[0]
