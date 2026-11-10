@@ -1000,6 +1000,16 @@ bool EditorMode::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
     return true;
 }
 
+//! \brief Abandons an editor drag without applying its command.
+void EditorMode::cancelMouseInput()
+{
+    AbstractApplicationMode::cancelMouseInput();
+    mTileMarker.isExtensible = false;
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::selectTile)
+        mPlayerSelection.setCurrentAction(SelectedAction::none);
+    unselectAllTiles();
+}
+
 bool EditorMode::mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
 {
     CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));

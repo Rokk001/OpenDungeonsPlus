@@ -1726,6 +1726,19 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     return true;
 }
 
+//! \brief Abandons held mouse actions without submitting a world command.
+void GameMode::cancelMouseInput()
+{
+    mPendingHandDrop = false;
+    mMiddleDragDistance = 0.0f;
+    AbstractApplicationMode::cancelMouseInput();
+    ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);
+    ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateY, 0.0);
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::selectTile)
+        mPlayerSelection.setCurrentAction(SelectedAction::none);
+    unselectAllTiles();
+}
+
 //! \brief Completes a world action using the current action-specific pointer target.
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
