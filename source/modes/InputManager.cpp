@@ -181,6 +181,7 @@ void InputManager::destroyInputDevices()
     mKeyboard.reset();
 }
 
+//! \brief Applies capture settings after cancelling gestures owned by the old devices.
 void InputManager::refreshSettings()
 {
     // Called before capturing input, never from inside an OIS callback.
@@ -192,6 +193,9 @@ void InputManager::refreshSettings()
 
     const bool previousMouseGrab = mMouseGrab;
     const bool previousKeyboardGrab = mKeyboardGrab;
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+    cancelPointerInput();
+#endif
     destroyInputDevices();
     try
     {
@@ -209,6 +213,7 @@ void InputManager::refreshSettings()
     mLMouseDown = mRMouseDown = mMMouseDown = false;
 }
 
+//! \brief Rebinds input to a render window without retaining gestures from the old window.
 bool InputManager::setRenderWindow(Ogre::RenderWindow* renderWindow)
 {
     if(renderWindow == mRenderWindow)
@@ -218,6 +223,9 @@ bool InputManager::setRenderWindow(Ogre::RenderWindow* renderWindow)
     return false;
 #else
     Ogre::RenderWindow* previousWindow = mRenderWindow;
+#if defined OIS_WIN32_PLATFORM
+    cancelPointerInput();
+#endif
     destroyInputDevices();
     mRenderWindow = renderWindow;
     try
@@ -409,11 +417,13 @@ void InputManager::capturePointer()
     bool inside = true;
     if(readSystemPointer(x, y, inside) && (x != mLastPointerX || y != mLastPointerY))
     {
+        OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+        state.X.rel = x - mLastPointerX;
+        state.Y.rel = y - mLastPointerY;
+        state.Z.rel = 0;
         mLastPointerX = x;
         mLastPointerY = y;
         applyPointerToState(x, y);
-        OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
-        state.X.rel = state.Y.rel = state.Z.rel = 0;
         if(mCurrentAMode != nullptr)
             mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
     }
@@ -708,7 +718,10 @@ long long __stdcall InputManager::wheelWindowProc(void* window, unsigned int mes
             if(down)
             {
                 owner->mCapturedButtons |= button;
-                SetCapture(hwnd);
+                // Reacquiring our own capture can synchronously report capture loss.
+                // Additional held buttons must keep the existing drag capture.
+                if(GetCapture() != hwnd)
+                    SetCapture(hwnd);
             }
             if(up)
             {
@@ -718,7 +731,8 @@ long long __stdcall InputManager::wheelWindowProc(void* window, unsigned int mes
             }
         }
     }
-    if((message == WM_CAPTURECHANGED && owner->mCapturedButtons != 0) ||
+    if((message == WM_CAPTURECHANGED && reinterpret_cast<HWND>(lParam) != hwnd &&
+        owner->mCapturedButtons != 0) ||
        message == WM_CANCELMODE || message == WM_KILLFOCUS ||
        (message == WM_ACTIVATEAPP && wParam == FALSE))
     {

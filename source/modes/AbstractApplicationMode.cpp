@@ -148,8 +148,20 @@ void AbstractApplicationMode::cancelMouseInput()
     inputManager.mCommandState = InputCommandState::infoOnly;
     CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
     CEGUI::Window* capture = context.getInputCaptureWindow();
-    if(capture != nullptr)
+    std::vector<CEGUI::Window*> released;
+    while(capture != nullptr)
+    {
+        // Scrollbars can restore an older dropdown capture. Cancel the whole chain;
+        // a capture-lost subscriber must not keep this loop alive by recapturing.
+        if(std::find(released.begin(), released.end(), capture) != released.end())
+        {
+            context.setInputCaptureWindow(nullptr);
+            break;
+        }
+        released.push_back(capture);
         capture->releaseInput();
+        capture = context.getInputCaptureWindow();
+    }
     // CEGUI has no cancel-button injection. Clear its actual held-button state without
     // injecting an up: injectMouseButtonUp can also generate a click on capture loss.
     CEGUI::SystemKeys& keys = const_cast<CEGUI::SystemKeys&>(context.getSystemKeys());
