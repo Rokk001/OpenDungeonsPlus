@@ -7,8 +7,8 @@ confirm button, drawn below it. CEGUI raises a clicked window to the front of it
 panel put the opaque grey stone in front of the panel. The button was covered and every further click
 hit the stone; keys are blocked during the defeat, so the game could not be left any more.
 
-This check links the installed CEGUIBase library, renders with the Null renderer of the CEGUI sources
-(compiled in), loads the real scheme, imagesets, fonts, look and feel and layout from gui/, and drives the
+This check links the installed CEGUI and Ogre libraries, renders with the Null renderer of the CEGUI sources
+(compiled in), loads the real scheme, imagesets, fonts, look and feel and layout from registered GUI locations, and drives the
 real GameMode functions that build the defeat windows, open the debriefing, hide the interface each frame,
 route the mouse and handle the confirm button. They are cut out of GameMode.cpp by signature; the game
 objects they touch (client, map, mode manager) are small mocks.
@@ -32,6 +32,10 @@ game_mode = (repo / 'source/modes/GameMode.cpp').read_text()
 mode_manager = (repo / 'source/modes/ModeManager.h').read_text()
 mode_manager_source = (repo / 'source/modes/ModeManager.cpp').read_text()
 layout_path = repo / 'gui/WindowDefeatDebriefing.layout'
+# Register the game's GUI locations non-recursively, as ResourceManager does.
+gui_section = (repo / 'cmake/config/resources.cfg.in').read_text().split('[GUI]', 1)[1].split('[', 1)[0]
+gui_folders = ','.join('"%s"' % (repo / line.split('=', 1)[1].strip()).as_posix()
+                       for line in gui_section.splitlines() if line.startswith('FileSystem='))
 
 
 def function(text, signature):
@@ -71,6 +75,9 @@ probe = r'''
 #include <vector>
 #include <CEGUI/CEGUI.h>
 #include "CEGUI/RendererModules/Null/Renderer.h"
+#include <CEGUI/RendererModules/Ogre/ResourceProvider.h>
+#include <OgreRoot.h>
+#include <OgreResourceGroupManager.h>
 #include "game/LevelStatistics.h"
 #include "modes/DebriefingTable.h"
 #include "modes/DefeatSequence.h"
@@ -99,20 +106,10 @@ struct AbstractApplicationMode
     bool mouseReleased(const OIS::MouseEvent&, OIS::MouseButtonID id)
     {return CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(Gui::convertButton(id));}
 };
-namespace Ogre
-{
-struct ColourValue
-{
-    uint32_t argb;
-    explicit ColourValue(uint32_t value = 0xFFFFFFFF) : argb(value) {}
-    uint32_t getAsARGB() const {return argb;}
-    static const ColourValue White;
-};
-const ColourValue ColourValue::White(0xFFFFFFFF);
-}
+//! \brief Supplies the seat colour through Ogre's real colour type.
 struct Seat
 {
-    Ogre::ColourValue colour;
+    Ogre::ColourValue colour = Ogre::ColourValue::White;
     const Ogre::ColourValue& getColorValue() const {return colour;}
 };
 struct ODClient
@@ -292,20 +289,24 @@ void closeDebriefing(GameMode* mode, CEGUI::Window* root)
     gLastMode = 0;
 }
 
+//! \brief Exercises the defeat clicks with the game's registered GUI resource locations.
 int run()
 {
+    Ogre::Root ogre("", "", "ogre-check.log");
+    Ogre::ResourceGroupManager& resources = Ogre::ResourceGroupManager::getSingleton();
+    for(const char* path : {@@GUI_FOLDERS@@})
+        resources.addResourceLocation(path, "FileSystem", "GUI", false);
     CEGUI::NullRenderer& renderer = CEGUI::NullRenderer::create();
     renderer.setDisplaySize(CEGUI::Sizef(1920.0f, 1200.0f));
-    CEGUI::DefaultResourceProvider* provider = new CEGUI::DefaultResourceProvider();
-    provider->setResourceGroupDirectory("gui", "@@GUI@@");
-    provider->setResourceGroupDirectory("fonts", "@@FONTS@@");
+    CEGUI::OgreResourceProvider provider;
+    provider.setDefaultResourceGroup("GUI");
     StubImageCodec codec;
-    CEGUI::System::create(renderer, provider, static_cast<CEGUI::XMLParser*>(nullptr), &codec, nullptr, "", "cegui-check.log");
-    CEGUI::Scheme::setDefaultResourceGroup("gui");
-    CEGUI::ImageManager::setImagesetDefaultResourceGroup("gui");
-    CEGUI::Font::setDefaultResourceGroup("fonts");
-    CEGUI::WidgetLookManager::setDefaultResourceGroup("gui");
-    CEGUI::WindowManager::setDefaultResourceGroup("gui");
+    CEGUI::System::create(renderer, &provider, static_cast<CEGUI::XMLParser*>(nullptr), &codec, nullptr, "", "cegui-check.log");
+    CEGUI::Scheme::setDefaultResourceGroup("GUI");
+    CEGUI::ImageManager::setImagesetDefaultResourceGroup("GUI");
+    CEGUI::Font::setDefaultResourceGroup("GUI");
+    CEGUI::WidgetLookManager::setDefaultResourceGroup("GUI");
+    CEGUI::WindowManager::setDefaultResourceGroup("GUI");
     CEGUI::SchemeManager::getSingleton().createFromFile("ODSkin.scheme");
     CEGUI::System::getSingleton().notifyDisplaySizeChanged(CEGUI::Sizef(1920.0f, 1200.0f));
     CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
@@ -396,7 +397,6 @@ int run()
     }
 
     CEGUI::System::destroy();
-    delete provider;
     CEGUI::NullRenderer::destroy(renderer);
     std::cout << "CHECKS=" << gChecks << " FAILURES=" << gFailures << '\n';
     return gFailures ? 1 : 0;
@@ -432,8 +432,7 @@ for marker, text in (
         ('@@FILL@@', function(game_mode, 'void GameMode::fillDefeatStatistics(')),
         ('@@CONFIRM@@', function(game_mode, 'bool GameMode::onClickDefeatDebriefingConfirm(')),
         ('@@CAMPAIGN_CONFIRM@@', function(game_mode, 'bool GameMode::onClickCampaignVictoryConfirm(')),
-        ('@@GUI@@', (repo / 'gui').as_posix() + '/'),
-        ('@@FONTS@@', (repo / 'gui/fonts').as_posix() + '/')):
+        ('@@GUI_FOLDERS@@', gui_folders)):
     assert marker in probe, marker
     probe = probe.replace(marker, text)
 
@@ -474,8 +473,10 @@ with tempfile.TemporaryDirectory(prefix='odp-defeat-click-') as directory:
     shutil.copy(null_source / 'RenderTarget.inl', work / 'RenderTarget.inl')
     (work / 'check.cpp').write_text(probe)
     subprocess.run(['cl', '/nologo', '/EHsc', '/MD', '/std:c++17', '/W1', '/DCEGUINULLRENDERER_EXPORTS',
-                    '/I', str(work), '/I', str(cegui_include), '/I', str(repo / 'source'), 'check.cpp'] + sources +
-                   ['/Fecheck.exe', '/link', '/LIBPATH:' + str(cegui_lib), 'CEGUIBase-0.lib'],
+                    '/I', str(work), '/I', str(cegui_include), '/I', str(deps / 'install/include/OGRE'),
+                    '/I', str(repo / 'source'), 'check.cpp'] + sources +
+                   ['/Fecheck.exe', '/link', '/LIBPATH:' + str(cegui_lib),
+                    'CEGUIBase-0.lib', 'CEGUIOgreRenderer-0.lib', 'OgreMain.lib'],
                    cwd=work, check=True)
     environment = dict(os.environ)
     environment['PATH'] = str(deps / 'install/bin') + os.pathsep + environment.get('PATH', '')
