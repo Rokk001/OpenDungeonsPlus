@@ -24,6 +24,7 @@
 #include "modes/WheelAccumulator.h"
 
 #include <memory>
+#include <vector>
 
 
 #include "modes/Keyboard.h"
@@ -130,18 +131,17 @@ public:
     //! \brief Destroys the mouse and keyboard; safe to call when they do not exist
     void destroyInputDevices();
 #if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
-    //! \brief Hands the OIS mouse events to the current mode with the position of the Windows pointer
-    class PointerForwarder: public OIS::MouseListener
+    //! \brief Stores one window mouse message and its client coordinates in arrival order.
+    struct PointerEvent
     {
-    public:
-        PointerForwarder(InputManager& inputManager): mInputManager(inputManager) {}
-        virtual bool mouseMoved(const OIS::MouseEvent& arg) override;
-        virtual bool mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id) override;
-        virtual bool mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id) override;
-    private:
-        InputManager& mInputManager;
+        unsigned int mMessage;
+        int mX, mY, mWheel;
     };
-    friend class PointerForwarder;
+    //! \brief Delivers queued Windows pointer events to the current mode.
+    void dispatchPointerEvents();
+    std::vector<PointerEvent> mPointerEvents;
+    int mPointerButtons = 0;
+    int mCapturedButtons = 0;
     //! \brief Reads the Windows pointer as game pointer position. Returns false if not possible.
     bool readSystemPointer(int& x, int& y, bool& inside);
     //! \brief Writes the game pointer position to the OIS state and the GUI
@@ -150,7 +150,6 @@ public:
     void updateCursorGrab(bool grab);
     //! \brief Moves the Windows pointer to the given game pointer position (clamped)
     void moveSystemPointer(int x, int y);
-    PointerForwarder mPointerForwarder;
     bool mWasForeground;
     bool mCursorHidden;
     bool mCursorClipped;
