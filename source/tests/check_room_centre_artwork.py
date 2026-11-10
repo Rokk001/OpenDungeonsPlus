@@ -8,6 +8,7 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[2]
+EXPECTED_ASSETS = 31
 ICONS = (
     'alchemy-lab', 'arena', 'casino', 'crypt', 'dormitory', 'ghost-room',
     'guard-room', 'hatchery', 'herb-garden', 'infirmary', 'library', 'merchant',
@@ -49,6 +50,7 @@ def main():
     inventory = [('gui/RoomCentreIcons/' + name + '.png',
                   (128, 128) if name == 'ghost-room' else (256, 256)) for name in ICONS]
     inventory.extend(('gui/RoomCentreArtwork/' + name, size) for name, size in ARTWORK)
+    assert len(inventory) == EXPECTED_ASSETS, 'complete fixed artwork inventory'
     failed = 0
     for relative, size in inventory:
         try:
@@ -57,7 +59,7 @@ def main():
         except (AssertionError, OSError) as error:
             print('FAIL ' + str(error))
             failed += 1
-    print('DONE total=31 red=%d' % failed)
+    print('DONE total=%d red=%d' % (EXPECTED_ASSETS, failed))
     return 1 if failed else 0
 
 
