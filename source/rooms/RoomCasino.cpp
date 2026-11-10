@@ -134,9 +134,22 @@ static RoomRegister reg(new RoomCasinoFactory);
 
 static const Ogre::Real OFFSET_CREATURE = 0.3;
 
+//! \brief Reads the setting from the current owner, so capture immediately uses the new keeper's value.
+CasinoPayout RoomCasino::getPayout() const
+{
+    return getSeat() != nullptr ? getSeat()->getCasinoPayout() : CasinoPayout::smiles;
+}
+
+//! \brief Changes the setting shared by every room of this type belonging to the current keeper.
+void RoomCasino::setPayout(CasinoPayout payout)
+{
+    if(getSeat() != nullptr)
+        getSeat()->setCasinoPayout(payout);
+}
+
+//! \brief Creates a room whose payer or payout is owned by its keeper.
 RoomCasino::RoomCasino(GameMap* gameMap) :
-    Room(gameMap),
-    mPayout(CasinoPayout::smiles)
+    Room(gameMap)
 {
     setMeshName("Casino");
 }
@@ -195,19 +208,20 @@ double RoomCasino::getFeeForPayout(CasinoPayout payout)
     return std::max(0.0, std::min(fee, 1.0));
 }
 
+//! \brief Leaves the receiving casino's payout with its current keeper during splits and captures.
 void RoomCasino::splitRoom(Room& newRoom, const std::vector<Tile*>& tiles)
 {
-    // The room that gets the tiles keeps the payout level set for this one
-    if(newRoom.getType() == getType())
-        static_cast<RoomCasino&>(newRoom).setPayout(mPayout);
+    // The room that gets the tiles reads its own keeper's payout.
 }
 
+//! \brief Writes the room and its keeper's payout for compatibility with legacy room streams.
 void RoomCasino::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
-    os << "CasinoPayout " << static_cast<uint32_t>(mPayout) << std::endl;
+    os << "CasinoPayout " << static_cast<uint32_t>(getPayout()) << std::endl;
 }
 
+//! \brief Migrates the first legacy casino's payout unless the keeper already has a setting.
 bool RoomCasino::importFromStream(std::istream& is)
 {
     if(!Room::importFromStream(is))
@@ -221,6 +235,8 @@ bool RoomCasino::importFromStream(std::istream& is)
     {
         is.clear();
         is.seekg(pos);
+        if(getSeat() != nullptr)
+            getSeat()->loadLegacyCasinoPayout(CasinoPayout::smiles);
         return true;
     }
 
@@ -233,7 +249,8 @@ bool RoomCasino::importFromStream(std::istream& is)
     if(payout > 2)
         return false;
 
-    mPayout = (payout == 0) ? CasinoPayout::money : CasinoPayout::smiles;
+    if(getSeat() != nullptr)
+        getSeat()->loadLegacyCasinoPayout((payout == 0) ? CasinoPayout::money : CasinoPayout::smiles);
     return true;
 }
 
@@ -353,13 +370,14 @@ bool RoomCasino::addCreatureUsingRoom(Creature* creature)
     return false;
 }
 
+//! \brief Uses the keeper's shared room setting for this operation.
 void RoomCasino::removeCreatureUsingRoom(Creature* creature)
 {
     Room::removeCreatureUsingRoom(creature);
 
     // The visit ends. Paying out smiles it gave the pleasure buff if it gained mood; paying out money the visit costs
     // mood, gives no buff and still locks the casino
-    creature->finishPleasureVisit(PleasureRoomKind::casino, mPayout == CasinoPayout::money);
+    creature->finishPleasureVisit(PleasureRoomKind::casino, getPayout() == CasinoPayout::money);
 
     // If the creature leaving the casino left another one playing alone, we
     // should search for another creature alone and try to make them match
@@ -429,6 +447,7 @@ void RoomCasino::removeCreatureUsingRoom(Creature* creature)
 }
 
 //! \brief Cheers up or annoys the creatures in the casino and plays the games; the keeper fee and the mood gain follow the casino research.
+//! \brief Applies the keeper's shared payout to every casino guest and game.
 void RoomCasino::doUpkeep()
 {
     Room::doUpkeep();
@@ -438,10 +457,10 @@ void RoomCasino::doUpkeep()
 
     // Every creature in the casino gets cheered up (smiles) or annoyed (money), in mood points per second
     double moodPerSecond = ConfigManager::getSingleton().getRoomConfigDoubleOrDefault(
-        (mPayout == CasinoPayout::smiles) ? "CasinoMoodSmiles" : "CasinoMoodMoney", 0.0);
+        (getPayout() == CasinoPayout::smiles) ? "CasinoMoodSmiles" : "CasinoMoodMoney", 0.0);
     // The research raises the mood the smiles payout gives, not the annoyance of the money payout
     // A dirty casino cheers up less (the mood gain only, the annoyance of the money payout stays)
-    if(mPayout == CasinoPayout::smiles)
+    if(getPayout() == CasinoPayout::smiles)
     {
         moodPerSecond = SkillManager::getResearchValue(getSeat(), SkillType::roomCasino, moodPerSecond, ResearchEffect::Mood);
         moodPerSecond *= getDirtOutputFactor();
@@ -481,7 +500,7 @@ void RoomCasino::doUpkeep()
         uint32_t cooldown = Random::Uint(ConfigManager::getSingleton().getRoomConfigUInt32("CasinoCooldownWorkMin"),
             ConfigManager::getSingleton().getRoomConfigUInt32("CasinoCooldownWorkMax"));
         double feePercent = std::min(SkillManager::getResearchValue(getSeat(), SkillType::roomCasino,
-            getFeeForPayout(mPayout), ResearchEffect::Fee), 1.0);
+            getFeeForPayout(getPayout()), ResearchEffect::Fee), 1.0);
         double wakefullness = ConfigManager::getSingleton().getRoomConfigDouble("CasinoWakefulnessPerWork");
         int32_t creatureBet = ConfigManager::getSingleton().getRoomConfigInt32("CasinoBet");
         creatureBet = std::min(creatureBet, static_cast<int32_t>(p.second.mCreature1.mCreature->getGoldCarried()));

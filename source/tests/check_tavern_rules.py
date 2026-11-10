@@ -37,6 +37,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import sys
 
 root = Path(__file__).resolve().parents[2]
 
@@ -589,6 +590,8 @@ public:
     void knockOut(RoomTavernSpot& spot);
     void cheerSpectators(const RoomTavernGame& game);
     static bool isGuestDisturbed(const Creature& creature);
+    //! \brief Supplies the selected payer to the extracted room rules.
+    TavernPayer getPayer() const { return mPayer; }
     TavernPayer mPayer;
     Tile* mCounterTile;
     InnkeeperEntity* mInnkeeper;
@@ -1292,6 +1295,11 @@ replacements = {
 for token, text in replacements.items():
     assert token in probe, token
     probe = probe.replace(token, text)
+
+# Source checks and probe generation can run while the plan forbids compilation.
+if '--source-only' in sys.argv:
+    print('source wiring checked; runtime probe compilation pending FINAL')
+    sys.exit(0)
 
 with tempfile.TemporaryDirectory(prefix='odp-tavern-rules-') as directory:
     work = Path(directory)

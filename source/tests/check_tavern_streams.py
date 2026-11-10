@@ -22,6 +22,7 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import sys
 
 root = Path(__file__).resolve().parents[2]
 
@@ -207,9 +208,20 @@ struct BuildingObject
     // Returns the object's rotation.
     double getRotationAngle() const { return angle; }
 };
+enum class TavernPayer;
+//! \brief Holds the shared payer for the extracted tavern stream functions.
+struct Seat
+{
+    TavernPayer payer = static_cast<TavernPayer>(0); bool configured = false;
+    //! \brief Adopts the first room value, including its missing-line default.
+    void loadLegacyTavernPayer(TavernPayer value) { if(!configured) { payer = value; configured = true; } }
+};
 // The stream data of the base room is a single word here
 struct Room
 {
+    Seat mKeeper; Seat* mSharedKeeper = nullptr;
+    //! \brief Returns this fixture room's keeper.
+    Seat* getSeat() const { return mSharedKeeper != nullptr ? mSharedKeeper : const_cast<Seat*>(&mKeeper); }
     GameMap* mMap; std::vector<Tile*> mCoveredTiles; std::map<Tile*, BuildingObject*> mBuildingObjects;
     Room(GameMap* map) : mMap(map) {}
     virtual ~Room() {}
@@ -222,10 +234,13 @@ struct Room
 class RoomTavern : public Room
 {
 public:
-    RoomTavern(GameMap* gameMap) : Room(gameMap), mPayer(TavernPayer::keeper), mCounterTile(nullptr), mInnkeeper(nullptr) {}
+    RoomTavern(GameMap* gameMap) : Room(gameMap), mCounterTile(nullptr), mInnkeeper(nullptr) {}
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
-    TavernPayer mPayer;
+    //! \brief Reads the stream fixture's shared keeper value.
+    TavernPayer getPayer() const { return getSeat()->payer; }
+    //! \brief Selects a shared payer for stream round trips.
+    void setPayer(TavernPayer payer) { getSeat()->payer = payer; getSeat()->configured = true; }
     Tile* mCounterTile;
     InnkeeperEntity* mInnkeeper;
     std::map<RoomTavernSeat, RoomTavernSpot> mSpots;
@@ -315,7 +330,7 @@ static void checkRoomStream()
     Creature a("Anna", &thirstyType), b("Bert", &thirstyType), c("Cleo", &thirstyType), d("Dirk", &thirstyType);
     RoomTavern room(&map);
     for(int i = 1; i < 6; ++i) room.mCoveredTiles.push_back(map.getTile(i, 2));
-    room.mPayer = TavernPayer::creature;
+    room.setPayer(TavernPayer::creature);
     room.mCounterTile = map.getTile(1, 2);
     room.mInnkeeper = reinterpret_cast<InnkeeperEntity*>(0x10);
     // A guest that drinks its third beer, a loser lying on the floor on its way to bed, and two running games
@@ -354,7 +369,7 @@ static void checkRoomStream()
     std::stringstream in(text + "NextRoom 5");
     expect(loaded.importFromStream(in), "the room stream is read");
     std::string next; in >> next; expect(next == "NextRoom", "the next token is put back, got " + next);
-    expect(loaded.mPayer == TavernPayer::creature, "payer round trip");
+    expect(loaded.getPayer() == TavernPayer::creature, "payer round trip");
     expect(loaded.mCounterTile == map2.getTile(1, 2), "counter round trip");
     // Furniture retains its tile, mesh and rotation across the room stream.
     BuildingObject keg(TAVERN_KEG_MESH, 90.0), table(TAVERN_TABLE_MESH, 180.0);
@@ -421,7 +436,7 @@ static void checkRoomStream()
     GameMap map4(10, 10); RoomTavern shuffled(&map4); for(int i = 1; i < 6; ++i) shuffled.mCoveredTiles.push_back(map4.getTile(i, 2));
     std::stringstream shuffledIn("RoomData\nGame 0 2 4 3 4 Anna Bert 4 0 0 0\nSpot 3 2 Cleo drinking 2\nCounter 3 2\nSeatLayout 2\nTavernPayer 0\nTail");
     expect(shuffled.importFromStream(shuffledIn), "lines in any order are read");
-    expect(shuffled.mCounterTile == map4.getTile(3, 2) && shuffled.mPayer == TavernPayer::keeper, "counter and payer in any order");
+    expect(shuffled.mCounterTile == map4.getTile(3, 2) && shuffled.getPayer() == TavernPayer::keeper, "counter and payer in any order");
     expect(shuffled.mPendingSpots.size() == 1 && shuffled.mPendingSpots["Cleo"].mDrinks == 0 && shuffled.mPendingSpots["Cleo"].mTurnsLeft == 2, "the short Spot form loads");
     expect(shuffled.mPendingSpots["Cleo"].mSeat == RoomTavernSeat(map4.getTile(3, 2), 0), "the short Spot form takes the first seat");
     expect(shuffled.mPendingGames.size() == 1 && shuffled.mPendingGames[0].mKind == TavernGameKind::armWrestling, "arm wrestling game loads");
@@ -432,7 +447,7 @@ static void checkRoomStream()
     std::stringstream oldSaveIn("RoomData\nTavernPayer 1\nCounter 3 2\nFurniture 2 2 TavernTable 0\nSpot 2 2 Anna drinking 3 2 0 0\nSpot 4 2 Bert game 0 1 0 0\n"
         "Spot 5 2 Cleo ko 17 0 1 0\nGame 0 2 4 3 4 Anna Bert 4 0 0 0\nTail");
     expect(oldSave.importFromStream(oldSaveIn), "a save without seat data is read");
-    expect(oldSave.mPayer == TavernPayer::creature && oldSave.mCounterTile == mapOld.getTile(3, 2), "payer and counter of the old save stay");
+    expect(oldSave.getPayer() == TavernPayer::creature && oldSave.mCounterTile == mapOld.getTile(3, 2), "payer and counter of the old save stay");
     expect(oldSave.mSavedFurniture.empty(), "the furniture of the old save is spread again");
     expect(oldSave.mPendingGames.empty(), "the games of the old save end without a winner");
     expect(oldSave.mPendingSpots.size() == 3, "the guests of the old save stay guests");
@@ -454,13 +469,25 @@ static void checkRoomStream()
     std::string formatOneTail; formatOneIn >> formatOneTail; expect(formatOneTail == "Tail", "the format 1 save leaves its next token");
     GameMap map5(10, 10); RoomTavern oldRoom(&map5);
     std::stringstream oldIn("RoomData\nNextRoom 1");
-    expect(oldRoom.importFromStream(oldIn) && oldRoom.mPayer == TavernPayer::keeper && oldRoom.mPendingSpots.empty() && oldRoom.mPendingGames.empty(), "an old room loads with the defaults");
+    expect(oldRoom.importFromStream(oldIn) && oldRoom.getPayer() == TavernPayer::keeper && oldRoom.mPendingSpots.empty() && oldRoom.mPendingGames.empty(), "an old room loads with the defaults");
     std::string oldNext; oldIn >> oldNext; expect(oldNext == "NextRoom", "the old room leaves its next token");
     GameMap map6(10, 10); RoomTavern atEnd(&map6); std::stringstream atEndIn("RoomData\n");
     expect(atEnd.importFromStream(atEndIn), "a room at the end of the stream loads");
 
     // Broken lines are refused
     GameMap map7(10, 10);
+    // Two legacy rooms share one keeper; even an absent first payer line wins.
+    Seat shared;
+    RoomTavern first(&map), second(&map); first.mSharedKeeper = &shared; second.mSharedKeeper = &shared;
+    std::istringstream firstIn("RoomData\nTavernPayer 1\n"), secondIn("RoomData\nTavernPayer 0\n");
+    expect(first.importFromStream(firstIn) && second.importFromStream(secondIn) && second.getPayer() == TavernPayer::creature,
+           "first tavern payer wins over a later different payer");
+    Seat missingShared;
+    RoomTavern missing(&map), later(&map); missing.mSharedKeeper = &missingShared; later.mSharedKeeper = &missingShared;
+    std::istringstream missingIn("RoomData\nTail"), laterIn("RoomData\nTavernPayer 1\n");
+    expect(missing.importFromStream(missingIn) && later.importFromStream(laterIn) && later.getPayer() == TavernPayer::keeper,
+           "first tavern without payer line freezes the historical keeper default");
+
     const char* broken[] = {
         "RoomData\nTavernPayer 7\n", "RoomData\nGame 9 1 1 2 1 A B 4 0 0 0\n", "RoomData\nSpot 1 1 A sitting 3\n",
         "RoomData\nSpot 1 1 A drinking\n", "RoomData\nCounter 3\n", "RoomData\nGame 0 1 1 2 1 A B\n", "RoomData\nSeatLayout 9\n",
@@ -533,6 +560,11 @@ replacements = {
 for token, text in replacements.items():
     assert token in probe, token
     probe = probe.replace(token, text)
+
+# Source checks and probe generation can run while the plan forbids compilation.
+if '--source-only' in sys.argv:
+    print('source wiring checked; runtime probe compilation pending FINAL')
+    sys.exit(0)
 
 with tempfile.TemporaryDirectory(prefix='odp-tavern-streams-') as directory:
     work = Path(directory)

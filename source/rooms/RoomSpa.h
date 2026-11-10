@@ -217,11 +217,11 @@ public:
     //! \brief Sets the name, seat and tiles. A spa of a seat that is played by the computer lets the creatures pay.
     void setupRoom(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles) override;
 
-    //! \brief Joins an adjacent spa of the same seat into this room. The room that already has its pool objects keeps
-    //! its payer setting.
+    //! \brief Joins an adjacent spa of the same seat into this room without changing the keeper's shared
+    //! payer setting.
     void absorbRoom(Room* r) override;
 
-    //! \brief Called on the room the tiles are leaving. The new room gets the payer setting.
+    //! \brief Called on the room the tiles are leaving. The new room uses its current keeper's payer setting.
     void splitRoom(Room& newRoom, const std::vector<Tile*>& tiles) override;
 
     //! \brief Removes a tile from the room. A bather on the tile or with a place on it stops (its action queue is
@@ -246,13 +246,11 @@ public:
     //! to their creatures again in the first turn (doUpkeep).
     bool importFromStream(std::istream& is) override;
 
-    //! \brief Returns who pays for the bath.
-    inline SpaPayer getPayer() const
-    { return mPayer; }
+    //! \brief Returns the current keeper's shared bath payer.
+    SpaPayer getPayer() const;
 
-    //! \brief Sets who pays for the bath.
-    inline void setPayer(SpaPayer payer)
-    { mPayer = payer; }
+    //! \brief Sets the bath payer for all spas of the current keeper.
+    void setPayer(SpaPayer payer);
 
     //! \brief True when the tile is a pool tile of a lava spa: it is covered by a spa and so are its eight neighbours.
     //! \param tile The tile to test; null is no pool tile.
@@ -432,8 +430,7 @@ private:
     //! \param gameMap The map.
     void updateTileObject(Tile* tile, const std::string& meshName, double angle, GameMap* gameMap);
 
-    //! \brief Who pays for the bath.
-    SpaPayer mPayer;
+    //! \brief The keeper owns the bath payer; only pool state is kept here.
     //! \brief The bath places, one for every bather and reservation (server side only).
     std::vector<RoomSpaBather> mBathers;
     //! \brief The places read from a saved room, by creature name, until the creatures are bound again.

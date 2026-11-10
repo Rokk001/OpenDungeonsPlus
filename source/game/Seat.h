@@ -58,6 +58,9 @@ enum class SpellType;
 enum class TileVisual;
 enum class TileType;
 enum class TrapType;
+enum class TavernPayer;
+enum class SpaPayer;
+enum class CasinoPayout;
 
 //! Class used to save the last tile state notified to each seat
 class TileStateNotified
@@ -109,6 +112,25 @@ public:
 
     inline Player* getPlayer() const
     { return mPlayer; }
+
+    //! \brief Returns the keeper's shared beer payer, using the player default until configured.
+    TavernPayer getTavernPayer() const;
+    //! \brief Sets the payer for every current and future tavern of this keeper.
+    void setTavernPayer(TavernPayer payer);
+    //! \brief Adopts only the first legacy tavern's loaded payer when no keeper value was saved.
+    void loadLegacyTavernPayer(TavernPayer payer);
+    //! \brief Returns the keeper's shared bath payer, using the player default until configured.
+    SpaPayer getSpaPayer() const;
+    //! \brief Sets the payer for every current and future spa of this keeper.
+    void setSpaPayer(SpaPayer payer);
+    //! \brief Adopts only the first legacy spa's loaded payer when no keeper value was saved.
+    void loadLegacySpaPayer(SpaPayer payer);
+    //! \brief Returns the keeper's shared casino payout, defaulting to smiles.
+    CasinoPayout getCasinoPayout() const;
+    //! \brief Sets the payout for every current and future casino of this keeper.
+    void setCasinoPayout(CasinoPayout payout);
+    //! \brief Adopts only the first legacy casino's loaded payout when no keeper value was saved.
+    void loadLegacyCasinoPayout(CasinoPayout payout);
 
     //! \brief Adds a goal to the vector of goals which must be completed by this seat before it can be declared a winner.
     void addGoal(Goal* g);
@@ -495,6 +517,12 @@ private:
 
     //! \brief The player sitting on this seat
     Player* mPlayer;
+    TavernPayer mTavernPayer;
+    SpaPayer mSpaPayer;
+    CasinoPayout mCasinoPayout;
+    bool mTavernPayerSet;
+    bool mSpaPayerSet;
+    bool mCasinoPayoutSet;
 
     //! \brief Counters shown in the level debriefing (server side, not saved)
     SeatStatistics mStatistics;

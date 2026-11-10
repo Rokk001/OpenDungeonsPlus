@@ -25,7 +25,7 @@ class Creature;
 class Tile;
 enum class TileVisual;
 
-//! \brief What the casino aims at. The keeper sets it per room. There are two settings:
+//! \brief What the casino aims at. The keeper sets it for all owned casinos. There are two settings:
 //! Money keeps a share of the bets and annoys the gamblers, Smiles keeps little and cheers them up.
 //! Levels saved with the former three settings are mapped on these two when loaded.
 enum class CasinoPayout
@@ -63,6 +63,7 @@ public:
     uint32_t mCooldown;
 };
 
+//! \brief Runs casino games using the keeper's shared payout setting.
 class RoomCasino: public Room
 {
 public:
@@ -82,11 +83,11 @@ public:
     void exportToStream(std::ostream& os) const override;
     bool importFromStream(std::istream& is) override;
 
-    inline CasinoPayout getPayout() const
-    { return mPayout; }
+    //! \brief Returns the current keeper's shared payout.
+    CasinoPayout getPayout() const;
 
-    void setPayout(CasinoPayout payout)
-    { mPayout = payout; }
+    //! \brief Sets the payout for all casinos of the current keeper.
+    void setPayout(CasinoPayout payout);
 
     //! \brief The share of the bets the keeper keeps for the given payout level (0.0 to 1.0)
     static double getFeeForPayout(CasinoPayout payout);
@@ -104,7 +105,6 @@ private:
     //! Tells the keepers who see the winner that a game ended (cosmetic event, the clients show the win and the loss)
     void sendGameResult(Creature& winner, Creature& loser);
     std::map<Tile*,RoomCasinoGame> mCreaturesSpots;
-    CasinoPayout mPayout;
 };
 
 #endif // ROOMCASINO_H

@@ -642,9 +642,22 @@ bool readTileFromStream(GameMap* gameMap, std::istream& is, Tile*& tile)
 }
 }
 
+//! \brief Reads the setting from the current owner, so capture immediately uses the new keeper's value.
+TavernPayer RoomTavern::getPayer() const
+{
+    return getSeat() != nullptr ? getSeat()->getTavernPayer() : TavernPayer::keeper;
+}
+
+//! \brief Changes the setting shared by every room of this type belonging to the current keeper.
+void RoomTavern::setPayer(TavernPayer payer)
+{
+    if(getSeat() != nullptr)
+        getSeat()->setTavernPayer(payer);
+}
+
+//! \brief Creates a room whose payer or payout is owned by its keeper.
 RoomTavern::RoomTavern(GameMap* gameMap) :
     Room(gameMap),
-    mPayer(TavernPayer::keeper),
     mCounterTile(nullptr),
     mInnkeeper(nullptr),
     mLayoutCounter(nullptr)
@@ -1833,11 +1846,12 @@ void RoomTavern::upkeepSpots()
     }
 }
 
+//! \brief Uses the keeper's shared room setting for this operation.
 bool RoomTavern::payForBeer(Creature& creature, bool& noCoin)
 {
     noCoin = false;
     const int32_t price = static_cast<int32_t>(std::floor(getTavernValue("BeerPrice") + 0.5));
-    if(mPayer == TavernPayer::keeper)
+    if(getPayer() == TavernPayer::keeper)
         return getGameMap()->withdrawFromTreasuries(price, getSeat());
 
     if(creature.getGoldCarried() >= price)
@@ -1857,7 +1871,7 @@ int32_t RoomTavern::nextDrinkTurns(const Creature& creature) const
 {
     const double price = std::floor(getTavernValue("BeerPrice") + 0.5);
     bool beer = servesBeer();
-    if(beer && (mPayer == TavernPayer::keeper))
+    if(beer && (getPayer() == TavernPayer::keeper))
         beer = (getSeat() != nullptr) && (getSeat()->getGold() >= price);
     else if(beer)
         beer = creature.getGoldCarried() >= price;
@@ -2482,6 +2496,7 @@ bool RoomTavern::servesBeer() const
     return (getSeat() != nullptr) && (getSeat()->getSkillLevel(SkillType::tavernBeer) >= 1);
 }
 
+//! \brief Creates the counter without changing the keeper's shared beer payer.
 void RoomTavern::setupRoom(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles)
 {
     Room::setupRoom(name, seat, tiles);
@@ -2489,9 +2504,7 @@ void RoomTavern::setupRoom(const std::string& name, Seat* seat, const std::vecto
     if(!tiles.empty())
         mCounterTile = tiles.front();
 
-    // The computer keepers let their creatures pay for the beer
-    if((seat != nullptr) && (seat->getPlayer() != nullptr) && !seat->getPlayer()->getIsHuman())
-        mPayer = TavernPayer::creature;
+    // The keeper supplies the beer payer, including the default for computer keepers.
 }
 
 bool RoomTavern::hasPlacedCounter() const
@@ -2506,6 +2519,7 @@ bool RoomTavern::hasPlacedCounter() const
     return it->second->getMeshName() == TAVERN_COUNTER_MESH;
 }
 
+//! \brief Merges furniture while leaving the keeper's shared payer unchanged.
 void RoomTavern::absorbRoom(Room* r)
 {
     if(r->getType() != getType())
@@ -2514,13 +2528,12 @@ void RoomTavern::absorbRoom(Room* r)
         return;
     }
 
-    // The room that already has its counter and innkeeper is the older one and keeps them with its payer setting. The
+    // The older room keeps its counter and innkeeper; the payer belongs to the keeper. The
     // room that is built last has only picked a counter tile so far; the other room has its objects.
     RoomTavern* other = static_cast<RoomTavern*>(r);
     if(!hasPlacedCounter() && other->hasPlacedCounter())
     {
         mCounterTile = other->mCounterTile;
-        mPayer = other->mPayer;
     }
 
     // The figure of the other room goes away; updateActiveSpots puts one on the counter of the merged room. Its stools go
@@ -2532,14 +2545,14 @@ void RoomTavern::absorbRoom(Room* r)
     Room::absorbRoom(r);
 }
 
+//! \brief Moves the counter; the receiving room uses its current keeper's payer.
 void RoomTavern::splitRoom(Room& newRoom, const std::vector<Tile*>& tiles)
 {
     if(newRoom.getType() != getType())
         return;
 
-    // The room that gets the tiles keeps the payer setting of this one, also when the seat changes
+    // The room that gets the tiles reads its own keeper's payer, also when the seat changes.
     RoomTavern& newTavern = static_cast<RoomTavern&>(newRoom);
-    newTavern.mPayer = mPayer;
 
     // The counter stays where it was when its tile goes over with the others
     if((mCounterTile != nullptr) && (std::find(tiles.begin(), tiles.end(), mCounterTile) != tiles.end()))
@@ -2861,7 +2874,7 @@ void RoomTavern::updateActiveSpots(GameMap* gameMap)
 void RoomTavern::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
-    os << STREAM_TAG_PAYER << " " << static_cast<uint32_t>(mPayer) << std::endl;
+    os << STREAM_TAG_PAYER << " " << static_cast<uint32_t>(getPayer()) << std::endl;
     if(mCounterTile == nullptr)
         return;
 
@@ -2922,6 +2935,7 @@ bool RoomTavern::importFromStream(std::istream& is)
     Tile* innkeeperTile = nullptr;
     Tile* counterTile = nullptr;
     bool hasSeatLayout = false;
+    TavernPayer legacyPayer = TavernPayer::keeper;
     while(true)
     {
         std::streampos pos = is.tellg();
@@ -2939,7 +2953,7 @@ bool RoomTavern::importFromStream(std::istream& is)
             if(!(is >> payer) || (payer > static_cast<uint32_t>(TavernPayer::creature)))
                 return false;
 
-            mPayer = static_cast<TavernPayer>(payer);
+            legacyPayer = static_cast<TavernPayer>(payer);
         }
         else if(tag == STREAM_TAG_INNKEEPER)
         {
@@ -3052,6 +3066,10 @@ bool RoomTavern::importFromStream(std::istream& is)
             break;
         }
     }
+
+    // A tavern without a payer line historically loads as keeper-paid, including for computer keepers.
+    if(getSeat() != nullptr)
+        getSeat()->loadLegacyTavernPayer(legacyPayer);
 
     // The innkeeper stands on the counter tile, so its tile tells the counter if the counter line is missing. A tile
     // that is not part of the room is ignored: updateActiveSpots takes the first tile then.

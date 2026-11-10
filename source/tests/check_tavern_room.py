@@ -166,7 +166,10 @@ header = read('source/rooms/RoomTavern.h')
 payer_enum = header[header.index('enum class TavernPayer'):]
 payer_enum = payer_enum[:payer_enum.index('};')]
 assert re.search(r'keeper = 0,', payer_enum) and re.search(r'creature = 1', payer_enum), 'TavernPayer: keeper 0, creature 1'
-assert 'mPayer(TavernPayer::keeper)' in room_cpp, 'the default payer is the keeper'
-assert 'getIsHuman()' in setup and 'mPayer = TavernPayer::creature;' in setup, 'computer keepers let the creatures pay'
+seat_cpp = read('source/game/Seat.cpp')
+assert 'mTavernPayer(TavernPayer::keeper)' in seat_cpp, 'the default payer is the keeper'
+payer_default = extract(seat_cpp, 'TavernPayer Seat::getTavernPayer(')
+assert 'getIsHuman()' in payer_default and 'TavernPayer::creature' in payer_default, 'computer keepers let the creatures pay'
+assert 'setTavernPayer' not in setup, 'building a tavern preserves the keeper setting'
 
 print('tavern room ok')

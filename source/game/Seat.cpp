@@ -46,6 +46,9 @@
 #include "rooms/Room.h"
 #include "rooms/RoomManager.h"
 #include "rooms/RoomType.h"
+#include "rooms/RoomTavern.h"
+#include "rooms/RoomSpa.h"
+#include "rooms/RoomCasino.h"
 #include "sound/SoundEffectsManager.h"
 #include "spawnconditions/SpawnCondition.h"
 #include "traps/Trap.h"
@@ -95,6 +98,12 @@ TileStateNotified::TileStateNotified():
 Seat::Seat(GameMap* gameMap) :
     mGameMap(gameMap),
     mPlayer(nullptr),
+    mTavernPayer(TavernPayer::keeper),
+    mSpaPayer(SpaPayer::keeper),
+    mCasinoPayout(CasinoPayout::smiles),
+    mTavernPayerSet(false),
+    mSpaPayerSet(false),
+    mCasinoPayoutSet(false),
     mGoldMined(0),
     mAutoWorkerTimer(0.0),
     mManaShortageSeconds(0.0),
@@ -116,6 +125,70 @@ Seat::Seat(GameMap* gameMap) :
     mKoCreatures(true)
 {
     mMerchantMargin = ConfigManager::getSingleton().getRoomConfigInt32("MerchantMarginDefault");
+}
+
+//! \brief Resolves the beer default from the actual player, including seats configured as Choice.
+TavernPayer Seat::getTavernPayer() const
+{
+    if(mTavernPayerSet)
+        return mTavernPayer;
+    return (getPlayer() != nullptr && !getPlayer()->getIsHuman()) ? TavernPayer::creature : TavernPayer::keeper;
+}
+
+//! \brief Changes the shared beer payer and makes it authoritative over legacy room values.
+void Seat::setTavernPayer(TavernPayer payer)
+{
+    mTavernPayer = payer;
+    mTavernPayerSet = true;
+}
+
+//! \brief Seeds the keeper from the first imported tavern, including one without a payer line.
+void Seat::loadLegacyTavernPayer(TavernPayer payer)
+{
+    if(!mTavernPayerSet)
+        setTavernPayer(payer);
+}
+
+//! \brief Resolves the bath default from the actual player, including seats configured as Choice.
+SpaPayer Seat::getSpaPayer() const
+{
+    if(mSpaPayerSet)
+        return mSpaPayer;
+    return (getPlayer() != nullptr && !getPlayer()->getIsHuman()) ? SpaPayer::creature : SpaPayer::keeper;
+}
+
+//! \brief Changes the shared bath payer and makes it authoritative over legacy room values.
+void Seat::setSpaPayer(SpaPayer payer)
+{
+    mSpaPayer = payer;
+    mSpaPayerSet = true;
+}
+
+//! \brief Seeds the keeper from the first imported spa, including one without a payer line.
+void Seat::loadLegacySpaPayer(SpaPayer payer)
+{
+    if(!mSpaPayerSet)
+        setSpaPayer(payer);
+}
+
+//! \brief Returns smiles until this keeper has configured or loaded a payout.
+CasinoPayout Seat::getCasinoPayout() const
+{
+    return mCasinoPayout;
+}
+
+//! \brief Changes the shared payout and makes it authoritative over legacy room values.
+void Seat::setCasinoPayout(CasinoPayout payout)
+{
+    mCasinoPayout = payout;
+    mCasinoPayoutSet = true;
+}
+
+//! \brief Seeds the keeper from the first imported casino, including one without a payout line.
+void Seat::loadLegacyCasinoPayout(CasinoPayout payout)
+{
+    if(!mCasinoPayoutSet)
+        setCasinoPayout(payout);
 }
 
 void Seat::addGoal(Goal* g)
@@ -1279,8 +1352,23 @@ bool Seat::importSeatFromStream(std::istream& is)
     while(str == "[ResearchProgress]" || str == "[HadLibrary]" || str == "[StoredSpecials]" ||
         str == "[AnnouncedCreatureClasses]" || str == "[Infirmary]" ||
         str == "[SpellCooldowns]" || str == "[Merchant]" || str == "[MerchantBalance]" || str == "[GhostRoom]" || str == "[GhostBells]" ||
-        str == "[ResearchRemainder]" || str == "[WorkerJobs]")
+        str == "[ResearchRemainder]" || str == "[WorkerJobs]" || str == "[PleasureRoomSettings]")
     {
+    if(str == "[PleasureRoomSettings]")
+    {
+        uint32_t tavern = 0;
+        uint32_t spa = 0;
+        uint32_t casino = 0;
+        if(!(is >> tavern >> spa >> casino >> str) || tavern > 1 || spa > 1 || casino > 1 ||
+            str != "[/PleasureRoomSettings]")
+            return false;
+        setTavernPayer(static_cast<TavernPayer>(tavern));
+        setSpaPayer(static_cast<SpaPayer>(spa));
+        setCasinoPayout(static_cast<CasinoPayout>(casino));
+        if(!(is >> str))
+            return false;
+        continue;
+    }
     if(str == "[SpellCooldowns]")
     {
         std::vector<std::pair<std::string, uint32_t>> entries;
@@ -1738,6 +1826,9 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     for(uint32_t value : mWorkerJobSettings.priority) os << '\t' << value;
     for(uint32_t value : mWorkerJobSettings.carryOrder) os << '\t' << value;
     os << '\t' << mWorkerJobSettings.goldFirst << "\t[/WorkerJobs]\n";
+    os << "[PleasureRoomSettings]\t" << static_cast<uint32_t>(getTavernPayer()) << '\t'
+        << static_cast<uint32_t>(getSpaPayer()) << '\t' << static_cast<uint32_t>(getCasinoPayout())
+        << "\t[/PleasureRoomSettings]\n";
     os << "[Infirmary]\t" << getInfirmaryPayer() << '\t' << mInfirmaryThreshold << '\t'
         << mInfirmaryHealOn << "\t[/Infirmary]\n";
 

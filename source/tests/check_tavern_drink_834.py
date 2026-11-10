@@ -380,7 +380,7 @@ def check_duration():
     room = read('source/rooms/RoomTavern.cpp')
     turns = extract(room, 'int32_t RoomTavern::nextDrinkTurns(')
     assert 'getTavernValue(beer ? "BeerDrinkTurns" : "WaterDrinkTurns")' in turns and 'servesBeer()' in turns
-    assert 'mPayer == TavernPayer::keeper' in turns and 'getSeat()->getGold() >= price' in turns
+    assert 'getPayer() == TavernPayer::keeper' in turns and 'getSeat()->getGold() >= price' in turns
     assert 'creature.getGoldCarried() >= price' in turns
     assert room.count('setSpotState(spot, TavernGuestState::drinking, nextDrinkTurns(') == 2, 'a drink starts without its duration'
     assert 'getTavernValue("DrinkTurns")' not in room.replace(turns, ''), 'a drink still lasts DrinkTurns'

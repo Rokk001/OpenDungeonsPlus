@@ -265,10 +265,21 @@ static void checkSpaBlock()
 
 // ---- Room stream
 struct Player { bool human; bool getIsHuman() const { return human; } };
-struct Seat { Player* player; Player* getPlayer() const { return player; } };
+enum class SpaPayer;
+//! \brief Supplies a player and persistent shared payer to the real spa importer.
+struct Seat
+{
+    Player* player; SpaPayer payer; bool configured;
+    //! \brief Creates an unconfigured keeper whose player supplies the legacy spa default.
+    Seat(Player* p = nullptr) : player(p), payer(static_cast<SpaPayer>(0)), configured(false) {}
+    Player* getPlayer() const { return player; }
+    //! \brief Adopts only the first legacy spa's loaded value.
+    void loadLegacySpaPayer(SpaPayer value) { if(!configured) { payer = value; configured = true; } }
+};
 struct Room
 {
-    Room() : mSeat(nullptr) {}
+    Room() : mSeat(&mKeeper) {}
+    Seat mKeeper;
     Seat* mSeat;
     Seat* getSeat() const { return mSeat; }
     void exportToStream(std::ostream& os) const { os << "RoomHead" << std::endl; }
@@ -286,8 +297,12 @@ struct PoolAttendantEntity
 class RoomSpa : public Room
 {
 public:
-    RoomSpa() : mPayer(SpaPayer::keeper), mAttendant(nullptr), mPendingAttendant() {}
-    SpaPayer mPayer; PoolAttendantEntity* mAttendant; RoomSpaPendingAttendant mPendingAttendant;
+    RoomSpa() : mAttendant(nullptr), mPendingAttendant() {}
+    //! \brief Reads the keeper value used by the real stream writer.
+    SpaPayer getPayer() const { return getSeat()->payer; }
+    //! \brief Selects the shared payer to be written.
+    void setPayer(SpaPayer payer) { getSeat()->payer = payer; getSeat()->configured = true; }
+    PoolAttendantEntity* mAttendant; RoomSpaPendingAttendant mPendingAttendant;
     std::vector<RoomSpaBather> mBathers; std::map<std::string, RoomSpaPendingBather> mPendingBathers;
     void exportToStream(std::ostream& os) const;
     bool importFromStream(std::istream& is);
@@ -304,7 +319,7 @@ static void checkRoomStream()
     attendant.save.mX = 12.5; attendant.save.mY = 8.25; attendant.save.mState = PoolAttendantState::dozing; attendant.save.mTurnsLeft = 7.5;
     attendant.save.mHasCannonball = true; attendant.save.mCannonballTurnsLeft = 99.5; attendant.save.mHasPlace = true;
     attendant.save.mPlaceX = 16; attendant.save.mPlaceY = 9; attendant.save.mHasClipTime = true; attendant.save.mClipTime = 12.25;
-    RoomSpa room; room.mPayer = SpaPayer::creature; room.mAttendant = &attendant;
+    RoomSpa room; room.setPayer(SpaPayer::creature); room.mAttendant = &attendant;
     RoomSpaBather b1(&reserved); b1.mBlock.mX = 16; b1.mBlock.mY = 8; b1.mBlock.mWidth = 1; b1.mBlock.mHeight = 2; b1.mState = SpaBatherState::reserved; b1.mJump = true;
     jumping.mJumpTurnsLeft = 1;
     RoomSpaBather b2(&jumping); b2.mBlock.mX = 17; b2.mBlock.mY = 9; b2.mBlock.mWidth = 2; b2.mBlock.mHeight = 2; b2.mState = SpaBatherState::jumping; b2.mJump = true;
@@ -323,7 +338,7 @@ static void checkRoomStream()
     // Load it back into a fresh room: the places wait for their creatures, the stream continues with the next token
     RoomSpa loaded; std::istringstream in(text + "NextThing 7\n");
     expect(loaded.importFromStream(in), "room stream read");
-    expect(loaded.mPayer == SpaPayer::creature, "payer");
+    expect(loaded.getPayer() == SpaPayer::creature, "payer");
     expect(loaded.mPendingAttendant.mPresent && loaded.mPendingAttendant.mSave.mState == PoolAttendantState::dozing, "attendant state");
     expectNear(loaded.mPendingAttendant.mSave.mTurnsLeft, 7.5, "attendant turns left");
     expectNear(loaded.mPendingAttendant.mSave.mCannonballTurnsLeft, 99.5, "attendant cannonball turns");
@@ -341,7 +356,7 @@ static void checkRoomStream()
     // One to one: a loaded room writes the same lines again before its creatures are bound
     expect(exported(loaded).find("SpaPayer 1") != std::string::npos, "payer written again");
     RoomSpa again; std::istringstream in2(exported(loaded));
-    expect(again.importFromStream(in2) && again.mPendingBathers.size() == 3 && again.mPayer == SpaPayer::creature, "second round trip");
+    expect(again.importFromStream(in2) && again.mPendingBathers.size() == 3 && again.getPayer() == SpaPayer::creature, "second round trip");
 
     // All added bather phases preserve their separate transition timer and seated progress.
     const SpaBatherState phases[] = {SpaBatherState::sitting, SpaBatherState::standing, SpaBatherState::leaving};
@@ -382,21 +397,35 @@ static void checkRoomStream()
     Player computer; computer.human = false; Player human; human.human = true;
     Seat computerSeat; computerSeat.player = &computer; Seat humanSeat; humanSeat.player = &human;
     RoomSpa aiRoom; aiRoom.mSeat = &computerSeat; std::istringstream aiIn("RoomHead\n");
-    expect(aiRoom.importFromStream(aiIn) && aiRoom.mPayer == SpaPayer::creature, "no payer line, computer seat: the creatures pay");
+    expect(aiRoom.importFromStream(aiIn) && aiRoom.getPayer() == SpaPayer::creature, "no payer line, computer seat: the creatures pay");
     RoomSpa humanRoom; humanRoom.mSeat = &humanSeat; std::istringstream humanIn("RoomHead\n");
-    expect(humanRoom.importFromStream(humanIn) && humanRoom.mPayer == SpaPayer::keeper, "no payer line, human seat: the keeper pays");
-    RoomSpa savedRoom; savedRoom.mSeat = &computerSeat; std::istringstream savedIn("RoomHead\nSpaPayer 0\n");
-    expect(savedRoom.importFromStream(savedIn) && savedRoom.mPayer == SpaPayer::keeper, "a saved payer line wins over the seat kind");
+    expect(humanRoom.importFromStream(humanIn) && humanRoom.getPayer() == SpaPayer::keeper, "no payer line, human seat: the keeper pays");
+    Seat savedComputerSeat{&computer};
+    RoomSpa savedRoom; savedRoom.mSeat = &savedComputerSeat; std::istringstream savedIn("RoomHead\nSpaPayer 0\n");
+    expect(savedRoom.importFromStream(savedIn) && savedRoom.getPayer() == SpaPayer::keeper, "a saved payer line wins over the seat kind");
     // A room that was saved before the spa (tiles only) loads with the defaults
     RoomSpa plain; std::istringstream plainIn("RoomHead\n");
-    expect(plain.importFromStream(plainIn) && plain.mPayer == SpaPayer::keeper && !plain.mPendingAttendant.mPresent && plain.mPendingBathers.empty(), "old room loads with defaults");
+    expect(plain.importFromStream(plainIn) && plain.getPayer() == SpaPayer::keeper && !plain.mPendingAttendant.mPresent && plain.mPendingBathers.empty(), "old room loads with defaults");
     RoomSpa plainNext; std::istringstream plainNextIn("RoomHead\n[Room]\n");
     std::string token;
     expect(plainNext.importFromStream(plainNextIn) && static_cast<bool>(plainNextIn >> token) && token == "[Room]", "the next tag is put back");
     // Lines in any order
     RoomSpa shuffled; std::istringstream order("RoomHead\nSpaBathers 1\nOrc1 1 2 1 1 reserved 0\nPoolAttendant 1 2 sit 3\nSpaPayer 1\n");
-    expect(shuffled.importFromStream(order) && shuffled.mPayer == SpaPayer::creature && shuffled.mPendingAttendant.mPresent && shuffled.mPendingBathers.size() == 1, "any order");
+    expect(shuffled.importFromStream(order) && shuffled.getPayer() == SpaPayer::creature && shuffled.mPendingAttendant.mPresent && shuffled.mPendingBathers.size() == 1, "any order");
     // Broken lines are refused
+    // The first spa's implicit AI default wins over a later explicit keeper payer.
+    Seat sharedComputer{&computer}; RoomSpa firstSpa, laterSpa;
+    firstSpa.mSeat = &sharedComputer; laterSpa.mSeat = &sharedComputer;
+    std::istringstream firstSpaIn("RoomHead\nTail"), laterSpaIn("RoomHead\nSpaPayer 0\n");
+    expect(firstSpa.importFromStream(firstSpaIn) && laterSpa.importFromStream(laterSpaIn) &&
+           laterSpa.getPayer() == SpaPayer::creature, "first missing spa payer line wins");
+    // A keeper block (represented by a configured shared value) wins over every room line.
+    Seat configured; configured.payer = SpaPayer::creature; configured.configured = true;
+    RoomSpa configuredSpa; configuredSpa.mSeat = &configured;
+    std::istringstream configuredIn("RoomHead\nSpaPayer 0\n");
+    expect(configuredSpa.importFromStream(configuredIn) && configuredSpa.getPayer() == SpaPayer::creature,
+           "keeper setting wins over old room lines");
+
     const char* broken[] = {
         "RoomHead\nSpaPayer 2\n", "RoomHead\nSpaPayer x\n", "RoomHead\nPoolAttendant 1 2 flying 3\n", "RoomHead\nPoolAttendant 1 2\n",
         "RoomHead\nSpaBathers 1\nOrc1 1 2 0 1 reserved 0\n", "RoomHead\nSpaBathers 1\nOrc1 1 2 1 1 swimming 0\n",

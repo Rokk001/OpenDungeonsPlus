@@ -337,7 +337,7 @@ for key in LOCK_KEYS.values():
     check(re.search(r"(?m)^\s+" + key + r"\s+600\s*$", rooms_cfg), key + " is 600 in rooms.cfg")
 # wiring of the end of each visit
 check("finishPleasureVisit(PleasureRoomKind::tavern, true)" in extract(tavern_cpp, "void RoomTavern::removeCreatureUsingRoom("), "tavern visit end")
-check("finishPleasureVisit(PleasureRoomKind::casino, mPayout == CasinoPayout::money)" in extract(casino_cpp, "void RoomCasino::removeCreatureUsingRoom("), "casino visit end")
+check("finishPleasureVisit(PleasureRoomKind::casino, getPayout() == CasinoPayout::money)" in extract(casino_cpp, "void RoomCasino::removeCreatureUsingRoom("), "casino visit end")
 check("beginPleasureVisit(PleasureRoomKind::casino)" in extract(casino_cpp, "bool RoomCasino::addCreatureUsingRoom("), "casino visit start")
 check("finishPleasureVisit(PleasureRoomKind::temple, false)" in extract(temple_cpp, "void RoomTemple::removeCreatureUsingRoom("), "temple visit end")
 check("beginPleasureVisit(PleasureRoomKind::temple)" in extract(temple_cpp, "bool RoomTemple::addCreatureUsingRoom("), "temple visit start")
@@ -522,7 +522,7 @@ check(c.stored < 900.0, "the loss per second applies")
 c.finish_default(Creature.CASINO, True)
 check(not c.has_buff(), "a visit in mode Money gives no pleasure buff")
 near(c.lock_turns(Creature.CASINO), 600.0, "but starts the lock")
-check("mPayout == CasinoPayout::money" in extract(casino_cpp, "void RoomCasino::removeCreatureUsingRoom("), "the casino passes the mode")
+check("getPayout() == CasinoPayout::money" in extract(casino_cpp, "void RoomCasino::removeCreatureUsingRoom("), "the casino passes the mode")
 check("CasinoPayout::money" in search_job_cpp and "continue;" in search_job_cpp[search_job_cpp.index("CasinoPayout::money"):][:80],
       "Upset creatures do not look for a casino in mode Money")
 check("addPleasureMood(PleasureRoomKind::casino, points)" in extract(creature_cpp, "void Creature::addCasinoMood("), "casino mood through the visit")

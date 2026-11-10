@@ -380,10 +380,10 @@ public:
     void setupRoom(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles) override;
 
     //! \brief Joins an adjacent tavern of the same seat into this room. The room that already has its counter keeps it
-    //! (and its payer setting); the innkeeper of the other room goes away.
+    //! (the payer stays with the keeper); the innkeeper of the other room goes away.
     void absorbRoom(Room* r) override;
 
-    //! \brief Called on the room the tiles are leaving. The new room gets the payer setting and, when the counter tile
+    //! \brief Called on the room the tiles are leaving. The new room uses its keeper's payer and, when the counter tile
     //! goes over with the tiles, keeps the counter where it was.
     void splitRoom(Room& newRoom, const std::vector<Tile*>& tiles) override;
 
@@ -420,13 +420,11 @@ public:
     //! \param creature The guest.
     Tile* getArrivalTile(const Creature& creature) override;
 
-    //! \brief Returns who pays for the beer.
-    inline TavernPayer getPayer() const
-    { return mPayer; }
+    //! \brief Returns the current keeper's shared beer payer.
+    TavernPayer getPayer() const;
 
-    //! \brief Sets who pays for the beer.
-    inline void setPayer(TavernPayer payer)
-    { mPayer = payer; }
+    //! \brief Sets the beer payer for all taverns of the current keeper.
+    void setPayer(TavernPayer payer);
 
     //! \brief Returns the counter tile, nullptr while the room has no tile.
     inline Tile* getCounterTile() const
@@ -743,8 +741,7 @@ private:
     //! \brief Server side. Makes sure there is an innkeeper on the counter tile, turned like the counter.
     void placeInnkeeper();
 
-    //! \brief Who pays for the beer.
-    TavernPayer mPayer;
+    //! \brief The keeper owns the beer payer; only room furniture is kept here.
     //! \brief The tile with the counter and the innkeeper, nullptr while the room has no tile. Not owned.
     Tile* mCounterTile;
     //! \brief The figure behind the counter (server side only), nullptr while it is not on the map. Not owned: the

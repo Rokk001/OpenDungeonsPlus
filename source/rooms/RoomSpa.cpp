@@ -319,9 +319,22 @@ class RoomSpaFactory : public RoomFactory
 static RoomRegister reg(new RoomSpaFactory);
 }
 
+//! \brief Reads the setting from the current owner, so capture immediately uses the new keeper's value.
+SpaPayer RoomSpa::getPayer() const
+{
+    return getSeat() != nullptr ? getSeat()->getSpaPayer() : SpaPayer::keeper;
+}
+
+//! \brief Changes the setting shared by every room of this type belonging to the current keeper.
+void RoomSpa::setPayer(SpaPayer payer)
+{
+    if(getSeat() != nullptr)
+        getSeat()->setSpaPayer(payer);
+}
+
+//! \brief Creates a room whose payer or payout is owned by its keeper.
 RoomSpa::RoomSpa(GameMap* gameMap) :
     Room(gameMap),
-    mPayer(SpaPayer::keeper),
     mAttendant(nullptr),
     mPendingAttendant()
 {
@@ -421,19 +434,21 @@ std::vector<RoomSpaBather>::iterator RoomSpa::findBatherOf(const Creature* creat
     return mBathers.end();
 }
 
+//! \brief Uses the keeper's shared room setting for this operation.
 bool RoomSpa::canPay(const Creature& creature) const
 {
     const int32_t price = static_cast<int32_t>(std::floor(getTavernValue("BeerPrice") + 0.5));
-    if(mPayer == SpaPayer::keeper)
+    if(getPayer() == SpaPayer::keeper)
         return getSeat()->getGold() >= price;
 
     return creature.getGoldCarried() >= price;
 }
 
+//! \brief Uses the keeper's shared room setting for this operation.
 bool RoomSpa::payForBath(Creature& creature)
 {
     const int32_t price = static_cast<int32_t>(std::floor(getTavernValue("BeerPrice") + 0.5));
-    if(mPayer == SpaPayer::keeper)
+    if(getPayer() == SpaPayer::keeper)
         return getGameMap()->withdrawFromTreasuries(price, getSeat());
 
     if(creature.getGoldCarried() >= price)
@@ -1150,15 +1165,15 @@ void RoomSpa::upkeepSteam()
     }
 }
 
+//! \brief Creates a spa without changing the keeper's shared bath payer.
 void RoomSpa::setupRoom(const std::string& name, Seat* seat, const std::vector<Tile*>& tiles)
 {
     Room::setupRoom(name, seat, tiles);
 
-    // The computer keepers let their creatures pay for the bath
-    if((seat != nullptr) && (seat->getPlayer() != nullptr) && !seat->getPlayer()->getIsHuman())
-        mPayer = SpaPayer::creature;
+    // The keeper supplies the bath payer, including the default for computer keepers.
 }
 
+//! \brief Merges pool state without changing the keeper's shared payer.
 void RoomSpa::absorbRoom(Room* r)
 {
     if(r->getType() != getType())
@@ -1167,11 +1182,8 @@ void RoomSpa::absorbRoom(Room* r)
         return;
     }
 
-    // The room that already has its pool objects is the older one and keeps its payer setting; the room that is
-    // built last has not got any object yet
+    // The room objects can move between pools; the payer remains shared by the keeper.
     RoomSpa* other = static_cast<RoomSpa*>(r);
-    if(mBuildingObjects.empty() && !other->mBuildingObjects.empty())
-        mPayer = other->mPayer;
 
     // The rim pieces of the other room go away; updateActiveSpots puts the right ones around the merged pool
     other->removeRimObjects();
@@ -1224,14 +1236,14 @@ void RoomSpa::absorbRoom(Room* r)
     Room::absorbRoom(r);
 }
 
+//! \brief Moves the attendant while the receiving spa uses its current keeper's payer.
 void RoomSpa::splitRoom(Room& newRoom, const std::vector<Tile*>& tiles)
 {
     if(newRoom.getType() != getType())
         return;
 
-    // The room that gets the tiles keeps the payer setting of this one, also when the seat changes
+    // The room that gets the tiles reads its own keeper's payer, also when the seat changes.
     RoomSpa& newSpa = static_cast<RoomSpa&>(newRoom);
-    newSpa.mPayer = mPayer;
 
     // The pool attendant goes with the chair: when its tile changes rooms, he changes owner with it
     if((mAttendant != nullptr) && (std::find(tiles.begin(), tiles.end(), mAttendant->getChairTile()) != tiles.end()))
@@ -1469,7 +1481,7 @@ void RoomSpa::updateActiveSpots(GameMap* gameMap)
 void RoomSpa::exportToStream(std::ostream& os) const
 {
     Room::exportToStream(os);
-    os << STREAM_TAG_PAYER << " " << static_cast<uint32_t>(mPayer) << std::endl;
+    os << STREAM_TAG_PAYER << " " << static_cast<uint32_t>(getPayer()) << std::endl;
 
     // <x> <y> <state> <turnsLeft> <cannonballTurnsLeft> <hasPlace> <placeX> <placeY>: the pool attendant. A loaded room
     // that has not spawned him yet writes the line it read.
@@ -1525,6 +1537,7 @@ bool RoomSpa::importFromStream(std::istream& is)
     // The lines come after the tiles of the room, in any order, and every one of them is optional. The first word that
     // is none of them belongs to what follows in the stream: it is put back.
     bool payerRead = false;
+    SpaPayer legacyPayer = SpaPayer::keeper;
     while(true)
     {
         std::streampos pos = is.tellg();
@@ -1542,7 +1555,7 @@ bool RoomSpa::importFromStream(std::istream& is)
             if(!(is >> payer) || (payer > static_cast<uint32_t>(SpaPayer::creature)))
                 return false;
 
-            mPayer = static_cast<SpaPayer>(payer);
+            legacyPayer = static_cast<SpaPayer>(payer);
             payerRead = true;
         }
         else if(tag == STREAM_TAG_ATTENDANT)
@@ -1612,10 +1625,13 @@ bool RoomSpa::importFromStream(std::istream& is)
     // computer lets the creatures pay, a human keeper pays himself
     if(!payerRead)
     {
-        mPayer = SpaPayer::keeper;
+        legacyPayer = SpaPayer::keeper;
         if((getSeat() != nullptr) && (getSeat()->getPlayer() != nullptr) && !getSeat()->getPlayer()->getIsHuman())
-            mPayer = SpaPayer::creature;
+            legacyPayer = SpaPayer::creature;
     }
+
+    if(getSeat() != nullptr)
+        getSeat()->loadLegacySpaPayer(legacyPayer);
 
     return true;
 }

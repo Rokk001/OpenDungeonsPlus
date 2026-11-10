@@ -371,6 +371,8 @@ class RoomSpa : public Room
 {
 public:
     RoomSpa(GameMap* map, Seat* seat) : Room(map, seat), mPayer(SpaPayer::keeper), mAttendant(nullptr), posts(0) {}
+    //! \brief Supplies the selected payer to the extracted room rules.
+    SpaPayer getPayer() const { return mPayer; }
     SpaPayer mPayer; PoolAttendantEntity* mAttendant; std::vector<RoomSpaBather> mBathers;
     std::map<std::string, RoomSpaPendingBather> mPendingBathers; int posts;
     void sendBathFinished(Creature& creature) { ++posts; }
