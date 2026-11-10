@@ -19,6 +19,8 @@
 
 #include "gamemap/SelectionEntityWanted.h"
 #include "modes/AbstractApplicationMode.h"
+#include "modes/PointerMapping.h"
+#include "render/Gui.h"
 #include "modes/SFMLToOISListener.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
@@ -64,6 +66,18 @@ InputManager::InputManager(Ogre::RenderWindow* renderWindow):
     mRenderWindow(renderWindow),
     mMouseGrab(false),
     mKeyboardGrab(false)
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+    ,
+    mPointerForwarder(*this),
+    mWasForeground(true),
+    mCursorHidden(false),
+    mCursorClipped(false),
+    mHasPendingPosition(false),
+    mPendingX(0),
+    mPendingY(0),
+    mLastPointerX(0),
+    mLastPointerY(0)
+#endif
 #ifdef OD_USE_SFML_WINDOW
     ,
     mListener(Utils::make_unique<SFMLToOISListener>(mCurrentAMode, renderWindow->getWidth(), renderWindow->getHeight()))
@@ -98,7 +112,9 @@ void InputManager::createInputDevices(bool mouseGrab, bool keyboardGrab)
     paramList.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str()));
 #if defined OIS_WIN32_PLATFORM
     paramList.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_FOREGROUND" )));
-    paramList.insert(std::make_pair(std::string("w32_mouse"), std::string(mouseGrab ? "DISCL_EXCLUSIVE" : "DISCL_NONEXCLUSIVE")));
+    // The pointer position is the Windows pointer position, so the mouse is never exclusive.
+    // Mouse grab is done by clipping and hiding the Windows pointer (see updateCursorGrab).
+    paramList.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_NONEXCLUSIVE")));
     paramList.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_FOREGROUND")));
     paramList.insert(std::make_pair(std::string("w32_keyboard"), std::string(keyboardGrab ? "DISCL_EXCLUSIVE" : "DISCL_NONEXCLUSIVE")));
 #elif defined OIS_LINUX_PLATFORM
@@ -145,6 +161,9 @@ InputManager::~InputManager()
 void InputManager::destroyInputDevices()
 {
 #ifndef OD_USE_SFML_WINDOW
+#if defined OIS_WIN32_PLATFORM
+    updateCursorGrab(false);
+#endif
     if(mInputManager != nullptr)
     {
         if(mMouse != nullptr)
@@ -237,9 +256,20 @@ void InputManager::setMousePosition(int x, int y)
     size_t windowHandle = 0;
     mRenderWindow->getCustomAttribute("WINDOW", &windowHandle);
     const HWND window = reinterpret_cast<HWND>(windowHandle);
-    POINT point = {x, y};
-    if(GetForegroundWindow() == window && ClientToScreen(window, &point))
-        SetCursorPos(point.x, point.y);
+    if(GetForegroundWindow() == window)
+    {
+        moveSystemPointer(x, y);
+        mHasPendingPosition = false;
+    }
+    else
+    {
+        // A position set in the background wins when the window returns to the foreground
+        mHasPendingPosition = true;
+        mPendingX = x;
+        mPendingY = y;
+    }
+    mLastPointerX = x;
+    mLastPointerY = y;
 #else
     if(!mMouseGrab)
         return;
@@ -261,7 +291,11 @@ void InputManager::setCurrentAMode(AbstractApplicationMode& mode)
 {
     mCurrentAMode = &mode;
 #ifndef OD_USE_SFML_WINDOW
+#if defined OIS_WIN32_PLATFORM
+    mMouse->setEventCallback(&mPointerForwarder);
+#else
     mMouse->setEventCallback(&mode);
+#endif
     mKeyboard->getKeyboard()->setEventCallback(&mode);
 #else
     mListener->setReceiver(&mode);
@@ -276,3 +310,223 @@ void InputManager::handleSFMLEvent(const sf::Event& evt)
     OD_LOG_ERR("TRIED TO USE SFML EVENTS BUT THEY ARE DISABLED!");
 #endif
 }
+
+void InputManager::capturePointer()
+{
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+    if(mMouse == nullptr)
+        return;
+
+    size_t windowHandle = 0;
+    mRenderWindow->getCustomAttribute("WINDOW", &windowHandle);
+    const HWND window = reinterpret_cast<HWND>(windowHandle);
+    const bool foreground = (window != nullptr) && (GetForegroundWindow() == window) && !IsIconic(window);
+    OIS::MouseListener* listener = mMouse->getEventCallback();
+
+    if(!foreground)
+    {
+        // No mouse input while the window is not in the foreground, the pointer is free
+        if(mWasForeground)
+        {
+            updateCursorGrab(false);
+            mLMouseDown = mRMouseDown = mMMouseDown = false;
+            mWasForeground = false;
+        }
+        mMouse->setEventCallback(nullptr);
+        mMouse->capture();
+        mMouse->setEventCallback(listener);
+        return;
+    }
+
+    if(!mWasForeground)
+    {
+        // Back in the foreground: drop the input of the background, then follow the Windows pointer at once
+        mWasForeground = true;
+        mMouse->setEventCallback(nullptr);
+        mMouse->capture();
+        mMouse->setEventCallback(listener);
+        if(mHasPendingPosition)
+        {
+            moveSystemPointer(mPendingX, mPendingY);
+            mHasPendingPosition = false;
+        }
+        int returnX = 0;
+        int returnY = 0;
+        bool returnInside = true;
+        if(readSystemPointer(returnX, returnY, returnInside))
+        {
+            // Outside the window: bring the Windows pointer to the nearest point inside
+            if(!returnInside)
+                moveSystemPointer(returnX, returnY);
+            mLastPointerX = returnX;
+            mLastPointerY = returnY;
+            applyPointerToState(returnX, returnY);
+            if(mCurrentAMode != nullptr)
+                mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, mMouse->getMouseState()));
+        }
+    }
+
+    updateCursorGrab(mMouseGrab);
+    mMouse->capture();
+
+    // The pointer can move without OIS reporting it (remote desktop), follow the Windows pointer anyway
+    int x = 0;
+    int y = 0;
+    bool inside = true;
+    if(readSystemPointer(x, y, inside) && (x != mLastPointerX || y != mLastPointerY))
+    {
+        mLastPointerX = x;
+        mLastPointerY = y;
+        applyPointerToState(x, y);
+        OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+        state.X.rel = state.Y.rel = state.Z.rel = 0;
+        if(mCurrentAMode != nullptr)
+            mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
+    }
+#else
+    if(mMouse != nullptr)
+        mMouse->capture();
+#endif
+}
+
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+bool InputManager::PointerForwarder::mouseMoved(const OIS::MouseEvent& arg)
+{
+    if(mInputManager.mCurrentAMode == nullptr)
+        return true;
+    int x = 0;
+    int y = 0;
+    bool inside = true;
+    if(mInputManager.readSystemPointer(x, y, inside))
+    {
+        mInputManager.mLastPointerX = x;
+        mInputManager.mLastPointerY = y;
+        mInputManager.applyPointerToState(x, y);
+    }
+    return mInputManager.mCurrentAMode->mouseMoved(arg);
+}
+
+bool InputManager::PointerForwarder::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
+{
+    if(mInputManager.mCurrentAMode == nullptr)
+        return true;
+    int x = 0;
+    int y = 0;
+    bool inside = true;
+    if(mInputManager.readSystemPointer(x, y, inside))
+    {
+        mInputManager.mLastPointerX = x;
+        mInputManager.mLastPointerY = y;
+        mInputManager.applyPointerToState(x, y);
+    }
+    return mInputManager.mCurrentAMode->mousePressed(arg, id);
+}
+
+bool InputManager::PointerForwarder::mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
+{
+    if(mInputManager.mCurrentAMode == nullptr)
+        return true;
+    int x = 0;
+    int y = 0;
+    bool inside = true;
+    if(mInputManager.readSystemPointer(x, y, inside))
+    {
+        mInputManager.mLastPointerX = x;
+        mInputManager.mLastPointerY = y;
+        mInputManager.applyPointerToState(x, y);
+    }
+    return mInputManager.mCurrentAMode->mouseReleased(arg, id);
+}
+
+bool InputManager::readSystemPointer(int& x, int& y, bool& inside)
+{
+    size_t windowHandle = 0;
+    mRenderWindow->getCustomAttribute("WINDOW", &windowHandle);
+    const HWND window = reinterpret_cast<HWND>(windowHandle);
+    POINT point;
+    RECT client;
+    if(window == nullptr || !GetCursorPos(&point) || !ScreenToClient(window, &point) || !GetClientRect(window, &client))
+        return false;
+
+    const int clientWidth = client.right - client.left;
+    const int clientHeight = client.bottom - client.top;
+    inside = point.x >= 0 && point.y >= 0 && point.x < clientWidth && point.y < clientHeight;
+    // The UI scale changes the interface size, not the pointer pixels; it is passed for completeness
+    const int uiScale = static_cast<int>(Gui::getConfiguredUiScalePercent());
+    PointerMapping::Point mapped = PointerMapping::clientToGamePointer(point.x, point.y, clientWidth, clientHeight,
+        static_cast<int>(mRenderWindow->getWidth()), static_cast<int>(mRenderWindow->getHeight()), uiScale);
+    x = mapped.mX;
+    y = mapped.mY;
+    return true;
+}
+
+void InputManager::applyPointerToState(int x, int y)
+{
+    OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+    state.X.abs = x;
+    state.Y.abs = y;
+    CEGUI::System::getSingleton().getDefaultGUIContext().injectMousePosition(
+        static_cast<float>(x), static_cast<float>(y));
+}
+
+void InputManager::moveSystemPointer(int x, int y)
+{
+    size_t windowHandle = 0;
+    mRenderWindow->getCustomAttribute("WINDOW", &windowHandle);
+    const HWND window = reinterpret_cast<HWND>(windowHandle);
+    RECT client;
+    if(window == nullptr || !GetClientRect(window, &client))
+        return;
+    const int clientWidth = client.right - client.left;
+    const int clientHeight = client.bottom - client.top;
+    const int gameWidth = static_cast<int>(mRenderWindow->getWidth());
+    const int gameHeight = static_cast<int>(mRenderWindow->getHeight());
+    // Game pointer position to client position (inverse of the proportional mapping)
+    POINT point;
+    point.x = PointerMapping::clampToSize(gameWidth > 0 ? static_cast<int>(static_cast<long long>(x) * clientWidth / gameWidth) : x, clientWidth);
+    point.y = PointerMapping::clampToSize(gameHeight > 0 ? static_cast<int>(static_cast<long long>(y) * clientHeight / gameHeight) : y, clientHeight);
+    if(ClientToScreen(window, &point))
+        SetCursorPos(point.x, point.y);
+}
+
+void InputManager::updateCursorGrab(bool grab)
+{
+    if(grab)
+    {
+        size_t windowHandle = 0;
+        mRenderWindow->getCustomAttribute("WINDOW", &windowHandle);
+        const HWND window = reinterpret_cast<HWND>(windowHandle);
+        RECT client;
+        POINT topLeft = {0, 0};
+        if(window != nullptr && GetClientRect(window, &client) && ClientToScreen(window, &topLeft))
+        {
+            // Re-applied every frame so that it follows resizing and moving of the window
+            RECT clip;
+            clip.left = topLeft.x;
+            clip.top = topLeft.y;
+            clip.right = topLeft.x + (client.right - client.left);
+            clip.bottom = topLeft.y + (client.bottom - client.top);
+            ClipCursor(&clip);
+            mCursorClipped = true;
+        }
+        if(!mCursorHidden)
+        {
+            ShowCursor(FALSE);
+            mCursorHidden = true;
+        }
+    }
+    else
+    {
+        if(mCursorClipped)
+        {
+            ClipCursor(nullptr);
+            mCursorClipped = false;
+        }
+        if(mCursorHidden)
+        {
+            ShowCursor(TRUE);
+            mCursorHidden = false;
+        }
+    }
+}
+#endif

@@ -3,8 +3,10 @@
 #extension GL_ARB_shading_language_include : enable
 
 // Hardware skinned variant of ReflMetal.vert for the metal parts of animated creatures.
-// The bone matrices (world_matrix_array_3x4) contain the world transform.
+// The bone matrices (world_matrix_array_3x4) are in object space in OGRE 14, so the skinned
+// position and normal are moved into world space with worldMatrix, as ReflMetal.vert does.
 uniform    mat4 viewProjectionMatrix;
+uniform    mat4 worldMatrix;
 uniform    vec4 boneMatrices[768];
 
 layout (location = 0) in vec4 position;
@@ -29,7 +31,8 @@ void main() {
         P += weights[i] * vec3(dot(row0, pos), dot(row1, pos), dot(row2, pos));
         skinNormal += weights[i] * vec3(dot(row0.xyz, normal), dot(row1.xyz, normal), dot(row2.xyz, normal));
     }
-    out_Normal = skinNormal;
+    P = (worldMatrix * vec4(P, 1.0)).xyz;
+    out_Normal = mat3(worldMatrix) * skinNormal;
     gl_Position = viewProjectionMatrix * vec4(P, 1.0);
     out_FragPos = P;
 }

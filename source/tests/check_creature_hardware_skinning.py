@@ -26,7 +26,11 @@ match = re.search(r'uniform\s+vec4\s+boneMatrices\[(\d+)\]', vert)
 assert match, 'Creature.vert has no bone matrix array'
 max_bones = int(match.group(1)) // 3
 assert 'layout (location = 1) in vec4 blendWeights;' in vert and 'layout (location = 7) in vec4 blendIndices;' in vert
-assert 'viewProjectionMatrix' in vert and 'uniform    mat4 worldMatrix' not in vert, 'the CPU skinned world matrix is still used'
+assert 'viewProjectionMatrix' in vert and 'uniform    mat4 projectionMatrix' not in vert, 'the former projection and view pair is still used'
+# OGRE 14 keeps bone matrices in object space (MeshManager::getBonesUseObjectSpace() is true by default and
+# world_matrix_array_3x4 is an alias of bone_matrix_array_3x4), so the skinned position must still be moved into
+# world space with the entity's world matrix; without it every creature is drawn around the map origin (build 58).
+assert 'uniform    mat4 worldMatrix' in vert and 'P = (worldMatrix * vec4(P, 1.0)).xyz;' in vert, 'the skinned position is not moved into world space'
 assert 'uniform    mat4 lightMatrix' in vert and 'lightMatrix * vec4(P, 1.0)' in vert, 'the shadow coordinate must use the skinned position'
 
 materials = sorted((repo / 'materials/scripts/Creatures').glob('*.material'))
@@ -45,7 +49,8 @@ for path in materials:
         assert 'param_named_auto boneMatrices world_matrix_array_3x4' in body, path.name
         assert 'param_named_auto viewProjectionMatrix viewproj_matrix' in body, path.name
         assert 'param_named_auto lightMatrix texture_viewproj_matrix 0' in body, path.name
-        assert 'worldMatrix' not in body and 'texture_worldviewproj_matrix' not in body, '%s still has CPU skinning params' % path.name
+        assert re.search(r'param_named_auto\s+worldMatrix\s+world_matrix\s*$', body, re.M), '%s: the object space bones need the world matrix' % path.name
+        assert 'projectionMatrix projection_matrix' not in body and 'texture_worldviewproj_matrix' not in body, '%s still has CPU skinning params' % path.name
     techniques = len(re.findall(r'^\s*technique\b', text, re.M))
     casters = len(re.findall(r'^\s*shadow_caster_material\s+CreatureShadowCaster\s*$', text, re.M))
     assert techniques == casters == len(names), '%s: every technique needs the skinning shadow caster' % path.name
