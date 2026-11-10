@@ -184,11 +184,17 @@ const std::string TAVERN_MUG_PREFIX = "TavernMug_";
 //! instead of 0.13 tiles across). Its length, from the grip to the rim, stays, so the drink clips still bring the rim to
 //! the mouth; checked against the table in SitDrink by source/tests/check_tavern_stools_863.py.
 const Ogre::Real TAVERN_MUG_GIRTH_SCALE = 1.8f;
+//! Decision 901: a hand holds the mug at its middle, not at its foot. On Weapon_R the mug is shifted this far along the x
+//! axis of the bone (its foot side), so the hand grips the tankard, the mug can stand on the table with the hand above the
+//! table top, and the drink clips (tools/author_tavern_drink.py) bring its rim, not the hand, to the mouth. The hand of the
+//! Defender (a limb mount) has the same shift in its offset.
+const Ogre::Real TAVERN_MUG_GRIP_SHIFT = 0.1f;
 
 //! \brief Where a guest whose skeleton has no Weapon_R bone holds its mug: on the paw, claw, feeler or front tentacle that
 //! its drink clips raise (decision 834: every guest holds a mug in every drink). The turn stands the mug upright in the
 //! rest pose of the bone (its rim along the -x axis of the mesh points up), the offset puts its foot on the middle of the
-//! limb (in the frame of the bone) and the scale is at least 0.67, so that even the mug of a small body is 0.12 tiles
+//! limb (in the frame of the bone; the hand of the Defender holds the middle of the mug, TAVERN_MUG_GRIP_SHIFT lower) and
+//! the scale is at least 0.67, so that even the mug of a small body is 0.12 tiles
 //! tall and readable from the game camera (decision 863; decision 834 had kept it at 0.3 of the height of a small body,
 //! 0.06 tiles on the spider). Values from the rest poses of the models (decision 834); checked against them by
 //! source/tests/check_tavern_drink_834.py.
@@ -208,13 +214,12 @@ struct TavernMugLimbMount
 
 const TavernMugLimbMount TAVERN_MUG_LIMB_MOUNTS[] =
 {
-    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0000f, 0.0810f, 0.8172f, -0.0012f, 0.0104f, -0.0002f, 0.67f },
-    { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, 0.0000f, 0.0000f, 0.0000f, 1.00f },
+    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0f, 0.081f, 0.8172f, -0.00927217250429f, 0.02282818196546f, -0.02555186825649f, 0.67f },
+    { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, -0.0998f, 0.0000f, 0.0069f, 1.00f },
     { "Rat.skeleton", "FrontLeg_R.003", 0.7071f, 0.0000f, -0.7071f, 0.0000f, 0.0011f, 0.0260f, 0.0028f, 0.67f },
-    { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0000f, -0.0561f, 0.4743f, -0.0002f, 0.0557f, -0.0080f, 0.90f },
-    { "Slime.skeleton", "slime_head", 0.7071f, 0.0000f, -0.3376f, -0.6213f, 0.0000f, 0.1018f, 0.0001f, 0.67f },
-    { "Spider.skeleton", "FU_3_R", 0.7487f, 0.0000f, -0.5237f, 0.4064f, -0.0201f, -0.0652f, -0.1277f, 0.67f },
-    { "Tentacle.skeleton", "ForeTentacle3_R", 0.5427f, 0.0000f, -0.7964f, 0.2670f, 0.0074f, 0.1346f, -0.0365f, 1.00f }
+    { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0f, -0.0561f, 0.4743f, 0.05803043732464f, 0.16537449933524f, -0.04501090019113f, 0.9f },
+    { "Spider.skeleton", "sip_tip", 0.707106781187f, 0.0f, 0.707106781187f, 0.0f, -0.02412f, 0.0f, -0.0603f, 0.67f },
+    { "Tentacle.skeleton", "ForeTentacle3_R", 0.5427f, 0.0f, -0.7964f, 0.267f, 0.00721508267503f, 0.202350441975f, -0.05217924144684f, 1.0f }
 };
 
 //! \brief Finds the limb mount of the mug for a skeleton without a Weapon_R bone: the entry of the skeleton, or else the
@@ -1640,6 +1645,59 @@ std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string
     if(!entity->hasAnimationState(name))
         entity->getAllAnimationStates()->createAnimationState(name, 0, skeleton->getAnimation(name)->getLength());
     return name;
+}
+
+//! \brief Builds seated spa transitions from each creature's existing bath pose without changing shared assets.
+void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
+{
+    Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
+    if(!skeleton->hasAnimation(EntityAnimation::bathe_anim) || !skeleton->hasAnimation(EntityAnimation::idle_anim))
+        return;
+    if(!skeleton->hasAnimation(name))
+    {
+        const Ogre::Animation* idle = skeleton->getAnimation(EntityAnimation::idle_anim);
+        const Ogre::Animation* bath = skeleton->getAnimation(EntityAnimation::bathe_anim);
+        const bool wading = name == "SpaWade";
+        const Ogre::Animation* walking = skeleton->getAnimation(EntityAnimation::walk_anim);
+        const Ogre::Real duration = wading ? walking->getLength() : 1.0f;
+        Ogre::Animation* transition = skeleton->createAnimation(name, duration);
+        for(unsigned short bone = 0; bone < skeleton->getNumBones(); ++bone)
+        {
+            Ogre::TransformKeyFrame standing(nullptr, 0), seated(nullptr, 0);
+            if(idle->hasNodeTrack(bone))
+                idle->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &standing);
+            if(bath->hasNodeTrack(bone))
+                bath->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &seated);
+            Ogre::NodeAnimationTrack* track = transition->createNodeTrack(bone);
+            for(unsigned key = 0; key <= 16; ++key)
+            {
+                const Ogre::Real progress = key / 16.0f;
+                const Ogre::Real smooth = progress * progress * (3.0f - 2.0f * progress);
+                const Ogre::Real blend = name == "SpaStand" ? 1.0f - smooth : smooth;
+                Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(progress * duration);
+                if(wading)
+                {
+                    Ogre::TransformKeyFrame step(nullptr, 0);
+                    if(walking->hasNodeTrack(bone))
+                        walking->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(progress * duration), &step);
+                    Ogre::Vector3 sink = Ogre::Vector3::ZERO;
+                    if(skeleton->getBone(bone)->getParent() == nullptr)
+                        sink.z = std::min(0.0f, (seated.getTranslate().z - standing.getTranslate().z) * 0.5f);
+                    frame->setTranslate(step.getTranslate() + sink);
+                    frame->setScale(step.getScale());
+                    frame->setRotation(step.getRotation());
+                }
+                else
+                {
+                    frame->setTranslate(standing.getTranslate() + (seated.getTranslate() - standing.getTranslate()) * blend);
+                    frame->setScale(standing.getScale() + (seated.getScale() - standing.getScale()) * blend);
+                    frame->setRotation(Ogre::Quaternion::Slerp(blend, standing.getRotation(), seated.getRotation(), true));
+                }
+            }
+        }
+    }
+    if(!entity->hasAnimationState(name))
+        entity->getAllAnimationStates()->createAnimationState(name, 0, skeleton->getAnimation(name)->getLength());
 }
 
 //! Sets the corpseDecay shader parameter (0 = intact, 1 = fully decayed) on every sub-entity material that has it
@@ -4050,6 +4108,10 @@ void RenderManager::rrAttachEntity(GameEntity* entity)
     parentNode->addChild(entityNode);
 }
 
+//! Offset in tiles of the figure in Merchant.mesh from the origin of the mesh (the front corner of the sales table, STAND 0.64, -0.76)
+static const Ogre::Real MERCHANT_RIG_OFFSET_X = 0.64f;
+static const Ogre::Real MERCHANT_RIG_OFFSET_Y = -0.76f;
+
 //! \brief Builds movable visuals with explicit decorative scales and the existing furniture defaults.
 //! \brief Creates an object mesh, including untouchable translucent ghost shapes.
 void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* renderedMovableEntity, NodeType nt)
@@ -4176,7 +4238,17 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
 
         ent = mSceneManager->createEntity(tempString, meshPtr);
-        node->attachObject(ent); 
+        if(meshName == "Merchant")
+        {
+            // The Merchant mesh is modelled standing at the front corner of a sales table, MERCHANT_RIG_OFFSET from its
+            // origin. The offset turns with the node and put him into walls and shelves; the figure hangs on a child
+            // node that cancels it, so the figure stands at the tile centre the server walks (decision 901)
+            Ogre::SceneNode* figure = node->createChildSceneNode(tempString + "_figure");
+            figure->setPosition(-MERCHANT_RIG_OFFSET_X, -MERCHANT_RIG_OFFSET_Y, 0.0f);
+            figure->attachObject(ent);
+        }
+        else
+            node->attachObject(ent);
         if(renderedMovableEntity->getObjectType() == GameEntityType::ghostEntity)
         {
             ent->setMaterialName("GhostGlow");
@@ -4280,9 +4352,11 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
             ent->detachObjectFromBone(fire);
             mSceneManager->destroyParticleSystem(fire);
         }
-        node->detachObject(ent);
+        ent->detachFromParent();
         mSceneManager->destroyEntity(ent);
     }
+    if(mSceneManager->hasSceneNode(tempString + "_figure"))
+        mSceneManager->destroySceneNode(tempString + "_figure");
     // The sack shown while a worker carries gold
     if(mSceneManager->hasEntity(tempString + "_sack"))
     {
@@ -4355,6 +4429,84 @@ void RenderManager::rrUpdateEntityOpacity(RenderedMovableEntity* entity)
     }
 }
 
+//! \brief Samples the first supported animated contact bone in world coordinates.
+static bool dragBonePoint(Ogre::Entity* entity, std::initializer_list<const char*> names,
+    Ogre::Vector3& point)
+{
+    if(!entity->hasSkeleton() || entity->getParentSceneNode() == nullptr)
+        return false;
+    entity->_updateAnimation();
+    Ogre::SkeletonInstance* skeleton = entity->getSkeleton();
+    for(const char* name : names)
+    {
+        if(!skeleton->hasBone(name))
+            continue;
+        point = entity->getParentSceneNode()->convertLocalToWorldPosition(
+            skeleton->getBone(name)->_getDerivedPosition());
+        return true;
+    }
+    return false;
+}
+
+//! \brief Keeps an ankle in the animated hand; unknown rigs use their transformed mesh bounds.
+void RenderManager::rrApplyDragContact(Creature& dragged, const Creature& worker)
+{
+    const std::string bodyName = dragged.getOgreNamePrefix() + dragged.getName();
+    const std::string workerName = worker.getOgreNamePrefix() + worker.getName();
+    if(!mSceneManager->hasEntity(bodyName) || !mSceneManager->hasEntity(workerName))
+        return;
+    Ogre::Entity* body = mSceneManager->getEntity(bodyName);
+    Ogre::Entity* puller = mSceneManager->getEntity(workerName);
+    Ogre::SceneNode* bodyNode = body->getParentSceneNode();
+    Ogre::SceneNode* workerNode = puller->getParentSceneNode();
+    if(bodyNode == nullptr || workerNode == nullptr)
+        return;
+    Ogre::Vector3 hand;
+    if(!dragBonePoint(puller, {"Hand.R", "hand_r", "Hand_R", "RightHand", "Weapon_R"}, hand))
+    {
+        const Ogre::AxisAlignedBox& bounds = puller->getBoundingBox();
+        if(bounds.isNull() || bounds.isInfinite())
+            return;
+        hand = workerNode->convertLocalToWorldPosition(bounds.getCenter());
+    }
+    Ogre::Vector3 ankle;
+    if(!dragBonePoint(body, {"Foot.R", "foot_r", "foot.R", "Foot_R", "RightFoot"}, ankle))
+    {
+        const Ogre::AxisAlignedBox& bounds = body->getBoundingBox();
+        if(bounds.isNull() || bounds.isInfinite())
+            return;
+        // The end of the body's own bounds provides a deterministic contact for legless rigs.
+        const Ogre::Vector3 center = bounds.getCenter();
+        ankle = bodyNode->convertLocalToWorldPosition(
+            Ogre::Vector3(center.x, bounds.getMinimum().y, center.z));
+    }
+    const Ogre::Vector3 contactPosition = bodyNode->_getDerivedPosition() + hand - ankle;
+    const Ogre::Vector3 basePosition = bodyNode->getPosition();
+    Ogre::SceneNode* parent = bodyNode->getParentSceneNode();
+    bodyNode->setPosition(parent != nullptr ? parent->convertWorldToLocalPosition(contactPosition) : contactPosition);
+    mDragContactPositions[&dragged] = std::make_pair(basePosition, bodyNode->getPosition());
+}
+
+//! \brief Removes last frame's cosmetic displacement before animation and release movement.
+void RenderManager::rrResetDragContacts()
+{
+    for(const std::pair<Creature* const, std::pair<Ogre::Vector3, Ogre::Vector3>>& contact : mDragContactPositions)
+    {
+        Ogre::SceneNode* node = contact.first->getEntityNode();
+        // A packet or another pose may already have moved the node since contact was drawn.
+        if(node != nullptr && node->getPosition() == contact.second.second)
+            node->setPosition(contact.second.first);
+    }
+    mDragContactPositions.clear();
+}
+
+//! \brief Applies contact after every creature has advanced, independent of creation order.
+void RenderManager::rrUpdateDragContacts()
+{
+    for(Creature* creature : mDragContactCreatures)
+        creature->updateDragTether();
+}
+
 //! \brief Gives the plain ReflMetal sub entities of an animated creature the hardware skinned ReflMetalSkinned.
 //! An entity is only skinned on the GPU when the materials of all its sub entities are, and the Wyvern
 //! mesh has a ReflMetal part next to its creature material. ReflMetal itself stays unskinned for weapons.
@@ -4371,8 +4523,10 @@ static void useSkinnedMetalMaterial(Ogre::Entity* entity)
     }
 }
 
+//! \brief Creates the visible creature and registers it for late contact sampling.
 void RenderManager::rrCreateCreature(Creature* curCreature)
 {
+    mDragContactCreatures.insert(curCreature);
     const std::string& meshName = curCreature->getCurrentMeshName();
 
     // Load the mesh for the creature
@@ -4476,8 +4630,11 @@ bool RenderManager::isLastBlowLeftHanded(const Creature* creature) const
     return it != mCreatureLastBlowLeft.end() && it->second;
 }
 
+//! \brief Removes visible creature resources and its late contact registration.
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
+    mDragContactCreatures.erase(curCreature);
+    mDragContactPositions.erase(curCreature);
     clearCreatureDecay(curCreature);
     removeCreatureTavernProps(curCreature);
     cancelCreatureStep(curCreature);
@@ -5271,6 +5428,8 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         return;
 
     std::string anim = poseAnimation;
+    if((animation == "SpaSit") || (animation == "SpaStand") || (animation == "SpaWade"))
+        prepareSpaAnimation(objectEntity, animation);
     if(curAnimatedObject->getObjectType() == GameEntityType::chickenEntity)
     {
         // The hatchery animals have clips for crowing, running and peeping, the plain walk and idle clips stay for
@@ -7539,6 +7698,21 @@ float RenderManager::getBuriedLift(RenderedMovableEntity* entity, bool settleAtO
     return it->second.mCurrent;
 }
 
+//! \brief Moves both procedural falls of the creature to their end; the next frame update applies the lying pose.
+void RenderManager::rrSettleCreatureFall(const Creature* creature)
+{
+    for(CreatureDropAnimation& dropAnimation : mCreatureDropAnimations)
+    {
+        if(dropAnimation.mCreature == creature)
+            dropAnimation.mElapsed = std::max(dropAnimation.mElapsed, CREATURE_DROP_ANIMATION_DURATION);
+    }
+    for(CreatureDeathVariant& variant : mCreatureDeathVariants)
+    {
+        if(variant.mCreature == creature)
+            variant.mElapsed = std::max(variant.mElapsed, variant.mDuration);
+    }
+}
+
 bool RenderManager::rrIsCreatureDown(const Creature* creature) const
 {
     if(creature == nullptr)
@@ -8331,6 +8505,9 @@ void RenderManager::updateCreatureTavernProps(Creature* creature, const std::str
         WeaponMount mount;
         Ogre::Real mugScale = 1.0f;
         bool hasMount = getWeaponMount(skeleton, "R", TAVERN_MUG_MESH, mount);
+        // The hand grips the middle of the mug (decision 901)
+        if(hasMount)
+            mount.mOffset = mount.mRotation * Ogre::Vector3(TAVERN_MUG_GRIP_SHIFT, 0.0f, 0.0f);
         if(!hasMount)
         {
             const TavernMugLimbMount* limb = nullptr;

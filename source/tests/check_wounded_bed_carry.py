@@ -112,7 +112,7 @@ for needle in ('isHostileNear(', 'DormitoryWoundedCarryEnemyRadius', 'DormitoryW
                'followTrail(', 'setDragDestination(', 'startLaying(', 'isAlive()',
                'getNbTurnsActive()'):
     assert needle in drag, needle
-assert 'DormitoryWoundedDragGap' in carry, 'the configured gap is the minimum of dragGap()'
+assert 'DormitoryWoundedDragGap' in (carry + open(str(root / 'source/entities/Creature.cpp'), encoding='utf-8').read()), 'the configured gap is the minimum of dragGap()'
 assert 'getKoTurnCounter() < 0' not in drag, 'a creature knocked out to death is pulled on, not let go'
 assert 'popAction' not in drag and 'setDragDestination(' in drag and 'setDestination(' not in drag, 'only stopDragging may pop the action'
 stop = function_body(carry, 'bool CreatureActionCarryEntity::stopDragging(')

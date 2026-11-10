@@ -3,14 +3,14 @@ from pathlib import Path
 import os
 import subprocess
 import tempfile
+from check_ghost_rules import function
 
 repo = Path(__file__).resolve().parents[2]
 prefix = Path(os.environ['CMAKE_PREFIX_PATH'])
 (repo / 'build' / 'review-followups').mkdir(parents=True, exist_ok=True)
 source = (repo / 'source/render/RenderManager.cpp').read_text()
-start = source.index('std::string createCreatureDecayAnimation(')
-end = source.index('\n}\n}', start) + 2
-helper = source[start:end]
+# Extract only the production decay helpers, regardless of neighbouring animation helpers.
+helper = function(source, 'std::string createCreatureDecayAnimation(') + '\n' + function(source, 'void setCreatureDecayProgress(')
 cleanup_start = source.index('void RenderManager::clearCreatureDecay(')
 cleanup_end = source.index('\nvoid RenderManager::rrSetCreaturesTextOverlay', cleanup_start)
 cleanup = source[cleanup_start:cleanup_end]

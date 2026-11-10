@@ -4,12 +4,12 @@ follows the tavern in the order the AI builds, and every key is documented in th
 
 What is checked
   rooms.cfg [Rooms]       all Spa keys with their values, no Spa key without a design value, every key documented
-  derived values          SpaMoodPerTurn = TemplePrayerReliefPerTurn (10.5 mood points per turn; SpaMoodMax and SpaMoodDecayPerTurn are gone),
+  derived values          SpaMoodPerTurn = 150/42 (decision 904; SpaMoodMax and SpaMoodDecayPerTurn are gone),
                           SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath, SpaMoodJump 50 on top of it = the 200 of
                           PleasureVisitMax, PleasureBuffMood 100 over SpaRelaxTurns = 300 in total per visit,
-                          SpaRelaxTurns = HangoverTurns of global.cfg, SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns
+                          SpaRelaxTurns = HangoverTurns of global.cfg, SpaRelaxWorkFactor preserves the previous 1.0567 bonus
                           (both to 4 places), SpaCostPerTile = CasinoCostPerTile, SpaHP = CasinoHP,
-                          SpaDirtPerBath = 1.6154 / (0.557 x 9 / (SpaBathTurns + 1)) to 4 places
+                          SpaDirtPerBath preserves the previous 4.9257 per-bath trail
   skills.cfg              roomSpa 250 (tier II), the effect line roomSpa RelaxTime mul 1.0 1.2 1.4, both documented
   SkillManager.cpp        the research entry (parent tavern), the base line for RelaxTime and its effect text
   KeeperAI.cpp            the AI builds the spa directly after the tavern
@@ -59,8 +59,8 @@ tavern = block_values(global_cfg, 'Tavern')
 
 # 1. Every Spa key with the value of the design (section 4 of the design)
 SPA = {
-    'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodJump': '50', 'SpaMoodPerTurn': '10.5',
-    'SpaBathTurns': '14.2857', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.0567',
+    'SpaCostPerTile': '290', 'SpaHP': '40', 'SpaMinRoomSide': '4', 'SpaMoodJump': '50', 'SpaMoodPerTurn': '3.5714285714285714',
+    'SpaBathTurns': '42', 'SpaRelaxTurns': '252', 'SpaRelaxWorkFactor': '1.0567',
     'SpaDirtPerBath': '4.9257', 'SpaMudTrailTiles': '3', 'SpaAttendantActMinSeconds': '10',
     'SpaAttendantActMaxSeconds': '20', 'SpaAttendantCannonballMinSeconds': '120',
     'SpaAttendantCannonballMaxSeconds': '180', 'SpaCannonballChance': '0.25', 'SpaJumpTurns': '2',
@@ -79,7 +79,7 @@ assert 'SpaBathPrice' not in rooms and 'SpaPrice' not in rooms, 'the bath costs 
 assert float(tavern['BeerPrice']) == 5.0, 'BeerPrice is 5 gold'
 
 # 2. The values that derive from existing keys still equal them
-assert float(rooms['SpaMoodPerTurn']) == float(rooms['TemplePrayerReliefPerTurn'])
+assert abs(float(rooms['SpaBathTurns']) / 1.4 - 30.0) < 1e-12, 'decision 904: 30 seconds seated'
 # SpaMoodMax and SpaMoodDecayPerTurn are gone (the mood is added to the stored mood); one bath gives 150 mood points
 bath_mood = float(rooms['SpaMoodPerTurn']) * float(rooms['SpaBathTurns'])
 assert round(bath_mood, 1) == 150.0, 'SpaBathTurns x SpaMoodPerTurn = 150 mood points per bath'
@@ -89,12 +89,12 @@ assert float(rooms['PleasureBuffMood']) == 100.0 and float(rooms['PleasureVisitM
 for key in ('PleasureVisitMax', 'PleasureBuffMood', 'CasinoVisitLockTurns', 'TempleVisitLockTurns', 'ArenaVisitLockTurns'):
     assert_documented(rooms_cfg, key, 'rooms.cfg')
 assert float(rooms['SpaRelaxTurns']) == float(tavern['HangoverTurns']), 'SpaRelaxTurns = HangoverTurns'
-factor = 1.0 + float(rooms['SpaBathTurns']) / float(rooms['SpaRelaxTurns'])
-assert round(factor, 4) == float(rooms['SpaRelaxWorkFactor']), 'SpaRelaxWorkFactor = 1 + SpaBathTurns / SpaRelaxTurns'
+factor = 1.0 + 14.2857 / float(rooms['SpaRelaxTurns'])
+assert round(factor, 4) == float(rooms['SpaRelaxWorkFactor']), 'decision 904 preserves the previous work bonus'
 assert float(rooms['SpaCostPerTile']) == float(rooms['CasinoCostPerTile'])
 assert float(rooms['SpaHP']) == float(rooms['CasinoHP'])
 # The dirt formula: class high 1.6154, occupancy 0.557, nine pool spots of a 25 tile room, one use per bath turn plus one
-use_rate = 9.0 / (float(rooms['SpaBathTurns']) + 1.0)
+use_rate = 9.0 / (14.2857 + 1.0)
 dirt = 1.6154 / (0.557 * use_rate)
 assert round(dirt, 4) == round(float(rooms['SpaDirtPerBath']), 4), 'SpaDirtPerBath by the dirt formula: ' + str(round(dirt, 4))
 # The jump timings are ordered ranges
