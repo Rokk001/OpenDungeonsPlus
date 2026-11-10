@@ -15,8 +15,8 @@ namespace
 {
 const char* const PAGE_NAMES[] = {"GhostPage", "MerchantPage", "TavernPage", "SpaPage",
     "InfirmaryPage", "AlchemyPage", "CasinoPage", "WorkshopPage"};
-const char* const ROOM_ICONS[] = {"GhostRoomButton", "MerchantButton", "TavernButton", "SpaButton",
-    "InfirmaryButton", "AlchemyLabButton", "CasinoButton", "WorkshopButton"};
+const char* const ROOM_ICONS[] = {"RoomCentreIconGhostRoom/Icon", "RoomCentreIconMerchant/Icon", "RoomCentreIconTavern/Icon", "RoomCentreIconSpa/Icon",
+    "RoomCentreIconInfirmary/Icon", "RoomCentreIconAlchemyLab/Icon", "RoomCentreIconCasino/Icon", "RoomCentreIconWorkshop/Icon"};
 const TileVisual ROOM_VISUALS[] = {TileVisual::ghostRoom, TileVisual::merchantRoom, TileVisual::tavernRoom,
     TileVisual::spaRoom, TileVisual::infirmaryRoom, TileVisual::alchemyLabRoom,
     TileVisual::casinoRoom, TileVisual::workshopRoom};
@@ -85,7 +85,7 @@ void GameMode::refreshRoomManager()
             continue;
         row->setYPosition(CEGUI::UDim(0, static_cast<float>(visibleRow++) * row->getSize().d_height.d_offset));
         row->getChild("Name")->setText(RoomManager::getRoomReadableName(entries[index].type));
-        row->getChild("Icon")->setProperty("Image", std::string("OpenDungeonsIcons/") + ROOM_ICONS[index]);
+        row->getChild("Icon")->setProperty("Image", ROOM_ICONS[index]);
         row->getChild("Highlight")->setVisible(entries[index].type == mRoomManagerNavigation.selected());
         showRoomDot(row->getChild("Dot"), entries[index].dot);
     }
