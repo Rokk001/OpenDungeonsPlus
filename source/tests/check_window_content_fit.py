@@ -242,6 +242,13 @@ def title_height(node, screen, user):
 def client_rect(node, rect, screen, user, s):
     """The rectangle the children of the node are laid out in (looknfeel NamedArea, CEGUI Window::getChildContentArea)."""
     x0, y0, x1, y1 = rect
+    if node.type == 'OD/ScrollablePane' and node.path.endswith('/SocialWindow/ValuesPage'):
+        # Gui::applyScale places these original columns in an 820x500 design-pixel scroll document.
+        # Measure their captions in that document; check_dungeonbook_profile_layout also checks scroll reachability.
+        assert 'const float documentWidth = 820.0f * scale;' in gui_cpp
+        assert 'const float documentHeight = 500.0f * scale;' in gui_cpp
+        document_scale = min(screen[0] / DESIGN_W, screen[1] / DESIGN_H) * user
+        return x0, y0, x0 + 820.0 * document_scale, y0 + 500.0 * document_scale
     if node.type in ('OD/FrameWindow',):
         images = frame_images(node)
         return (x0 + image_size(images['FrameLeftImage'], screen, user)[0], y0 + title_height(node, screen, user),

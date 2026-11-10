@@ -689,6 +689,23 @@ for name in need:
 state_lines = []
 wrapped_lines = {}
 narrowest_link = 1e9
+# The original sheet keeps its columns in a scrollable document beside the persistent roster. Pin the production
+# dimensions independently; all existing full-text samples and font/size requirements below still apply.
+values_page = boxes['ValuesPage'][1]
+assert values_page.get('type') == 'OD/ScrollablePane'
+assert values_page.find("Property[@name='ContentPaneAutoSized']").get('value') == 'False'
+assert boxes['ValuesPage'][0][1] >= boxes['Header'][0][3], 'scroll viewport starts below the header'
+assert 'const float documentWidth = 820.0f * scale;' in gui
+assert 'const float documentHeight = 500.0f * scale;' in gui
+assert 'const CEGUI::URect& area = mScaledWindows.at(child).area;' in gui
+for edge in ('d_min.d_x', 'd_max.d_x'):
+    assert 'area.' + edge + '.d_scale * documentWidth' in gui
+for edge in ('d_min.d_y', 'd_max.d_y'):
+    assert 'area.' + edge + '.d_scale * documentHeight' in gui
+assert 'pane->setContentPaneArea(CEGUI::Rectf(0, 0, documentWidth, documentHeight));' in gui
+VALUES_WIDTH, VALUES_HEIGHT = 820.0, 500.0
+values_box = boxes['ValuesPage'][0]
+values_w, values_h = values_box[2] - values_box[0], values_box[3] - values_box[1]
 for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for user in (0.8, 1.2):
         scale = min(screen_w / 1024.0, screen_h / 768.0) * user
@@ -704,6 +721,21 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             box = boxes[name][0]
             width = (box[2] - box[0]) * client_w
             height = (box[3] - box[1]) * client_h
+            if name.startswith('ValuesPage/'):
+                width = (box[2] - box[0]) / values_w * VALUES_WIDTH
+                height = (box[3] - box[1]) / values_h * VALUES_HEIGHT
+                # Both stock scrollbars are 12 screen pixels. Every complete text cell must be reachable at
+                # some valid scroll position, with neither the frame nor the persistent roster covering it.
+                viewport_w = values_w * client_w - 12.0 / scale
+                viewport_h = values_h * client_h - 12.0 / scale
+                left = (box[0] - values_box[0]) / values_w * VALUES_WIDTH
+                top = (box[1] - values_box[1]) / values_h * VALUES_HEIGHT
+                for start, length, viewport, document in ((left, width, viewport_w, VALUES_WIDTH),
+                                                          (top, height, viewport_h, VALUES_HEIGHT)):
+                    assert length <= viewport + 1e-6, ('cell exceeds viewport', name, screen_w, screen_h, user)
+                    offset = min(start, max(0.0, document - viewport))
+                    assert offset <= start + 1e-6 and start + length <= offset + viewport + 1e-6, \
+                        ('cell unreachable by scrolling', name, screen_w, screen_h, user)
             if wrap:
                 # every text in full: all its wrapped lines in the height, its widest word in the width
                 wrapped = [wrap_lines(font, t, width - pad_w) for t in texts]
@@ -723,10 +755,12 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             ratio = max(wanted_h / height, wanted_w / width)
             if ratio > tightest.get(page, (0.0, ''))[0]:
                 tightest[page] = (ratio, name)
-        # The friend and foe names of the shared profile page are one-line buttons from PROFILE_LINK_LEFT to the right
-        # margin of the holder (Gui::layoutCreatureProfilePage): the widest name must fit whole
+        # The compact profile puts the label above its one-line links, which use the full row width.
+        # The noncompact creature card retains PROFILE_LINK_LEFT beside its label.
+        assert 'float linkY = compact ? y + lineHeight : y;' in gui
+        assert 'compact ? PROFILE_SIDE_MARGIN : PROFILE_LINK_LEFT' in gui
         holder = boxes['ProfilePage/SocialHolder'][0]
-        link_width = (holder[2] - holder[0]) * client_w - LINK_LEFT - 32.0
+        link_width = (holder[2] - holder[0]) * client_w - 16.0 - 32.0
         assert link_width >= max(text_width('MedievalSharp-8', n) for n in WIDEST_NAMES_8) + 2.0,             ('a friend name is wider than its link', screen_w, screen_h, user, round(link_width, 1))
         narrowest_link = min(narrowest_link, link_width)
         # the slot pictures stay squares of at least 24 screen pixels, the portraits at least 40
@@ -736,7 +770,8 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             assert edge >= 12.0, ('slot too small', screen_w, screen_h, user, edge)
         # the one attribute row: each cell in screen pixels and the room its widest and highest text takes
         cell = boxes['ValuesPage/Strength'][0]
-        cell_w, cell_h = (cell[2] - cell[0]) * client_w, (cell[3] - cell[1]) * client_h
+        cell_w = (cell[2] - cell[0]) / values_w * VALUES_WIDTH
+        cell_h = (cell[3] - cell[1]) / values_h * VALUES_HEIGHT
         attribute_w = max(text_width('MedievalSharp-8', part) + 6.0 for name in ATTRIBUTES
                           for t in ATTRIBUTE_TEXTS[name] for part in t.split('\n'))
         state_lines.append('%dx%d UI %d%%: attribute row 4 cells of %dx%d px, widest line %.0f%% of the width, '

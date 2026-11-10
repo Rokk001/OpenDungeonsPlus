@@ -82,7 +82,7 @@ for page in ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'):
 assert props(boxes['FeedPage/FeedTitle'][1])['Text'] == 'Feed'
 print('1. whole book: start page list left / feed right in framed panels, bottom navigation on every page')
 
-# 2. Profile: portrait left, data middle, posts right; the portrait covers nothing
+# 2. Profile: portrait left, social data right, six posts below; the portrait covers nothing
 portrait = boxes['ProfilePage/Portrait']
 pp = props(portrait[1])
 assert 'HorizontalAlignment' not in pp and 'VerticalAlignment' not in pp, \
@@ -95,9 +95,11 @@ assert clip[1].get('type') == 'DefaultWindow' and image.get('ClippedByParent', '
 assert image['AspectMode'] == 'Expand' and image['AspectRatio'] == '1', 'square portrait, filled like the concept'
 assert 'page->getChild("Portrait/Clip/Image")' in social
 middle = ('NameText', 'KeeperText', 'SocialHolder', 'SocialText')
-right = ['PostsTitle', 'PostsEmpty'] + ['PostThumb%d' % i for i in range(6)]
-for name in middle + tuple(right):
+right = ['PostsTitle']
+bottom = ['PostsEmpty'] + ['PostThumb%d' % i for i in range(6)]
+for name in middle + tuple(right + bottom):
     assert not overlaps(portrait[0], boxes['ProfilePage/' + name][0]), ('the portrait lies over', name)
+for name in middle + tuple(right):
     assert boxes['ProfilePage/' + name][0][0] >= portrait[0][2] - 1e-9, name + ' is right of the portrait'
 for name in middle:
     assert boxes['ProfilePage/' + name][0][2] >= boxes['ProfilePage/ColumnRule'][0][2] - 1e-9, name + ' in the middle'
@@ -107,24 +109,26 @@ for name in right:
 assert 'mProfilePage = gui.createCreatureProfilePage(holder)' in social
 # The left column holds only the portrait and the info text (class, level, mood); nothing else is drawn there
 left_column = [n for n in boxes if n.startswith('ProfilePage/') and n.count('/') == 1
-               and boxes[n][0][0] < portrait[0][2] - 1e-9]
+               and boxes[n][0][0] < portrait[0][2] - 1e-9 and n.split('/')[1] not in bottom]
 assert sorted(left_column) == ['ProfilePage/InfoText', 'ProfilePage/Portrait'], left_column
 assert boxes['ProfilePage/InfoText'][0][1] >= portrait[0][3] - 1e-9, 'the info text sits below the portrait'
-# Six pictures reflow to three columns and two rows in the narrower creature pane.
+# Six original pictures share one bottom row, leaving height for the eight-line social row above them.
 thumbs = [boxes['ProfilePage/PostThumb%d' % i][0] for i in range(6)]
 for i, a in enumerate(thumbs):
     assert framed('ProfilePage/PostThumb%d' % i) and 'ProfilePage/PostThumb%d/Clip/Image' % i in boxes
     for b in thumbs[i + 1:]:
         assert not overlaps(a, b), 'post pictures overlap'
-assert all(abs(thumbs[0][1] - thumbs[i][1]) < 1e-9 for i in (1, 2))
-assert thumbs[0][2] <= thumbs[1][0] and thumbs[1][2] <= thumbs[2][0]
-assert thumbs[2][3] <= thumbs[3][1], 'three pictures per row'
+assert all(abs(thumbs[0][1] - t[1]) < 1e-9 and abs(thumbs[0][3] - t[3]) < 1e-9 for t in thumbs)
+assert all(a[2] <= b[0] for a, b in zip(thumbs, thumbs[1:])), 'six pictures from left to right'
+for name in bottom:
+    assert boxes['ProfilePage/' + name][0][1] >= max(boxes['ProfilePage/' + above][0][3]
+        for above in ('Portrait', 'InfoText', 'SocialHolder', 'SocialText', 'PostsTitle', 'ColumnRule')), name
 assert 'MAX_OWN_POSTS = 6' in social
 posts = social[social.index('// The posts of the creature'):social.index('//! \\brief Fills the values sheet')]
 for fragment in ('findPostPicture(*it)', 'thumb->setTooltipText(text', '->setVisible(false)', '"PostsEmpty"',
                  '"Posts (" + std::to_string(count) + ")"'):
     assert fragment in posts, fragment
-print('2. profile: portrait left without window centring, data middle, six post pictures right; left column clean')
+print('2. profile: portrait left without window centring, social data right, six post pictures in the bottom row')
 
 # 3. Inventory: the slots stay right of the portrait
 inv = boxes['InventoryPage/Portrait']

@@ -81,7 +81,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Name">
-                        <Property name="Area" value="{{0.25,0},{0.03,0},{0.9853,0},{0.62,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.02,0},{0.9853,0},{0.62,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -152,7 +152,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Name">
-                        <Property name="Area" value="{{0.25,0},{0.03,0},{0.9853,0},{0.62,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.02,0},{0.9853,0},{0.62,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -223,7 +223,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Name">
-                        <Property name="Area" value="{{0.25,0},{0.03,0},{0.9853,0},{0.62,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.02,0},{0.9853,0},{0.62,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -294,7 +294,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Name">
-                        <Property name="Area" value="{{0.25,0},{0.03,0},{0.9853,0},{0.62,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.02,0},{0.9853,0},{0.62,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -365,7 +365,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Name">
-                        <Property name="Area" value="{{0.25,0},{0.03,0},{0.9853,0},{0.62,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.02,0},{0.9853,0},{0.62,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -436,7 +436,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Name">
-                        <Property name="Area" value="{{0.25,0},{0.03,0},{0.9853,0},{0.62,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.02,0},{0.9853,0},{0.62,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -507,7 +507,7 @@
                         <Property name="MousePassThroughEnabled" value="True" />
                     </Window>
                     <Window type="OD/StaticText" name="Name">
-                        <Property name="Area" value="{{0.25,0},{0.03,0},{0.9853,0},{0.62,0}}" />
+                        <Property name="Area" value="{{0.25,0},{0.02,0},{0.9853,0},{0.62,0}}" />
                         <Property name="Font" value="MedievalSharp-8" />
                         <Property name="FrameEnabled" value="False" />
                         <Property name="BackgroundEnabled" value="False" />
@@ -1027,7 +1027,7 @@
             <Property name="Area" value="{{0.372,0},{0.0859,0},{0.9952,0},{0.86,0}}" />
             <Property name="Visible" value="False" />
             <Window type="OD/StaticText" name="Portrait">
-                <Property name="Area" value="{{0.0145,0},{0.0938,0},{0.4145,0},{0.64,0}}" />
+                <Property name="Area" value="{{0.0145,0},{0.0938,0},{0.4145,0},{0.61,0}}" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
@@ -1049,7 +1049,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="InfoText">
-                <Property name="Area" value="{{0.0145,0},{0.65,0},{0.4145,0},{0.9961,0}}" />
+                <Property name="Area" value="{{0.0145,0},{0.62,0},{0.4145,0},{0.795,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -1073,10 +1073,10 @@
                 <Property name="VertFormatting" value="CentreAligned" />
             </Window>
             <Window type="DefaultWindow" name="SocialHolder">
-                <Property name="Area" value="{{0.43,0},{0.33,0},{0.99,0},{0.555,0}}" />
+                <Property name="Area" value="{{0.43,0},{0.33,0},{0.99,0},{0.735,0}}" />
             </Window>
             <Window type="OD/StaticText" name="SocialText">
-                <Property name="Area" value="{{0.44,0},{0.33,0},{0.99,0},{0.555,0}}" />
+                <Property name="Area" value="{{0.44,0},{0.33,0},{0.99,0},{0.735,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -1086,14 +1086,14 @@
                 <Property name="Visible" value="False" />
             </Window>
             <Window type="OD/StaticText" name="ColumnRule">
-                <Property name="Area" value="{{0.42,0},{0.0938,0},{0.425,0},{0.9961,0}}" />
+                <Property name="Area" value="{{0.42,0},{0.0938,0},{0.425,0},{0.795,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/StaticText" name="PostsTitle">
-                <Property name="Area" value="{{0.44,0},{0.56,0},{0.99,0},{0.615,0}}" />
+                <Property name="Area" value="{{0.44,0},{0.74,0},{0.99,0},{0.795,0}}" />
                 <Property name="Font" value="MedievalSharp-10" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -1102,7 +1102,7 @@
                 <Property name="Text" value="Posts" />
             </Window>
             <Window type="OD/StaticText" name="PostThumb0">
-                <Property name="Area" value="{{0.44,0},{0.62,0},{0.615,0},{0.805,0}}" />
+                <Property name="Area" value="{{0.0097,0},{0.8,0},{0.1697,0},{1,0}}" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
@@ -1123,7 +1123,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb1">
-                <Property name="Area" value="{{0.625,0},{0.62,0},{0.78,0},{0.805,0}}" />
+                <Property name="Area" value="{{0.1747,0},{0.8,0},{0.3347,0},{1,0}}" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
@@ -1144,7 +1144,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb2">
-                <Property name="Area" value="{{0.81,0},{0.62,0},{0.99,0},{0.805,0}}" />
+                <Property name="Area" value="{{0.3397,0},{0.8,0},{0.4997,0},{1,0}}" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
@@ -1165,7 +1165,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb3">
-                <Property name="Area" value="{{0.44,0},{0.815,0},{0.615,0},{1,0}}" />
+                <Property name="Area" value="{{0.5047,0},{0.8,0},{0.6647,0},{1,0}}" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
@@ -1186,7 +1186,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb4">
-                <Property name="Area" value="{{0.625,0},{0.815,0},{0.78,0},{1,0}}" />
+                <Property name="Area" value="{{0.6697,0},{0.8,0},{0.8297,0},{1,0}}" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
@@ -1207,7 +1207,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostThumb5">
-                <Property name="Area" value="{{0.81,0},{0.815,0},{0.99,0},{1,0}}" />
+                <Property name="Area" value="{{0.8347,0},{0.8,0},{0.9947,0},{1,0}}" />
                 <Property name="FrameEnabled" value="True" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
@@ -1228,7 +1228,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PostsEmpty">
-                <Property name="Area" value="{{0.44,0},{0.62,0},{0.99,0},{0.805,0}}" />
+                <Property name="Area" value="{{0.0145,0},{0.8,0},{0.9947,0},{1,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -1237,8 +1237,9 @@
                 <Property name="Visible" value="False" />
             </Window>
         </Window>
-        <Window type="DefaultWindow" name="ValuesPage">
-            <Property name="Area" value="{{0.372,0},{0.0859,0},{0.9952,0},{0.86,0}}" />
+        <Window type="OD/ScrollablePane" name="ValuesPage">
+            <Property name="Area" value="{{0.372,0},{0.142,0},{0.9952,0},{0.86,0}}" />
+            <Property name="ContentPaneAutoSized" value="False" />
             <Property name="Visible" value="False" />
             <Window type="OD/StaticText" name="StatsPanel">
                 <Property name="Area" value="{{0.0097,0},{0.0898,0},{0.43,0},{0.9961,0}}" />
@@ -2148,7 +2149,7 @@
                 </Window>
             </Window>
             <Window type="OD/StaticText" name="PotionsLabel">
-                <Property name="Area" value="{{0.4671,0},{0.539,0},{0.8436,0},{0.58,0}}" />
+                <Property name="Area" value="{{0.4671,0},{0.5351,0},{0.8436,0},{0.5837,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -2157,14 +2158,14 @@
                 <Property name="Text" value="Potions" />
             </Window>
             <Window type="OD/StaticText" name="PotionsRule">
-                <Property name="Area" value="{{0.402,0},{0.581,0},{0.9088,0},{0.5829,0}}" />
+                <Property name="Area" value="{{0.402,0},{0.5837,0},{0.9088,0},{0.5856,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
             <Window type="OD/StaticText" name="InventoryLabel">
-                <Property name="Area" value="{{0.402,0},{0.7343,0},{0.9088,0},{0.7753,0}}" />
+                <Property name="Area" value="{{0.402,0},{0.7304,0},{0.9088,0},{0.7792,0}}" />
                 <Property name="Font" value="MedievalSharp-8" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="False" />
@@ -2173,7 +2174,7 @@
                 <Property name="Text" value="Inventory" />
             </Window>
             <Window type="OD/StaticText" name="InventoryRule">
-                <Property name="Area" value="{{0.402,0},{0.7763,0},{0.9088,0},{0.7782,0}}" />
+                <Property name="Area" value="{{0.402,0},{0.7792,0},{0.9088,0},{0.7811,0}}" />
                 <Property name="FrameEnabled" value="False" />
                 <Property name="BackgroundEnabled" value="True" />
                 <Property name="BackgroundColours" value="tl:A0000000 tr:A0000000 bl:A0000000 br:A0000000" />
