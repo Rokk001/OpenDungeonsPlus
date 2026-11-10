@@ -197,11 +197,36 @@ assert child.get('widget') == '__auto_titlebar__' and child.get('font') is None 
 assert frame_look.find("PropertyLinkDefinition[@name='TitlebarFont']").get('initialValue') == 'MedievalSharp-10'
 new_props = set(fdefs) | set(tdefs) | {'TitlebarFont'}
 new_props -= {'CaptionColour'}
+room_manager_overrides = {
+    'TitlebarFont': 'MedievalSharp-20',
+    'FrameTopLeftImage': 'DungeonbookIcons/BookFrameTopLeft',
+    'FrameTopRightImage': 'DungeonbookIcons/BookFrameTopRight',
+    'FrameBottomLeftImage': 'DungeonbookIcons/BookFrameBottomLeft',
+    'FrameBottomRightImage': 'DungeonbookIcons/BookFrameBottomRight',
+    'FrameTopImage': 'DungeonbookIcons/BookFrameTop',
+    'FrameLeftImage': 'DungeonbookIcons/BookFrameLeft',
+    'FrameRightImage': 'DungeonbookIcons/BookFrameRight',
+    'FrameBottomImage': 'DungeonbookIcons/BookFrameBottom',
+    'TitleTopLeftImage': 'DungeonbookIcons/BookFrameTopLeft',
+    'TitleTopRightImage': 'DungeonbookIcons/BookFrameTopRight',
+    'TitleTopImage': 'DungeonbookIcons/BookFrameTop',
+    'TitleLeftImage': 'DungeonbookIcons/BookFrameLeft',
+    'TitleRightImage': 'DungeonbookIcons/BookFrameRight',
+    'TitleRuleImage': 'DungeonbookIcons/BookTitleRule',
+    'CaptionHorzFormatting': 'CentreAligned',
+    'CaptionCentred': 'True',
+}
+room_manager = ET.parse(repo / 'gui/WindowRoomManager.layout').getroot()
+room_manager_properties = {node.get('name'): node.get('value') for node in room_manager.iter('Property')}
+assert {name: room_manager_properties.get(name) for name in room_manager_overrides} == room_manager_overrides, \
+    'Room Manager keeps its intentional Dungeonbook frame and title overrides'
 for other in sorted((repo / 'gui').glob('*.layout')):
     if other.name == 'WindowSocial.layout':
         continue
     text = other.read_text(encoding='utf-8', errors='replace')
     for name in new_props:
+        if other.name == 'WindowRoomManager.layout' and name in room_manager_overrides:
+            continue
         assert 'name="%s"' % name not in text, (other.name, 'sets', name)
 
 
