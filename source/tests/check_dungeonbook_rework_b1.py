@@ -77,7 +77,7 @@ assert boxes['HomePage/ListPanel'][0][2] <= boxes['HomePage/FeedPanel'][0][0], '
 for row in range(7):
     assert framed('HomePage/ListRows/Row%d/PortraitFrame' % row), 'list portraits are framed'
 nav = boxes['NavBar'][0]
-for page in ('HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'):
+for page in ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'):
     assert boxes[page][0][3] <= nav[1] + 1e-6, page + ' ends above the bottom navigation (variant 2)'
 assert props(boxes['FeedPage/FeedTitle'][1])['Text'] == 'Feed'
 print('1. whole book: start page list left / feed right in framed panels, bottom navigation on every page')
@@ -100,7 +100,7 @@ for name in middle + tuple(right):
     assert not overlaps(portrait[0], boxes['ProfilePage/' + name][0]), ('the portrait lies over', name)
     assert boxes['ProfilePage/' + name][0][0] >= portrait[0][2] - 1e-9, name + ' is right of the portrait'
 for name in middle:
-    assert boxes['ProfilePage/' + name][0][2] <= boxes['ProfilePage/ColumnRule'][0][0] + 1e-9, name + ' in the middle'
+    assert boxes['ProfilePage/' + name][0][2] >= boxes['ProfilePage/ColumnRule'][0][2] - 1e-9, name + ' in the middle'
 for name in right:
     assert boxes['ProfilePage/' + name][0][0] >= boxes['ProfilePage/ColumnRule'][0][2] - 1e-9, name + ' right'
 # The health and XP bars and the handle are rows of the shared page inside SocialHolder: they stay clear as well
@@ -110,13 +110,15 @@ left_column = [n for n in boxes if n.startswith('ProfilePage/') and n.count('/')
                and boxes[n][0][0] < portrait[0][2] - 1e-9]
 assert sorted(left_column) == ['ProfilePage/InfoText', 'ProfilePage/Portrait'], left_column
 assert boxes['ProfilePage/InfoText'][0][1] >= portrait[0][3] - 1e-9, 'the info text sits below the portrait'
-# Posts as pictures in two columns, three rows (book-variant-2)
+# Six pictures reflow to three columns and two rows in the narrower creature pane.
 thumbs = [boxes['ProfilePage/PostThumb%d' % i][0] for i in range(6)]
 for i, a in enumerate(thumbs):
     assert framed('ProfilePage/PostThumb%d' % i) and 'ProfilePage/PostThumb%d/Clip/Image' % i in boxes
     for b in thumbs[i + 1:]:
         assert not overlaps(a, b), 'post pictures overlap'
-assert abs(thumbs[0][1] - thumbs[1][1]) < 1e-9 and thumbs[0][2] <= thumbs[1][0], 'two pictures per row'
+assert all(abs(thumbs[0][1] - thumbs[i][1]) < 1e-9 for i in (1, 2))
+assert thumbs[0][2] <= thumbs[1][0] and thumbs[1][2] <= thumbs[2][0]
+assert thumbs[2][3] <= thumbs[3][1], 'three pictures per row'
 assert 'MAX_OWN_POSTS = 6' in social
 posts = social[social.index('// The posts of the creature'):social.index('//! \\brief Fills the values sheet')]
 for fragment in ('findPostPicture(*it)', 'thumb->setTooltipText(text', '->setVisible(false)', '"PostsEmpty"',

@@ -569,7 +569,9 @@ void SocialWindow::show()
     if(!mWindow->isVisible())
     {
         mFilter = CreatureFilter::All;
-        mWindow->getChild("HomePage/Filter")->setText(FILTER_LABELS[0]);
+        CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
+        filter->setItemSelectState(static_cast<std::size_t>(0), true);
+        filter->setText(FILTER_LABELS[0]);
     }
     if(!mWindow->isVisible() && !useLocalCreatureRoster())
     {
@@ -587,7 +589,9 @@ void SocialWindow::show()
 void SocialWindow::showCreature(const std::string& creatureName)
 {
     mFilter = CreatureFilter::All;
-    mWindow->getChild("HomePage/Filter")->setText(FILTER_LABELS[0]);
+    CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
+    filter->setItemSelectState(static_cast<std::size_t>(0), true);
+    filter->setText(FILTER_LABELS[0]);
     mSelectedCreature = creatureName;
     mPage = Page::Inventory;
     show();
@@ -784,7 +788,9 @@ void SocialWindow::selectCreature(const std::string& creatureName, Page page)
        (std::find(mListedCreatures.begin(), mListedCreatures.end(), creatureName) == mListedCreatures.end()))
     {
         mFilter = CreatureFilter::All;
-        mWindow->getChild("HomePage/Filter")->setText(FILTER_LABELS[0]);
+        CEGUI::Combobox* filter = static_cast<CEGUI::Combobox*>(mWindow->getChild("HomePage/Filter"));
+        filter->setItemSelectState(static_cast<std::size_t>(0), true);
+        filter->setText(FILTER_LABELS[0]);
     }
     mSelectedCreature = creatureName;
     rebuildCreatureList();

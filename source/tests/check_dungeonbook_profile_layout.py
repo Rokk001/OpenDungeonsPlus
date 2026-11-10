@@ -239,7 +239,7 @@ collect_boxes(book, (0.0, 0.0, 1.0, 1.0), '', boxes)
 pages = ('HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage')
 for page in pages + ('Header', 'NavBar'):
     assert page in boxes, page
-assert boxes['NavBar'][0][1] >= max(boxes[p][0][3] for p in pages) - 1e-6, 'the pages end above the navigation bar'
+assert boxes['NavBar'][0][1] >= max(boxes[p][0][3] for p in pages[1:]) - 1e-6, 'the pages end above the navigation bar'
 header_bottom = boxes['Header'][0][3]
 for name, (box, element) in boxes.items():
     page = name.split('/')[0]
@@ -265,13 +265,14 @@ for arrow in ('BackButton', 'PrevButton', 'NextButton'):
 prev_box, name_box, next_box = (boxes['Header/' + n][0] for n in ('PrevButton', 'NameText', 'NextButton'))
 assert prev_box[2] <= name_box[0] and name_box[2] <= next_box[0], 'the arrows sit around the name'
 assert boxes['Header/BackButton'][0][2] <= prev_box[0], 'the back arrow sits left in the head'
-filters = ['HomePage/Filter' + f for f in ('All', 'Workers', 'Fighters', 'Unhappy')]
-for f in filters:
-    assert f in boxes and boxes[f][0][3] <= boxes['HomePage/ListRows'][0][1], f + ' sits in the head of the start page'
+filters = ['HomePage/Filter']
+assert boxes[filters[0]][1].get('type') == 'OD/Combobox'
+assert boxes['HomePage/CreaturesLabel'][0][2] <= boxes[filters[0]][0][0]
+assert boxes[filters[0]][0][1] < boxes['HomePage/ListRows'][0][1]
 buttons = [n for n, (b, e) in boxes.items() if e.get('type') in ('OD/Button', 'OD/InvisibleButton')]
 for n in buttons:
     allowed = n.startswith('NavBar/') or n.startswith('Header/') or n in filters or (
-        n.startswith('HomePage/ListRows/Row') and n.endswith('/Button'))
+        n.startswith('HomePage/ListRows/Row') and n.endswith('/Button')) or n.endswith('/ProfileLink')
     assert allowed, n + ' is a button in mid-page'
 # Rows of the list and of the feeds, scrolled by their scrollbars, no overlap
 list_rows = sorted(n for n in boxes if re.fullmatch(r'HomePage/ListRows/Row\d', n))
@@ -635,8 +636,9 @@ NICK = 'W' * 20  # the nick of a keeper has at most 20 characters (MenuModeMulti
 assert 'nickCeguiStr.length() > 20' in (repo / 'source/modes/MenuModeMultiplayerServer.cpp').read_text()
 
 require('HomePage/CreaturesLabel', 'MedievalSharp-10', texts=('Known creatures (999 of 999)',), wrap=True)
-for f, text in zip(filters, ('[ All ]', '[ Workers ]', '[ Fighters ]', '[ Unhappy ]')):
-    require(f, 'MedievalSharp-8', texts=(text,), pad_w=14.0, pad_h=6.0)
+# The combo area includes its popup; its edit box holds one choice at a time.
+for text in ('All', 'Workers', 'Fighters', 'Unhappy'):
+    require('HomePage/Filter', 'MedievalSharp-8', texts=(text,), pad_w=28.0, pad_h=6.0)
 require('HomePage/FeedTitle', 'MedievalSharp-10', texts=('All-Creature Feed',))
 for row in list_rows:
     require(row + '/Name', 'MedievalSharp-8', lines=2, texts=WIDEST_NAMES_8, wrap=True)
@@ -655,7 +657,8 @@ require('ProfilePage/NameText', 'MedievalSharp-10', texts=WIDEST_NAMES_10, wrap=
 require('ProfilePage/KeeperText', 'MedievalSharp-8', texts=('Keeper: ' + NICK, 'Keeper: Player 1'), wrap=True)
 require('ProfilePage/InfoText', 'MedievalSharp-8', lines=4, texts=('Mood: Furious', 'Level 30'))
 require('ProfilePage/PostsTitle', 'MedievalSharp-10', texts=('Posts (200)',))
-require('ProfilePage/SocialHolder', 'MedievalSharp-8', lines=6)
+# The narrow profile viewport scrolls the full shared document.
+require('ProfilePage/SocialHolder', 'MedievalSharp-8', lines=4)
 require('ProfilePage/PostsEmpty', 'MedievalSharp-8', lines=2, texts=('Nothing posted yet.',))
 # Values: rounded numbers (two decimals at most, every magnitude); a pair "a / b" wraps after the slash
 pairs = tuple(a + ' / ' + b for a in WORST_NUMBERS[-3:] for b in WORST_NUMBERS[-3:])

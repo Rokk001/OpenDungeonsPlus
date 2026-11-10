@@ -1,6 +1,7 @@
 """Check Dungeonbook navigation wiring and the six existing visual asset blobs."""
 from pathlib import Path
 import hashlib
+import json
 import re
 import xml.etree.ElementTree as ET
 
@@ -9,12 +10,16 @@ source = (repo / 'source/render/SocialWindow.cpp').read_text(encoding='utf-8')
 book = ET.parse(repo / 'gui/WindowSocial.layout').getroot().find('Window')
 home = book.find("Window[@name='HomePage']")
 assert home.find("Window[@name='Filter']").get('type') == 'OD/Combobox'
+assert home.find("Window[@name='Filter']/Property[@name='ReadOnly']").get('value') == 'True'
 assert all(label in source for label in ('"All", "Workers", "Fighters", "Unhappy"',))
 
 def body(signature):
     return source.split(signature, 1)[1].split('\n}', 1)[0]
 
 assert 'mFilter = CreatureFilter::All' in body('void SocialWindow::show()')
+for signature in ('void SocialWindow::show()', 'void SocialWindow::showCreature(',
+                  'void SocialWindow::selectCreature('):
+    assert 'setItemSelectState(static_cast<std::size_t>(0), true)' in body(signature), signature
 assert 'Page::Inventory' in body('void SocialWindow::showCreature(')
 assert 'Page::Inventory' in body('bool SocialWindow::onListRowClicked(')
 assert 'Page::Inventory' in body('bool SocialWindow::onLinkClicked(')
@@ -28,6 +33,47 @@ for name in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory'):
 for page in ('HomePage', 'FeedPage'):
     for row in range(3):
         assert book.find("Window[@name='%s']/Window[@name='FeedRows']/Window[@name='Row%d']/Window[@name='ProfileLink']" % (page, row)) is not None
+
+
+def rectangle(window):
+    """Read the layout's relative rectangle for arrangement assertions."""
+    value = window.find("Property[@name='Area']").get('value')
+    return tuple(float(n) for n in re.findall(r'\{([0-9.]+),0\}', value))
+
+
+label = rectangle(home.find("Window[@name='CreaturesLabel']"))
+dropdown = rectangle(home.find("Window[@name='Filter']"))
+assert label[2] == dropdown[0] and label[1] <= dropdown[1] < label[3]
+list_right = rectangle(home.find("Window[@name='ListPanel']"))[2]
+nav = book.find("Window[@name='NavBar']")
+assert nav.find("Property[@name='Visible']").get('value') == 'False'
+nav_box = rectangle(nav)
+for name in ('FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage'):
+    page_box = rectangle(book.find("Window[@name='%s']" % name))
+    assert list_right <= page_box[0] and page_box[3] <= nav_box[1]
+    assert (page_box[0], page_box[2]) == (nav_box[0], nav_box[2])
+
+styles = []
+
+
+def collect_styles(window, path=''):
+    """Pin all 787 existing image, font, background and frame properties, excluding replaced filter buttons."""
+    path += '/' + window.get('name', '')
+    if window.get('name', '').startswith('Filter'):
+        return
+    for prop in window.findall('Property'):
+        name = prop.get('name')
+        if name in ('Font', 'Image', 'BackgroundEnabled', 'BackgroundColours', 'FrameEnabled', 'FrameColours',
+                    'TitlebarFont') or name.startswith('Frame') or name.startswith('Title'):
+            styles.append((path, name, prop.get('value')))
+    for child in window.findall('Window') + window.findall('AutoWindow'):
+        collect_styles(child, path)
+
+
+collect_styles(book)
+assert len(styles) == 787
+assert hashlib.sha256(json.dumps(styles, separators=(',', ':')).encode()).hexdigest() == \
+    '60c427f4f709f480401739064ffd3cd5adaf99f815446e4ae8c63cfd11a228f9'
 
 expected = {
     'DungeonbookIcons.png': '1f8c0171d312b6a7c432eb9640cd754089ace73f',
