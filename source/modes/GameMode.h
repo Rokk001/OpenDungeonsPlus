@@ -30,6 +30,7 @@
 #include "game/TrapProductionData.h"
 #include "entities/ItemInstance.h"
 #include "rooms/RoomAlchemyLab.h"
+#include "rooms/RoomManagerNavigation.h"
 
 #include "utils/ConfigManager.h"
 #include <CEGUI/EventArgs.h>
@@ -169,6 +170,25 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     //! \brief Shows/toggles the Dungeonbook (creature list and post feed) and closes it again
     bool toggleSocialWindow(const CEGUI::EventArgs& = {});
     //! \brief Connects the approved merchant controls to owner-only requests.
+//! \brief Connects the single management frame and its room row buttons.
+    void initializeRoomManager();
+    //! \brief Synchronizes owned rows, selection, page subscriptions and status dots.
+    void refreshRoomManager();
+    //! \brief Toggles the frame on its first owned room and closes other game windows.
+    bool toggleRoomManager(const CEGUI::EventArgs& = {});
+    //! \brief Selects a shortcut target, optionally closing other windows and toggling it.
+    bool selectRoomManagerType(RoomType type, bool closeOthers = false, bool toggle = true);
+    //! \brief Selects a clicked room row without closing other windows.
+    bool selectRoomManagerRow(const CEGUI::EventArgs&);
+    //! \brief Closes the frame and releases all page subscriptions.
+    bool closeRoomManager(const CEGUI::EventArgs& = {});
+    //! \brief Starts the merchant subscription when its embedded page is selected.
+    void showMerchantPage();
+    //! \brief Navigation state shared by shortcuts, ownership updates and the frame.
+    RoomManagerNavigation mRoomManagerNavigation;
+    //! \brief Page whose controls currently hold active subscriptions.
+    RoomType mRoomManagerPageType = RoomType::nullRoomType;
+
     void initializeMerchantWindow();
     //! \brief Opens or closes the merchant stock window and its live subscription.
     bool toggleMerchantWindow(const CEGUI::EventArgs& = {});

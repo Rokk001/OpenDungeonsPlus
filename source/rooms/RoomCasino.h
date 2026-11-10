@@ -67,6 +67,9 @@ public:
 class RoomCasino: public Room
 {
 public:
+    //! \brief Reports physical free places, including all reservations and ignoring payment or settings.
+    bool hasRoomManagerPlace() const;
+
     RoomCasino(GameMap* gameMap);
 
     RoomType getType() const override

@@ -222,9 +222,39 @@ public:
 };
 const CEGUI::String MiniMapCornerButton::WidgetTypeName("OD/MiniMapCornerBase");
 
-//! \brief Positions and sizes the four integrated plates as fractions of the current minimap.
+//! \brief Compacts the navigation icons in their fixed order whenever a room or sandbox icon is hidden.
+void layoutNavigationButtons(CEGUI::Window* root)
+{
+    if(!root->isChild("RoomManagerButton"))
+        return;
+    const CEGUI::URect first = root->getChild("GoalsButton")->getArea();
+    const CEGUI::UDim side = first.d_max.d_x - first.d_min.d_x;
+    CEGUI::UDim x = first.d_min.d_x;
+    const char* names[] = {"GoalsButton", "ResearchButton", "RoomManagerButton", "SocialButton", "WorkersButton", "SandboxButton"};
+    for(const char* name : names)
+    {
+        CEGUI::Window* button = root->getChild(name);
+        if(!button->isVisible())
+            continue;
+        button->setArea(CEGUI::URect(x, first.d_min.d_y, x + side, first.d_max.d_y));
+        x += side * 1.2f;
+    }
+}
+
+//! \brief Reflows navigation immediately after one of its optional icons changes visibility.
+bool navigationVisibilityChanged(const CEGUI::EventArgs& event)
+{
+    const CEGUI::WindowEventArgs& windowEvent = static_cast<const CEGUI::WindowEventArgs&>(event);
+    CEGUI::Window* root = windowEvent.window->getParent();
+    if(root != nullptr)
+        layoutNavigationButtons(root);
+    return true;
+}
+
+//! \brief Positions the integrated plates and compacts the icons above the current minimap.
 void layoutMiniMapButtons(CEGUI::Window* root)
 {
+    layoutNavigationButtons(root);
     if(!root->isChild("MiniMap"))
         return;
     const CEGUI::URect map = root->getChild("MiniMap")->getArea();
@@ -1581,6 +1611,7 @@ std::string scaleFormattedImageSizes(const CEGUI::String& ceguiText, float scale
 }
 }
 
+//! \brief Loads and registers the GUI sheets, including immediate navigation visibility reflow.
 Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFileName, Ogre::RenderTarget &renderTarget)
   : mUserScale(1.0f),
     mSoundEffectsManager(soundEffectsManager)
@@ -1702,6 +1733,12 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
 
     for(const std::pair<const guiSheet, CEGUI::Window*>& sheet : mSheets)
         registerWindow(sheet.second);
+    for(const char* name : {"RoomManagerButton", "WorkersButton", "SandboxButton"})
+    {
+        CEGUI::Window* button = mSheets[inGameMenu]->getChild(name);
+        button->subscribeEvent(CEGUI::Window::EventShown, CEGUI::Event::Subscriber(&navigationVisibilityChanged));
+        button->subscribeEvent(CEGUI::Window::EventHidden, CEGUI::Event::Subscriber(&navigationVisibilityChanged));
+    }
     applyScale(renderer.getDisplaySize());
 
     // Set the game version

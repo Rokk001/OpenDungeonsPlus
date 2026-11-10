@@ -20,7 +20,7 @@ void GameMode::showAlchemyLabWindow()
     if(!isConnected() || player == nullptr || player->getSeat() == nullptr ||
        player->getSeat()->getNbRooms(RoomType::alchemyLab) == 0)
         return;
-    mRootWindow->getChild("AlchemyLabWindow")->show();
+    mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage")->show();
     setLabModeShown(player->getSeat()->getLabMode());
     ClientNotification* request = new ClientNotification(ClientNotificationType::askLabWindow);
     request->mPacket << true;
@@ -30,16 +30,13 @@ void GameMode::showAlchemyLabWindow()
 //! \brief Toggles the laboratory window from the minimap control and the L key.
 bool GameMode::toggleAlchemyLabWindow(const CEGUI::EventArgs& event)
 {
-    if(mRootWindow->getChild("AlchemyLabWindow")->isVisible())
-        return hideAlchemyLabWindow(event);
-    showAlchemyLabWindow();
-    return true;
+    return selectRoomManagerType(RoomType::alchemyLab);
 }
 
 //! \brief Closes the overview and stops server snapshots for this player.
 bool GameMode::hideAlchemyLabWindow(const CEGUI::EventArgs&)
 {
-    mRootWindow->getChild("AlchemyLabWindow")->hide();
+    mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage")->hide();
     if(isConnected())
     {
         ClientNotification* request = new ClientNotification(ClientNotificationType::askLabWindow);
@@ -70,14 +67,14 @@ void GameMode::setLabModeShown(int32_t mode)
     if(player != nullptr && player->getSeat() != nullptr)
         player->getSeat()->setLabMode(mode);
     static const char* const labels[] = {"Automatic", "Healing and mana", "Combat potions"};
-    mRootWindow->getChild("AlchemyLabWindow/ModeButton")->setText(labels[mode]);
+    mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/ModeButton")->setText(labels[mode]);
 }
 
 //! \brief Replaces cauldron rows and herb totals with one coherent owner-seat snapshot.
 void GameMode::setLabWindowData(const LabWindowData& data)
 {
     CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(
-        mRootWindow->getChild("AlchemyLabWindow/CauldronList"));
+        mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/CauldronList"));
     if(list->getColumnCount() == 0)
     {
         list->addColumn("Cauldron", 0, CEGUI::UDim(0.17f, 0));
@@ -106,6 +103,6 @@ void GameMode::setLabWindowData(const LabWindowData& data)
         std::map<std::string, uint32_t>::const_iterator amount = data.mHerbs.find(herb.mId);
         stock << herb.mDisplay << " " << (amount == data.mHerbs.end() ? 0 : amount->second);
     }
-    mRootWindow->getChild("AlchemyLabWindow/HerbStock")->setText(stock.str());
+    mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/HerbStock")->setText(stock.str());
     setLabModeShown(data.mMode);
 }

@@ -669,3 +669,11 @@ void RoomInfirmary::restoreInitialEntityState()
     }
     updateShaman();
 }
+
+//! \brief A cot occupied by an admission or carry reservation is unavailable, regardless of healing settings.
+bool RoomInfirmary::hasRoomManagerPlace() const
+{
+    for(const std::pair<const size_t, CotInfo>& cot : mCots)
+        if(mPatients.find(cot.first) == mPatients.end()) return true;
+    return false;
+}

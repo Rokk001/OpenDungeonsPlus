@@ -698,3 +698,21 @@ RoomWorkshopTileData* RoomWorkshop::createTileData(Tile* tile)
 {
     return new RoomWorkshopTileData;
 }
+
+//! \brief Indicates a finished-trap backlog only while trap or box work needs this workshop's places.
+RoomManagerDot RoomWorkshop::getRoomManagerDot() const
+{
+    uint32_t finished = 0;
+    for(Tile* tile : mCoveredTiles) finished += tile->countEntitiesOnTile(GameEntityType::craftedTrap);
+    const bool hasWorkPlaces = !mUnusedSpots.empty() || !mCreaturesSpots.empty();
+    bool working = mTrapType != TrapType::nullTrapType || mCrackBox != nullptr;
+    // An order or delivered box is work even between completion and the next upkeep assignment.
+    for(Trap* trap : getGameMap()->getTraps())
+        if(trap->getSeat() == getSeat() && trap->getNbNeededCraftedTrap() > 0) working = true;
+    for(Tile* tile : mCoveredTiles)
+        for(GameEntity* entity : tile->getEntitiesInTile())
+            if(entity->getObjectType() == GameEntityType::giftBoxEntity &&
+                static_cast<GiftBoxEntity*>(entity)->getGiftBoxType() == GiftBoxType::item &&
+                static_cast<GiftBoxItem*>(entity)->canCrack(*getSeat())) working = true;
+    return workshopRoomManagerDot(working, hasWorkPlaces ? getNumActiveSpots() : 0, finished);
+}

@@ -1,0 +1,377 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GUILayout version="4">
+    <Window type="OD/FrameWindow" name="RoomManagerWindow">
+        <Property name="TitlebarFont" value="MedievalSharp-20" />
+        <Property name="FrameTopLeftImage" value="DungeonbookIcons/BookFrameTopLeft" />
+        <Property name="FrameTopRightImage" value="DungeonbookIcons/BookFrameTopRight" />
+        <Property name="FrameBottomLeftImage" value="DungeonbookIcons/BookFrameBottomLeft" />
+        <Property name="FrameBottomRightImage" value="DungeonbookIcons/BookFrameBottomRight" />
+        <Property name="FrameTopImage" value="DungeonbookIcons/BookFrameTop" />
+        <Property name="FrameLeftImage" value="DungeonbookIcons/BookFrameLeft" />
+        <Property name="FrameRightImage" value="DungeonbookIcons/BookFrameRight" />
+        <Property name="FrameBottomImage" value="DungeonbookIcons/BookFrameBottom" />
+        <Property name="Area" value="{{0.5,-440},{0.5,-355},{0.5,440},{0.5,355}}" />
+        <Property name="Text" value="Room Manager" />
+        <Property name="SizingEnabled" value="False" />
+        <Property name="Visible" value="False" />
+        <AutoWindow namePath="__auto_titlebar__">
+            <Property name="TitleTopLeftImage" value="DungeonbookIcons/BookFrameTopLeft" />
+            <Property name="TitleTopRightImage" value="DungeonbookIcons/BookFrameTopRight" />
+            <Property name="TitleTopImage" value="DungeonbookIcons/BookFrameTop" />
+            <Property name="TitleLeftImage" value="DungeonbookIcons/BookFrameLeft" />
+            <Property name="TitleRightImage" value="DungeonbookIcons/BookFrameRight" />
+            <Property name="TitleRuleImage" value="DungeonbookIcons/BookTitleRule" />
+            <Property name="CaptionHorzFormatting" value="CentreAligned" />
+            <Property name="CaptionCentred" value="True" />
+        </AutoWindow>
+        <Window type="OD/StaticText" name="RoomsLabel">
+            <Property name="Area" value="{{0.0145,0},{0,0},{0.34,0},{0,42}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Rooms (0)" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+        </Window>
+        <Window type="DefaultWindow" name="Rows">
+            <Property name="Area" value="{{0.0097,0},{0,42},{0.3382,0},{0,570}}" />
+            <Window type="DefaultWindow" name="Row0">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{0,66}}" />
+                <Window type="OD/StaticText" name="Highlight">
+                    <Property name="Area" value="{{0,0},{0.0152,0},{1,0},{0.9848,0}}" />
+                    <Property name="FrameEnabled" value="True" />
+                    <Property name="BackgroundEnabled" value="True" />
+                    <Property name="FrameColours" value="tl:FFF2C860 tr:FFF2C860 bl:FFF2C860 br:FFF2C860" />
+                    <Property name="BackgroundColours" value="tl:50F2C860 tr:50F2C860 bl:50F2C860 br:50F2C860" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Visible" value="False" />
+                </Window>
+                <Window type="OD/StaticImage" name="Icon">
+                    <Property name="Area" value="{{0.0294,0},{0.1212,0},{0.2132,0},{0.8788,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/StaticText" name="Name">
+                    <Property name="Area" value="{{0.25,0},{0,0},{0.9,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/InvisibleButton" name="Button">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="" />
+                </Window>
+                <Window type="OD/StaticText" name="Dot">
+                    <Property name="Area" value="{{0.9,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="•" />
+                    <Property name="Font" value="MedievalSharp-10" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                </Window>
+            </Window>
+            <Window type="DefaultWindow" name="Row1">
+                <Property name="Area" value="{{0,0},{0,66},{1,0},{0,132}}" />
+                <Window type="OD/StaticText" name="Highlight">
+                    <Property name="Area" value="{{0,0},{0.0152,0},{1,0},{0.9848,0}}" />
+                    <Property name="FrameEnabled" value="True" />
+                    <Property name="BackgroundEnabled" value="True" />
+                    <Property name="FrameColours" value="tl:FFF2C860 tr:FFF2C860 bl:FFF2C860 br:FFF2C860" />
+                    <Property name="BackgroundColours" value="tl:50F2C860 tr:50F2C860 bl:50F2C860 br:50F2C860" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Visible" value="False" />
+                </Window>
+                <Window type="OD/StaticImage" name="Icon">
+                    <Property name="Area" value="{{0.0294,0},{0.1212,0},{0.2132,0},{0.8788,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/StaticText" name="Name">
+                    <Property name="Area" value="{{0.25,0},{0,0},{0.9,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/InvisibleButton" name="Button">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="" />
+                </Window>
+                <Window type="OD/StaticText" name="Dot">
+                    <Property name="Area" value="{{0.9,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="•" />
+                    <Property name="Font" value="MedievalSharp-10" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                </Window>
+            </Window>
+            <Window type="DefaultWindow" name="Row2">
+                <Property name="Area" value="{{0,0},{0,132},{1,0},{0,198}}" />
+                <Window type="OD/StaticText" name="Highlight">
+                    <Property name="Area" value="{{0,0},{0.0152,0},{1,0},{0.9848,0}}" />
+                    <Property name="FrameEnabled" value="True" />
+                    <Property name="BackgroundEnabled" value="True" />
+                    <Property name="FrameColours" value="tl:FFF2C860 tr:FFF2C860 bl:FFF2C860 br:FFF2C860" />
+                    <Property name="BackgroundColours" value="tl:50F2C860 tr:50F2C860 bl:50F2C860 br:50F2C860" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Visible" value="False" />
+                </Window>
+                <Window type="OD/StaticImage" name="Icon">
+                    <Property name="Area" value="{{0.0294,0},{0.1212,0},{0.2132,0},{0.8788,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/StaticText" name="Name">
+                    <Property name="Area" value="{{0.25,0},{0,0},{0.9,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/InvisibleButton" name="Button">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="" />
+                </Window>
+                <Window type="OD/StaticText" name="Dot">
+                    <Property name="Area" value="{{0.9,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="•" />
+                    <Property name="Font" value="MedievalSharp-10" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                </Window>
+            </Window>
+            <Window type="DefaultWindow" name="Row3">
+                <Property name="Area" value="{{0,0},{0,198},{1,0},{0,264}}" />
+                <Window type="OD/StaticText" name="Highlight">
+                    <Property name="Area" value="{{0,0},{0.0152,0},{1,0},{0.9848,0}}" />
+                    <Property name="FrameEnabled" value="True" />
+                    <Property name="BackgroundEnabled" value="True" />
+                    <Property name="FrameColours" value="tl:FFF2C860 tr:FFF2C860 bl:FFF2C860 br:FFF2C860" />
+                    <Property name="BackgroundColours" value="tl:50F2C860 tr:50F2C860 bl:50F2C860 br:50F2C860" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Visible" value="False" />
+                </Window>
+                <Window type="OD/StaticImage" name="Icon">
+                    <Property name="Area" value="{{0.0294,0},{0.1212,0},{0.2132,0},{0.8788,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/StaticText" name="Name">
+                    <Property name="Area" value="{{0.25,0},{0,0},{0.9,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/InvisibleButton" name="Button">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="" />
+                </Window>
+                <Window type="OD/StaticText" name="Dot">
+                    <Property name="Area" value="{{0.9,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="•" />
+                    <Property name="Font" value="MedievalSharp-10" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                </Window>
+            </Window>
+            <Window type="DefaultWindow" name="Row4">
+                <Property name="Area" value="{{0,0},{0,264},{1,0},{0,330}}" />
+                <Window type="OD/StaticText" name="Highlight">
+                    <Property name="Area" value="{{0,0},{0.0152,0},{1,0},{0.9848,0}}" />
+                    <Property name="FrameEnabled" value="True" />
+                    <Property name="BackgroundEnabled" value="True" />
+                    <Property name="FrameColours" value="tl:FFF2C860 tr:FFF2C860 bl:FFF2C860 br:FFF2C860" />
+                    <Property name="BackgroundColours" value="tl:50F2C860 tr:50F2C860 bl:50F2C860 br:50F2C860" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Visible" value="False" />
+                </Window>
+                <Window type="OD/StaticImage" name="Icon">
+                    <Property name="Area" value="{{0.0294,0},{0.1212,0},{0.2132,0},{0.8788,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/StaticText" name="Name">
+                    <Property name="Area" value="{{0.25,0},{0,0},{0.9,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/InvisibleButton" name="Button">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="" />
+                </Window>
+                <Window type="OD/StaticText" name="Dot">
+                    <Property name="Area" value="{{0.9,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="•" />
+                    <Property name="Font" value="MedievalSharp-10" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                </Window>
+            </Window>
+            <Window type="DefaultWindow" name="Row5">
+                <Property name="Area" value="{{0,0},{0,330},{1,0},{0,396}}" />
+                <Window type="OD/StaticText" name="Highlight">
+                    <Property name="Area" value="{{0,0},{0.0152,0},{1,0},{0.9848,0}}" />
+                    <Property name="FrameEnabled" value="True" />
+                    <Property name="BackgroundEnabled" value="True" />
+                    <Property name="FrameColours" value="tl:FFF2C860 tr:FFF2C860 bl:FFF2C860 br:FFF2C860" />
+                    <Property name="BackgroundColours" value="tl:50F2C860 tr:50F2C860 bl:50F2C860 br:50F2C860" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Visible" value="False" />
+                </Window>
+                <Window type="OD/StaticImage" name="Icon">
+                    <Property name="Area" value="{{0.0294,0},{0.1212,0},{0.2132,0},{0.8788,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/StaticText" name="Name">
+                    <Property name="Area" value="{{0.25,0},{0,0},{0.9,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/InvisibleButton" name="Button">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="" />
+                </Window>
+                <Window type="OD/StaticText" name="Dot">
+                    <Property name="Area" value="{{0.9,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="•" />
+                    <Property name="Font" value="MedievalSharp-10" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                </Window>
+            </Window>
+            <Window type="DefaultWindow" name="Row6">
+                <Property name="Area" value="{{0,0},{0,396},{1,0},{0,462}}" />
+                <Window type="OD/StaticText" name="Highlight">
+                    <Property name="Area" value="{{0,0},{0.0152,0},{1,0},{0.9848,0}}" />
+                    <Property name="FrameEnabled" value="True" />
+                    <Property name="BackgroundEnabled" value="True" />
+                    <Property name="FrameColours" value="tl:FFF2C860 tr:FFF2C860 bl:FFF2C860 br:FFF2C860" />
+                    <Property name="BackgroundColours" value="tl:50F2C860 tr:50F2C860 bl:50F2C860 br:50F2C860" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Visible" value="False" />
+                </Window>
+                <Window type="OD/StaticImage" name="Icon">
+                    <Property name="Area" value="{{0.0294,0},{0.1212,0},{0.2132,0},{0.8788,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/StaticText" name="Name">
+                    <Property name="Area" value="{{0.25,0},{0,0},{0.9,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/InvisibleButton" name="Button">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="" />
+                </Window>
+                <Window type="OD/StaticText" name="Dot">
+                    <Property name="Area" value="{{0.9,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="•" />
+                    <Property name="Font" value="MedievalSharp-10" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                </Window>
+            </Window>
+            <Window type="DefaultWindow" name="Row7">
+                <Property name="Area" value="{{0,0},{0,462},{1,0},{0,528}}" />
+                <Window type="OD/StaticText" name="Highlight">
+                    <Property name="Area" value="{{0,0},{0.0152,0},{1,0},{0.9848,0}}" />
+                    <Property name="FrameEnabled" value="True" />
+                    <Property name="BackgroundEnabled" value="True" />
+                    <Property name="FrameColours" value="tl:FFF2C860 tr:FFF2C860 bl:FFF2C860 br:FFF2C860" />
+                    <Property name="BackgroundColours" value="tl:50F2C860 tr:50F2C860 bl:50F2C860 br:50F2C860" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="Visible" value="False" />
+                </Window>
+                <Window type="OD/StaticImage" name="Icon">
+                    <Property name="Area" value="{{0.0294,0},{0.1212,0},{0.2132,0},{0.8788,0}}" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="AspectMode" value="Shrink" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/StaticText" name="Name">
+                    <Property name="Area" value="{{0.25,0},{0,0},{0.9,0},{1,0}}" />
+                    <Property name="Font" value="MedievalSharp-8" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="HorzFormatting" value="WordWrapLeftAligned" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                </Window>
+                <Window type="OD/InvisibleButton" name="Button">
+                    <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="" />
+                </Window>
+                <Window type="OD/StaticText" name="Dot">
+                    <Property name="Area" value="{{0.9,0},{0,0},{1,0},{1,0}}" />
+                    <Property name="Text" value="•" />
+                    <Property name="Font" value="MedievalSharp-10" />
+                    <Property name="FrameEnabled" value="False" />
+                    <Property name="BackgroundEnabled" value="False" />
+                    <Property name="MousePassThroughEnabled" value="True" />
+                    <Property name="VertFormatting" value="CentreAligned" />
+                </Window>
+            </Window>
+        </Window>
+        <Window type="DefaultWindow" name="Pages">
+            <Property name="Area" value="{{0.35,0},{0,10},{0.99,0},{1,-12}}" />
+            <LayoutImport type="DefaultWindow" filename="RoomManagerGhostPage.layout" name="GhostPageImport" />
+            <LayoutImport type="DefaultWindow" filename="RoomManagerMerchantPage.layout" name="MerchantPageImport" />
+            <LayoutImport type="DefaultWindow" filename="RoomManagerTavernPage.layout" name="TavernPageImport" />
+            <LayoutImport type="DefaultWindow" filename="RoomManagerSpaPage.layout" name="SpaPageImport" />
+            <LayoutImport type="DefaultWindow" filename="RoomManagerInfirmaryPage.layout" name="InfirmaryPageImport" />
+            <LayoutImport type="DefaultWindow" filename="RoomManagerAlchemyPage.layout" name="AlchemyPageImport" />
+            <LayoutImport type="DefaultWindow" filename="RoomManagerCasinoPage.layout" name="CasinoPageImport" />
+            <LayoutImport type="DefaultWindow" filename="RoomManagerWorkshopPage.layout" name="WorkshopPageImport" />
+        </Window>
+    </Window>
+</GUILayout>

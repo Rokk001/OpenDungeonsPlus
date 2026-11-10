@@ -13,6 +13,9 @@ class InfirmaryShamanEntity;
 class RoomInfirmary : public Room
 {
 public:
+    //! \brief Reports physical free places, including all reservations and ignoring payment or settings.
+    bool hasRoomManagerPlace() const;
+
     //! \brief Describes one cot and its complete tile footprint.
     struct CotInfo
     {

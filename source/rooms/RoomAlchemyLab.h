@@ -2,6 +2,7 @@
 #define ROOMALCHEMYLAB_H
 
 #include "rooms/Room.h"
+#include "rooms/RoomManagerStatus.h"
 #include <cstdint>
 #include <cstddef>
 #include <map>
@@ -52,6 +53,9 @@ struct LabWindowData
 class RoomAlchemyLab : public Room
 {
 public:
+    //! \brief Reports output congestion and ingredient availability for the owner navigation dot.
+    RoomManagerDot getRoomManagerDot() const;
+
     //! \brief Creates empty laboratory storage and its first cosmetic timer.
     explicit RoomAlchemyLab(GameMap* map);
     //! \brief Returns the appended laboratory type.

@@ -29,8 +29,8 @@
 namespace
 {
 static const float ICON_DESIGN_SIZE = 64.0f;
-// Design width of the stock list inside the shared window frame (780 - 2 * 16 frame - 2 * 16 margin)
-static const float STOCK_DESIGN_WIDTH = 716.0f;
+// Design width of the stock list inside the Room Manager's right page, less its margins.
+static const float STOCK_DESIGN_WIDTH = 485.12f;
 static const float MARGIN_STEP = 5.0f;
 static const uint32_t QUALITY_COLOURS[] = {0xFF8A8A8A,0xFFFFFFFF,0xFF3E7BFF,0xFFA64DFF};
 
@@ -85,7 +85,7 @@ std::string historyText(const std::string& encoded)
 //! \brief Sets up one stock list and the approved owner controls after the layout imports are registered.
 void GameMode::initializeMerchantWindow()
 {
-    CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("MerchantWindow/StockList"));
+    CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/StockList"));
     list->setSelectionMode(CEGUI::MultiColumnList::RowSingle);
     if(list->getColumnCount() == 0)
     {
@@ -95,45 +95,42 @@ void GameMode::initializeMerchantWindow()
         list->addColumn("Price", 3, CEGUI::UDim(0.11f, 0));
         list->addColumn("Bonuses", 4, CEGUI::UDim(0.40f, 0));
     }
-    addEventConnection(mRootWindow->getChild("MerchantButton")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber(&GameMode::toggleMerchantWindow, this)));
-    addEventConnection(mRootWindow->getChild("MerchantWindow")->subscribeEvent(CEGUI::FrameWindow::EventCloseClicked,
-        CEGUI::Event::Subscriber(&GameMode::hideMerchantWindow, this)));
-    addEventConnection(mRootWindow->getChild("MerchantWindow/CloseButton")->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber(&GameMode::hideMerchantWindow, this)));
+
     addEventConnection(list->subscribeEvent(CEGUI::MultiColumnList::EventSelectionChanged,
         CEGUI::Event::Subscriber(&GameMode::refreshMerchantSelection, this)));
-    CEGUI::Slider* slider = static_cast<CEGUI::Slider*>(mRootWindow->getChild("MerchantWindow/MarginSlider"));
+    CEGUI::Slider* slider = static_cast<CEGUI::Slider*>(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/MarginSlider"));
     slider->setMaxValue(static_cast<float>(ConfigManager::getSingleton().getRoomConfigInt32("MerchantMarginMax")));
     slider->setClickStep(MARGIN_STEP);
     addEventConnection(slider->subscribeEvent(CEGUI::Slider::EventValueChanged,
         CEGUI::Event::Subscriber(&GameMode::changeMerchantMargin, this)));
-    addEventConnection(mRootWindow->getChild("MerchantWindow/ModeButton")->subscribeEvent(CEGUI::PushButton::EventClicked,
+    addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/ModeButton")->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&GameMode::cycleMerchantMode, this)));
-    addEventConnection(mRootWindow->getChild("MerchantWindow/BuyButton")->subscribeEvent(CEGUI::PushButton::EventClicked,
+    addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/BuyButton")->subscribeEvent(CEGUI::PushButton::EventClicked,
         CEGUI::Event::Subscriber(&GameMode::buyMerchantItem, this)));
-    mRootWindow->getChild("MerchantWindow")->hide();
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage")->hide();
 }
 
 //! \brief Opens the window only for a seat with a merchant room and starts its live subscription.
 bool GameMode::toggleMerchantWindow(const CEGUI::EventArgs&)
 {
-    if(mRootWindow->getChild("MerchantWindow")->isVisible()) return hideMerchantWindow();
-    Player* player = mGameMap->getLocalPlayer();
-    if(!isConnected() || player == nullptr || player->getSeat()->getNbRooms(RoomType::merchant) == 0) return true;
-    mRootWindow->getChild("MerchantWindow")->show();
-    mRootWindow->getChild("MerchantWindow/EmptyText")->setVisible(mMerchantItems.empty());
+    return selectRoomManagerType(RoomType::merchant);
+}
+
+//! \brief Starts live stock updates when the merchant page becomes selected.
+void GameMode::showMerchantPage()
+{
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage")->show();
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/EmptyText")->setVisible(mMerchantItems.empty());
     mMerchantSnapshotReceived = false;
     ClientNotification* request = new ClientNotification(ClientNotificationType::askMerchantWindow);
     request->mPacket << true;
     ODClient::getSingleton().queueClientNotification(request);
-    return true;
 }
 
 //! \brief Closes the merchant window and releases its server-side live subscription.
 bool GameMode::hideMerchantWindow(const CEGUI::EventArgs&)
 {
-    mRootWindow->getChild("MerchantWindow")->hide();
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage")->hide();
     if(isConnected())
     {
         ClientNotification* request = new ClientNotification(ClientNotificationType::askMerchantWindow);
@@ -147,7 +144,7 @@ bool GameMode::hideMerchantWindow(const CEGUI::EventArgs&)
 bool GameMode::changeMerchantMargin(const CEGUI::EventArgs&)
 {
     if(mMerchantUpdating || !isConnected()) return true;
-    const float value = static_cast<CEGUI::Slider*>(mRootWindow->getChild("MerchantWindow/MarginSlider"))->getCurrentValue();
+    const float value = static_cast<CEGUI::Slider*>(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/MarginSlider"))->getCurrentValue();
     const int32_t margin = static_cast<int32_t>(std::round(value / MARGIN_STEP) * MARGIN_STEP);
     ClientNotification* request = new ClientNotification(ClientNotificationType::askMerchantSettings);
     request->mPacket << margin << mMerchantModeShown;
@@ -172,9 +169,9 @@ void GameMode::setMerchantSettingsShown(int32_t margin, const std::string& mode)
     mMerchantUpdating = true;
     mMerchantMarginShown = margin;
     mMerchantModeShown = mode;
-    static_cast<CEGUI::Slider*>(mRootWindow->getChild("MerchantWindow/MarginSlider"))->setCurrentValue(static_cast<float>(margin));
-    mRootWindow->getChild("MerchantWindow/MarginLabel")->setText("Margin: " + Helper::toString(margin) + " %");
-    mRootWindow->getChild("MerchantWindow/ModeButton")->setText(mode == "fair" ? "Fair" : "Profit");
+    static_cast<CEGUI::Slider*>(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/MarginSlider"))->setCurrentValue(static_cast<float>(margin));
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/MarginLabel")->setText("Margin: " + Helper::toString(margin) + " %");
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/ModeButton")->setText(mode == "fair" ? "Fair" : "Profit");
     mMerchantUpdating = false;
 }
 
@@ -207,7 +204,7 @@ void GameMode::receiveMerchantWindow(ODPacket& packet)
     mMerchantSnapshotReceived = true;
     mMerchantItems = items;
     setMerchantSettingsShown(margin, mode);
-    CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("MerchantWindow/StockList"));
+    CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/StockList"));
     const CEGUI::ListboxItem* selected = list->getFirstSelectedItem();
     const uint32_t selectedId = selected == nullptr ? 0 : selected->getID();
     list->resetList();
@@ -241,11 +238,11 @@ void GameMode::receiveMerchantWindow(ODPacket& packet)
         }
         if(entry.first == selectedId) list->setItemSelectState(image, true);
     }
-    mRootWindow->getChild("MerchantWindow/HistoryText")->setText(history);
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/HistoryText")->setText(history);
     // An empty stock says why it is empty and what to do (decision 845)
-    mRootWindow->getChild("MerchantWindow/EmptyText")->setVisible(mMerchantItems.empty());
+    mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/EmptyText")->setVisible(mMerchantItems.empty());
     refreshMerchantSelection();
-    if(newDeal && isConnected() && mRootWindow->getChild("MerchantWindow")->isVisible())
+    if(newDeal && isConnected() && mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage")->isVisible())
     {
         ClientNotification* request = new ClientNotification(ClientNotificationType::askMerchantWindow);
         request->mPacket << true;
@@ -256,10 +253,10 @@ void GameMode::receiveMerchantWindow(ODPacket& packet)
 //! \brief Keeps the approved buy label and treasury-enabled state matched to the selected good.
 bool GameMode::refreshMerchantSelection(const CEGUI::EventArgs&)
 {
-    CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("MerchantWindow/StockList"));
+    CEGUI::MultiColumnList* list = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/StockList"));
     CEGUI::ListboxItem* selected = list->getFirstSelectedItem();
     Player* player = mGameMap->getLocalPlayer();
-    CEGUI::Window* button = mRootWindow->getChild("MerchantWindow/BuyButton");
+    CEGUI::Window* button = mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/BuyButton");
     button->setEnabled(false);
     button->setText("Buy");
     if(selected == nullptr || player == nullptr) return true;
@@ -278,7 +275,7 @@ bool GameMode::refreshMerchantSelection(const CEGUI::EventArgs&)
 bool GameMode::buyMerchantItem(const CEGUI::EventArgs&)
 {
     if(!isConnected()) return true;
-    CEGUI::ListboxItem* selected = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("MerchantWindow/StockList"))->getFirstSelectedItem();
+    CEGUI::ListboxItem* selected = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/StockList"))->getFirstSelectedItem();
     if(selected != nullptr)
     {
         ClientNotification* request = new ClientNotification(ClientNotificationType::askMerchantBuy);

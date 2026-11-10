@@ -711,3 +711,16 @@ void RoomAlchemyLab::splitRoom(Room& room, const std::vector<Tile*>& tiles)
         mPausedBatches.clear();
     }
 }
+
+//! \brief Uses reserved ingredients as running work, including unstaffed cauldrons and displaced paused batches.
+RoomManagerDot RoomAlchemyLab::getRoomManagerDot() const
+{
+    bool brewing = !mPausedBatches.empty();
+    for(const std::pair<Tile* const, TileData*>& entry : mTileData)
+    {
+        const AlchemyLabTileData* data = static_cast<const AlchemyLabTileData*>(entry.second);
+        if(data->mReserved) brewing = true;
+    }
+    return labRoomManagerDot(finishedCount() >= ConfigManager::getSingleton().getRoomConfigUInt32("AlchemyLabPotionCapacity"),
+        brewing, choosePotion() != nullptr);
+}

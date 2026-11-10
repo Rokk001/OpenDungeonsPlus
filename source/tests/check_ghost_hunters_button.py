@@ -1,15 +1,10 @@
-"""Check the ghost hunters button, the removed ghost room tile click and the start choice without compiling
-(GHOST-APPARATUS-PLAN G2, owner decision 800).
+"""Check ghost-room integration after room controls moved into Room Manager.
 
-- The ghost room window is opened only by its own icon button GhostHuntersButton in the icon row above the minimap,
-  directly next to MerchantButton, shown while the keeper owns a ghost room, tooltip "Ghost hunters", its painted icon a
-  capture trap in the reskin frame of the row; it stays on screen and overlaps nothing from 640x480 to 8K at UI scale
-  80 to 120 percent.
-- Clicking a ghost room tile no longer opens the window.
-- A new game starts on the apparatus that makes research points (the ghost press) when it is unlocked, otherwise on the
-  mana still until it is; the stored choice is never overwritten while it is locked, and the AI follows the same rule.
-Expected values are fixed, counted once on this branch. Every part fails on base 636e678c8 (no button, the tile click
-branch, the mana still start rule)."""
+The former ghost hunters HUD button is removed, and the shared Room Manager button
+uses the navigation icon and compacts with the rest of the row. The retained ghost
+icon asset, room tile ownership transport and apparatus start choices are still
+checked; dedicated Room Manager navigation probes cover opening and selection.
+"""
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
@@ -62,27 +57,25 @@ def udims(value):
     return [(float(a), float(b)) for a, b in re.findall(r"\{([-\d.]+),([-\d.]+)\}", value)]
 
 
-# The button in the layout: its kind, picture, tooltip and place next to the merchant button.
+# The single manager replaces the separate room buttons at the original production slot.
 def layout_button():
     gui = read("source/render/Gui.cpp")
     assert float(re.search(r"LAYOUT_DESIGN_WIDTH = ([0-9.]+)f", gui)[1]) == DESIGN_W
     assert float(re.search(r"LAYOUT_DESIGN_HEIGHT = ([0-9.]+)f", gui)[1]) == DESIGN_H
     root = ET.parse(repo / "gui/ModeGame.layout").getroot()
     nodes = {n.get("name"): n for n in root.iter("Window")}
-    button = nodes["GhostHuntersButton"]
+    button = nodes["RoomManagerButton"]
     p = props(button)
-    assert button.get("type") == "OD/GameTabButton", "an icon button like the merchant button"
-    assert p["TooltipText"] == "Ghost hunters"
-    assert p["NormalImage"] == "OpenDungeonsIcons/GhostHuntersButton"
-    assert p["Visible"] == "False", "hidden until the keeper owns a ghost room"
+    assert button.get("type") == "OD/GameTabButton"
+    assert p["TooltipText"] == "Room Manager"
+    assert p["NormalImage"] == "OpenDungeonsIcons/NavigationRooms"
+    assert p["Visible"] == "False"
     assert p["NavigationFrame"] == "True" and p["AlwaysOnTop"] == "True"
-    assert "Text" not in p, "the icon button draws no text"
-    # Fixed place: the slot right of the merchant button in the icon row above the minimap
-    assert p["Area"] == "{{0,340},{1,-224},{0,380},{1,-184}}", p["Area"]
-    merchant = udims(props(nodes["MerchantButton"])["Area"])
-    mine = udims(p["Area"])
-    assert mine[0][1] == merchant[2][1] + 8 and mine[1] == merchant[1] and mine[3] == merchant[3], "next to the merchant button"
-    # The whole row: every icon on its own 48 unit slot, ten icons, the alchemy lab and sandbox icons moved one slot on
+    assert "Text" not in p
+    assert p["Area"] == "{{0,100},{1,-224},{0,140},{1,-184}}"
+    for removed in ("ProductionButton", "InfirmaryButton", "MerchantButton", "GhostHuntersButton", "LabButton"):
+        # The options Production button and room construction controls are independent of the HUD row.
+        assert all(n.get("name") != removed for n in root.find("Window").findall("Window")), removed
     row = {}
     for node in root.iter("Window"):
         q = props(node)
@@ -91,9 +84,8 @@ def layout_button():
             if area[1] == (1.0, -224.0):
                 row[node.get("name")] = area
     assert {name: area[0][1] for name, area in row.items()} == {
-        "GoalsButton": 4, "ResearchButton": 52, "ProductionButton": 100, "SocialButton": 148, "WorkersButton": 196,
-        "InfirmaryButton": 244, "MerchantButton": 292, "GhostHuntersButton": 340, "LabButton": 388,
-        "SandboxButton": 436}, row
+        "GoalsButton": 4, "ResearchButton": 52, "RoomManagerButton": 100,
+        "SocialButton": 148, "WorkersButton": 196, "SandboxButton": 244}, row
     return root, nodes, row
 
 
@@ -114,18 +106,18 @@ def resolutions(root, nodes, row):
                                (3840, 2160), (7680, 4320)):
         for user in (0.8, 1.0, 1.2):
             scale = min(screen_w / DESIGN_W, screen_h / DESIGN_H) * user
-            mine = rect(row["GhostHuntersButton"], screen_w, screen_h, scale)
+            mine = rect(row["RoomManagerButton"], screen_w, screen_h, scale)
             assert 0 <= mine[0] < mine[2] <= screen_w and 0 <= mine[1] < mine[3] <= screen_h, (screen_w, screen_h, user, mine)
             assert mine[2] - mine[0] >= 40 * 0.8 * 0.625 - 1e-6, "large enough to click at the smallest screen"
             for name, area in others.items():
-                if name == "GhostHuntersButton":
+                if name == "RoomManagerButton":
                     continue
                 other = rect(area, screen_w, screen_h, scale)
                 apart = other[2] <= mine[0] or mine[2] <= other[0] or other[3] <= mine[1] or mine[3] <= other[1]
                 assert apart, ("overlaps", name, screen_w, screen_h, user)
             checked += 1
     assert checked == 24
-    print("ghost hunters button next to the merchant button, no overlap at 8 screens x 3 UI scales: ok")
+    print("room manager button in the navigation row, no overlap at 8 screens x 3 UI scales: ok")
 
 
 # The painted icon: its own atlas cell, a copy of its 256 pixel tile, the iron frame of the row tiles, a green-white trap glow.
@@ -184,31 +176,11 @@ def icon():
     print("ghost hunters icon: own atlas cell, iron row frame, painted stone and bronze, green-white trap light: ok")
 
 
-# The game code: the button opens the window like the merchant button, follows the ghost rooms, and the tile click is gone.
+# The ghost room keeps its tile ownership transport, while neither tiles nor figures open room controls.
 def game_code():
     game = read("source/modes/GameMode.cpp")
-    has(game, "the button opens and closes the window",
-        'guiSheet->getChild("GhostHuntersButton")->subscribeEvent(\n        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleGhostRoomWindow, this)));')
-    toggle = body(game, "bool GameMode::toggleGhostRoomWindow(")
-    has(toggle, "toggle like the merchant window", 'if(mRootWindow->getChild("GhostRoomWindow")->isVisible())\n        return hideGhostRoomWindow();',
-        "player->getSeat()->getNbRooms(RoomType::ghostRoom) == 0)", "showGhostRoomWindow(findOwnGhostRoomTile());")
-    frame = body(game, "void GameMode::onFrameStarted(")
-    has(frame, "the button follows the keeper's ghost rooms",
-        "merchantPlayer->getSeat()->getNbRooms(RoomType::ghostRoom) > 0;",
-        'mRootWindow->getChild("GhostHuntersButton")->setVisible(hasGhostRoom);',
-        'if(!hasGhostRoom && mRootWindow->getChild("GhostRoomWindow")->isVisible()) hideGhostRoomWindow();')
-    has(game, "hidden at mode start", 'guiSheet->getChild("GhostHuntersButton")->hide();')
-    find = body(game, "Tile* GameMode::findOwnGhostRoomTile() const")
-    has(find, "an own ghost room tile, the remembered one first",
-        "tileMatchesRoomType(*remembered, RoomType::ghostRoom)", "tile->getSeat() == player->getSeat() && tileMatchesRoomType(*tile, RoomType::ghostRoom)")
-    refresh = body(game, "void GameMode::refreshGhostRoomWindow()")
-    has(refresh, "a lost room hands the window on", "Tile* tile = findOwnGhostRoomTile();", "mGhostRoomX = tile->getX();")
-    has(read("source/modes/GameMode.h"), "declarations", "bool toggleGhostRoomWindow(const CEGUI::EventArgs& = {});",
-        "Tile* findOwnGhostRoomTile() const;")
-    # The click on a ghost room tile is removed: the window opens from the toggle only
-    assert "tileMatchesRoomType(*tileClicked, RoomType::ghostRoom)" not in game, "no ghost room tile click"
-    assert "showGhostRoomWindow(tileClicked)" not in game, "no ghost room tile click"
-    assert len(re.findall(r"\bshowGhostRoomWindow\(", game)) == 2, "only the definition and the toggle"
+    assert "showGhostRoomWindow(tileClicked)" not in game
+    assert "tileMatchesRoomType(*tileClicked, RoomType::ghostRoom)" not in game
     # Decision 825: the click opened nothing because a human client never knew the owner of a ghost room tile
     # (findOwnGhostRoomTile compares tile->getSeat()), so the toggle had no tile to open. The server now sends the
     # owner of ghost room tiles like that of the other rooms, and always the keeper's own tiles.
@@ -236,38 +208,21 @@ def game_code():
         return 1 if visual == "ghostRoom" and stored == -1 and own else stored
     assert [sent("ghostRoom", -1, True, False), sent("ghostRoom", -1, True, True), sent("ghostRoom", 2, False, True),
             sent("ghostRoom", -1, False, True)] == [-1, 1, 2, -1]
-    print("button opens the window, follows the ghost rooms, tile click removed, own tiles known: ok")
+    print("ghost room tile click removed and own tiles known: ok")
 
 
-# Decision 825: the merchant button (scale icon) is shown while the keeper has a merchant room and opens its window;
-# both buttons carry a tooltip and a context help line.
+# One tooltip and context help line now describe the single room navigation entry point.
 def merchant_and_tooltips():
     root = ET.parse(repo / "gui/ModeGame.layout").getroot()
     nodes = {n.get("name"): n for n in root.iter("Window")}
-    for name, tooltip in (("MerchantButton", "Merchant (K)"), ("GhostHuntersButton", "Ghost hunters")):
-        p = props(nodes[name])
-        assert p["TooltipText"] == tooltip, (name, p.get("TooltipText"))
-        help_lines = {u.get("name"): u.get("value") for u in nodes[name].findall("UserString")}
-        assert help_lines.get("ContextHelp", "").startswith(tooltip.split(" (")[0] + ":"), (name, help_lines)
-    assert props(nodes["MerchantButton"])["NormalImage"] == "OpenDungeonsIcons/MerchantButton", "the scale icon"
-    game = read("source/modes/GameMode.cpp")
-    frame = body(game, "void GameMode::onFrameStarted(")
-    has(frame, "shown while the keeper has a merchant room",
-        "merchantPlayer->getSeat()->getNbRooms(RoomType::merchant) > 0;", 'mRootWindow->getChild("MerchantButton")->setVisible(hasMerchant);')
-    merchant = read("source/modes/GameModeMerchant.cpp")
-    has(body(merchant, "void GameMode::initializeMerchantWindow()"), "the click opens the merchant window",
-        'addEventConnection(mRootWindow->getChild("MerchantButton")->subscribeEvent(CEGUI::PushButton::EventClicked,\n'
-        '        CEGUI::Event::Subscriber(&GameMode::toggleMerchantWindow, this)));')
-    toggle = body(merchant, "bool GameMode::toggleMerchantWindow(")
-    has(toggle, "opens the window and asks the server for its stock",
-        "player->getSeat()->getNbRooms(RoomType::merchant) == 0) return true;", 'mRootWindow->getChild("MerchantWindow")->show();',
-        "new ClientNotification(ClientNotificationType::askMerchantWindow);", "request->mPacket << true;")
-    assert game.count("initializeMerchantWindow();") == 1, "connected once"
+    button = nodes["RoomManagerButton"]
+    assert props(button)["TooltipText"] == "Room Manager"
+    help_lines = {u.get("name"): u.get("value") for u in button.findall("UserString")}
+    assert help_lines.get("ContextHelp", "").startswith("Room Manager:")
     assert "case ClientNotificationType::askMerchantWindow:" in read("source/network/ODServer.cpp")
-    # The test map has a merchant room for the keeper, so the button is shown there
     level = read("levels/skirmish/TestGhosts.level")
-    assert re.search(r"\[Room\]\n20\tMerchant1\t1\t16\n", level), "a merchant room of seat 1 on [Test] Ghosts"
-    print("merchant button shown with a merchant room and opens its window, tooltips on both buttons: ok")
+    assert re.search(r"\[Room\]\n20\tMerchant1\t1\t16\n", level)
+    print("room manager tooltip and merchant stock transport retained: ok")
 
 
 # The start choice of decision 800, read from the code and replayed for every room research level.
@@ -309,7 +264,7 @@ def main():
     game_code()
     merchant_and_tooltips()
     start_choice()
-    print("ghost hunters button: ok")
+    print("ghost room manager integration: ok")
 
 
 if __name__ == "__main__":

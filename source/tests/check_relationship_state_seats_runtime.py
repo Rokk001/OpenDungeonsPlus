@@ -11,7 +11,7 @@ fixed (ODClient.cpp, ServerNotificationType::pickNick, ServerMode::ModeGameLoade
 Packet layout, as written by ODPacket (SFML sf::Packet):
   - each message is a frame: uint32 payload size, big-endian, then the payload;
   - int32 (also every enum class value): big-endian; string: uint32 length + UTF-8 bytes; bool: one byte 0/1.
-  - hello: int32 type + string "OpenDungeons V <VERSION> / wire-3" (NetworkProtocol::WIRE_SCHEMA_SUFFIX)
+  - hello: int32 type + string "OpenDungeons V <VERSION> / wire-4" (NetworkProtocol::WIRE_SCHEMA_SUFFIX)
   - levelOK: int32 type
   - setNick: int32 type + string nick + 7 bools (the server asked for all seven in pickNick)
   - readyForSeatConfiguration, seatConfigurationSet: int32 type only
@@ -57,7 +57,7 @@ import check_relationship_state_load_headless as load  # noqa: E402  (same folde
 
 HERE = Path(__file__).resolve().parent
 SRC = HERE.parent
-WIRE_SUFFIX = " / wire-3"
+WIRE_SUFFIX = " / wire-4"
 PICK_NICK_FLAGS = 7
 
 

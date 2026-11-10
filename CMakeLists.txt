@@ -488,6 +488,7 @@ set(OD_SOURCEFILES
     ${SRC}/modes/GameMode.cpp
     ${SRC}/modes/GameModeMerchant.cpp
     ${SRC}/modes/GameModeAlchemy.cpp
+    ${SRC}/modes/GameModeRoomManager.cpp
     ${SRC}/modes/InputCommand.cpp
     ${SRC}/modes/GameEditorModeBase.cpp
     ${SRC}/modes/GameEditorModeConsole.cpp

@@ -20,6 +20,7 @@
 
 
 #include "game/WorkerJobs.h"
+#include "rooms/RoomManagerStatus.h"
 #include "game/WorkerTargets.h"
 
 #include <Ogre.h>
@@ -44,6 +45,11 @@ enum class GhostProduct : uint32_t { research = 0, mana = 1, crystal = 2 };
 class SeatData
 {
 public:
+    //! \brief Returns the server-authoritative owned room counts and status dots in navigation order.
+    const std::array<RoomManagerEntry, 8>& getRoomManagerEntries() const { return mRoomManagerEntries; }
+    //! \brief Replaces the complete owner-only room status snapshot.
+    void setRoomManagerEntries(const std::array<RoomManagerEntry, 8>& entries) { mRoomManagerEntries = entries; }
+
     //! \brief Returns the shared fractional ectoplasm bar of this keeper.
     double getEctoplasmLevels() const { return mEctoplasmLevels; }
     //! \brief Sets the exact shared bar after catching or consuming ghost levels.
@@ -220,6 +226,8 @@ protected:
     uint32_t mFreeWorkers = 0;
     //! \brief Shared ghost-room state, also retained by Seat save records.
     double mEctoplasmLevels = 0.0;
+    //! \brief Transient owner-only room availability, recomputed every server turn.
+    std::array<RoomManagerEntry, 8> mRoomManagerEntries = emptyRoomManagerEntries();
     //! A new game starts on the apparatus that makes research points, the ghost press (GHOSTS-PLAN D25, decision 800);
     //! until room research unlocks it, RoomGhostRoom::getChosenApparatus uses the mana still
     GhostProduct mGhostProduct = GhostProduct::research;

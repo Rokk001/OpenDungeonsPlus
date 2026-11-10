@@ -137,7 +137,7 @@ void SeatData::writeWorkerJobSettings(ODPacket& packet, const WorkerJobSettings&
 }
 
 //! \brief Reads changing seat data and the infirmary and ghost settings.
-//! \brief Receives changing seat data followed by shared room settings.
+//! \brief Receives changing seat data, shared room settings and the complete owner room status snapshot.
 bool SeatData::importFromPacketForUpdate(ODPacket& is)
 {
     // We only refresh data that changes over time (gold, mana, ...)
@@ -204,10 +204,21 @@ bool SeatData::importFromPacketForUpdate(ODPacket& is)
     mWorkerJobSettings = workerSettings;
     mFreeWorkers = freeWorkers;
     mWorkerJobCounts = counts;
+    std::array<RoomManagerEntry, 8> roomEntries = emptyRoomManagerEntries();
+    for(RoomManagerEntry& entry : roomEntries)
+    {
+        uint32_t dot = 0;
+        if(!(is >> entry.count >> dot) || dot > static_cast<uint32_t>(RoomManagerDot::red)) return false;
+        if(entry.type == RoomType::merchant && dot != static_cast<uint32_t>(RoomManagerDot::none)) return false;
+        if(entry.type != RoomType::merchant && dot == static_cast<uint32_t>(RoomManagerDot::none)) return false;
+        if(entry.type != RoomType::alchemyLab && dot == static_cast<uint32_t>(RoomManagerDot::yellow)) return false;
+        entry.dot = static_cast<RoomManagerDot>(dot);
+    }
+    mRoomManagerEntries = roomEntries;
     return true;
 }
 
-//! \brief Sends owner-only changing seat data followed by infirmary and ghost room settings.
+//! \brief Sends owner-only changing seat data, room settings and the complete room status snapshot.
 void SeatData::exportToPacketForUpdate(ODPacket& os) const
 {
     os << mGold;
@@ -240,6 +251,7 @@ void SeatData::exportToPacketForUpdate(ODPacket& os) const
     writeWorkerJobSettings(os, mWorkerJobSettings);
     os << mFreeWorkers;
     for(uint32_t value : mWorkerJobCounts) os << value;
+    for(const RoomManagerEntry& entry : mRoomManagerEntries) os << entry.count << static_cast<uint32_t>(entry.dot);
 }
 
 //! \brief Sends full seat data followed by shared room settings.

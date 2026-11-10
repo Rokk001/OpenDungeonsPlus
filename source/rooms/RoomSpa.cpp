@@ -1635,3 +1635,10 @@ bool RoomSpa::importFromStream(std::istream& is)
 
     return true;
 }
+
+//! \brief Finds a bath block for the smallest size while retaining live and saved reservations.
+bool RoomSpa::hasRoomManagerPlace() const
+{
+    SpaBlock block;
+    return SpaLayout::findFreeBlock(getPoolSet(), getTakenSet(), 1, 1, block);
+}

@@ -27,7 +27,7 @@
 namespace NetworkProtocol
 {
     //! Network record schema; checked by the existing hello before any level data.
-    static const std::string WIRE_SCHEMA_SUFFIX = " / wire-3";
+    static const std::string WIRE_SCHEMA_SUFFIX = " / wire-4";
 }
 
 /*! \brief This class is an utility class to transfer data through ODSocketClient.

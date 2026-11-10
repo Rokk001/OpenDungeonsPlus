@@ -438,12 +438,20 @@ assert button_box[0] == row_boxes['WorkersButton'] and button_box[1] == -224
 # The icons of the row stand on a 48 unit grid starting at the minimap edge; every slot is used once
 assert sorted(row_boxes.values()) == list(range(4, 4 + 48 * len(row_boxes), 48)), row_boxes
 assert len(set(row_boxes.values())) == len(row_boxes), 'two icons share a slot'
-# The icons that are always there (goals, skill, production, dungeonbook) come first and the Workers icon is the next one, so it
-# is never separated from them by free slots; icons that only show up later (room buttons, sandbox) follow behind it
-always = [row_boxes[n] for n in ('GoalsButton', 'ResearchButton', 'ProductionButton', 'SocialButton')]
-assert sorted(always) == [4, 52, 100, 148], always
-assert row_boxes['WorkersButton'] == 196, 'the Workers icon is the first one after the always visible icons'
-assert all(row_boxes[n] > 196 for n in ('MerchantButton', 'LabButton', 'SandboxButton', 'InfirmaryButton'))
+# Room Manager replaces the old production and separate room buttons. Its optional slot
+# is compacted at runtime so Workers always follows the visible Dungeonbook icon.
+assert {name: row_boxes[name] for name in ('GoalsButton', 'ResearchButton', 'RoomManagerButton',
+                                         'SocialButton', 'WorkersButton', 'SandboxButton')} == {
+    'GoalsButton': 4, 'ResearchButton': 52, 'RoomManagerButton': 100,
+    'SocialButton': 148, 'WorkersButton': 196, 'SandboxButton': 244}
+assert 'ProductionButton' not in row_boxes
+assert all(name not in row_boxes for name in ('MerchantButton', 'LabButton', 'InfirmaryButton', 'GhostHuntersButton'))
+arrange = read('source/render/Gui.cpp')
+assert 'void layoutNavigationButtons(CEGUI::Window* root)' in arrange
+assert 'if(!button->isVisible())' in arrange
+assert 'button->setArea(CEGUI::URect(x, first.d_min.d_y, x + side, first.d_max.d_y));' in arrange
+assert 'CEGUI::Window::EventShown, CEGUI::Event::Subscriber(&navigationVisibilityChanged)' in arrange
+assert 'CEGUI::Window::EventHidden, CEGUI::Event::Subscriber(&navigationVisibilityChanged)' in arrange
 # It stays left of the control panel toggle that ends the row and well inside the minimap column of the bottom bar
 assert button_box[2] <= 400, 'the Workers icon is not floating towards the middle of the screen'
 

@@ -162,6 +162,9 @@ struct RoomSpaRim
 class RoomSpa: public Room
 {
 public:
+    //! \brief Reports physical free places, including all reservations and ignoring payment or settings.
+    bool hasRoomManagerPlace() const;
+
     //! \brief Creates an empty lava spa on the given map. The bath is paid by the keeper until it is set otherwise.
     RoomSpa(GameMap* gameMap);
 

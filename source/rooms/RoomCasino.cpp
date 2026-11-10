@@ -704,3 +704,11 @@ void RoomCasino::sendGameResult(Creature& winner, Creature& loser)
         ODServer::getSingleton().sendCosmeticEvent(seat->getPlayer(), event);
     }
 }
+
+//! \brief Counts unreserved gambling positions independently of payout and creature purses.
+bool RoomCasino::hasRoomManagerPlace() const
+{
+    for(const std::pair<Tile* const, RoomCasinoGame>& entry : mCreaturesSpots)
+        if(entry.second.mCreature1.mCreature == nullptr || entry.second.mCreature2.mCreature == nullptr) return true;
+    return false;
+}

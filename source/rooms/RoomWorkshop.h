@@ -19,6 +19,7 @@
 #define ROOMWORKSHOP_H
 
 #include "rooms/Room.h"
+#include "rooms/RoomManagerStatus.h"
 #include "rooms/RoomType.h"
 
 enum class TrapType;
@@ -50,6 +51,9 @@ public:
 //! \brief Crafts traps and cracks researched item boxes using the existing workshop work cycle.
 class RoomWorkshop: public Room{
 public:
+    //! \brief Reports output congestion and ingredient availability for the owner navigation dot.
+    RoomManagerDot getRoomManagerDot() const;
+
     RoomWorkshop(GameMap* gameMap);
 
     RoomType getType() const override

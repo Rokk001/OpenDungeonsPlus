@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
-    <Window type="OD/FrameWindow" name="InfirmaryWindow">
-        <Property name="Area" value="{{0.5,-280},{0.5,-218},{0.5,280},{0.5,218}}" />
-        <Property name="Text" value="Infirmary" />
-        <Property name="SizingEnabled" value="False" />
-        <Property name="AlwaysOnTop" value="True" />
+    <Window type="DefaultWindow" name="InfirmaryPage">
+        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Window type="OD/MultiColumnList" name="PatientList">
             <Property name="Area" value="{{0,20},{0,40},{1,-20},{0,290}}" />
         </Window>
@@ -17,6 +14,7 @@
             <Property name="Text" value="Healing on" />
         </Window>
         <Window type="OD/StaticText" name="ThresholdLabel">
+            <Property name="Font" value="MedievalSharp-8" />
             <Property name="Area" value="{{0,20},{0,350},{0,220},{0,374}}" />
             <Property name="Text" value="Discharge at: 100 %" />
             <Property name="FrameEnabled" value="False" />
@@ -24,10 +22,6 @@
         </Window>
         <Window type="OD/SettingsSlider" name="ThresholdSlider">
             <Property name="Area" value="{{0,230},{0,354},{1,-20},{0,370}}" />
-        </Window>
-        <Window type="OD/Button" name="CloseButton">
-            <Property name="Area" value="{{1,-140},{1,-50},{1,-20},{1,-18}}" />
-            <Property name="Text" value="Close" />
         </Window>
     </Window>
 </GUILayout>

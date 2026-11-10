@@ -3096,3 +3096,41 @@ bool RoomTavern::importFromStream(std::istream& is)
 
     return true;
 }
+
+//! \brief Tests physical table places independently of beer research, payer and guest leisure eligibility.
+bool RoomTavern::hasRoomManagerPlace() const
+{
+    if(!hasTavernBlock(mCoveredTiles)) return false;
+    for(Tile* table : getTableTiles())
+    {
+        for(uint32_t index = 0; index < TAVERN_SEATS_PER_TABLE; ++index)
+        {
+            const RoomTavernSeat seat(table, index);
+            if(!isFreeSeat(seat, 1)) continue;
+            bool reserved = false;
+            for(const std::pair<const std::string, RoomTavernPendingSpot>& pending : mPendingSpots)
+            {
+                uint32_t places = 1;
+                for(Creature* creature : getGameMap()->getCreatures())
+                    if(creature->getName() == pending.first) places = getPlacesOf(*creature);
+                const RoomTavernSeat& taken = pending.second.mSeat;
+                if(taken.mTable == table && taken.mIndex <= index && index < taken.mIndex + places) reserved = true;
+            }
+            if(!reserved) return true;
+        }
+        // Stool footprints depend on their body; existing room creatures provide the exact size probes.
+        for(Creature* creature : getGameMap()->getCreatures())
+        {
+            for(uint32_t index = TAVERN_SEATS_PER_TABLE; index < TAVERN_PLACES_PER_TABLE; ++index)
+            {
+                const RoomTavernSeat seat(table, index);
+                if(!isFreeStool(*creature, seat)) continue;
+                bool reserved = false;
+                for(const std::pair<const std::string, RoomTavernPendingSpot>& pending : mPendingSpots)
+                    if(pending.second.mSeat == seat) reserved = true;
+                if(!reserved) return true;
+            }
+        }
+    }
+    return false;
+}

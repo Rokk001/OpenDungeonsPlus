@@ -161,6 +161,41 @@ namespace
         ODServer::getSingleton().queueServerNotification(notification);
     }
 
+    //! \brief Collects owner-only managed rooms and aggregates their physical availability every turn.
+    std::array<RoomManagerEntry, 8> countRoomManagerEntries(GameMap* gameMap, Seat* seat)
+    {
+        std::array<RoomManagerEntry, 8> entries = emptyRoomManagerEntries();
+        for(RoomManagerEntry& entry : entries)
+        {
+            const std::vector<Room*> rooms = gameMap->getRoomsByTypeAndSeat(entry.type, seat);
+            entry.count = static_cast<uint32_t>(rooms.size());
+            bool freePlace = false;
+            for(Room* room : rooms)
+            {
+                switch(entry.type)
+                {
+                    case RoomType::tavern: freePlace = static_cast<RoomTavern*>(room)->hasRoomManagerPlace() || freePlace; break;
+                    case RoomType::spa: freePlace = static_cast<RoomSpa*>(room)->hasRoomManagerPlace() || freePlace; break;
+                    case RoomType::infirmary: freePlace = static_cast<RoomInfirmary*>(room)->hasRoomManagerPlace() || freePlace; break;
+                    case RoomType::casino: freePlace = static_cast<RoomCasino*>(room)->hasRoomManagerPlace() || freePlace; break;
+                    case RoomType::alchemyLab:
+                    {
+                        const RoomManagerDot dot = static_cast<RoomAlchemyLab*>(room)->getRoomManagerDot();
+                        if(static_cast<uint32_t>(dot) > static_cast<uint32_t>(entry.dot)) entry.dot = dot;
+                        break;
+                    }
+                    case RoomType::workshop:
+                        if(static_cast<RoomWorkshop*>(room)->getRoomManagerDot() == RoomManagerDot::red) entry.dot = RoomManagerDot::red;
+                        break;
+                    default: break;
+                }
+            }
+            if(entry.type == RoomType::tavern || entry.type == RoomType::spa || entry.type == RoomType::infirmary || entry.type == RoomType::casino)
+                entry.dot = freePlace ? RoomManagerDot::green : RoomManagerDot::red;
+        }
+        return entries;
+    }
+
     //! \brief Sends the current patients of all owned infirmaries and their remaining healing time.
     void notifyInfirmaryWindow(GameMap* gameMap, Player* player)
     {
@@ -776,6 +811,7 @@ void ODServer::startNewTurn(double timeSinceLastTurn)
         uint64_t configuredFixed = 0;
         for(uint32_t fixed : seat->getWorkerJobSettings().fixed) configuredFixed += fixed;
         seat->setWorkerJobCounts(configuredFixed < livingWorkers ? livingWorkers - static_cast<uint32_t>(configuredFixed) : 0, workerCounts);
+        seat->setRoomManagerEntries(countRoomManagerEntries(gameMap, seat));
         seat->exportToPacketForUpdate(serverNotification->mPacket);
         serverNotification->mPacket << goals;
         ODServer::getSingleton().queueServerNotification(serverNotification);

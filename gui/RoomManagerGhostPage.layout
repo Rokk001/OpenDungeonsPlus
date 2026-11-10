@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <GUILayout version="4">
-    <Window type="OD/FrameWindow" name="GhostRoomWindow">
-        <!-- Game look (decision 845): the shared game window frame and title of every room window (only the
-             Dungeonbook has its own), MedievalSharp texts in game colours on a dark framed panel. Sizes are 1024x768 design pixels; Gui scales them with the resolution and the UI scale and
-             shrinks the window to the screen. Every text wraps inside its panel so nothing sticks out. -->
-        <Property name="Area" value="{{0.5,-280},{0.5,-210},{0.5,280},{0.5,210}}" />
-        <Property name="Text" value="Ghost room" />
-        <Property name="SizingEnabled" value="False" />
-        <Property name="AlwaysOnTop" value="True" />
+    <Window type="DefaultWindow" name="GhostPage">
+        <!-- Existing room controls embedded in the Room Manager frame. -->
+        <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Window type="OD/StaticText" name="GhostInfoPanel">
             <Property name="Area" value="{{0.03,0},{0.03,0},{0.97,0},{0.56,0}}" />
             <Property name="FrameEnabled" value="True" />
@@ -49,11 +44,6 @@
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="Revive own: On" />
             <Property name="TooltipText" value="Hunters bring own ghosts to their corpse in the crypt" />
-        </Window>
-        <Window type="OD/Button" name="CloseButton">
-            <Property name="Area" value="{{0.5,-64},{0.88,0},{0.5,64},{0.98,0}}" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="Close" />
         </Window>
     </Window>
 </GUILayout>
