@@ -19,7 +19,7 @@ inline int classifyLoadSave(const std::string& filename, bool valid, const Level
     return valid && info.mIsSandbox ? 2 : 1;
 }
 
-//! rief A file offered by the load screen with its filter kind (0 Campaign, 1 Skirmish, 2 Sandbox, 3 Replays).
+//! \brief A file offered by the load screen with its filter kind (0 Campaign, 1 Skirmish, 2 Sandbox, 3 Replays).
 struct LoadEntry
 {
     std::string mPath;
@@ -27,13 +27,13 @@ struct LoadEntry
     int mKind;
 };
 
-//! rief Orders entries newest first, breaking ties by path.
+//! \brief Orders entries newest first, breaking ties by path.
 inline bool newerLoadEntry(const LoadEntry& left, const LoadEntry& right)
 {
     return left.mModified == right.mModified ? left.mPath < right.mPath : left.mModified > right.mModified;
 }
 
-//! rief Kind of the newest entry of all kinds, Campaign (0) when there is none.
+//! \brief Kind of the newest entry of all kinds, Campaign (0) when there is none.
 inline int openingLoadKind(const std::vector<LoadEntry>& entries)
 {
     int kind = 0;
@@ -51,7 +51,7 @@ inline int openingLoadKind(const std::vector<LoadEntry>& entries)
     return kind;
 }
 
-//! rief Entries of one kind, newest first.
+//! \brief Entries of one kind, newest first.
 inline std::vector<LoadEntry> visibleLoadEntries(const std::vector<LoadEntry>& entries, int kind)
 {
     std::vector<LoadEntry> result;
@@ -62,7 +62,7 @@ inline std::vector<LoadEntry> visibleLoadEntries(const std::vector<LoadEntry>& e
     return result;
 }
 
-//! rief What confirming does: 0 nothing, 1 load a saved game, 2 play a replay.
+//! \brief What confirming does: 0 nothing, 1 load a saved game, 2 play a replay.
 inline int loadConfirmAction(int kind, bool hasSelection)
 {
     return !hasSelection ? 0 : (kind == 3 ? 2 : 1);
