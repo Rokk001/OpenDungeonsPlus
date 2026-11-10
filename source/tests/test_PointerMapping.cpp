@@ -82,6 +82,26 @@ BOOST_AUTO_TEST_CASE(test_client_and_render_size_differ)
     BOOST_CHECK_EQUAL(point.mX, 1920);
     BOOST_CHECK_EQUAL(point.mY, 1200);
     point = PointerMapping::clientToGamePointer(5000, 5000, 1920, 1200, 3840, 2400, 100);
-    BOOST_CHECK_EQUAL(point.mX, (1919 * 3840) / 1920);
-    BOOST_CHECK_EQUAL(point.mY, (1199 * 2400) / 1200);
+    BOOST_CHECK_EQUAL(point.mX, 3839);
+    BOOST_CHECK_EQUAL(point.mY, 2399);
+}
+
+BOOST_AUTO_TEST_CASE(test_differing_sizes_map_first_and_last_pixel)
+{
+    PointerMapping::Point point = PointerMapping::clientToGamePointer(0, 0, 1920, 1200, 3840, 2400, 100);
+    BOOST_CHECK_EQUAL(point.mX, 0);
+    BOOST_CHECK_EQUAL(point.mY, 0);
+    point = PointerMapping::clientToGamePointer(1919, 1199, 1920, 1200, 3840, 2400, 100);
+    BOOST_CHECK_EQUAL(point.mX, 3839);
+    BOOST_CHECK_EQUAL(point.mY, 2399);
+    // Shrinking
+    point = PointerMapping::clientToGamePointer(3839, 2399, 3840, 2400, 1920, 1200, 100);
+    BOOST_CHECK_EQUAL(point.mX, 1919);
+    BOOST_CHECK_EQUAL(point.mY, 1199);
+    // Inverse direction as used for moving the Windows pointer
+    BOOST_CHECK_EQUAL(PointerMapping::scaleCoordinate(1919, 1920, 3840), 3839);
+    BOOST_CHECK_EQUAL(PointerMapping::scaleCoordinate(3839, 3840, 1920), 1919);
+    BOOST_CHECK_EQUAL(PointerMapping::scaleCoordinate(0, 3840, 1920), 0);
+    BOOST_CHECK_EQUAL(PointerMapping::scaleCoordinate(7, 100, 100), 7);
+    BOOST_CHECK_EQUAL(PointerMapping::scaleCoordinate(0, 1, 100), 0);
 }

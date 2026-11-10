@@ -38,6 +38,17 @@ namespace PointerMapping
         return (std::max)(0, (std::min)(value, size - 1));
     }
 
+    //! \brief Maps a coordinate from [0, fromSize - 1] to [0, toSize - 1] so that 0 gives 0 and the last
+    //! pixel gives the last pixel. Equal sizes (or a size below 1) keep the value.
+    inline int scaleCoordinate(int value, int fromSize, int toSize)
+    {
+        if(fromSize == toSize || fromSize < 1 || toSize < 1)
+            return value;
+        if(fromSize == 1)
+            return 0;
+        return static_cast<int>(static_cast<long long>(value) * (toSize - 1) / (fromSize - 1));
+    }
+
     //! \brief Converts the pointer position in client coordinates to the game pointer position.
     //! The game pointer is in render window pixels and equals the client position (1:1). Only if the
     //! client area and the render window differ in size (display scaling of the system) the position
@@ -51,14 +62,8 @@ namespace PointerMapping
         Point result;
         const int x = clampToSize(clientX, clientWidth);
         const int y = clampToSize(clientY, clientHeight);
-        if(clientWidth == gameWidth || clientWidth < 1)
-            result.mX = x;
-        else
-            result.mX = static_cast<int>(static_cast<long long>(x) * gameWidth / clientWidth);
-        if(clientHeight == gameHeight || clientHeight < 1)
-            result.mY = y;
-        else
-            result.mY = static_cast<int>(static_cast<long long>(y) * gameHeight / clientHeight);
+        result.mX = scaleCoordinate(x, clientWidth, gameWidth);
+        result.mY = scaleCoordinate(y, clientHeight, gameHeight);
         result.mX = clampToSize(result.mX, gameWidth);
         result.mY = clampToSize(result.mY, gameHeight);
         return result;

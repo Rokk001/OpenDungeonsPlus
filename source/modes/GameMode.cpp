@@ -2245,6 +2245,7 @@ void GameMode::updateCameraControls(float elapsed)
     CameraInput input = CameraInput::read(down);
     if(input.x == 0.0f && input.y == 0.0f && input.zoom == 0.0f && input.swivel == 0.0f
         && !down(OIS::KC_X) && !down(OIS::KC_Z)
+        && ODFrameListener::getSingleton().getRenderWindow()->isActive()
         && config.getInputValue(Config::AUTOSCROLL, "No", false) == "Yes")
     {
         CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
