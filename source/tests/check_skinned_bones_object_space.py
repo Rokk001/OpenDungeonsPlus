@@ -11,6 +11,7 @@ This check requires that the game keeps OGRE's object space bones, and that ever
 bone array also binds world_matrix and moves the skinned position (and directions) into world space with it.
 """
 from pathlib import Path
+import os
 import re
 
 repo = Path(__file__).resolve().parents[2]
@@ -18,6 +19,27 @@ repo = Path(__file__).resolve().parents[2]
 
 def read(path):
     return (repo / path).read_text(encoding='utf-8')
+
+
+def check_pinned_ogre():
+    """When the pinned Ogre source is present, confirm that it keeps the bones in object space."""
+    deps = Path(os.environ.get('BUILD_DEPS_ROOT', Path(os.environ.get('USERPROFILE', '')) / 'build-deps'))
+    src = deps / 'src/ogre/OgreMain/src'
+    if not (src / 'OgreMeshManager.cpp').is_file():
+        return 'pinned Ogre source absent, shaders only'
+    def ogre(name):
+        return (src / name).read_text(encoding='utf-8', errors='replace')
+    assert 'bool MeshManager::mBonesUseObjectSpace = true;' in ogre('OgreMeshManager.cpp')
+    assert 'AutoConstantDefinition(ACT_BONE_MATRIX_ARRAY_3x4,        "world_matrix_array_3x4"' in ogre('OgreGpuProgramParams.cpp')
+    params = ogre('OgreAutoParamDataSource.cpp')
+    assert 'return mWorldMatrixArray + int(MeshManager::getBonesUseObjectSpace());' in params
+    # world_matrix stays the entity transform, the first entry before the bones
+    assert 'return mWorldMatrixArray[0];' in params
+    sub = ogre('OgreSubEntity.cpp')
+    transforms = sub[sub.index('void SubEntity::getWorldTransforms('):sub.index('SubEntity::getNumWorldTransforms(')]
+    assert '*xform++ = mParentEntity->_getParentNodeFullTransform();' in transforms
+    assert '? mParentEntity->mBoneMatrices' in transforms
+    return 'pinned Ogre source confirmed'
 
 
 # The game must not switch OGRE to world space bones, which the RTSS skinning of the menu models and animated
@@ -74,4 +96,4 @@ outliner = render.split('void RenderManager::rrAddOutliner')[1].split('void Rend
 assert 'setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4)' in outliner
 assert 'setNamedAutoConstant("worldMatrix", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX)' in outliner
 
-print('ok')
+print('ok: ' + check_pinned_ogre())
