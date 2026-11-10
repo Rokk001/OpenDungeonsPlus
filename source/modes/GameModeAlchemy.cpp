@@ -5,6 +5,7 @@
 #include "entities/CreatureDefinition.h"
 #include "social/SocialProfileCache.h"
 #include "game/SkillManager.h"
+#include "game/SkillType.h"
 #include "entities/PotionDefinition.h"
 #include "game/Player.h"
 #include "game/Seat.h"

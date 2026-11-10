@@ -88,7 +88,7 @@ public:
     const std::string& getName()const{return name;}unsigned getID()const{return id;}
     void setText(const std::string& s){text=s;}void setProperty(const std::string& key,const std::string& s){properties[key]=s;}
     void show(){visible=true;}void hide(){visible=false;}void moveToFront(){}void setVisible(bool v){visible=v;}
-    void setEnabled(bool v){enabled=v;}bool isEnabled()const{return enabled;}void setAlpha(float a){alpha=a;}
+    void setEnabled(bool v){enabled=v;}bool isDisabled()const{return !enabled;}void setAlpha(float a){alpha=a;}
     bool isSelected()const{return selected;}void setSelected(bool v){selected=v;}
     float getCurrentValue()const{return value;}void setCurrentValue(float v){value=v;}
     ListboxItem* getFirstSelectedItem(){return selectedItem;}

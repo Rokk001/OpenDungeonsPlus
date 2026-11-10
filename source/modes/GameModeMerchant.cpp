@@ -305,7 +305,7 @@ bool GameMode::buyMerchantItem(const CEGUI::EventArgs&)
 {
     refreshMerchantSelection();
     if(!isConnected() || !mMerchantConfirmationOpen ||
-        !mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/Confirmation/OK")->isEnabled()) return true;
+        mRootWindow->getChild("RoomManagerWindow/Pages/MerchantPage/Confirmation/OK")->isDisabled()) return true;
     ClientNotification* request = new ClientNotification(ClientNotificationType::askMerchantBuy);
     request->mPacket << mMerchantPendingId;
     ODClient::getSingleton().queueClientNotification(request);
