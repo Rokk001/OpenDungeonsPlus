@@ -171,7 +171,7 @@ public:
     bool mHasPendingPosition;
     int mPendingX, mPendingY;
     int mLastPointerX, mLastPointerY;
-    //! rief Window procedure that was replaced to see the wheel messages, and its window
+    //! \brief Window procedure that was replaced to see the wheel messages, and its window
     void* mOldWindowProc = nullptr;
     void* mHookedWindow = nullptr;
     void hookWindowWheel();

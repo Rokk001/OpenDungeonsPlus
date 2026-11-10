@@ -297,7 +297,8 @@ int main()
     assert(context.getMouseCursor().getPosition().d_x == 700);
 
     // Reset inside a callback invalidates the old in-flight batch including wheel.
-    p.mode.pressed = [&p]() { p.setMousePosition(600,700); };
+    std::function<void()> resetPointer = [&p]() { p.setMousePosition(600,700); };
+    p.mode.pressed = resetPointer;
     p.mPointerEvents = {{WM_LBUTTONDOWN,500,500,0},{WM_LBUTTONUP,500,500,0},{WM_MOUSEWHEEL,500,500,120},{WM_MOUSEMOVE,900,900,0}};
     p.mode.records.clear();
     p.dispatchPointerEvents();
