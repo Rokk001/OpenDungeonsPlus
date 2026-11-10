@@ -472,6 +472,7 @@ ODServer::~ODServer()
 }
 
 //! \brief Shows the loading picture while synchronously reading the level and starting the server.
+//! \brief Restores campaign save context before configuring players and their campaign effects.
 bool ODServer::startServer(const std::string& creator, const std::string& levelFilename, ServerMode mode, bool useMasterServer,
     bool relationships)
 {
@@ -513,6 +514,16 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         return false;
     }
     LoadingScreen::loadStepDone(LoadingScreen::LOAD_LEVEL_READ);
+
+    if(mode == ServerMode::ModeGameLoaded)
+    {
+        LevelInfo info;
+        Campaign& campaign = Campaign::getSingleton();
+        if(MapHandler::loadCampaignProgress() && MapHandler::getMapInfo(levelFilename, info))
+            campaign.restoreSavedLevel(info.mCampaignSave, levelFilename);
+        else
+            campaign.stopCampaign();
+    }
 
     // The relationships option comes from the game setup, a saved game brings its own setting
     if(mode == ServerMode::ModeEditor)
@@ -615,10 +626,12 @@ bool ODServer::startServer(const std::string& creator, const std::string& levelF
         {
             // In the campaign the AI level is the difficulty chosen for the campaign
             KeeperAIType aiType = KeeperAIType::normal;
-            if(seat->getAiLevel() != KeeperAIType::nbAI)
+            if((mode == ServerMode::ModeGameLoaded) && Campaign::getSingleton().isActive())
+                aiType = static_cast<KeeperAIType>(Campaign::getSingleton().getLevelDifficulty());
+            else if(seat->getAiLevel() != KeeperAIType::nbAI)
                 aiType = seat->getAiLevel();
             else if(Campaign::getSingleton().isActive())
-                aiType = static_cast<KeeperAIType>(Campaign::getSingleton().getDifficulty());
+                aiType = static_cast<KeeperAIType>(Campaign::getSingleton().getLevelDifficulty());
             seat->setConfigPlayerId(Seat::aITypeToPlayerId(aiType));
         }
         else if(seat->getPlayerType().compare(Seat::PLAYER_TYPE_HUMAN) == 0)
@@ -1881,14 +1894,15 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             gameMap->applySkirmishSkillStates();
 
             // The complete campaign Heartstone gives the keepers the Summon champion spell
-            if(Campaign::getSingleton().isActive() && Campaign::getSingleton().isHeartstoneComplete())
+            if(Campaign::getSingleton().isActive())
             {
+                const bool championAvailable = Campaign::getSingleton().isLevelHeartstoneComplete();
                 for(Seat* seat : gameMap->getSeats())
                 {
                     if(seat->isRogueSeat() || (seat->getPlayer() == nullptr) || !seat->getPlayer()->getIsHuman())
                         continue;
 
-                    seat->setSkillAvailability(SkillType::spellSummonChampion, true, true);
+                    seat->setSkillAvailability(SkillType::spellSummonChampion, championAvailable, championAvailable);
                 }
             }
 
@@ -1899,7 +1913,9 @@ bool ODServer::processClientNotifications(ODSocketClient* clientSocket)
             }
 
             // A creature that the last campaign level brought along comes to the dungeon
-            LevelScriptRunner::spawnKeptMinion(*gameMap);
+            // In a saved game it is already on the map; the progress creature belongs to a fresh start.
+            if(mServerMode != ServerMode::ModeGameLoaded)
+                LevelScriptRunner::spawnKeptMinion(*gameMap);
 
             mSeatsConfigured = true;
             gameMap->notifySeatsConfigured();

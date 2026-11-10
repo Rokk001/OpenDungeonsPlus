@@ -33,9 +33,10 @@ public:
     bool deleteSelectedButtonPressed(const CEGUI::EventArgs&);
     bool listReplaysClicked(const CEGUI::EventArgs&);
 
-private:
-    bool checkReplayValid(const std::string& replayFileName, std::string& mapDescription, std::string& errorMsg);
+    //! \brief Checks replay compatibility and extracts its description.
+    static bool checkReplayValid(const std::string& replayFileName, std::string& mapDescription, std::string& errorMsg);
 
+private:
     std::vector<std::string> mFilesList;
 };
 
