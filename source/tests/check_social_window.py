@@ -30,7 +30,7 @@ check(m is not None, 'a fixed size centred area is expected')
 width, height = int(m[3]) - int(m[1]), int(m[4]) - int(m[2])
 check(width <= 1024 - 64 and height <= 768 - 120, 'the window must fit into 1024x768 with the HUD: %dx%d' % (width, height))
 check('name="Visible" value="False"' in layout, 'hidden by default')
-for name in ('HomePage', 'CreaturesLabel', 'FilterAll', 'FilterWorkers', 'FilterFighters', 'FilterUnhappy', 'ListRows',
+for name in ('HomePage', 'CreaturesLabel', 'Filter', 'ListRows',
              'ListScroll', 'FeedRows', 'FeedScroll', 'FeedPage', 'ProfilePage', 'SocialHolder', 'PostThumb0', 'ValuesPage',
              'InventoryPage', 'Header', 'BackButton', 'PrevButton', 'NextButton', 'NavBar', 'NavFeed', 'NavProfile',
              'NavValues', 'NavInventory'):
@@ -62,12 +62,17 @@ for page in pages[1:5] + ['Header']:
     own = social_root.find("Window[@name='%s']" % page).findall('Property')
     check(any(p.get('name') == 'Visible' and p.get('value') == 'False' for p in own),
           page + ' is hidden until a creature is opened')
-filter_areas = [area(n) for n in ('FilterAll', 'FilterWorkers', 'FilterFighters', 'FilterUnhappy')]
-check(all(abs((a[2] - a[0]) - (filter_areas[0][2] - filter_areas[0][0])) < 0.01 for a in filter_areas),
-      'equal filter widths')
+filter_window = social_root.find("Window[@name='HomePage']/Window[@name='Filter']")
+check(filter_window.get('type') == 'OD/Combobox', 'filter is a dropdown')
+check(filter_window.find("Property[@name='ReadOnly']").get('value') == 'True', 'filter selects a fixed entry')
+check(area('CreaturesLabel')[2] == area('Filter')[0], 'dropdown sits beside the roster heading')
+check(not any('name="Filter%s"' % name in layout for name in ('All', 'Workers', 'Fighters', 'Unhappy')),
+      'old filter buttons are replaced')
 nav_areas = [area(n) for n in ('NavFeed', 'NavProfile', 'NavValues', 'NavInventory')]
 check(all(abs((a[2] - a[0]) - (nav_areas[0][2] - nav_areas[0][0])) < 1e-6 for a in nav_areas), 'equal navigation widths')
-check(area('NavBar')[1] >= max(area(p)[3] for p in pages[:5]) - 1e-6, 'the navigation bar sits below the pages')
+check(area('NavBar')[1] >= max(area(p)[3] for p in pages[1:5]) - 1e-6,
+      'the navigation bar sits below the selected creature pages')
+check(area('NavBar')[0] >= area('ListPanel')[2], 'navigation leaves the persistent roster visible')
 check('Area" value="{{0.5' in layout and 'UDim' not in layout, 'design pixels only')
 
 hud = read('gui/ModeGame.layout')
@@ -179,7 +184,7 @@ for name in ('CreaturesLabel', 'Name', 'Head', 'Text', 'NameText', 'KeeperText')
 check('EventMouseDoubleClick' not in window, 'no double click window')
 selection = window[window.index('bool SocialWindow::onListRowClicked'):]
 selection = selection[:selection.index('\n}\n')]
-check('Page::Profile' in selection, 'selecting a creature shows its profile')
+check('Page::Inventory' in selection, 'selecting a creature opens its inventory')
 check('fillProfilePage(mProfilePage)' in window and 'createCreatureProfilePage(holder)' in window,
       'the profile uses the shared fill function')
 tabs = window[window.index('void SocialWindow::setTabState'):window.index('bool SocialWindow::isVisible')]

@@ -239,7 +239,7 @@ collect_boxes(book, (0.0, 0.0, 1.0, 1.0), '', boxes)
 pages = ('HomePage', 'FeedPage', 'ProfilePage', 'ValuesPage', 'InventoryPage')
 for page in pages + ('Header', 'NavBar'):
     assert page in boxes, page
-assert boxes['NavBar'][0][1] >= max(boxes[p][0][3] for p in pages) - 1e-6, 'the pages end above the navigation bar'
+assert boxes['NavBar'][0][1] >= max(boxes[p][0][3] for p in pages[1:]) - 1e-6, 'the pages end above the navigation bar'
 header_bottom = boxes['Header'][0][3]
 for name, (box, element) in boxes.items():
     page = name.split('/')[0]
@@ -265,13 +265,14 @@ for arrow in ('BackButton', 'PrevButton', 'NextButton'):
 prev_box, name_box, next_box = (boxes['Header/' + n][0] for n in ('PrevButton', 'NameText', 'NextButton'))
 assert prev_box[2] <= name_box[0] and name_box[2] <= next_box[0], 'the arrows sit around the name'
 assert boxes['Header/BackButton'][0][2] <= prev_box[0], 'the back arrow sits left in the head'
-filters = ['HomePage/Filter' + f for f in ('All', 'Workers', 'Fighters', 'Unhappy')]
-for f in filters:
-    assert f in boxes and boxes[f][0][3] <= boxes['HomePage/ListRows'][0][1], f + ' sits in the head of the start page'
+filters = ['HomePage/Filter']
+assert boxes[filters[0]][1].get('type') == 'OD/Combobox'
+assert boxes['HomePage/CreaturesLabel'][0][2] <= boxes[filters[0]][0][0]
+assert boxes[filters[0]][0][1] < boxes['HomePage/ListRows'][0][1]
 buttons = [n for n, (b, e) in boxes.items() if e.get('type') in ('OD/Button', 'OD/InvisibleButton')]
 for n in buttons:
     allowed = n.startswith('NavBar/') or n.startswith('Header/') or n in filters or (
-        n.startswith('HomePage/ListRows/Row') and n.endswith('/Button'))
+        n.startswith('HomePage/ListRows/Row') and n.endswith('/Button')) or n.endswith('/ProfileLink')
     assert allowed, n + ' is a button in mid-page'
 # Rows of the list and of the feeds, scrolled by their scrollbars, no overlap
 list_rows = sorted(n for n in boxes if re.fullmatch(r'HomePage/ListRows/Row\d', n))
@@ -635,8 +636,9 @@ NICK = 'W' * 20  # the nick of a keeper has at most 20 characters (MenuModeMulti
 assert 'nickCeguiStr.length() > 20' in (repo / 'source/modes/MenuModeMultiplayerServer.cpp').read_text()
 
 require('HomePage/CreaturesLabel', 'MedievalSharp-10', texts=('Known creatures (999 of 999)',), wrap=True)
-for f, text in zip(filters, ('[ All ]', '[ Workers ]', '[ Fighters ]', '[ Unhappy ]')):
-    require(f, 'MedievalSharp-8', texts=(text,), pad_w=14.0, pad_h=6.0)
+# The combo area includes its popup; its edit box holds one choice at a time.
+for text in ('All', 'Workers', 'Fighters', 'Unhappy'):
+    require('HomePage/Filter', 'MedievalSharp-8', texts=(text,), pad_w=28.0, pad_h=6.0)
 require('HomePage/FeedTitle', 'MedievalSharp-10', texts=('All-Creature Feed',))
 for row in list_rows:
     require(row + '/Name', 'MedievalSharp-8', lines=2, texts=WIDEST_NAMES_8, wrap=True)
@@ -655,7 +657,8 @@ require('ProfilePage/NameText', 'MedievalSharp-10', texts=WIDEST_NAMES_10, wrap=
 require('ProfilePage/KeeperText', 'MedievalSharp-8', texts=('Keeper: ' + NICK, 'Keeper: Player 1'), wrap=True)
 require('ProfilePage/InfoText', 'MedievalSharp-8', lines=4, texts=('Mood: Furious', 'Level 30'))
 require('ProfilePage/PostsTitle', 'MedievalSharp-10', texts=('Posts (200)',))
-require('ProfilePage/SocialHolder', 'MedievalSharp-8', lines=6)
+# The narrow profile viewport scrolls the full shared document.
+require('ProfilePage/SocialHolder', 'MedievalSharp-8', lines=4)
 require('ProfilePage/PostsEmpty', 'MedievalSharp-8', lines=2, texts=('Nothing posted yet.',))
 # Values: rounded numbers (two decimals at most, every magnitude); a pair "a / b" wraps after the slash
 pairs = tuple(a + ' / ' + b for a in WORST_NUMBERS[-3:] for b in WORST_NUMBERS[-3:])
@@ -686,6 +689,23 @@ for name in need:
 state_lines = []
 wrapped_lines = {}
 narrowest_link = 1e9
+# The original sheet keeps its columns in a scrollable document beside the persistent roster. Pin the production
+# dimensions independently; all existing full-text samples and font/size requirements below still apply.
+values_page = boxes['ValuesPage'][1]
+assert values_page.get('type') == 'OD/ScrollablePane'
+assert values_page.find("Property[@name='ContentPaneAutoSized']").get('value') == 'False'
+assert boxes['ValuesPage'][0][1] >= boxes['Header'][0][3], 'scroll viewport starts below the header'
+assert 'const float documentWidth = 820.0f * scale;' in gui
+assert 'const float documentHeight = 500.0f * scale;' in gui
+assert 'const CEGUI::URect& area = mScaledWindows.at(child).area;' in gui
+for edge in ('d_min.d_x', 'd_max.d_x'):
+    assert 'area.' + edge + '.d_scale * documentWidth' in gui
+for edge in ('d_min.d_y', 'd_max.d_y'):
+    assert 'area.' + edge + '.d_scale * documentHeight' in gui
+assert 'pane->setContentPaneArea(CEGUI::Rectf(0, 0, documentWidth, documentHeight));' in gui
+VALUES_WIDTH, VALUES_HEIGHT = 820.0, 500.0
+values_box = boxes['ValuesPage'][0]
+values_w, values_h = values_box[2] - values_box[0], values_box[3] - values_box[1]
 for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
     for user in (0.8, 1.2):
         scale = min(screen_w / 1024.0, screen_h / 768.0) * user
@@ -701,6 +721,21 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             box = boxes[name][0]
             width = (box[2] - box[0]) * client_w
             height = (box[3] - box[1]) * client_h
+            if name.startswith('ValuesPage/'):
+                width = (box[2] - box[0]) / values_w * VALUES_WIDTH
+                height = (box[3] - box[1]) / values_h * VALUES_HEIGHT
+                # Both stock scrollbars are 12 screen pixels. Every complete text cell must be reachable at
+                # some valid scroll position, with neither the frame nor the persistent roster covering it.
+                viewport_w = values_w * client_w - 12.0 / scale
+                viewport_h = values_h * client_h - 12.0 / scale
+                left = (box[0] - values_box[0]) / values_w * VALUES_WIDTH
+                top = (box[1] - values_box[1]) / values_h * VALUES_HEIGHT
+                for start, length, viewport, document in ((left, width, viewport_w, VALUES_WIDTH),
+                                                          (top, height, viewport_h, VALUES_HEIGHT)):
+                    assert length <= viewport + 1e-6, ('cell exceeds viewport', name, screen_w, screen_h, user)
+                    offset = min(start, max(0.0, document - viewport))
+                    assert offset <= start + 1e-6 and start + length <= offset + viewport + 1e-6, \
+                        ('cell unreachable by scrolling', name, screen_w, screen_h, user)
             if wrap:
                 # every text in full: all its wrapped lines in the height, its widest word in the width
                 wrapped = [wrap_lines(font, t, width - pad_w) for t in texts]
@@ -720,10 +755,12 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             ratio = max(wanted_h / height, wanted_w / width)
             if ratio > tightest.get(page, (0.0, ''))[0]:
                 tightest[page] = (ratio, name)
-        # The friend and foe names of the shared profile page are one-line buttons from PROFILE_LINK_LEFT to the right
-        # margin of the holder (Gui::layoutCreatureProfilePage): the widest name must fit whole
+        # The compact profile puts the label above its one-line links, which use the full row width.
+        # The noncompact creature card retains PROFILE_LINK_LEFT beside its label.
+        assert 'float linkY = compact ? y + lineHeight : y;' in gui
+        assert 'compact ? PROFILE_SIDE_MARGIN : PROFILE_LINK_LEFT' in gui
         holder = boxes['ProfilePage/SocialHolder'][0]
-        link_width = (holder[2] - holder[0]) * client_w - LINK_LEFT - 32.0
+        link_width = (holder[2] - holder[0]) * client_w - 16.0 - 32.0
         assert link_width >= max(text_width('MedievalSharp-8', n) for n in WIDEST_NAMES_8) + 2.0,             ('a friend name is wider than its link', screen_w, screen_h, user, round(link_width, 1))
         narrowest_link = min(narrowest_link, link_width)
         # the slot pictures stay squares of at least 24 screen pixels, the portraits at least 40
@@ -733,7 +770,8 @@ for screen_w, screen_h in ((640, 480), (1024, 768), (1920, 1200), (7680, 4320)):
             assert edge >= 12.0, ('slot too small', screen_w, screen_h, user, edge)
         # the one attribute row: each cell in screen pixels and the room its widest and highest text takes
         cell = boxes['ValuesPage/Strength'][0]
-        cell_w, cell_h = (cell[2] - cell[0]) * client_w, (cell[3] - cell[1]) * client_h
+        cell_w = (cell[2] - cell[0]) / values_w * VALUES_WIDTH
+        cell_h = (cell[3] - cell[1]) / values_h * VALUES_HEIGHT
         attribute_w = max(text_width('MedievalSharp-8', part) + 6.0 for name in ATTRIBUTES
                           for t in ATTRIBUTE_TEXTS[name] for part in t.split('\n'))
         state_lines.append('%dx%d UI %d%%: attribute row 4 cells of %dx%d px, widest line %.0f%% of the width, '
