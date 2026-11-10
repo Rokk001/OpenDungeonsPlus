@@ -138,6 +138,26 @@ bool AbstractApplicationMode::mouseReleased(const OIS::MouseEvent& arg, OIS::Mou
         Gui::convertButton(id));
 }
 
+//! \brief Drops GUI capture and held buttons without dispatching click or release actions.
+void AbstractApplicationMode::cancelMouseInput()
+{
+    InputManager& inputManager = mModeManager->getInputManager();
+    inputManager.mLMouseDown = inputManager.mRMouseDown = inputManager.mMMouseDown = false;
+    inputManager.mMouseDownOnCEGUIWindow = false;
+    inputManager.mMouseDownOnDraggableTileContainer = false;
+    inputManager.mCommandState = InputCommandState::infoOnly;
+    CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
+    CEGUI::Window* capture = context.getInputCaptureWindow();
+    if(capture != nullptr)
+        capture->releaseInput();
+    // CEGUI has no cancel-button injection. Clear its actual held-button state without
+    // injecting an up: injectMouseButtonUp can also generate a click on capture loss.
+    CEGUI::SystemKeys& keys = const_cast<CEGUI::SystemKeys&>(context.getSystemKeys());
+    for(int button = 0; button < 5; ++button)
+        keys.mouseButtonReleased(Gui::convertButton(static_cast<OIS::MouseButtonID>(button)));
+    ODFrameListener::getSingleton().getFrameStatistics().endDrag();
+}
+
 bool AbstractApplicationMode::keyPressed(const OIS::KeyEvent& arg)
 {
     if(handleScreenshotKey(arg))

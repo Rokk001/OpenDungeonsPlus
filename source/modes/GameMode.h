@@ -121,6 +121,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
      * Finalize the selection of tiles or drop a creature when the user releases the mouse button.
      */
     virtual bool mouseReleased  (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
+    //! \brief Cancels world selection, pending hand drops and mouse camera rotation.
+    void cancelMouseInput() override;
 
     //! \brief Handle the keyboard input.
     virtual bool keyPressed     (const OIS::KeyEvent &arg) override;

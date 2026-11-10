@@ -21,7 +21,6 @@
 #include <OgreVector.h>
 #include <OgreSingleton.h>
 #include <OISMouse.h>
-#include "modes/WheelAccumulator.h"
 
 #include <memory>
 #include <vector>
@@ -60,7 +59,11 @@ enum class SelectionEntityWanted;
 
 class Creature;
 
+//! \brief Owns input devices and delivers ordered absolute Windows pointer input.
 class InputManager: public Ogre::Singleton<InputManager>
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+    , public OIS::MouseListener
+#endif
 {
 public:
 
@@ -77,7 +80,7 @@ public:
 
     void setWidthAndHeight(int width, int height);
     //! \brief Moves the system cursor, the OIS mouse state and the GUI cursor to the given
-    //! window position (clamped to the window) and drops motion accumulated before the call.
+    //! window position (clamped to the window) and cancels gestures accumulated before the call.
     void setMousePosition(int x, int y);
     void setCurrentAMode(AbstractApplicationMode& mode);
     //! \brief Captures the mouse. On Windows (OIS/DirectInput) the game pointer is the position of the
@@ -139,7 +142,18 @@ public:
     };
     //! \brief Delivers queued Windows pointer events to the current mode.
     void dispatchPointerEvents();
+    //! \brief Invalidates queued input and cancels held GUI and mode actions safely.
+    void cancelPointerInput();
+    //! \brief Updates fallback OIS events from the absolute Windows pointer.
+    bool prepareFallbackPointer();
+    //! \brief Forwards fallback motion and wheel input with absolute Windows coordinates.
+    bool mouseMoved(const OIS::MouseEvent& arg) override;
+    //! \brief Forwards fallback presses with absolute Windows coordinates.
+    bool mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID button) override;
+    //! \brief Forwards fallback releases only for a delivered press.
+    bool mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID button) override;
     std::vector<PointerEvent> mPointerEvents;
+    unsigned int mPointerEpoch = 0;
     int mPointerButtons = 0;
     int mCapturedButtons = 0;
     //! \brief Reads the Windows pointer as game pointer position. Returns false if not possible.
@@ -157,8 +171,6 @@ public:
     bool mHasPendingPosition;
     int mPendingX, mPendingY;
     int mLastPointerX, mLastPointerY;
-    //! rief Wheel movement taken from the window messages (see WheelAccumulator)
-    WheelAccumulator mWheel;
     //! rief Window procedure that was replaced to see the wheel messages, and its window
     void* mOldWindowProc = nullptr;
     void* mHookedWindow = nullptr;
