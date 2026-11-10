@@ -1,70 +1,125 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <GUILayout version="4">
     <Window type="DefaultWindow" name="MerchantPage">
-        <!-- Existing room controls embedded in the Room Manager frame. -->
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="Visible" value="False" />
-        <Window type="OD/MultiColumnList" name="StockList">
-            <Property name="Area" value="{{0,16},{0,10},{1,-16},{0,270}}" />
-            <Property name="Font" value="MedievalSharp-10" />
-        </Window>
-        <!-- Shown over the empty stock list: why it is empty and what to do (decision 845) -->
-        <Window type="OD/StaticText" name="EmptyText">
-            <Property name="Area" value="{{0.04,0},{0,30},{0.96,0},{0,260}}" />
-            <Property name="Font" value="MedievalSharp-10" />
-            <Property name="TextColours" value="FFF2C860" />
-            <Property name="Text" value="The tables are empty: no goods for sale yet. Goods come from your dungeon: creatures sell items they carry but do not need, and workers bring item bags lying in your dungeon to the merchant tables. As soon as goods lie here, select one and buy it for your hand." />
+        <Window type="OD/StaticText" name="Title">
+            <Property name="Area" value="{{0.03,0},{0.01,0},{0.97,0},{0.09,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
-            <Property name="VertFormatting" value="CentreAligned" />
             <Property name="MousePassThroughEnabled" value="True" />
-        </Window>
-        <Window type="OD/StaticText" name="MarginLabel">
-            <Property name="TooltipText" value="Creatures pay the keeper's margin on every merchant purchase and sale." />
-            <Property name="Area" value="{{0.03,0},{0,282},{0.32,0},{0,314}}" />
             <Property name="Font" value="MedievalSharp-10" />
-            <Property name="TextColours" value="FFF2C860" />
-            <Property name="Text" value="Margin: 10 %" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Text" value="Merchant" />
+            <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
-        </Window>
-        <Window type="OD/SettingsSlider" name="MarginSlider">
-            <Property name="TooltipText" value="Creatures pay the keeper's margin on every merchant purchase and sale." />
-            <Property name="Area" value="{{0.34,0},{0,290},{0.73,0},{0,306}}" />
-            <Property name="MaxValue" value="50" />
-            <Property name="ClickStepSize" value="5" />
         </Window>
         <Window type="OD/Button" name="ModeButton">
-            <Property name="Area" value="{{0.76,0},{0,280},{0.97,0},{0,316}}" />
+            <Property name="Area" value="{{0.03,0},{0.11,0},{0.23,0},{0.18,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
             <Property name="Text" value="Fair" />
-            <Property name="TooltipText" value="Fair: the creature that needs the item most buys it. Profit: the strongest creature buys it." />
+            <Window type="OD/StaticImage" name="Check">
+                <Property name="Area" value="{{0.02,0},{0.2,0},{0.18,0},{0.8,0}}" />
+                <Property name="Image" value="OpenDungeonsIcons/CheckIcon" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Visible" value="False" />
+            </Window>
         </Window>
-        <Window type="OD/StaticText" name="HistoryPanel">
-            <Property name="Area" value="{{0,16},{0,326},{1,-16},{1,-62}}" />
-            <Property name="FrameEnabled" value="True" />
-            <Property name="BackgroundEnabled" value="True" />
-            <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
-            <Property name="BackgroundColours" value="tl:70000000 tr:70000000 bl:70000000 br:70000000" />
-            <Property name="MousePassThroughEnabled" value="True" />
+        <Window type="OD/Button" name="ProfitButton">
+            <Property name="Area" value="{{0.25,0},{0.11,0},{0.45,0},{0.18,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Profit" />
+            <Window type="OD/StaticImage" name="Check">
+                <Property name="Area" value="{{0.02,0},{0.2,0},{0.18,0},{0.8,0}}" />
+                <Property name="Image" value="OpenDungeonsIcons/CheckIcon" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Visible" value="False" />
+            </Window>
         </Window>
-        <Window type="OD/StaticText" name="HistoryText">
-            <Property name="Area" value="{{0,24},{0,330},{1,-24},{1,-66}}" />
-            <Property name="Font" value="MedievalSharp-8" />
-            <Property name="TextColours" value="FFD8CCB8" />
+        <Window type="OD/SettingsSlider" name="MarginSlider">
+            <Property name="Area" value="{{0.5,0},{0.13,0},{0.82,0},{0.16,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+        </Window>
+        <Window type="OD/StaticText" name="MarginLabel">
+            <Property name="Area" value="{{0.83,0},{0.11,0},{0.98,0},{0.18,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-            <Property name="VertFormatting" value="TopAligned" />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-            <Property name="VertScrollbar" value="True" />
-        </Window>
-        <Window type="OD/Button" name="BuyButton">
-            <Property name="Area" value="{{0,16},{1,-52},{0,250},{1,-14}}" />
+            <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="Buy" />
-            <Property name="Disabled" value="True" />
+            <Property name="Text" value="10 %" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/MultiColumnList" name="StockList">
+            <Property name="Area" value="{{0.03,0},{0.21,0},{0.97,0},{0.97,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <AutoWindow namePath="__auto_listheader__">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{0,0}}" />
+                <Property name="Visible" value="False" />
+            </AutoWindow>
+        </Window>
+        <Window type="OD/StaticText" name="Confirmation">
+            <Property name="Area" value="{{0.15,0},{0.28,0},{0.85,0},{0.7,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+            <Property name="Visible" value="False" />
+            <Property name="FrameEnabled" value="True" />
+            <Property name="BackgroundEnabled" value="True" />
+            <Property name="MousePassThroughEnabled" value="False" />
+            <Window type="OD/StaticText" name="Title">
+                <Property name="Area" value="{{0.03,0},{0.02,0},{0.97,0},{0.18,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Text" value="Buy" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+            </Window>
+            <Window type="OD/StaticImage" name="Item">
+                <Property name="Area" value="{{0.08,0},{0.2,0},{0.3,0},{0.65,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+            </Window>
+            <Window type="OD/StaticText" name="Name">
+                <Property name="Area" value="{{0.32,0},{0.2,0},{0.95,0},{0.5,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Text" value="" />
+                <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+            </Window>
+            <Window type="OD/StaticText" name="Price">
+                <Property name="Area" value="{{0.32,0},{0.5,0},{0.95,0},{0.65,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Text" value="" />
+                <Property name="HorzFormatting" value="CentreAligned" />
+                <Property name="VertFormatting" value="CentreAligned" />
+            </Window>
+            <Window type="OD/Button" name="OK">
+                <Property name="Area" value="{{0.08,0},{0.76,0},{0.45,0},{0.95,0}}" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Text" value="OK" />
+            </Window>
+            <Window type="OD/Button" name="Cancel">
+                <Property name="Area" value="{{0.55,0},{0.76,0},{0.92,0},{0.95,0}}" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Text" value="Cancel" />
+            </Window>
         </Window>
     </Window>
 </GUILayout>

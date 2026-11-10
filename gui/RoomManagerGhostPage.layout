@@ -1,49 +1,180 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <GUILayout version="4">
     <Window type="DefaultWindow" name="GhostPage">
-        <!-- Existing room controls embedded in the Room Manager frame. -->
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-        <Window type="OD/StaticText" name="GhostInfoPanel">
-            <Property name="Area" value="{{0.03,0},{0.03,0},{0.97,0},{0.56,0}}" />
-            <Property name="FrameEnabled" value="True" />
-            <Property name="BackgroundEnabled" value="True" />
-            <Property name="FrameColours" value="tl:FF6E4A2C tr:FF6E4A2C bl:FF6E4A2C br:FF6E4A2C" />
-            <Property name="BackgroundColours" value="tl:70000000 tr:70000000 bl:70000000 br:70000000" />
+        <Property name="Visible" value="False" />
+        <Window type="OD/StaticText" name="Title">
+            <Property name="Area" value="{{0.03,0},{0.01,0},{0.97,0},{0.09,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
             <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Ghost room" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/StaticImage" name="Vessel">
+            <Property name="Area" value="{{0.04,0},{0.12,0},{0.47,0},{0.79,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Image" value="RoomArtworkGhostVessel/Image" />
+            <Property name="AspectMode" value="Shrink" />
+        </Window>
+        <Window type="OD/ProgressBar" name="EctoplasmProgress">
+            <Property name="Area" value="{{0.07,0},{0.8,0},{0.44,0},{0.84,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
         </Window>
         <Window type="OD/StaticText" name="GhostBarText">
-            <Property name="Area" value="{{0.06,0},{0.05,0},{0.94,0},{0.2,0}}" />
+            <Property name="Area" value="{{0.05,0},{0.85,0},{0.46,0},{0.92,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Font" value="MedievalSharp-10" />
-            <Property name="TextColours" value="FFF2C860" />
-            <Property name="Text" value="" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="HorzFormatting" value="WordWrapCentreAligned" />
+            <Property name="Text" value="0 / 10" />
+            <Property name="HorzFormatting" value="CentreAligned" />
             <Property name="VertFormatting" value="CentreAligned" />
-            <Property name="MousePassThroughEnabled" value="True" />
         </Window>
-        <Window type="OD/StaticText" name="GhostExplainText">
-            <Property name="Area" value="{{0.06,0},{0.21,0},{0.94,0},{0.54,0}}" />
-            <Property name="Font" value="MedievalSharp-8" />
-            <Property name="TextColours" value="FFD8CCB8" />
-            <Property name="Text" value="Ghost hunters catch ghosts in traps and pour them into the cauldron. Each ghost level fills the ectoplasm bar; a full bar becomes one ectoplasm, which workers carry to the chosen apparatus. Research unlocks the ghost press and the soul forge." />
+        <Window type="OD/StaticText" name="Path0">
+            <Property name="Area" value="{{0.45,0},{0.2,0},{0.67,0},{0.26,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-            <Property name="VertFormatting" value="TopAligned" />
             <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="---" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/Button" name="GhostProductButton">
-            <Property name="Area" value="{{0.08,0},{0.6,0},{0.92,0},{0.71,0}}" />
+            <Property name="Area" value="{{0.65,0},{0.13,0},{0.88,0},{0.30000000000000004,0}}" />
             <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="Apparatus: Mana still" />
-            <Property name="TooltipText" value="Choose the apparatus for the next ectoplasm" />
+            <Property name="Text" value="" />
+            <Property name="ID" value="1" />
+            <Window type="OD/StaticImage" name="Image">
+                <Property name="Area" value="{{0.1,0},{0.05,0},{0.9,0},{0.95,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Image" value="RoomArtworkGhostManaCrystal/Image" />
+                <Property name="AspectMode" value="Shrink" />
+            </Window>
+            <Window type="OD/StaticImage" name="Lock">
+                <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Image" value="DungeonbookIcons/Lock" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="Visible" value="False" />
+            </Window>
         </Window>
-        <Window type="OD/Button" name="GhostReviveButton">
-            <Property name="Area" value="{{0.08,0},{0.74,0},{0.92,0},{0.85,0}}" />
+        <Window type="OD/StaticText" name="Ratio0">
+            <Property name="Area" value="{{0.65,0},{0.30000000000000004,0},{0.88,0},{0.36,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
             <Property name="Font" value="MedievalSharp-10" />
-            <Property name="Text" value="Revive own: On" />
-            <Property name="TooltipText" value="Hunters bring own ghosts to their corpse in the crypt" />
+            <Property name="Text" value="1 : 1" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="Path1">
+            <Property name="Area" value="{{0.45,0},{0.44,0},{0.67,0},{0.5,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="---" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/Button" name="Product1">
+            <Property name="Area" value="{{0.65,0},{0.37,0},{0.88,0},{0.54,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="" />
+            <Property name="ID" value="0" />
+            <Window type="OD/StaticImage" name="Image">
+                <Property name="Area" value="{{0.1,0},{0.05,0},{0.9,0},{0.95,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Image" value="RoomArtworkGhostResearchBook/Image" />
+                <Property name="AspectMode" value="Shrink" />
+            </Window>
+            <Window type="OD/StaticImage" name="Lock">
+                <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Image" value="DungeonbookIcons/Lock" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="Visible" value="False" />
+            </Window>
+        </Window>
+        <Window type="OD/StaticText" name="Ratio1">
+            <Property name="Area" value="{{0.65,0},{0.54,0},{0.88,0},{0.6,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="1 : 1" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/StaticText" name="Path2">
+            <Property name="Area" value="{{0.45,0},{0.6799999999999999,0},{0.67,0},{0.74,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="---" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/Button" name="Product2">
+            <Property name="Area" value="{{0.65,0},{0.61,0},{0.88,0},{0.78,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="" />
+            <Property name="ID" value="2" />
+            <Window type="OD/StaticImage" name="Image">
+                <Property name="Area" value="{{0.1,0},{0.05,0},{0.9,0},{0.95,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Image" value="RoomArtworkGhostLevelCrystal/Image" />
+                <Property name="AspectMode" value="Shrink" />
+            </Window>
+            <Window type="OD/StaticImage" name="Lock">
+                <Property name="Area" value="{{0.65,0},{0.55,0},{1,0},{1,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Image" value="DungeonbookIcons/Lock" />
+                <Property name="AspectMode" value="Shrink" />
+                <Property name="Visible" value="False" />
+            </Window>
+        </Window>
+        <Window type="OD/StaticText" name="Ratio2">
+            <Property name="Area" value="{{0.65,0},{0.78,0},{0.88,0},{0.84,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="1 : 1" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/Checkbox" name="GhostReviveButton">
+            <Property name="Area" value="{{0.04,0},{0.93,0},{0.48,0},{0.995,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Revive own" />
         </Window>
     </Window>
 </GUILayout>

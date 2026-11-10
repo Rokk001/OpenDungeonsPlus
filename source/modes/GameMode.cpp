@@ -16,7 +16,8 @@
  */
 
 #include "modes/GameMode.h"
-
+#include "modes/RoomManagerListItem.h"
+#include "render/CreaturePortrait.h"
 #include "camera/CameraManager.h"
 #include "camera/CameraInput.h"
 #include "entities/Creature.h"
@@ -491,7 +492,7 @@ GameMode::GameMode(ModeManager *modeManager):
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::showTrapProductionQueue, this)));
 
     addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders")->subscribeEvent(
-        CEGUI::Listbox::EventSelectionChanged, CEGUI::Event::Subscriber(&GameMode::updateTrapProductionButtons, this)));
+        CEGUI::MultiColumnList::EventSelectionChanged, CEGUI::Event::Subscriber(&GameMode::updateTrapProductionButtons, this)));
     addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/MoveUp")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::moveTrapProductionOrderEarlier, this)));
     addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/MoveDown")->subscribeEvent(
@@ -578,10 +579,14 @@ GameMode::GameMode(ModeManager *modeManager):
 
     // The Room Manager owns the shared frame and close action for these controls.
 
-    addEventConnection(guiSheet->getChild("RoomManagerWindow/Pages/GhostPage/GhostProductButton")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleGhostProduct, this)));
+    const char* const ghostProducts[] = {"GhostProductButton", "Product1", "Product2"};
+    for(const char* product : ghostProducts)
+        addEventConnection(guiSheet->getChild(std::string("RoomManagerWindow/Pages/GhostPage/") + product)->subscribeEvent(
+            CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleGhostProduct, this)));
+    addEventConnection(guiSheet->getChild("RoomManagerWindow/Pages/CasinoPage/MoneyButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleCasinoPayout, this)));
     addEventConnection(guiSheet->getChild("RoomManagerWindow/Pages/GhostPage/GhostReviveButton")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleGhostRevive, this)));
+        CEGUI::ToggleButton::EventSelectStateChanged, CEGUI::Event::Subscriber(&GameMode::toggleGhostRevive, this)));
 
     //Casino payout window
 
@@ -835,21 +840,16 @@ GameMode::GameMode(ModeManager *modeManager):
     addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/PayerButton")->subscribeEvent(
         CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::cycleInfirmaryPayer, this)));
     addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/HealButton")->subscribeEvent(
-        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::toggleInfirmaryHealing, this)));
-    CEGUI::Slider* infirmarySlider = static_cast<CEGUI::Slider*>(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/ThresholdSlider"));
-    const int32_t infirmaryMinimum = config.getRoomConfigInt32("InfirmaryDischargeMinPercent");
-    const int32_t infirmaryMaximum = config.getRoomConfigInt32("InfirmaryDischargeMaxPercent");
-    const int32_t infirmaryStep = config.getRoomConfigInt32("InfirmaryDischargeStepPercent");
-    infirmarySlider->setMaxValue(static_cast<float>(infirmaryMaximum - infirmaryMinimum));
-    infirmarySlider->setClickStep(static_cast<float>(infirmaryStep));
-    addEventConnection(infirmarySlider->subscribeEvent(CEGUI::Slider::EventValueChanged,
-        CEGUI::Event::Subscriber(&GameMode::changeInfirmaryThreshold, this)));
+        CEGUI::ToggleButton::EventSelectStateChanged, CEGUI::Event::Subscriber(&GameMode::toggleInfirmaryHealing, this)));
+    addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/Minus")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::changeInfirmaryThreshold, this)));
+    addEventConnection(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/Plus")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::changeInfirmaryThreshold, this)));
     CEGUI::MultiColumnList* patients = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/PatientList"));
     while(patients->getColumnCount() > 0)
         patients->removeColumn(0);
-    patients->addColumn("Patient", 0, CEGUI::UDim(0.45f, 0));
-    patients->addColumn("Health", 1, CEGUI::UDim(0.30f, 0));
-    patients->addColumn("Remaining", 2, CEGUI::UDim(0.25f, 0));
+    patients->addColumn("", 0, CEGUI::UDim(0.95f, 0));
+    patients->setUserSortControlEnabled(false);
     patients->setSelectionMode(CEGUI::MultiColumnList::SelectionMode::RowSingle);
     addEventConnection(patients->subscribeEvent(CEGUI::Window::EventMouseClick,
         CEGUI::Event::Subscriber(&GameMode::selectInfirmaryPatient, this)));
@@ -2777,28 +2777,27 @@ bool GameMode::cycleInfirmaryPayer(const CEGUI::EventArgs&)
 //! \brief Enables or pauses all infirmary healing of the keeper.
 bool GameMode::toggleInfirmaryHealing(const CEGUI::EventArgs&)
 {
-    mInfirmaryHealOn = !mInfirmaryHealOn;
+    if(mUpdatingInfirmary) return true;
+    mInfirmaryHealOn = static_cast<CEGUI::ToggleButton*>(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/HealButton"))->isSelected();
     sendInfirmarySettings();
     return true;
 }
 
-//! \brief Converts the slider offset to the permitted discharge health steps.
-bool GameMode::changeInfirmaryThreshold(const CEGUI::EventArgs&)
+//! \brief Applies one configured discharge step without exceeding the existing health limits.
+bool GameMode::changeInfirmaryThreshold(const CEGUI::EventArgs& args)
 {
-    if(mUpdatingInfirmary)
-        return true;
-    CEGUI::Slider* slider = static_cast<CEGUI::Slider*>(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/ThresholdSlider"));
+    if(mUpdatingInfirmary) return true;
+    const CEGUI::WindowEventArgs& event = static_cast<const CEGUI::WindowEventArgs&>(args);
     const int32_t minimum = config.getRoomConfigInt32("InfirmaryDischargeMinPercent");
+    const int32_t maximum = config.getRoomConfigInt32("InfirmaryDischargeMaxPercent");
     const int32_t step = config.getRoomConfigInt32("InfirmaryDischargeStepPercent");
-    const int32_t threshold = minimum + static_cast<int32_t>(std::round(slider->getCurrentValue() / step)) * step;
+    const int32_t threshold = std::max(minimum, std::min(maximum,
+        mInfirmaryThreshold + (event.window->getName() == "Plus" ? step : -step)));
     if(threshold != mInfirmaryThreshold)
     {
         mInfirmaryThreshold = threshold;
         sendInfirmarySettings();
     }
-    mUpdatingInfirmary = true;
-    slider->setCurrentValue(static_cast<float>(mInfirmaryThreshold - minimum));
-    mUpdatingInfirmary = false;
     return true;
 }
 
@@ -2820,11 +2819,11 @@ void GameMode::receiveInfirmaryWindow(ODPacket& packet, bool patients)
 {
     OD_ASSERT_TRUE(packet >> mInfirmaryPayer >> mInfirmaryThreshold >> mInfirmaryHealOn);
     mUpdatingInfirmary = true;
-    mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/PayerButton")->setText(mInfirmaryPayer == 0 ? "Keeper pays" : "Creatures pay");
-    mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/HealButton")->setText(mInfirmaryHealOn ? "Healing on" : "Healing off");
-    mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/ThresholdLabel")->setText("Discharge at: " + Helper::toString(mInfirmaryThreshold) + " %");
-    static_cast<CEGUI::Slider*>(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/ThresholdSlider"))->setCurrentValue(
-        static_cast<float>(mInfirmaryThreshold - config.getRoomConfigInt32("InfirmaryDischargeMinPercent")));
+    roomManagerPayer(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage"), mInfirmaryPayer == 0);
+    static_cast<CEGUI::ToggleButton*>(mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/HealButton"))->setSelected(mInfirmaryHealOn);
+    mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/ThresholdValue")->setText(Helper::toString(mInfirmaryThreshold) + " %");
+    mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/Minus")->setEnabled(mInfirmaryThreshold > config.getRoomConfigInt32("InfirmaryDischargeMinPercent"));
+    mRootWindow->getChild("RoomManagerWindow/Pages/InfirmaryPage/Plus")->setEnabled(mInfirmaryThreshold < config.getRoomConfigInt32("InfirmaryDischargeMaxPercent"));
     mUpdatingInfirmary = false;
     if(!patients)
         return;
@@ -2843,23 +2842,18 @@ void GameMode::receiveInfirmaryWindow(ODPacket& packet, bool patients)
         double remaining;
         OD_ASSERT_TRUE(packet >> name >> className >> worker >> hp >> maxHp >> remaining);
         mInfirmaryPatientNames.push_back(name);
-        std::ostringstream health;
-        health << std::fixed << std::setprecision(1) << hp << " / " << maxHp;
-        std::ostringstream seconds;
-        if(remaining < 0.0)
-            seconds << "-";
-        else
-            seconds << std::fixed << std::setprecision(1) << remaining;
+        const social::CreatureProfile& profile = social::SocialProfileCache::getSingleton().getProfile(name, className, worker);
+        const CreatureDefinition* definition = ConfigManager::getSingleton().getCreatureDefinition(className);
+        std::vector<const CEGUI::Image*> images;
+        if(definition != nullptr)
+            images.push_back(&getCreatureProfilePortraitImage(name, definition->getMeshName(), profile.mGender));
+        const float fraction = maxHp <= 0.0 ? 0.0f : static_cast<float>(hp / maxHp);
+        const std::string seconds = remaining < 0.0 ? "-" : Helper::toString(static_cast<uint32_t>(std::ceil(remaining))) + " s";
         list->addRow();
-        const std::string patientName = social::SocialProfileCache::getSingleton().getProfile(name,
-            className, worker).getFullName();
-        const std::vector<std::string> cells{patientName, health.str(), seconds.str()};
-        for(uint32_t column = 0; column < cells.size(); ++column)
-        {
-            CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(cells[column], row);
-            item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
-            list->setItem(item, column, row);
-        }
+        RoomManagerListItem* item = new RoomManagerListItem(Helper::toString(static_cast<int32_t>(fraction * 100)) + " %   " + seconds,
+            row, images, fraction, false, 0xFFB33030);
+        item->setTooltipText(profile.getFullName());
+        list->setItem(item, 0, row);
     }
 }
 
@@ -2885,9 +2879,11 @@ bool GameMode::hideCasinoPayoutWindow(const CEGUI::EventArgs&)
     return true;
 }
 
-bool GameMode::cycleCasinoPayout(const CEGUI::EventArgs&)
+//! \brief Selects the clicked keeper-wide payout picture.
+bool GameMode::cycleCasinoPayout(const CEGUI::EventArgs& args)
 {
-    uint32_t nextLevel = (mCasinoPayout + 1) % static_cast<uint32_t>(CasinoPayout::nbValues);
+    const CEGUI::WindowEventArgs& event = static_cast<const CEGUI::WindowEventArgs&>(args);
+    const uint32_t nextLevel = event.window->getID();
     ClientNotification* clientNotification = new ClientNotification(
         ClientNotificationType::askCasinoPayout);
     clientNotification->mPacket << mCasinoX << mCasinoY << nextLevel << true;
@@ -2905,21 +2901,10 @@ void GameMode::setCasinoPayoutShown(int tileX, int tileY, uint32_t level)
         return;
 
     mCasinoPayout = level;
-    std::string levelText;
-    std::string infoText;
-    switch(static_cast<CasinoPayout>(level))
-    {
-        case CasinoPayout::money:
-            levelText = "Payout: Money";
-            infoText = "The casino keeps a large share of the bets. Creatures get annoyed.";
-            break;
-        default:
-            levelText = "Payout: Smiles";
-            infoText = "The casino keeps little of the bets. Creatures get cheered up.";
-            break;
-    }
-    mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/CasinoPayoutButton")->setText(levelText);
-    mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/CasinoPayoutText")->setText(infoText);
+    mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/CasinoPayoutButton")->setProperty("NormalTextColour", level == static_cast<uint32_t>(CasinoPayout::smiles) ? "FFF2C860" : "FF808080");
+    mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/CasinoPayoutButton/Image")->setProperty("FrameEnabled", level == static_cast<uint32_t>(CasinoPayout::smiles) ? "True" : "False");
+    mRootWindow->getChild("RoomManagerWindow/Pages/CasinoPage/MoneyButton/Image")->setProperty("FrameEnabled", level == static_cast<uint32_t>(CasinoPayout::money) ? "True" : "False");
+
 }
 
 //! \brief Opens the tavern window for the clicked tile and asks the server for the state of the tavern.
@@ -2964,11 +2949,9 @@ void GameMode::setTavernWindowShown(int tileX, int tileY, uint32_t payer, bool b
     if((tileX != mTavernX) || (tileY != mTavernY))
         return;
 
-    std::string beerText = "Beer: not researched";
-    if(beerResearched)
-        beerText = "Beer: " + Helper::toString(static_cast<int32_t>(beerPrice + 0.5)) + " gold";
-    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/BeerText")->setText(beerText);
-    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/SizeText")->setText(hasMinimumBlock ? "" : "Guests need a complete 3 x 3 block.");
+    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/BeerText")->setText(beerResearched ? Helper::toString(static_cast<int32_t>(beerPrice + 0.5)) : "Locked");
+    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/BeerLock")->setVisible(!beerResearched);
+    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/Beer")->setAlpha(beerResearched ? 1.0f : 0.4f);
     setTavernPayerShown(tileX, tileY, payer);
 }
 
@@ -2982,10 +2965,7 @@ void GameMode::setTavernPayerShown(int tileX, int tileY, uint32_t payer)
         return;
 
     mTavernPayer = payer;
-    std::string payerText = "Keeper pays";
-    if(payer == static_cast<uint32_t>(TavernPayer::creature))
-        payerText = "Creatures pay";
-    mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage/PayerButton")->setText(payerText);
+    roomManagerPayer(mRootWindow->getChild("RoomManagerWindow/Pages/TavernPage"), payer == static_cast<uint32_t>(TavernPayer::keeper));
 }
 
 //! \brief Opens the lava spa window for the clicked tile and asks the server who pays for a bath.
@@ -3034,12 +3014,9 @@ void GameMode::setSpaWindowShown(int tileX, int tileY, uint32_t payer, double ba
         return;
 
     mSpaPayer = payer;
-    std::string priceText = "Bath: " + Helper::toString(static_cast<int32_t>(bathPrice + 0.5)) + " gold";
+    std::string priceText = Helper::toString(static_cast<int32_t>(bathPrice + 0.5));
     mRootWindow->getChild("RoomManagerWindow/Pages/SpaPage/SpaPriceText")->setText(priceText);
-    std::string payerText = "Keeper pays";
-    if(payer == static_cast<uint32_t>(SpaPayer::creature))
-        payerText = "Creatures pay";
-    mRootWindow->getChild("RoomManagerWindow/Pages/SpaPage/SpaPayerButton")->setText(payerText);
+    roomManagerPayer(mRootWindow->getChild("RoomManagerWindow/Pages/SpaPage"), payer == static_cast<uint32_t>(SpaPayer::keeper));
 }
 
 bool GameMode::toggleSandboxWindow(const CEGUI::EventArgs&)
@@ -3286,9 +3263,9 @@ void GameMode::requestTrapProductionQueue()
 //! \brief Enables workshop priority controls for the selected order.
 bool GameMode::updateTrapProductionButtons(const CEGUI::EventArgs&)
 {
-    CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders"));
+    CEGUI::MultiColumnList* orders = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders"));
     CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
-    const bool valid = selected != nullptr &&
+    const bool valid = !mProductionRequestPending && selected != nullptr &&
         selected->getID() < mTrapProductionData.orders.size();
     mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/MoveUp")->setEnabled(valid && selected->getID() > 0);
     mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/MoveDown")->setEnabled(valid && selected->getID() + 1 < mTrapProductionData.orders.size());
@@ -3300,7 +3277,7 @@ bool GameMode::moveTrapProductionOrder(bool earlier)
 {
     if(!isConnected())
         return true;
-    CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders"));
+    CEGUI::MultiColumnList* orders = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders"));
     CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
     if(selected == nullptr || selected->getID() >= mTrapProductionData.orders.size())
         return true;
@@ -3316,7 +3293,7 @@ bool GameMode::moveTrapProductionOrder(bool earlier)
 //! \brief Updates the refresh trap production queue controls in the Room Manager.
 void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
 {
-    CEGUI::Listbox* orders = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders"));
+    CEGUI::MultiColumnList* orders = static_cast<CEGUI::MultiColumnList*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Orders"));
     CEGUI::Listbox* workshops = static_cast<CEGUI::Listbox*>(mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/Workshops"));
     std::string selectedName;
     CEGUI::ListboxItem* selected = orders->getFirstSelectedItem();
@@ -3324,39 +3301,40 @@ void GameMode::refreshTrapProductionQueue(const TrapProductionData& data)
         selectedName = mTrapProductionData.orders[selected->getID()].name;
     const float scroll = orders->getVertScrollbar()->getScrollPosition();
     mProductionRequestPending = true;
+    if(orders->getColumnCount() == 0)
+    {
+        for(uint32_t column = 0; column < 4; ++column)
+            orders->addColumn("", column, CEGUI::UDim(0.23f, 0));
+        orders->setSelectionMode(CEGUI::MultiColumnList::CellSingle);
+        orders->setUserSortControlEnabled(false);
+    }
     orders->resetList();
     workshops->resetList();
     mTrapProductionData = data;
     for(size_t index = 0; index < data.orders.size(); ++index)
     {
         const TrapProductionOrder& order = data.orders[index];
-        const std::string text = Helper::toString(index + 1) + ". " +
-            TrapManager::getTrapNameFromTrapType(order.type) + " - " +
-            Helper::toString(order.needed) + " required (" + order.name + ")";
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(text, static_cast<CEGUI::uint>(index));
-        item->setTextParsingEnabled(false);
-        item->setSelectionBrushImage("OpenDungeonsSkin/SelectionBrush");
-        orders->addItem(item);
-        if(order.name == selectedName)
-            orders->setItemSelectState(item, true);
+        if(index % 4 == 0) orders->addRow();
+        std::vector<const CEGUI::Image*> pictures(1, roomManagerTrapImage(order.type));
+        RoomManagerListItem* item = new RoomManagerListItem(Helper::toString(index + 1) + "   " +
+            Helper::toString(order.needed), static_cast<uint32_t>(index), pictures, -1.0f, true);
+        item->setTooltipText(TrapManager::getTrapReadableName(order.type));
+        orders->setItem(item, static_cast<uint32_t>(index % 4), static_cast<uint32_t>(index / 4));
+        if(order.name == selectedName) orders->setItemSelectState(item, true);
     }
     orders->getVertScrollbar()->setScrollPosition(scroll);
     for(const TrapProductionWorkshop& workshop : data.workshops)
     {
-        std::string text = workshop.name + ": ";
-        if(workshop.type == TrapType::nullTrapType)
-            text += "Idle";
-        else
-            text += TrapManager::getTrapNameFromTrapType(workshop.type) + " - " +
-                Helper::toString(workshop.points) + "/" + Helper::toString(workshop.required) + " work points";
-        CEGUI::ListboxTextItem* item = new CEGUI::ListboxTextItem(text);
-        item->setTextParsingEnabled(false);
+        std::vector<const CEGUI::Image*> pictures;
+        pictures.push_back(roomManagerImage("OpenDungeonsIcons/WorkshopButton"));
+        pictures.push_back(roomManagerTrapImage(workshop.type));
+        const float progress = workshop.required > 0 ? static_cast<float>(workshop.points) / workshop.required : 0.0f;
+        RoomManagerListItem* item = new RoomManagerListItem(workshop.type == TrapType::nullTrapType ? "Idle" :
+            Helper::toString(workshop.points) + " / " + Helper::toString(workshop.required), 0, pictures, progress);
+        item->setTooltipText(workshop.name);
         workshops->addItem(item);
     }
-    mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/OrdersLabel")->setText(
-        data.orders.empty() ? "No pending trap orders" : "Order priority (required items)");
-    mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/WorkshopsLabel")->setText(
-        data.workshops.empty() ? "No workshops" : "Work in progress");
+    mRootWindow->getChild("RoomManagerWindow/Pages/WorkshopPage/OrdersLabel")->setText("Priority");
     mProductionRequestPending = false;
     updateTrapProductionButtons();
 }
@@ -6071,28 +6049,17 @@ bool GameMode::hideGhostRoomWindow(const CEGUI::EventArgs&)
 }
 
 //! \brief Cycles the unlocked apparatuses (mana still, ghost press, soul forge) the next ectoplasm is carried to.
-bool GameMode::cycleGhostProduct(const CEGUI::EventArgs&)
+bool GameMode::cycleGhostProduct(const CEGUI::EventArgs& args)
 {
     Player* player = mGameMap->getLocalPlayer();
     if(player == nullptr || player->getSeat() == nullptr)
         return true;
     Seat* seat = player->getSeat();
-    // Order of the room research unlocks; a locked apparatus is skipped
-    static const GhostProduct ORDER[] = {GhostProduct::mana, GhostProduct::research, GhostProduct::crystal};
-    const GhostProduct current = RoomGhostRoom::getChosenApparatus(*seat);
-    size_t position = 0;
-    for(size_t index = 0; index < 3; ++index)
-        if(ORDER[index] == current) position = index;
-    GhostProduct nextKind = current;
-    for(size_t step = 1; step <= 3; ++step)
-    {
-        const GhostProduct candidate = ORDER[(position + step) % 3];
-        if(RoomGhostRoom::isApparatusUnlocked(*seat, candidate))
-        {
-            nextKind = candidate;
-            break;
-        }
-    }
+    // The three apparatus pictures follow the room research unlock order.
+    const CEGUI::WindowEventArgs& event = static_cast<const CEGUI::WindowEventArgs&>(args);
+    if(event.window->getID() >= 3) return true;
+    const GhostProduct nextKind = static_cast<GhostProduct>(event.window->getID());
+    if(!RoomGhostRoom::isApparatusUnlocked(*seat, nextKind)) return true;
     const uint32_t next = static_cast<uint32_t>(nextKind);
     seat->setGhostProduct(nextKind);
     ODClient::getSingleton().queueClientNotification(ClientNotificationType::askGhostRoomSettings,
@@ -6108,7 +6075,8 @@ bool GameMode::toggleGhostRevive(const CEGUI::EventArgs&)
     if(player == nullptr || player->getSeat() == nullptr)
         return true;
     Seat* seat = player->getSeat();
-    seat->setGhostRevive(!seat->getGhostRevive());
+    if(mUpdatingGhost) return true;
+    seat->setGhostRevive(static_cast<CEGUI::ToggleButton*>(mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/GhostReviveButton"))->isSelected());
     ODClient::getSingleton().queueClientNotification(ClientNotificationType::askGhostRoomSettings,
         mGhostRoomX, mGhostRoomY, static_cast<uint32_t>(seat->getGhostProduct()), seat->getGhostRevive(), true);
     refreshGhostRoomWindow();
@@ -6147,13 +6115,26 @@ void GameMode::refreshGhostRoomWindow()
     const double perEctoplasm = RoomGhostRoom::getLevelsPerEctoplasm(*seat);
     const double progress = perEctoplasm > 0.0 ? std::fmod(seat->getEctoplasmLevels(), perEctoplasm) : 0.0;
     std::ostringstream text;
-    text << std::fixed << std::setprecision(1) << "Ectoplasm: " << progress << " / " << perEctoplasm << " ghost levels";
+    text << std::fixed << std::setprecision(1) << progress << " / " << perEctoplasm;
     mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/GhostBarText")->setText(text.str());
-    // A locked choice is shown and used as the mana still
-    std::string product = "Apparatus: Mana still";
+    static_cast<CEGUI::ProgressBar*>(mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/EctoplasmProgress"))->setProgress(
+        perEctoplasm > 0.0 ? static_cast<float>(progress / perEctoplasm) : 0.0f);
+    // A locked choice is shown grey; the validated effective choice remains the mana still.
     const GhostProduct chosen = RoomGhostRoom::getChosenApparatus(*seat);
-    if(chosen == GhostProduct::research) product = "Apparatus: Ghost press";
-    else if(chosen == GhostProduct::crystal) product = "Apparatus: Soul forge";
-    mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/GhostProductButton")->setText(product);
-    mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/GhostReviveButton")->setText(seat->getGhostRevive() ? "Revive own: On" : "Revive own: Off");
+    const char* const names[] = {"GhostProductButton", "Product1", "Product2"};
+    const GhostProduct kinds[] = {GhostProduct::mana, GhostProduct::research, GhostProduct::crystal};
+    for(uint32_t index = 0; index < 3; ++index)
+    {
+        const bool unlocked = RoomGhostRoom::isApparatusUnlocked(*seat, kinds[index]);
+        CEGUI::Window* button = mRootWindow->getChild(std::string("RoomManagerWindow/Pages/GhostPage/") + names[index]);
+        button->setEnabled(unlocked);
+        button->getChild("Lock")->setVisible(!unlocked);
+        button->getChild("Image")->setAlpha(unlocked ? 1.0f : 0.35f);
+        button->getChild("Image")->setProperty("FrameEnabled", chosen == kinds[index] ? "True" : "False");
+    }
+    mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/Ratio2")->setText(
+        Helper::toString(config.getRoomConfigDouble("GhostEctoplasmPerCrystal")) + " : 1");
+    mUpdatingGhost = true;
+    static_cast<CEGUI::ToggleButton*>(mRootWindow->getChild("RoomManagerWindow/Pages/GhostPage/GhostReviveButton"))->setSelected(seat->getGhostRevive());
+    mUpdatingGhost = false;
 }

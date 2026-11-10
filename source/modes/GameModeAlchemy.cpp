@@ -1,4 +1,10 @@
 #include "modes/GameMode.h"
+#include "modes/RoomManagerListItem.h"
+#include "render/CreaturePortrait.h"
+#include "entities/Creature.h"
+#include "entities/CreatureDefinition.h"
+#include "social/SocialProfileCache.h"
+#include "game/SkillManager.h"
 #include "entities/PotionDefinition.h"
 #include "game/Player.h"
 #include "game/Seat.h"
@@ -66,7 +72,7 @@ void GameMode::setLabModeShown(int32_t mode)
     Player* player = mGameMap->getLocalPlayer();
     if(player != nullptr && player->getSeat() != nullptr)
         player->getSeat()->setLabMode(mode);
-    static const char* const labels[] = {"Automatic", "Healing and mana", "Combat potions"};
+    static const char* const labels[] = {"Automatic", "Healing/mana", "Combat potions"};
     mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/ModeButton")->setText(labels[mode]);
 }
 
@@ -77,10 +83,7 @@ void GameMode::setLabWindowData(const LabWindowData& data)
         mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/CauldronList"));
     if(list->getColumnCount() == 0)
     {
-        list->addColumn("Cauldron", 0, CEGUI::UDim(0.17f, 0));
-        list->addColumn("Potion", 1, CEGUI::UDim(0.36f, 0));
-        list->addColumn("Brewer", 2, CEGUI::UDim(0.29f, 0));
-        list->addColumn("Remaining s", 3, CEGUI::UDim(0.18f, 0));
+        list->addColumn("", 0, CEGUI::UDim(0.95f, 0));
         list->setUserSortControlEnabled(false);
     }
     list->resetList();
@@ -88,21 +91,35 @@ void GameMode::setLabWindowData(const LabWindowData& data)
     {
         const LabCauldronRow& cauldron = data.mCauldrons[index];
         const uint32_t row = list->addRow();
-        list->setItem(new CEGUI::ListboxTextItem(Helper::toString(index+1)), 0, row);
-        list->setItem(new CEGUI::ListboxTextItem(cauldron.mPotion), 1, row);
-        list->setItem(new CEGUI::ListboxTextItem(cauldron.mBrewer), 2, row);
-        list->setItem(new CEGUI::ListboxTextItem(Helper::toString(static_cast<uint32_t>(std::ceil(cauldron.mRemaining)))), 3, row);
+        std::vector<const CEGUI::Image*> pictures;
+        pictures.push_back(roomManagerImage("OpenDungeonsIcons/AlchemyLabButton"));
+        const PotionDefinition* recipe = nullptr;
+        for(const PotionDefinition& potion : ConfigManager::getSingleton().getPotions())
+            if(potion.getDisplay() == cauldron.mPotion) recipe = &potion;
+        pictures.push_back(recipe == nullptr ? nullptr : roomManagerImage("ItemImages/" + recipe->getImage()));
+        Creature* brewer = mGameMap->getCreature(cauldron.mBrewer);
+        if(brewer != nullptr)
+            pictures.push_back(&getCreatureProfilePortraitImage(cauldron.mBrewer, brewer->getDefinition()->getMeshName(),
+                social::SocialProfileCache::getCreatureGender(cauldron.mBrewer, brewer->getDefinition()->getClassName())));
+        Player* player = mGameMap->getLocalPlayer();
+        const double duration = recipe == nullptr || player == nullptr ? 0.0 :
+            SkillManager::getResearchValue(player->getSeat(), SkillType::roomAlchemyLab, recipe->getBrewSeconds(), "BrewTime");
+        const float progress = duration > 0.0 ? static_cast<float>(1.0 - cauldron.mRemaining / duration) : 0.0f;
+        RoomManagerListItem* item = new RoomManagerListItem(Helper::toString(static_cast<uint32_t>(std::ceil(cauldron.mRemaining))) + " s",
+            static_cast<uint32_t>(index), pictures, progress);
+        item->setTooltipText(cauldron.mPotion + " / " + cauldron.mBrewer);
+        list->setItem(item, 0, row);
     }
-    std::ostringstream stock;
-    bool first = true;
+    // Every herb has its existing stock icon and a number; names stay in tooltips.
+    uint32_t index = 0;
     for(const HerbDefinition& herb : ConfigManager::getSingleton().getHerbs())
     {
-        if(!first)
-            stock << ", ";
-        first = false;
+        if(index >= 4) break;
         std::map<std::string, uint32_t>::const_iterator amount = data.mHerbs.find(herb.mId);
-        stock << herb.mDisplay << " " << (amount == data.mHerbs.end() ? 0 : amount->second);
+        mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/Herb" + Helper::toString(index))->setProperty("Image", "ItemImages/" + herb.mId);
+        mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/HerbCount" + Helper::toString(index))->setText(
+            Helper::toString(amount == data.mHerbs.end() ? 0 : amount->second));
+        ++index;
     }
-    mRootWindow->getChild("RoomManagerWindow/Pages/AlchemyPage/HerbStock")->setText(stock.str());
     setLabModeShown(data.mMode);
 }

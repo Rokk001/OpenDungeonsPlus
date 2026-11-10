@@ -1,47 +1,49 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <GUILayout version="4">
     <Window type="DefaultWindow" name="WorkshopPage">
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
         <Property name="Visible" value="False" />
-        <Window type="OD/StaticText" name="WorkshopsLabel">
-            <Property name="Area" value="{{0.02,0},{0.01,0},{0.98,0},{0.07,0}}" />
-            <Property name="Text" value="Work in progress" />
+        <Window type="OD/StaticText" name="Title">
+            <Property name="Area" value="{{0.03,0},{0.01,0},{0.97,0},{0.09,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Trap production" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/Listbox" name="Workshops">
-            <Property name="Area" value="{{0.02,0},{0.08,0},{0.98,0},{0.34,0}}" />
+            <Property name="Area" value="{{0.03,0},{0.12,0},{0.97,0},{0.63,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
         </Window>
         <Window type="OD/StaticText" name="OrdersLabel">
-            <Property name="Area" value="{{0.02,0},{0.36,0},{0.98,0},{0.42,0}}" />
-            <Property name="Text" value="Order priority (required items)" />
+            <Property name="Area" value="{{0.03,0},{0.65,0},{0.83,0},{0.72,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Priority" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
         </Window>
-        <Window type="OD/Listbox" name="Orders">
-            <Property name="Area" value="{{0.02,0},{0.43,0},{0.79,0},{0.79,0}}" />
-            <Property name="Sort" value="False" />
-            <Property name="TooltipText" value="Select an order, then move it up or down." />
+        <Window type="OD/MultiColumnList" name="Orders">
+            <Property name="Area" value="{{0.03,0},{0.73,0},{0.83,0},{0.97,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <AutoWindow namePath="__auto_listheader__">
+                <Property name="Area" value="{{0,0},{0,0},{1,0},{0,0}}" />
+                <Property name="Visible" value="False" />
+            </AutoWindow>
         </Window>
         <Window type="OD/Button" name="MoveUp">
-            <Property name="Font" value="MedievalSharp-8" />
-            <Property name="Area" value="{{0.81,0},{0.43,0},{0.98,0},{0.52,0}}" />
-            <Property name="Text" value="Move up" />
-            <Property name="Disabled" value="True" />
+            <Property name="Area" value="{{0.86,0},{0.73,0},{0.97,0},{0.83,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="^" />
         </Window>
         <Window type="OD/Button" name="MoveDown">
-            <Property name="Font" value="MedievalSharp-8" />
-            <Property name="Area" value="{{0.81,0},{0.54,0},{0.98,0},{0.63,0}}" />
-            <Property name="Text" value="Move down" />
-            <Property name="Disabled" value="True" />
-        </Window>
-        <Window type="OD/StaticText" name="Explanation">
-            <Property name="Font" value="MedievalSharp-8" />
-            <Property name="Area" value="{{0.02,0},{0.795,0},{0.98,0},{0.915,0}}" />
-            <Property name="Text" value="Priorities apply to the next item; current work is kept. Stock and reachability may skip an order." />
-            <Property name="HorzFormatting" value="WordWrapLeftAligned" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
+            <Property name="Area" value="{{0.86,0},{0.86,0},{0.97,0},{0.96,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="v" />
         </Window>
     </Window>
 </GUILayout>

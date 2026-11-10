@@ -1,19 +1,67 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <GUILayout version="4">
     <Window type="DefaultWindow" name="CasinoPage">
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-        <Window type="OD/StaticText" name="CasinoPayoutText">
-            <Property name="Font" value="MedievalSharp-8" />
-            <Property name="Area" value="{{0,20},{0,35},{1,-20},{0,60}}" />
-            <Property name="Text" value="Payout" />
+        <Property name="Visible" value="False" />
+        <Window type="OD/StaticText" name="Title">
+            <Property name="Area" value="{{0.03,0},{0.01,0},{0.97,0},{0.09,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Casino" />
             <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/Button" name="CasinoPayoutButton">
-            <Property name="Area" value="{{0.5,-100},{0,70},{0.5,100},{0,100}}" />
-            <Property name="Text" value="Payout: Smiles" />
-            <Property name="TooltipText" value="Click to switch the payout. Money keeps more of the bets for you and annoys your creatures, Smiles pays more to them and cheers them up." />
+            <Property name="Area" value="{{0.04,0},{0.24,0},{0.48,0},{0.7,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="" />
+            <Property name="ID" value="1" />
+            <Window type="OD/StaticImage" name="Image">
+                <Property name="Area" value="{{0.04,0},{0.04,0},{0.96,0},{0.96,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Image" value="RoomArtworkCasinoSmiles/Image" />
+                <Property name="AspectMode" value="Shrink" />
+            </Window>
+        </Window>
+        <Window type="OD/StaticText" name="SmilesLabel">
+            <Property name="Area" value="{{0.04,0},{0.71,0},{0.48,0},{0.8,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Smiles" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/Button" name="MoneyButton">
+            <Property name="Area" value="{{0.52,0},{0.24,0},{0.96,0},{0.7,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="" />
+            <Property name="ID" value="0" />
+            <Window type="OD/StaticImage" name="Image">
+                <Property name="Area" value="{{0.04,0},{0.04,0},{0.96,0},{0.96,0}}" />
+                <Property name="FrameEnabled" value="False" />
+                <Property name="BackgroundEnabled" value="False" />
+                <Property name="MousePassThroughEnabled" value="True" />
+                <Property name="Font" value="MedievalSharp-10" />
+                <Property name="Image" value="RoomArtworkCasinoMoney/Image" />
+                <Property name="AspectMode" value="Shrink" />
+            </Window>
+        </Window>
+        <Window type="OD/StaticText" name="MoneyLabel">
+            <Property name="Area" value="{{0.52,0},{0.71,0},{0.96,0},{0.8,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Money" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
         </Window>
     </Window>
 </GUILayout>

@@ -5,6 +5,13 @@
     <Imageset filename="DungeonbookFrame.imageset" name="DungeonbookFrame" />
     <Imageset filename="DungeonbookIcons.imageset" name="DungeonbookIcons" />
     <Imageset filename="ODIcons.imageset" name="OpenDungeonsIcons" />
+    <Imageset filename="RoomArtworkSpaBath.imageset" name="RoomArtworkSpaBath" />
+    <Imageset filename="RoomArtworkGhostVessel.imageset" name="RoomArtworkGhostVessel" />
+    <Imageset filename="RoomArtworkGhostManaCrystal.imageset" name="RoomArtworkGhostManaCrystal" />
+    <Imageset filename="RoomArtworkGhostResearchBook.imageset" name="RoomArtworkGhostResearchBook" />
+    <Imageset filename="RoomArtworkGhostLevelCrystal.imageset" name="RoomArtworkGhostLevelCrystal" />
+    <Imageset filename="RoomArtworkCasinoSmiles.imageset" name="RoomArtworkCasinoSmiles" />
+    <Imageset filename="RoomArtworkCasinoMoney.imageset" name="RoomArtworkCasinoMoney" />
     <Imageset filename="Items.imageset" name="ItemImages" />
     <Imageset filename="SlotTypes.imageset" name="SlotTypes" />
     <Imageset filename="ODNavigation.imageset" name="OpenDungeonsNavigation" />

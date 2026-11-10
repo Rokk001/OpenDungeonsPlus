@@ -1,0 +1,4 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<Imageset version="2" name="RoomArtworkGhostLevelCrystal" imagefile="RoomCentreArtwork/ghost-level-crystal.png" autoScaled="false" nativeHorzRes="1024" nativeVertRes="768">
+    <Image name="Image" xPos="0" yPos="0" width="38" height="40" />
+</Imageset>

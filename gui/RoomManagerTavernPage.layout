@@ -1,25 +1,88 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <GUILayout version="4">
     <Window type="DefaultWindow" name="TavernPage">
         <Property name="Area" value="{{0,0},{0,0},{1,0},{1,0}}" />
-        <Window type="OD/StaticText" name="BeerText">
-            <Property name="Area" value="{{0,20},{0,45},{1,-20},{0,75}}" />
-            <Property name="Text" value="Beer: not researched" />
+        <Property name="Visible" value="False" />
+        <Window type="OD/StaticText" name="Title">
+            <Property name="Area" value="{{0.03,0},{0.01,0},{0.97,0},{0.09,0}}" />
             <Property name="FrameEnabled" value="False" />
             <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Tavern" />
             <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/StaticImage" name="Beer">
+            <Property name="Area" value="{{0.36,0},{0.13,0},{0.64,0},{0.48,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Image" value="OpenDungeonsIcons/BeerButton" />
+            <Property name="AspectMode" value="Shrink" />
+        </Window>
+        <Window type="OD/StaticImage" name="BeerLock">
+            <Property name="Area" value="{{0.52,0},{0.35,0},{0.64,0},{0.48,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Image" value="DungeonbookIcons/Lock" />
+            <Property name="AspectMode" value="Shrink" />
+        </Window>
+        <Window type="OD/StaticText" name="BeerText">
+            <Property name="Area" value="{{0.32,0},{0.49,0},{0.68,0},{0.57,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/StaticImage" name="Keeper">
+            <Property name="Area" value="{{0.1,0},{0.64,0},{0.25,0},{0.8,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Image" value="OpenDungeonsIcons/SeatIcon" />
+            <Property name="AspectMode" value="Shrink" />
+        </Window>
+        <Window type="OD/StaticText" name="KeeperLabel">
+            <Property name="Area" value="{{0.03,0},{0.8,0},{0.32,0},{0.88,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Keeper" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
+        </Window>
+        <Window type="OD/StaticImage" name="Creature">
+            <Property name="Area" value="{{0.75,0},{0.64,0},{0.9,0},{0.8,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Image" value="OpenDungeonsIcons/CreaturesIcon" />
+            <Property name="AspectMode" value="Shrink" />
+        </Window>
+        <Window type="OD/StaticText" name="CreatureLabel">
+            <Property name="Area" value="{{0.68,0},{0.8,0},{0.97,0},{0.88,0}}" />
+            <Property name="FrameEnabled" value="False" />
+            <Property name="BackgroundEnabled" value="False" />
+            <Property name="MousePassThroughEnabled" value="True" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="Creature" />
+            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="VertFormatting" value="CentreAligned" />
         </Window>
         <Window type="OD/Button" name="PayerButton">
-            <Property name="Area" value="{{0.5,-120},{0,95},{0.5,120},{0,125}}" />
-            <Property name="Text" value="Keeper pays" />
-            <Property name="TooltipText" value="Who pays for beer" />
-        </Window>
-        <Window type="OD/StaticText" name="SizeText">
-            <Property name="Area" value="{{0,20},{0,130},{1,-20},{0,160}}" />
-            <Property name="Text" value="" />
-            <Property name="FrameEnabled" value="False" />
-            <Property name="BackgroundEnabled" value="False" />
-            <Property name="HorzFormatting" value="CentreAligned" />
+            <Property name="Area" value="{{0.35,0},{0.68,0},{0.65,0},{0.79,0}}" />
+            <Property name="Font" value="MedievalSharp-10" />
+            <Property name="Text" value="&lt;&gt;" />
         </Window>
     </Window>
 </GUILayout>

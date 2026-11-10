@@ -202,6 +202,12 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     bool buyMerchantItem(const CEGUI::EventArgs& = {});
     //! \brief Refreshes selected-row tooltip, price and treasury affordability.
     bool refreshMerchantSelection(const CEGUI::EventArgs& = {});
+    //! \brief Opens the clicked stock item confirmation even when it is unaffordable.
+    bool confirmMerchantItem(const CEGUI::EventArgs&);
+    //! \brief Updates the hovered stock tooltip and keeps it beside the pointer.
+    bool hoverMerchantItem(const CEGUI::EventArgs&);
+    //! \brief Closes the pending purchase without changing stock.
+    bool cancelMerchantItem(const CEGUI::EventArgs& = {});
     //! \brief Reads a complete merchant stock snapshot without adopting a truncated response.
     void receiveMerchantWindow(ODPacket& packet);
     //! \brief Applies the validated margin and mode snapshot from the server.
@@ -713,6 +719,7 @@ private:
 
     //! \brief Tile of the casino whose payout window is open and the payout level shown
     //! \brief Own room tile used to validate keeper-wide ghost control requests.
+    bool mUpdatingGhost = false;
     int32_t mGhostRoomX = -1;
     int32_t mGhostRoomY = -1;
     int mCasinoX;
@@ -725,9 +732,10 @@ private:
     std::vector<std::string> mInfirmaryPatientNames;
     //! \brief Latest stock entries and stable indices received from the server.
     std::vector<std::pair<uint32_t, ItemInstance>> mMerchantItems;
-    //! \brief Tracks changed deal history so a live push also triggers the prescribed client refresh.
-    std::string mMerchantHistoryShown;
-    bool mMerchantSnapshotReceived = false;
+    //! \brief Tracks the pending purchase across live stock snapshots.
+    //! \brief Stable pending stock identity; snapshots never substitute another item.
+    uint32_t mMerchantPendingId = 0;
+    bool mMerchantConfirmationOpen = false;
     int32_t mMerchantMarginShown = 10;
     std::string mMerchantModeShown = "fair";
     //! \brief Prevents applying a received slider value from sending a new setting request.
