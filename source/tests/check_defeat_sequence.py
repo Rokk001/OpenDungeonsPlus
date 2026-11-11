@@ -436,7 +436,8 @@ for signature in ('bool GameMode::mouseMoved(', 'bool GameMode::mousePressed(', 
     assert lines[0] == '        return true;' or (lines[0] == '    {' and '        return true;' in lines[1:4]
                                                    and lines.index('    }') > lines.index('        return true;')), signature
 print('WIRING OK: mouse move/press/release and key press/release are gated right after the idle-hand reset and return before any game code while the sequence runs')
-assert 'if(mDefeatSequence.blocksInput())' in function(game_mode, 'void GameMode::updateCameraControls(')
+camera_controls = function(game_mode, 'void GameMode::updateCameraControls(')
+assert re.search(r'if\(mDefeatSequence\.blocksInput\(\) \|\| \(mLoadBrowser && mLoadBrowser->isOpenInGame\(\)\)\)\s*\{\s*camera->move\(CameraManager::fullStop\);\s*return;\s*\}', camera_controls)
 assert 'updateDefeatSequence(std::chrono::steady_clock::now());' in function(game_mode, 'void GameMode::onFrameStarted(')
 start = function(game_mode, 'void GameMode::startDefeatSequence(')
 assert 'if(!mDefeatSequence.start(' in start and start.index('return;') < start.index('cutCameraToHeart')
