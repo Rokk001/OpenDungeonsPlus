@@ -95,7 +95,16 @@ bool MenuModeLoad::closeBrowser(const CEGUI::EventArgs&)
     mOpen = false;
     ODFrameListener::getSingleton().getClientGameMap()->setGamePaused(mWasPaused);
     getModeManager().getGui().loadGuiSheet(Gui::inGameMenu);
+    getModeManager().getCurrentMode()->giveFocus();
     return true;
+}
+
+//! \brief Closes the in-game browser on Escape and otherwise uses menu input.
+bool MenuModeLoad::keyPressed(const OIS::KeyEvent& arg)
+{
+    if(mInGame && arg.key == OIS::KC_ESCAPE)
+        return closeBrowser();
+    return AbstractApplicationMode::keyPressed(arg);
 }
 
 void MenuModeLoad::activate()
@@ -117,6 +126,7 @@ void MenuModeLoad::activate()
             mWasPaused = gameMap->getGamePaused();
         mOpen = true;
         gameMap->setGamePaused(true);
+        giveFocus();
     }
     else
     {
