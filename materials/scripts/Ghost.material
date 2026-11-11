@@ -165,6 +165,28 @@ material GhostPackRubber
 // The flexible hose from the backpack to the capture cannon (decisions 894, 936 and 998): dark ribbed rubber matching the
 // pack, with physical corrugations and steel couplings. Unlit, so it never reads white in a bright room: shapeGhostHose
 // in Creature.cpp gives every vertex the shaded GhostHoseColour of config/rooms.cfg, which tints the rubber texture.
+// Explicit colour shaders keep the procedural hose colours on GL3Plus as well as the generated material scheme.
+vertex_program GhostHoseVertex glsl
+{
+    source GhostHose.vert
+    default_params
+    {
+        param_named_auto worldViewProj worldviewproj_matrix
+    }
+}
+fragment_program GhostHoseFragment glsl
+{
+    source GhostHose.frag
+    default_params
+    {
+        param_named rubberMap int 0
+    }
+}
+fragment_program GhostHoseWireFragment glsl
+{
+    source GhostHoseWire.frag
+}
+
 material GhostHose
 {
     receive_shadows off
@@ -176,6 +198,8 @@ material GhostHose
             lighting off
             ambient vertexcolour
             diffuse vertexcolour
+            vertex_program_ref GhostHoseVertex { }
+            fragment_program_ref GhostHoseFragment { }
             texture_unit
             {
                 texture GhostPackRubber.png
@@ -199,6 +223,8 @@ material GhostHoseWire
             lighting off
             ambient vertexcolour
             diffuse vertexcolour
+            vertex_program_ref GhostHoseVertex { }
+            fragment_program_ref GhostHoseWireFragment { }
         }
     }
 }

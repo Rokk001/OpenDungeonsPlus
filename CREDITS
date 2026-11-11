@@ -2280,3 +2280,5 @@ models/Wyvern.skeleton    AI-generated modification with Codex    GPLv3+ for add
 models/lich.skeleton    AI-generated modification with Codex    GPLv3+ for added work; original model, rig and texture licences retained in existing rows    Complete calm five-second standing and table-supported seated cup cycles, retaining native rig and unrelated clips. 2026-11-09.
 
 materials/textures/menu/MenuCrowFeather.png, materials/textures/menu/MenuCrowFeatherNormal.png OD Team GPLv3+ Original AI-generated feather albedo and tangent-space normal map created with the built-in image generator for the menu crow; fine charcoal-black barbs and central rachis, no external source.
+
+materials/scripts/GhostHose.vert, materials/scripts/GhostHose.frag, materials/scripts/GhostHoseWire.frag: original procedural hose colour shaders, AI-assisted project code, GPL-3.0-or-later.

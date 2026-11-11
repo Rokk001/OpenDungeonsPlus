@@ -576,7 +576,7 @@ def beam_from_capture_cannon():
     has(update, "a hunter without hand bones holds the cannon on a node that moves with it",
         'mGhostGunHandNode=getEntityNode()->createChildSceneNode(getName()+"_GhostGunHandNode",', "mGhostGunHandNode->attachObject(mGhostCaptureGun);")
     has(update, "the cannon is in the hand exactly while the beam is on, else in its holster on the pack",
-        "const bool beaming=target!=nullptr;", "mGhostCaptureGun->setVisible(beaming);", "mGhostPackGun->setVisible(!beaming);",
+        "const bool beaming=target!=nullptr && mGhostBoxMode==3 && ghostAboveTrap(scene,*target);", "mGhostCaptureGun->setVisible(beaming);", "mGhostPackGun->setVisible(!beaming);",
         'mGhostPackGun=scene->createEntity(getName()+"_GhostPackGun","GhostCaptureGun.mesh");', "holsterNode->attachObject(mGhostPackGun);")
     has(update, "the cannon takes the place of the hunter's own weapons while beaming",
         "if(beaming) { setGhostHunterWeaponsVisible(scene,*this,false);mGhostOwnWeaponsHidden=true; }",

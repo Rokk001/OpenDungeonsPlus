@@ -12848,6 +12848,16 @@ static Ogre::Vector3 ghostBeamAimPoint(Ogre::SceneManager* scene, const GameEnti
     return ghost.getPosition();
 }
 
+//! \brief Keeps the cannon on a visible ghost, stopping once its whole body has entered the floor trap (decision 1078).
+static bool ghostAboveTrap(Ogre::SceneManager* scene, const GameEntity& ghost)
+{
+    if(static_cast<const GhostEntity&>(ghost).getState()!=GhostState::beamed) return false;
+    const std::string name=ghost.getOgreNamePrefix()+ghost.getName();
+    if(!scene->hasEntity(name)) return true;
+    const Ogre::AxisAlignedBox bounds=scene->getEntity(name)->getWorldBoundingBox(true);
+    return !bounds.isFinite() || bounds.getMaximum().z>ghost.getPosition().z;
+}
+
 //! \brief Returns the unit direction of `direction` with its pitch held between `down` radians below and `up` radians
 //! above the horizontal (decision 998). A direction straight up or down keeps the flat heading of `heading`.
 static Ogre::Vector3 limitGhostCannonPitch(const Ogre::Vector3& direction, const Ogre::Vector3& heading, Ogre::Real down,
@@ -12979,7 +12989,7 @@ static Ogre::ColourValue shadeGhostHose(const Ogre::ColourValue& colour, const O
 //! the cannon. Both ends leave along the given directions and the middle sags, so the hose follows every movement of the
 //! hunter and of the cannon; the textured corrugations reach the given radius in world units. Coloured wires (decision
 //! 998, second section, material GhostHoseWire) wind round the ribs along the same curve every frame, from inside the
-//! steel coupling at the pack to inside the coupling at the cannon.
+//! steel coupling at the pack to inside the coupling at the cannon. Both sections supply colour and UV shader inputs.
 static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, const Ogre::Vector3& portOut,
     const Ogre::Vector3& rear, const Ogre::Vector3& rearOut, Ogre::Real radius)
 {
@@ -13059,6 +13069,7 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
                 hose.position(core+normal*thickness);
                 hose.normal(normal);
                 hose.colour(shadeGhostHose(look.mWires[wire],normal,look.mGlow));
+                hose.textureCoord(0.0f,share);
             }
         }
         for(size_t ring=0;ring<GHOST_HOSE_RINGS;++ring)
@@ -13363,6 +13374,7 @@ void Creature::clearGhostHuntVisuals()
 
 //! \brief Keeps hunter equipment sized to the hunter, the backpack on the back, the box in the hand and the capture cannon
 //! in the hand while beaming (in its holster on the pack otherwise), and starts capture effects at the cannon's emitter tip.
+//! Stops the cannon clip and effects as soon as the ghost has visibly entered the trap (decision 1078).
 void Creature::updateGhostHuntVisuals(double seconds)
 {
     if(getIsOnServerMap() || getEntityNode()==nullptr) return;
@@ -13438,7 +13450,11 @@ void Creature::updateGhostHuntVisuals(double seconds)
     // The capture cannon (GHOSTS-PLAN D20, decision 791): every hunter, also one without a weapon of its own, holds it
     // while the beam is on; then it takes the place of the hunter's own weapons. Otherwise it waits in its holster.
     GameEntity* target=mGhostBeamTarget.empty()?nullptr:getGameMap()->getEntityFromTypeAndName(GameEntityType::ghostEntity,mGhostBeamTarget);
-    const bool beaming=target!=nullptr;
+    // The client sees the ghost enter the trap before the server beam timer ends. Lower the cannon and stop its
+    // clip at that visible boundary (decision 1078), keeping the accepted throw, pull and snap clocks unchanged.
+    const bool beaming=target!=nullptr && mGhostBoxMode==3 && ghostAboveTrap(scene,*target);
+    if(!beaming && getAnimationStateName()==EntityAnimation::beam_anim)
+        setAnimationState(EntityAnimation::idle_anim,true,Ogre::Vector3::ZERO,false);
     if(mGhostCaptureGun==nullptr)
     {
         mGhostCaptureGun=scene->createEntity(getName()+"_GhostCaptureGun","GhostCaptureGun.mesh");
@@ -13815,7 +13831,7 @@ void Creature::updateGhostHuntVisuals(double seconds)
         Ogre::AnimationState* pose=body->getAnimationState(mGhostPoseName);
         pose->setEnabled(true);pose->setTimePosition(0.0f);pose->setWeight(poseWeight);
     }
-    if(target==nullptr || mGhostBeamTarget.empty())
+    if(!beaming)
     {
         if(mGhostBeamSound!=0) { SoundEffectsManager::getSingleton().stopSpatialLoop(mGhostBeamSound);mGhostBeamSound=0; }
         if(mGhostBeamSparks!=nullptr) { scene->destroyParticleSystem(mGhostBeamSparks);mGhostBeamSparks=nullptr; }
