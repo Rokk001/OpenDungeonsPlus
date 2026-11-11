@@ -4453,7 +4453,10 @@ static bool dragBonePoint(Ogre::Entity* entity, std::initializer_list<const char
     return false;
 }
 
-//! \brief Keeps an ankle in the animated hand; unknown rigs use their transformed mesh bounds.
+//! \brief Keeps an ankle in the worker's hand; unknown rigs use their transformed mesh bounds.
+//! The hand and the ankle are sampled once per pull and kept in the local space of their nodes (decision 1048): the Drag
+//! clip swings the hand forward and back with every step, and a contact that followed the swing made the pulled body
+//! jump back and forth. The body hangs at a fixed grip, so it only moves with the worker.
 void RenderManager::rrApplyDragContact(Creature& dragged, const Creature& worker)
 {
     const std::string bodyName = dragged.getOgreNamePrefix() + dragged.getName();
@@ -4466,25 +4469,36 @@ void RenderManager::rrApplyDragContact(Creature& dragged, const Creature& worker
     Ogre::SceneNode* workerNode = puller->getParentSceneNode();
     if(bodyNode == nullptr || workerNode == nullptr)
         return;
-    Ogre::Vector3 hand;
-    if(!dragBonePoint(puller, {"Hand.R", "hand_r", "Hand_R", "RightHand", "Weapon_R"}, hand))
+    DragGrip& grip = mDragContactGrips[&dragged];
+    if(!grip.mValid || grip.mWorkerName != worker.getName())
     {
-        const Ogre::AxisAlignedBox& bounds = puller->getBoundingBox();
-        if(bounds.isNull() || bounds.isInfinite())
-            return;
-        hand = workerNode->convertLocalToWorldPosition(bounds.getCenter());
+        Ogre::Vector3 sampledHand;
+        if(!dragBonePoint(puller, {"Hand.R", "hand_r", "Hand_R", "RightHand", "Weapon_R"}, sampledHand))
+        {
+            const Ogre::AxisAlignedBox& bounds = puller->getBoundingBox();
+            if(bounds.isNull() || bounds.isInfinite())
+                return;
+            sampledHand = workerNode->convertLocalToWorldPosition(bounds.getCenter());
+        }
+        Ogre::Vector3 sampledAnkle;
+        if(!dragBonePoint(body, {"Foot.R", "foot_r", "foot.R", "Foot_R", "RightFoot"}, sampledAnkle))
+        {
+            const Ogre::AxisAlignedBox& bounds = body->getBoundingBox();
+            if(bounds.isNull() || bounds.isInfinite())
+                return;
+            // The end of the body's own bounds provides a deterministic contact for legless rigs.
+            const Ogre::Vector3 center = bounds.getCenter();
+            sampledAnkle = bodyNode->convertLocalToWorldPosition(
+                Ogre::Vector3(center.x, bounds.getMinimum().y, center.z));
+        }
+        grip.mWorkerName = worker.getName();
+        grip.mHand = workerNode->convertWorldToLocalPosition(sampledHand);
+        grip.mAnkle = bodyNode->convertWorldToLocalPosition(sampledAnkle);
+        grip.mValid = true;
     }
-    Ogre::Vector3 ankle;
-    if(!dragBonePoint(body, {"Foot.R", "foot_r", "foot.R", "Foot_R", "RightFoot"}, ankle))
-    {
-        const Ogre::AxisAlignedBox& bounds = body->getBoundingBox();
-        if(bounds.isNull() || bounds.isInfinite())
-            return;
-        // The end of the body's own bounds provides a deterministic contact for legless rigs.
-        const Ogre::Vector3 center = bounds.getCenter();
-        ankle = bodyNode->convertLocalToWorldPosition(
-            Ogre::Vector3(center.x, bounds.getMinimum().y, center.z));
-    }
+    grip.mUsed = true;
+    const Ogre::Vector3 hand = workerNode->convertLocalToWorldPosition(grip.mHand);
+    const Ogre::Vector3 ankle = bodyNode->convertLocalToWorldPosition(grip.mAnkle);
     const Ogre::Vector3 contactPosition = bodyNode->_getDerivedPosition() + hand - ankle;
     const Ogre::Vector3 basePosition = bodyNode->getPosition();
     Ogre::SceneNode* parent = bodyNode->getParentSceneNode();
@@ -4503,6 +4517,17 @@ void RenderManager::rrResetDragContacts()
             node->setPosition(contact.second.first);
     }
     mDragContactPositions.clear();
+    // A grip that was not used since the last reset belongs to a pull that ended: the next pull samples a new one
+    for(std::map<Creature*, DragGrip>::iterator grip = mDragContactGrips.begin(); grip != mDragContactGrips.end();)
+    {
+        if(!grip->second.mUsed)
+            grip = mDragContactGrips.erase(grip);
+        else
+        {
+            grip->second.mUsed = false;
+            ++grip;
+        }
+    }
 }
 
 //! \brief Applies contact after every creature has advanced, independent of creation order.
@@ -4640,6 +4665,7 @@ void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
     mDragContactCreatures.erase(curCreature);
     mDragContactPositions.erase(curCreature);
+    mDragContactGrips.erase(curCreature);
     clearCreatureDecay(curCreature);
     removeCreatureTavernProps(curCreature);
     cancelCreatureStep(curCreature);
