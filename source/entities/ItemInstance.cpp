@@ -8,6 +8,7 @@
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <map>
@@ -390,4 +391,41 @@ std::string ItemInstance::describe(const GameMap* map, const Weapon* heldWeapon)
     for(const std::pair<std::string, double>& effect : mEffects)
         text += "\n" + ItemEffects::getName(effect.first) + " " + itemNumber(effect.second);
     return text + "\nLevel " + std::to_string(getLevelMin(map));
+}
+
+//! \brief Builds the item card tooltip (owner decision 1026, finding 5): large name and quality in the quality colour,
+//! the price after a gold coin, a short left-aligned list of the values and the level in grey. The values are those of
+//! describe(); only their layout and the labels of a held weapon are shorter.
+std::string ItemInstance::describeTooltip(const GameMap* map, const Weapon* heldWeapon, int32_t coinSize) const
+{
+    const std::string quality = "[colour='" + QUALITY_COLOURS.at(static_cast<size_t>(mQuality)) + "']";
+    const std::string size = std::to_string(std::max<int32_t>(coinSize, 1));
+    std::ostringstream text;
+    text << "[font='MedievalSharp-13']" << quality << (heldWeapon == nullptr ? getDisplayName(map) : heldWeapon->getName())
+        << "\n[font='MedievalSharp-10']" << quality << qualityName(mQuality)
+        << "     [colour='FFF2C860'][image-size='w:" << size << " h:" << size << "'][image='OpenDungeonsIcons/GoldCoin'] "
+        << itemNumber(getPrice(map)) << "[colour='FFE8DCC0']";
+    if(heldWeapon != nullptr)
+    {
+        text << "\nType: " << heldWeapon->getWeaponType() << "\nHands: " << heldWeapon->getHands()
+            << "\nDamage: "
+            << heldWeapon->getPhysicalDamageMin() << "-" << heldWeapon->getPhysicalDamage() << " / "
+            << heldWeapon->getMagicalDamageMin() << "-" << heldWeapon->getMagicalDamage() << " / "
+            << heldWeapon->getElementDamageMin() << "-" << heldWeapon->getElementDamage()
+            << "\nDefense: "
+            << heldWeapon->getPhysicalDefense() << " / " << heldWeapon->getMagicalDefense() << " / "
+            << heldWeapon->getElementDefense()
+            << "\nAttack rating: " << heldWeapon->getAttackRating()
+            << "\nDefense rating: " << heldWeapon->getDefenseRating();
+    }
+    for(const std::pair<std::string, double>& bonus : mBonuses)
+    {
+        text << "\n" << bonusName(bonus.first) << " +" << itemNumber(bonus.second);
+        if(bonus.first.find('%') != std::string::npos)
+            text << "%";
+    }
+    for(const std::pair<std::string, double>& effect : mEffects)
+        text << "\n" << ItemEffects::getName(effect.first) << " " << itemNumber(effect.second);
+    text << "\n[colour='FF9A9080']Level " << getLevelMin(map);
+    return text.str();
 }

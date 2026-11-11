@@ -6662,7 +6662,10 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
         CEGUI::Window* slotType = image->getChild("SlotType");
         slotType->setProperty("Image", std::string("SlotTypes/") + slotTypes[slot]);
         slotType->setVisible(item == nullptr);
-        image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap(), heldWeapon));
+        if(item == nullptr)
+            Gui::setPlainTooltip(image, "");
+        else
+            Gui::setItemTooltip(image, *item, creature->getGameMap(), heldWeapon);
         CEGUI::Window* frame = image->getChild("QualityFrame");
         frame->setVisible(item != nullptr);
         if(item != nullptr)
@@ -6682,7 +6685,7 @@ void Creature::fillItemSlotWindows(Creature* creature, const std::vector<CEGUI::
         {
             const char* const levelKey = (slot == 7) ? "PotionSlotLevel2" : "PotionSlotLevel3";
             const int32_t level = static_cast<int32_t>(ConfigManager::getSingleton().getItemSetting("Potions", levelKey));
-            image->setTooltipText("Potion slot locked: it opens at level " + Helper::toString(level));
+            Gui::setPlainTooltip(image, "Potion slot locked: it opens at level " + Helper::toString(level));
         }
     }
 }

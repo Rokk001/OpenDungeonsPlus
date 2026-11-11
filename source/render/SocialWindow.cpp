@@ -1308,7 +1308,7 @@ void SocialWindow::refreshInventory(const social::DungeonbookEntry& entry)
     // middle and the name passes the mouse to the box (decision 863, finding 3). The box repeats the tooltip of its
     // picture (item values, or the lock text), so hovering anywhere on a filled slot shows the item as on the card.
     for(CEGUI::Window* slot : slots)
-        slot->getParent()->setTooltipText(slot->getTooltipText());
+        Gui::copyTooltip(slot, slot->getParent());
 
     std::string hint;
     if(creature == nullptr)

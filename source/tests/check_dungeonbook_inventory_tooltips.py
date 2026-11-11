@@ -10,7 +10,7 @@ the name showed nothing. Checked here:
    around the picture, and no later window of the page, the header or the navigation bar lies over a slot box.
 2. refreshInventory copies the tooltip of every picture to its box right after fillItemSlotWindows, so the whole box
    shows the item values (or the lock text of a locked potion slot) and an empty slot shows nothing.
-3. fillItemSlotWindows still sets item->describe on the picture, and the creature card keeps its own slots and call.
+3. fillItemSlotWindows still sets the item tooltip (Gui::setItemTooltip) on the picture, and the creature card keeps its own slots and call.
 """
 from pathlib import Path
 import re
@@ -87,15 +87,15 @@ for i in range(SLOTS):
 # 2. The box repeats the tooltip of its picture
 inventory = function_of(social, 'void SocialWindow::refreshInventory(')
 fill_at = inventory.index('Creature::fillItemSlotWindows(creature, slots, true);')
-copy = 'slot->getParent()->setTooltipText(slot->getTooltipText());'
+copy = 'Gui::copyTooltip(slot, slot->getParent());'
 assert copy in inventory and inventory.index(copy) > fill_at, 'the slot boxes take the tooltip after the slots are filled'
 assert re.search(r'for\(CEGUI::Window\* slot : slots\)\s*\n\s*' + re.escape(copy), inventory), 'every slot box'
 assert '"SlotBox" + std::to_string(slot) + "/Slot" + std::to_string(slot)' in inventory, 'the picture is a child of its box'
 
 # 3. The shared fill and the creature card stay as they are
 fill = function_of(creature, 'void Creature::fillItemSlotWindows(')
-assert 'image->setTooltipText(item == nullptr ? "" : item->describe(creature->getGameMap(), heldWeapon));' in fill
-assert 'image->setTooltipText("Potion slot locked: it opens at level "' in fill
+assert 'Gui::setItemTooltip(image, *item, creature->getGameMap(), heldWeapon);' in fill
+assert 'Gui::setPlainTooltip(image, "Potion slot locked: it opens at level "' in fill
 assert 'getParent()' not in fill, 'the shared fill does not touch the parents of the card slots'
 assert 'fillItemSlotWindows(this, slotWindows, false);' in creature, 'the creature card keeps its slots'
 row = [w for w in card.iter('Window') if w.get('name') == 'EquipmentRow']

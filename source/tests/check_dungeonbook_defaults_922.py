@@ -40,7 +40,7 @@ def main():
     assert fill.index("item = creature->mEquipment[slot].get()") < fill.index("if(item == nullptr && slot < VISIBLE_ITEM_HAND_SLOTS)")
     assert "slot == 0 ? creature->mWeaponR : creature->mWeaponL" in fill
     assert "heldWeapon = weapon;" in fill and "item->getImageName(heldWeapon)" in fill
-    assert "item->describe(creature->getGameMap(), heldWeapon)" in fill
+    assert "Gui::setItemTooltip(image, *item, creature->getGameMap(), heldWeapon)" in fill
 
     # Replace only the world fixture's weapon stand-in with the actual class and actual parser.
     probe = catalogue_fixture()

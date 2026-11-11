@@ -34,7 +34,10 @@
 #include <map>
 #include <initializer_list>
 
+class GameMap;
+class ItemInstance;
 class SoundEffectsManager;
+class Weapon;
 
 namespace CEGUI
 {
@@ -90,6 +93,17 @@ public:
     //! \brief Brings the default tooltip in front of the dialogs again when one of them rose above it since the last
     //! frame. Called once per frame before the time pulse of CEGUI, outside of every CEGUI event and window update.
     static void keepTooltipInFront();
+
+    //! \brief Gives the window the tooltip of an item in the look of the merchant mockup (owner decision 1026, finding 5):
+    //! dark box with a violet border, the name large and the quality in colour, the price after a gold coin and the
+    //! values as a short left-aligned list. The default tooltip takes that look while it shows this window.
+    static void setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon);
+
+    //! \brief Gives the window a plain text tooltip in the normal look, or none when the text is empty.
+    static void setPlainTooltip(CEGUI::Window* window, const std::string& text);
+
+    //! \brief Gives the window the tooltip text and the look of another window.
+    static void copyTooltip(const CEGUI::Window* from, CEGUI::Window* to);
 
     CEGUI::Window* getGuiSheet(guiSheet sheet);
 

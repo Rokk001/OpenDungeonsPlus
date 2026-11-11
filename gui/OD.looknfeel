@@ -5043,6 +5043,98 @@
         </ImagerySection>
     </WidgetLook>
 
+    <!-- Tooltip of an item (owner decision 1026, finding 5, merchant mockup W-1 variant 3): dark box with a violet
+         border and left-aligned text; the item name, quality and price carry their own colours and fonts in the text.
+         Gui switches the default tooltip to this look while it shows a window marked with the user string ItemTooltip. -->
+    <WidgetLook name="OD/ItemTooltip">
+        <NamedArea name="TextArea">
+            <Area>
+                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/TooltipLeftEdge" /><AbsoluteDim value="8" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsSkin/TooltipTopEdge" /><AbsoluteDim value="8" /></OperatorDim></Dim>
+                <Dim type="RightEdge">
+                    <OperatorDim op="Subtract">
+                        <UnifiedDim scale="1" type="RightEdge" />
+                        <OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/TooltipRightEdge" /><AbsoluteDim value="8" /></OperatorDim>
+                    </OperatorDim>
+                </Dim>
+                <Dim type="BottomEdge">
+                    <OperatorDim op="Subtract">
+                        <UnifiedDim scale="1" type="BottomEdge" />
+                        <OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsSkin/TooltipBottomEdge" /><AbsoluteDim value="8" /></OperatorDim>
+                    </OperatorDim>
+                </Dim>
+            </Area>
+        </NamedArea>
+        <ImagerySection name="background">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="Background" name="OpenDungeonsSkin/TooltipMiddle" />
+                <Colours topLeft="F2100C18" topRight="F2100C18" bottomLeft="F2100C18" bottomRight="F2100C18" />
+            </FrameComponent>
+        </ImagerySection>
+        <ImagerySection name="border">
+            <FrameComponent>
+                <Area>
+                    <Dim type="LeftEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="TopEdge"><AbsoluteDim value="0" /></Dim>
+                    <Dim type="Width"><UnifiedDim scale="1" type="Width" /></Dim>
+                    <Dim type="Height"><UnifiedDim scale="1" type="Height" /></Dim>
+                </Area>
+                <Image component="TopLeftCorner" name="OpenDungeonsSkin/TooltipTopLeft" />
+                <Image component="TopRightCorner" name="OpenDungeonsSkin/TooltipTopRight" />
+                <Image component="BottomLeftCorner" name="OpenDungeonsSkin/TooltipBottomLeft" />
+                <Image component="BottomRightCorner" name="OpenDungeonsSkin/TooltipBottomRight" />
+                <Image component="LeftEdge" name="OpenDungeonsSkin/TooltipLeftEdge" />
+                <Image component="RightEdge" name="OpenDungeonsSkin/TooltipRightEdge" />
+                <Image component="TopEdge" name="OpenDungeonsSkin/TooltipTopEdge" />
+                <Image component="BottomEdge" name="OpenDungeonsSkin/TooltipBottomEdge" />
+                <Colours topLeft="FFB070FF" topRight="FFB070FF" bottomLeft="FFB070FF" bottomRight="FFB070FF" />
+            </FrameComponent>
+        </ImagerySection>
+        <ImagerySection name="label">
+            <TextComponent>
+            <Area>
+                <Dim type="LeftEdge"><OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/TooltipLeftEdge" /><AbsoluteDim value="8" /></OperatorDim></Dim>
+                <Dim type="TopEdge"><OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsSkin/TooltipTopEdge" /><AbsoluteDim value="8" /></OperatorDim></Dim>
+                <Dim type="RightEdge">
+                    <OperatorDim op="Subtract">
+                        <UnifiedDim scale="1" type="RightEdge" />
+                        <OperatorDim op="Add"><ImageDim dimension="Width" name="OpenDungeonsSkin/TooltipRightEdge" /><AbsoluteDim value="8" /></OperatorDim>
+                    </OperatorDim>
+                </Dim>
+                <Dim type="BottomEdge">
+                    <OperatorDim op="Subtract">
+                        <UnifiedDim scale="1" type="BottomEdge" />
+                        <OperatorDim op="Add"><ImageDim dimension="Height" name="OpenDungeonsSkin/TooltipBottomEdge" /><AbsoluteDim value="8" /></OperatorDim>
+                    </OperatorDim>
+                </Dim>
+            </Area>
+                <Colours topLeft="FFE8DCC0" topRight="FFE8DCC0" bottomLeft="FFE8DCC0" bottomRight="FFE8DCC0" />
+                <VertFormat type="TopAligned" />
+                <HorzFormat type="LeftAligned" />
+            </TextComponent>
+        </ImagerySection>
+        <StateImagery name="Enabled">
+            <Layer>
+                <Section section="background" />
+                <Section section="border" />
+                <Section section="label" />
+            </Layer>
+        </StateImagery>
+        <StateImagery name="Disabled">
+            <Layer>
+                <Section section="background" />
+                <Section section="border" />
+                <Section section="label" />
+            </Layer>
+        </StateImagery>
+    </WidgetLook>
+
     <WidgetLook name="OD/ScrollablePane">
         <NamedArea name="ViewableArea">
             <Area>

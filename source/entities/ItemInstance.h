@@ -53,6 +53,9 @@ public:
     std::string getImageName(const Weapon* heldWeapon = nullptr) const;
     //! \brief Builds the shared tooltip, including actual base values for a supplied spawn fallback.
     std::string describe(const GameMap* map = nullptr, const Weapon* heldWeapon = nullptr) const;
+    //! \brief Builds the card tooltip of the merchant mockup: name, quality and price with a gold coin of coinSize pixels,
+    //! then the same values as describe() as a short left-aligned list. The window shows it in the OD/ItemTooltip look.
+    std::string describeTooltip(const GameMap* map, const Weapon* heldWeapon, int32_t coinSize) const;
 
     //! \brief Catalogue id of the item line, or the potion id for a consumable.
     std::string mDefinitionId;

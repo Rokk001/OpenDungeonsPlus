@@ -25,6 +25,7 @@
 #include "render/RenderManager.h"
 
 #include "ODApplication.h"
+#include "entities/ItemInstance.h"
 #include "sound/SoundEffectsManager.h"
 #include "utils/ConfigManager.h"
 #include "utils/LogManager.h"
@@ -149,6 +150,12 @@ const char* const TAB_BUTTONS_WINDOW_NAME = "__auto_TabPane__Buttons";
 const char* const CATEGORY_TOOLTIP_FONT = "MedievalSharp-13";
 //! Space between the hand cursor and its tooltip, as a share of the tooltip font height
 const float TOOLTIP_HAND_GAP_FACTOR = 0.25f;
+//! \brief User string of a window whose tooltip is an item card; the value 1 selects the look OD/ItemTooltip
+const char* const ITEM_TOOLTIP_USER_STRING = "ItemTooltip";
+const char* const ITEM_TOOLTIP_LOOK = "OD/ItemTooltip";
+const char* const PLAIN_TOOLTIP_LOOK = "OD/Tooltip";
+//! \brief Font of the values of an item card, whose height sets the size of the gold coin
+const char* const ITEM_TOOLTIP_VALUE_FONT = "MedievalSharp-10";
 //! Set when a sibling of the default tooltip changed its place in the drawing order (owner decision 920). The tooltip
 //! and every shown dialog share the always-on-top layer of the root window (GameMode::raiseShownDialog), and CEGUI
 //! leaves the tooltip where it is while it stays attached between two targets: a dialog that rose later (opened, or
@@ -1628,6 +1635,14 @@ Gui::Gui(SoundEffectsManager* soundEffectsManager, const std::string& ceguiLogFi
             const CEGUI::Window* buttons = target == nullptr ? nullptr : target->getParent();
             const bool category = buttons != nullptr && buttons->getName() == TAB_BUTTONS_WINDOW_NAME &&
                 buttons->getParent() != nullptr && buttons->getParent()->getName() == MAIN_TABCONTROL.c_str();
+            const bool itemCard = target != nullptr && target->isUserStringDefined(ITEM_TOOLTIP_USER_STRING) &&
+                target->getUserString(ITEM_TOOLTIP_USER_STRING) == "1";
+            const char* const look = itemCard ? ITEM_TOOLTIP_LOOK : PLAIN_TOOLTIP_LOOK;
+            if(tooltip->getLookNFeel() != look)
+            {
+                tooltip->setLookNFeel(look);
+                tooltip->sizeSelf();
+            }
             const CEGUI::Font* font = category ? &CEGUI::FontManager::getSingleton().get(CATEGORY_TOOLTIP_FONT) : nullptr;
             if(tooltip->getFont(false) != font)
             {
@@ -1757,6 +1772,28 @@ void Gui::keepTooltipInFront()
     parent->removeChild(tooltip);
     parent->addChild(tooltip);
     sRaisingTooltip = false;
+}
+
+void Gui::setItemTooltip(CEGUI::Window* window, const ItemInstance& item, const GameMap* map, const Weapon* heldWeapon)
+{
+    // The coin is as high as the lines of values, at every resolution and UI scale, since the font is auto scaled
+    const int32_t coinSize = static_cast<int32_t>(std::ceil(
+        CEGUI::FontManager::getSingleton().get(ITEM_TOOLTIP_VALUE_FONT).getFontHeight()));
+    window->setTooltipText(item.describeTooltip(map, heldWeapon, coinSize));
+    window->setUserString(ITEM_TOOLTIP_USER_STRING, "1");
+}
+
+void Gui::setPlainTooltip(CEGUI::Window* window, const std::string& text)
+{
+    window->setTooltipText(text);
+    window->setUserString(ITEM_TOOLTIP_USER_STRING, "0");
+}
+
+void Gui::copyTooltip(const CEGUI::Window* from, CEGUI::Window* to)
+{
+    to->setTooltipText(from->getTooltipText());
+    to->setUserString(ITEM_TOOLTIP_USER_STRING, from->isUserStringDefined(ITEM_TOOLTIP_USER_STRING) ?
+        from->getUserString(ITEM_TOOLTIP_USER_STRING) : CEGUI::String("0"));
 }
 
 void Gui::loadGuiSheet(guiSheet newSheet)
