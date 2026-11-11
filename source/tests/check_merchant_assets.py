@@ -77,10 +77,11 @@ FLAT_DARK_LIMIT = 0.25
 BANNED_FURNITURE = ('ItemWood', 'ItemWoodLight', 'MerchantClothTrim', 'MerchantCloth', 'Bloodroot', 'Moonlily', 'Sunthorn',
                     'ItemBag', 'ItemRope', 'ItemBrass')
 TABLE_NEEDS = ('MerchantTableWood', 'MerchantTableCloth')
-FIGURE_TEXTURED = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantHide', 'MerchantLeather', 'MerchantBrass')
-FIGURE_FLAT_OK = ('MerchantDark', 'MerchantEye', 'MerchantGold', 'MerchantHair')
+FIGURE_TEXTURED = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantHide', 'MerchantLeather', 'MerchantBrass',
+                   'MerchantHair')
+FIGURE_FLAT_OK = ('MerchantDark', 'MerchantEye', 'MerchantGold')
 MERCHANT_CLIPS = ('Idle', 'Walk', 'CountGold', 'RubHands')
-NEW_TEXTURES = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantBrass', 'MerchantTableWood', 'MerchantTableCloth',
+NEW_TEXTURES = ('MerchantRobe', 'MerchantCloak', 'MerchantHood', 'MerchantBrass', 'MerchantHair', 'MerchantTableWood', 'MerchantTableCloth',
                 'MerchantWares')
 # Minimum mean luminance (0..255) per texture for the room light (decision 710); build 41 values in brackets
 MIN_LUMINANCE = {'MerchantLeather': 60,    # (39)
@@ -132,6 +133,23 @@ FACE_OUT_OF_HOOD = 0.04       # the face reaches at least this far forward of th
 NOSE_MIN = 0.2                # nose tip in front of the head joint (0.185)
 GOLD_TOOTH_MIN = 0.024        # gold tooth width (0.020)
 TEXTURE_SIZE = 256
+# Decisions 1053/1070: the look of rework 5 (flat face, smooth cloak, large bright scales, block boots) against variant 1;
+# values of the rework 5 files in brackets
+FACE_MIN_VERTICES = 2800      # wrinkled, hollow face (2024)
+HAIR_MIN_VERTICES = 800       # long grey hair ribbons (300 short strands)
+HAIR_LOW = 0.95               # the hair hangs below this height (the chest) from the hood (lowest 1.01)
+SKIN_MIN_STD = 14.0           # wrinkles, sockets and brows in the skin atlas (luminance deviation 7.3)
+HAIR_MIN_STD = 15.0           # strands in the hair texture
+SCALES_MAX_WIDTH = 0.23       # brass below the belt: the scales (0.33)
+BRASS_MAX_LUMINANCE = 70      # dark tarnished brass (132, bright yellow in the game)
+BRASS_MAX_EMISSIVE = 0.08     # (0.16)
+PANEL_MIN_COUNT = 3           # torn cloth panels hanging from the belt over the robe
+PANEL_MIN_HEIGHT = 0.18
+CLOTH_MIN_VERTICES = 9000     # pleated robe (6858)
+BOOT_TOP = 0.25
+BOOT_MIN_VERTICES = 2000      # shaped boots with toe caps, heels and cuffs (1327)
+SOLE_TOP = 0.04
+SOLE_MIN_VERTICES = 100       # dark soles (none)
 # Height of the sales table top (cloth) the figure must stay behind
 TABLE_TOP = 0.71
 BOUNDS_TOLERANCE = 1e-3
@@ -474,6 +492,37 @@ for piece in mesh_pieces(trees['Merchant'], RAG_MATERIALS):
         rags.append(max(zs) - min(zs))
 assert len(rags) <= RAG_MAX_COUNT, 'the robe is shaggy: %d rag strips at the hem (at most %d)' % (len(rags), RAG_MAX_COUNT)
 assert not rags or max(rags) <= RAG_MAX_LENGTH, 'a rag strip is %.2f long (at most %.2f)' % (max(rags), RAG_MAX_LENGTH)
+
+# 5b. Look of decisions 1053/1070 (the owner's in-game screenshot showed a flat brown face with two slits and a yellow
+# spot, a smooth lumpy cloak, large bright yellow scales and brown block boots; D-6-v2 variant 1 shows a gaunt wrinkled old
+# man with long grey hair, bony hands, a layered torn robe, small dark brass scales and worn boots)
+merchant_tree = trees['Merchant']
+head_pts = [p for p in submesh_positions(merchant_tree, 'MerchantHide') if p[2] > FACE_LOW]
+assert len(head_pts) >= FACE_MIN_VERTICES, 'the face is too coarse for wrinkles and hollow cheeks (%d vertices)' % len(head_pts)
+hair_pts = submesh_positions(merchant_tree, 'MerchantHair')
+assert len(hair_pts) >= HAIR_MIN_VERTICES, 'the merchant needs long grey hair (%d hair vertices)' % len(hair_pts)
+assert max(p[2] for p in hair_pts) > FACE_LOW and min(p[2] for p in hair_pts) < HAIR_LOW, \
+    'the grey hair must hang from the hood down to the chest (z %.2f to %.2f)' % (min(p[2] for p in hair_pts), max(p[2] for p in hair_pts))
+skin_value, skin_red, skin_green, skin_blue, skin_std = png_stats('materials/textures/MerchantHide.png')
+assert skin_std >= SKIN_MIN_STD, 'MerchantHide.png has no wrinkles, sockets and brows (luminance deviation %.1f, needs %d)' % (skin_std, SKIN_MIN_STD)
+assert png_stats('materials/textures/MerchantHair.png')[4] >= HAIR_MIN_STD, 'MerchantHair.png is a flat grey without strands'
+brass_pts = [p for p in submesh_positions(merchant_tree, 'MerchantBrass') if p[2] < BELT_LOW + 0.1]
+scales_width = max(p[0] for p in brass_pts) - min(p[0] for p in brass_pts)
+assert scales_width <= SCALES_MAX_WIDTH, 'the scales are too large (%.3f wide, at most %.2f)' % (scales_width, SCALES_MAX_WIDTH)
+brass_value = png_mean_luminance('materials/textures/MerchantBrass.png')
+assert brass_value <= BRASS_MAX_LUMINANCE, 'the brass is bright yellow, not dark brass (mean %.0f, at most %d)' % (brass_value, BRASS_MAX_LUMINANCE)
+brass_light = [float(x) for x in re.search(r'^\s*emissive\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', material_block('MerchantBrass'), re.M).groups()]
+assert max(brass_light) <= BRASS_MAX_EMISSIVE, 'the brass glows too much for dark brass (%s)' % brass_light
+panels = [piece for piece in mesh_pieces(merchant_tree, RAG_MATERIALS)
+          if max(p[2] for p in piece) > RAG_MAX_TOP and max(p[2] for p in piece) < BELT_HIGH and
+          max(p[0] for p in piece) - min(p[0] for p in piece) >= RAG_MAX_WIDTH and
+          max(p[2] for p in piece) - min(p[2] for p in piece) >= PANEL_MIN_HEIGHT]
+assert len(panels) >= PANEL_MIN_COUNT, 'the robe needs layered torn cloth panels from the belt (%d found)' % len(panels)
+assert len(submesh_positions(merchant_tree, 'MerchantRobe')) >= CLOTH_MIN_VERTICES, 'the robe is a smooth lump without pleats'
+boot_pts = [p for p in submesh_positions(merchant_tree, 'MerchantLeather') if p[2] < BOOT_TOP]
+assert len(boot_pts) >= BOOT_MIN_VERTICES, 'the boots are brown blocks (%d vertices, needs %d)' % (len(boot_pts), BOOT_MIN_VERTICES)
+assert len([p for p in submesh_positions(merchant_tree, 'MerchantDark') if p[2] < SOLE_TOP]) >= SOLE_MIN_VERTICES, \
+    'the boots need dark soles'
 
 # 6. Beside the table, not in it and not hidden behind it
 t_min_x, t_min_y, t_max_x, t_max_y = object_bounds('SalesTable')
