@@ -2652,11 +2652,11 @@ void RenderManager::prepareGameShaders()
         Ogre::MaterialPtr material = materialManager.getByName(name);
         if(!material)
             continue;
-        const Ogre::String copyName = name + PREPARED_OVERLAY_SUFFIX;
-        Ogre::MaterialPtr copy = materialManager.getByName(copyName, material->getGroup());
+        const Ogre::String preparedName = name + PREPARED_OVERLAY_SUFFIX;
+        Ogre::MaterialPtr copy = materialManager.getByName(preparedName, material->getGroup());
         if(!copy)
         {
-            copy = material->clone(copyName);
+            copy = material->clone(preparedName);
             copy->setLightingEnabled(false);
             copy->setReceiveShadows(false);
             copy->setDepthCheckEnabled(false);
