@@ -11,7 +11,8 @@ def read(path):
 render = read('source/render/RenderManager.cpp')
 vert = read('shaders/Enlarge.vert')
 
-body = render.split('void RenderManager::rrAddOutliner')[1].split('void RenderManager::rrRemoveOutliner')[0]
+# The contour copy is made in getOutlinerMaterial(); rrAddOutliner() puts it on every sub entity
+body = render.split('Ogre::MaterialPtr RenderManager::getOutlinerMaterial')[1].split('void RenderManager::rrRemoveOutliner')[0]
 # The extra pass draws only the back faces of a shell behind the model, so the model hides all of it but the rim.
 assert 'setCullingMode(Ogre::CULL_ANTICLOCKWISE)' in body
 # X1 rework (E9): the bias must push the shell away from the camera (negative), a positive bias filled the creature red
@@ -28,5 +29,5 @@ assert 'uniform    float pixelWidth;' in vert and 'uniform    vec4 viewportSize;
 assert 'clip.xy += dir * pixelWidth * 2.0 * viewportSize.zw * clip.w' in vert
 assert 'normalize(normal.xyz) * width' not in vert and 'position.xyz +' not in vert and 'blendIndices' in vert
 # Every sub-entity of every creature gets the pass (no creature type is skipped) and it is added to a clone only.
-assert 'getNumSubEntities()' in body and '->clone(ss.str(),"Graphics")' in body
+assert 'getNumSubEntities()' in body and '->clone(outlinerName,"Graphics")' in body
 print('ok')

@@ -92,7 +92,8 @@ assert programs >= 35, programs
 
 # The contour pass built in code binds the world matrix next to the bones.
 render = read('source/render/RenderManager.cpp')
-outliner = render.split('void RenderManager::rrAddOutliner')[1].split('void RenderManager::rrRemoveOutliner')[0]
+# The contour copy is made in getOutlinerMaterial(), which rrAddOutliner() and the seat preparation call
+outliner = render.split('Ogre::MaterialPtr RenderManager::getOutlinerMaterial')[1].split('Ogre::MaterialPtr RenderManager::getBrighterMaterial')[0]
 assert 'setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4)' in outliner
 assert 'setNamedAutoConstant("worldMatrix", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX)' in outliner
 

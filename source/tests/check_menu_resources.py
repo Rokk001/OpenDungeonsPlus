@@ -385,7 +385,10 @@ def check_menu_lighting(root):
     for setter, getter in (("setAmbient", "getAmbient"), ("setDiffuse", "getDiffuse"), ("setSpecular", "getSpecular"), ("setSelfIllumination", "getSelfIllumination")):
         assert f"dstPass->{setter}(toLightingHeadroom(srcPass->{getter}()));" in display, setter + " must enter the lighting headroom from the source pass"
     manager_source = (root / "source/render/RenderManager.cpp").read_text(encoding="utf-8")
-    assert "registerMenuDisplayShading(*mShaderGenerator);" in manager_source and "setLightCountAutoUpdate(false)" in manager_source and "setLightCountAutoUpdate(true)" in manager_source, "menu shaders must keep one light count"
+    assert "registerMenuDisplayShading(*mShaderGenerator);" in manager_source and "setLightCountAutoUpdate(false)" in manager_source, "menu shaders must keep one light count"
+    # Leaving the menu hands the shaders to the fixed light count of the game (check_game_shader_preparation.py)
+    release = manager_source.split("void RenderManager::releaseMenuShaderLights()")[1].split("\n}\n")[0]
+    assert "pinWorldShaderLights();" in release, "leaving the menu must hand the shaders to the game's light count"
     menu_source = (root / "source/renderscene/RenderSceneMenu.cpp").read_text(encoding="utf-8")
     assert menu_source.index("sceneGroup->reset(") < menu_source.index("pinMenuShaderLights()") < menu_source.index("updateMenu(cameraManager, renderManager, 0.0f)"), "the light count must be fixed after the menu lights exist"
     assert "releaseMenuShaderLights()" in menu_source, "leaving the menu must release the fixed light count"
