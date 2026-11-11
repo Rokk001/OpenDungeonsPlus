@@ -439,6 +439,7 @@ namespace PoolAttendantPose
 static const Ogre::Vector3 TOWARDS_CHAIR(0.0f, 1.0f, 0.0f);
 struct Tile { };
 static double getClipTurns() { return 40.0; }
+static const double WHISTLE_BLOW_SECONDS = 0.6;
 struct ODApplication { static constexpr double turnsPerSecond = 1.4; };
 struct RenderedMovableEntity { static void setPosition(const Ogre::Vector3& position) { } };
 struct ProbeRoom
@@ -451,7 +452,7 @@ struct ProbeRoom
 struct AttendantProbe
 {
     ProbeRoom* mRoom; Tile* mChairTile; PoolAttendantState mState; double mActTurnsLeft, mTurnsLeft, mCannonballTurnsLeft;
-    bool mHasPlace; int32_t mPlaceX, mPlaceY; uint32_t mJumpTurns, mJumpTurnsLeft; Ogre::Real mJumpElapsed; Ogre::Vector3 mJumpFrom, mJumpTo;
+    bool mWhistleSounded = false; bool mHasPlace; int32_t mPlaceX, mPlaceY; uint32_t mJumpTurns, mJumpTurnsLeft; Ogre::Real mJumpElapsed; Ogre::Vector3 mJumpFrom, mJumpTo;
     std::string clip; double clipTime; int aborts; double ladderProgress;
     AttendantProbe(ProbeRoom* room, Tile* chair) : mRoom(room), mChairTile(chair), mState(PoolAttendantState::sitting), mActTurnsLeft(0.0), mTurnsLeft(0.0),
         mCannonballTurnsLeft(0.0), mHasPlace(false), mPlaceX(0), mPlaceY(0), mJumpTurns(0), mJumpTurnsLeft(0), mJumpElapsed(0.0f), clipTime(-1.0), aborts(0), ladderProgress(-1.0) {}
