@@ -209,7 +209,7 @@ assert 'static const std::string EDITOR_GOLD_DENSITY;' in read('source/render/Gu
 layout = read('gui/ModeEditor.layout')
 density_window = layout[layout.index('name="GoldDensityDisplay"'):]
 density_window = density_window[:density_window.index('name="PositionDisplay"')]
-assert '{{0,210},{0,0},{0,405},{0,25}}' in density_window            # FullnessDisplay x (5) + 205
+assert '{{0,210},{0,-3.5},{0,405},{0,28.5}}' in density_window            # FullnessDisplay x (5) + 205
 assert 'Gold density (G): 100%' in density_window
 # The three windows right of it are moved by the same 205 px so that nothing overlaps
 assert '{{0,415},{0,0},{0,615},{0,25}}' in layout and '{{0,635},{0,0},{0,765},{0,25}}' in layout

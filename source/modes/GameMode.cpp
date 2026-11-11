@@ -46,7 +46,6 @@
 #include "gamemap/TileDirtSync.h"
 #include "modes/GameEditorModeConsole.h"
 #include "modes/InputBridge.h"
-#include "modes/MenuModeLoad.h"
 #include "network/ChatEventMessage.h"
 #include "network/ODClient.h"
 #include "network/ODServer.h"
@@ -791,11 +790,6 @@ GameMode::GameMode(ModeManager *modeManager):
             CEGUI::Event::Subscriber(&GameMode::saveGame, this)
         )
     );
-    saveGameButtonWindow->setEnabled(ODServer::getSingleton().isConnected());
-    CEGUI::Window* loadGameButtonWindow = guiSheet->getChild("GameOptionsWindow/LoadGameButton");
-    addEventConnection(loadGameButtonWindow->subscribeEvent(CEGUI::PushButton::EventClicked,
-        CEGUI::Event::Subscriber(&GameMode::loadGame, this)));
-    loadGameButtonWindow->setEnabled(ODServer::getSingleton().isConnected());
     addEventConnection(
         guiSheet->getChild("GameOptionsWindow/SettingsButton")->subscribeEvent(
             CEGUI::PushButton::EventClicked,
@@ -1732,6 +1726,19 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     return true;
 }
 
+//! \brief Abandons held mouse actions without submitting a world command.
+void GameMode::cancelMouseInput()
+{
+    mPendingHandDrop = false;
+    mMiddleDragDistance = 0.0f;
+    AbstractApplicationMode::cancelMouseInput();
+    ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);
+    ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateY, 0.0);
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::selectTile)
+        mPlayerSelection.setCurrentAction(SelectedAction::none);
+    unselectAllTiles();
+}
+
 //! \brief Completes a world action using the current action-specific pointer target.
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
@@ -1830,8 +1837,6 @@ bool GameMode::keyPressed(const OIS::KeyEvent& arg)
         return true;
     mIdleHandKeys.insert(arg.key);
     updateCreatureIndicatorAlt(arg.key, true);
-    if(mLoadMenu && mLoadMenu->isOpenInGame())
-        return mLoadMenu->keyPressed(arg);
     // Inject key to Gui
     const bool guiHandledKey = CEGUI::System::getSingleton().getDefaultGUIContext().injectKeyDown(
         static_cast<CEGUI::Key::Scan>(arg.key));
@@ -1907,10 +1912,6 @@ bool GameMode::keyPressedNormal(const OIS::KeyEvent &arg)
 
     case OIS::KC_F5:
         saveGame();
-        break;
-
-    case OIS::KC_F8:
-        loadGame();
         break;
 
     case OIS::KC_F9:
@@ -2257,6 +2258,7 @@ void GameMode::updateCameraControls(float elapsed)
     CameraInput input = CameraInput::read(down);
     if(input.x == 0.0f && input.y == 0.0f && input.zoom == 0.0f && input.swivel == 0.0f
         && !down(OIS::KC_X) && !down(OIS::KC_Z)
+        && ODFrameListener::getSingleton().getRenderWindow()->isActive()
         && config.getInputValue(Config::AUTOSCROLL, "No", false) == "Yes")
     {
         CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
@@ -3378,6 +3380,8 @@ bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
     {
     }
     resetSkillTree();
+    // Brings the tree up to date if the research progress changed while it was closed
+    refreshGuiSkill();
     // The Rooms tab is shown when the window opens
     static_cast<CEGUI::TabControl*>(mRootWindow->getChild("SkillTreeWindow/Skills/SkillTabs"))->setSelectedTab("Rooms");
     mRootWindow->getChild("SkillTreeWindow")->show();
@@ -3966,18 +3970,23 @@ bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
 void GameMode::setOptionsPage(bool endGame)
 {
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
-    for(const char* name : {"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
+    for(const char* name : {"ObjectivesButton", "SkillButton", "SaveGameButton",
         "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton", "ProductionButton"})
         options->getChild(name)->setVisible(!endGame);
     for(const char* name : {"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton"})
         options->getChild(name)->setVisible(endGame);
     options->setText(endGame ? "End Game" : "Options");
 
-    const std::vector<const char*> entries = endGame ?
+    std::vector<const char*> entries = endGame ?
         std::vector<const char*>{"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton", "ContinueButton"} :
-        std::vector<const char*>{"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
+        std::vector<const char*>{"ObjectivesButton", "SkillButton", "SaveGameButton",
             "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton",
             "ProductionButton", "ContinueButton"};
+    const bool canSave = ODServer::getSingleton().isConnected() &&
+        ODServer::getSingleton().getServerMode() != ServerMode::ModeGameMultiPlayer;
+    options->getChild("SaveGameButton")->setVisible(!endGame && canSave);
+    if(!endGame && !canSave)
+        entries.erase(entries.begin() + 2);
     Gui& gui = mModeManager->getGui();
     const CEGUI::Sizef display = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
     const float height = std::min(0.95f, (84.0f + 46.0f * entries.size()) * gui.getLayoutScale() / display.d_height);
@@ -4042,31 +4051,16 @@ bool GameMode::showSkillFromOptions(const CEGUI::EventArgs& e)
     return toggleSkillWindow(e);
 }
 
-bool GameMode::loadGame(const CEGUI::EventArgs& /*e*/)
-{
-    if(!ODServer::getSingleton().isConnected())
-        return true;
-    if(!mLoadMenu)
-        mLoadMenu.reset(new MenuModeLoad(&getModeManager(), true));
-    // Retain the options window so returning from the browser restores its caller.
-    showOptionsWindow();
-    mLoadMenu->activate();
-    return true;
-}
-
+//! \brief Saves only local single-player or loaded games.
 bool GameMode::saveGame(const CEGUI::EventArgs& /*e*/)
 {
+    if(!ODServer::getSingleton().isConnected() ||
+       ODServer::getSingleton().getServerMode() == ServerMode::ModeGameMultiPlayer)
+        return true;
+
+    // Saving is available only when the local server is not a multiplayer server.
     hideOptionsWindow();
     showEventMessages();
-
-    // We can save if launching in server mode only
-    if(!ODServer::getSingleton().isConnected())
-    {
-        std::string msg = "You cannot save the game when not launching in server mode";
-        EventMessage* event = new EventMessage(msg, EventShortNoticeType::genericGameInfo);
-        receiveEventShortNotice(event);
-        return true;
-    }
 
     if(ODClient::getSingleton().isConnected())
     {
@@ -4701,8 +4695,15 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
        ((mCurrentSkillType != curResType) ||
         (mCurrentSkillProgress != curSkillProgress)))
     {
-        forceRefresh = true;
+        // The progress is shown only inside the skill tree. While the tree is closed, the refresh waits until it
+        // opens: the cast buttons and the action bar do not depend on the progress.
+        if(mIsSkillWindowOpen)
+            forceRefresh = true;
+        else
+            mIsSkillTreeOutdated = true;
     }
+    if(mIsSkillWindowOpen && mIsSkillTreeOutdated)
+        forceRefresh = true;
 
     // Losing or regaining the library locks or unlocks the spells
     if(mIsLibraryLostShown != localPlayerSeat->isLibraryLost())
@@ -4713,6 +4714,9 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
 
     if(!forceRefresh && !localPlayerSeat->getGuiSkillNeedsRefresh())
         return;
+
+    // Every refresh below brings the whole tree up to date, the progress included
+    mIsSkillTreeOutdated = false;
 
     if(mIsSkillWindowOpen && localPlayerSeat->getGuiSkillNeedsRefresh())
     {

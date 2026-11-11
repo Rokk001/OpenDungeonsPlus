@@ -66,6 +66,30 @@
 
 namespace MapHandler {
 
+//! \brief Loads campaign progress for both save browsing and direct saved-game server starts.
+bool loadCampaignProgress()
+{
+    ResourceManager& resources = ResourceManager::getSingleton();
+    Campaign& campaign = Campaign::getSingleton();
+    std::ifstream definition((resources.getGameDataPath() + "levels/campaign/Campaign.cfg").c_str());
+    if(!definition.is_open() || !campaign.importDefinition(definition))
+    {
+        campaign.stopCampaign();
+        return false;
+    }
+    const std::string progressPath = resources.getUserDataPath() + "campaign.progress";
+    campaign.setProgressPath(progressPath);
+    std::ifstream progress(progressPath.c_str());
+    if(progress.is_open())
+        campaign.importProgress(progress);
+    else
+    {
+        std::istringstream empty;
+        campaign.importProgress(empty);
+    }
+    return true;
+}
+
 namespace {
 //! \brief The reason of the last failed level load, shown in the menu.
 std::string lastLoadError;
@@ -1090,6 +1114,7 @@ static void writeDirtSections(std::ostream& levelFile, GameMap& gameMap)
 }
 
 //! \brief Saves the map with item bags after gift boxes and the existing remaining sections.
+//! \brief Campaign games also record their running context, separately from user progress.
 bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 {
     std::ofstream levelFile(fileName.c_str(), std::ifstream::out);
@@ -1125,6 +1150,7 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
     bool isGameSave = gameMap.isServerGameMap() && !gameMap.isInEditorMode();
     if(isGameSave)
     {
+        Campaign::getSingleton().getSaveState().exportInfo(levelFile);
         levelFile << "Relationships\t" << (gameMap.isRelationshipsEnabled() ? "On" : "Off") << std::endl;
         // A saved game goes on from its current turn when it is loaded again. Levels written
         // by the editor have to start from the beginning, so they carry no turn.
@@ -1421,8 +1447,10 @@ bool writeGameMapToFile(const std::string& fileName, GameMap& gameMap)
 }
 
 //! \brief Lists supported level formats independently of the executable build suffix.
+//! \brief Exposes optional campaign save metadata without changing campaign activity.
 bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
 {
+    levelInfo = LevelInfo();
     // Prepare an invalid level reference
     std::stringstream levelFile;
     if(!Helper::readFile(fileName, levelFile,true))
@@ -1452,6 +1480,9 @@ bool getMapInfo(const std::string& fileName, LevelInfo& levelInfo)
         {
             break;
         }
+
+        if(levelInfo.mCampaignSave.importInfoLine(nextParam))
+            continue;
 
         param = "Name\t";
         if (nextParam.compare(0, param.size(), param) == 0)

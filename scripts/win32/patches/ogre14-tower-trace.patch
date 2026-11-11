@@ -1,0 +1,245 @@
+diff --git a/OgreMain/src/OgreSceneManager.cpp b/OgreMain/src/OgreSceneManager.cpp
+--- a/OgreMain/src/OgreSceneManager.cpp
++++ b/OgreMain/src/OgreSceneManager.cpp
+@@ -32,6 +32,7 @@
+ #include "OgreControllerManager.h"
+ #include "OgreAnimation.h"
+ #include "OgreRenderObjectListener.h"
++#include "OgreODTowerTrace.h"
+ #include "OgreBillboardSet.h"
+ #include "OgreStaticGeometry.h"
+ #include "OgreHardwarePixelBuffer.h"
+@@ -1547,6 +1548,7 @@
+     }// for each priority
+ }
+ //-----------------------------------------------------------------------
++/** Submits each normal light iteration, then optionally records its finalized CPU parameters. */
+ void SceneManager::issueRenderWithLights(Renderable* rend, const Pass* pass,
+                                          const LightList* pLightListToUse,
+                                          bool lightScissoringClipping)
+@@ -1578,6 +1580,8 @@
+     // nfz: set up multipass rendering
+     mDestRenderSystem->setCurrentPassIterationCount(pass->getPassIterationCount());
+     _issueRenderOp(rend, pass);
++    // Observe finalized CPU parameters without warming the light caches before the draw.
++    traceODTower(rend, pass, pLightListToUse, mAutoParamDataSource.get());
+
+      if (scissored == CLIPPED_SOME)
+          resetScissor();
+diff --git a/OgreMain/src/OgreODTowerTrace.h b/OgreMain/src/OgreODTowerTrace.h
+new file mode 100644
+--- /dev/null
++++ b/OgreMain/src/OgreODTowerTrace.h
+@@ -0,0 +1,212 @@
++/*
++ * Copyright (C) 2026 OpenDungeons Team
++ * SPDX-License-Identifier: MIT
++ */
++#ifndef OGRE_OD_TOWER_TRACE_H
++#define OGRE_OD_TOWER_TRACE_H
++
++#include "OgreEntity.h"
++#include "OgreSubEntity.h"
++#include "OgreMesh.h"
++#include "OgreTechnique.h"
++#include "OgreHighLevelGpuProgram.h"
++#include "OgreAutoParamDataSource.h"
++#include "OgreCamera.h"
++#include "OgreLight.h"
++#include "OgreLogManager.h"
++#include "OgreRoot.h"
++#include "OgreTextureUnitState.h"
++#include <cstdlib>
++#include <fstream>
++#include <iomanip>
++#include <locale>
++#include <set>
++
++namespace Ogre
++{
++/** Bounded, opt-in post-draw CPU parameter evidence; never reads or repairs light caches. */
++class ODTowerTrace
++{
++    std::ofstream mOutput;
++    std::set<String> mPrograms;
++    unsigned long mFrame;
++    unsigned int mFrames;
++    unsigned int mDraws;
++    bool mStopped;
++
++    /** Records exact named CPU buffer contents already passed to the render system. */
++    void parameters(const Pass* pass, GpuProgramType stage)
++    {
++        if(!pass->hasGpuProgram(stage))
++            return;
++        const GpuProgramPtr& program = pass->getGpuProgram(stage);
++        const GpuProgramParameters& params = *pass->getGpuProgramParameters(stage);
++        mOutput << "program stage=" << stage << " name=" << program->getName()
++            << " file=" << program->getSourceFile() << " language=" << program->getLanguage() << '\n';
++        if(mPrograms.insert(program->getName()).second)
++        {
++            const HighLevelGpuProgram* high = dynamic_cast<const HighLevelGpuProgram*>(program.get());
++            if(high != nullptr)
++                mOutput << "defines " << high->getPreprocessorDefines() << '\n';
++            mOutput << "source_begin " << program->getName() << '\n' << program->getSource()
++                << "\nsource_end\n";
++        }
++        const GpuConstantDefinitionMap& definitions = params.getConstantDefinitions().map;
++        for(GpuConstantDefinitionMap::const_iterator it = definitions.begin(); it != definitions.end(); ++it)
++        {
++            const GpuConstantDefinition& definition = it->second;
++            const size_t count = static_cast<size_t>(definition.elementSize) * definition.arraySize;
++            const size_t width = definition.isDouble() ? sizeof(double) : sizeof(float);
++            mOutput << "uniform " << it->first << " type=" << definition.constType
++                << " offset=" << definition.physicalIndex << " count=" << count << " values=";
++            if(definition.physicalIndex > params.getConstantList().size()
++                || count > (params.getConstantList().size() - definition.physicalIndex) / width)
++            {
++                mOutput << "OUT_OF_RANGE\n";
++                continue;
++            }
++            for(size_t index = 0; index < count; ++index)
++            {
++                if(index != 0)
++                    mOutput << ',';
++                if(definition.isFloat())
++                    mOutput << params.getFloatPointer(definition.physicalIndex)[index];
++                else if(definition.isDouble())
++                    mOutput << params.getDoublePointer(definition.physicalIndex)[index];
++                else if(definition.isInt() || definition.isBool())
++                    mOutput << params.getIntPointer(definition.physicalIndex)[index];
++                else if(definition.isUnsignedInt())
++                    mOutput << params.getUnsignedIntPointer(definition.physicalIndex)[index];
++                else
++                    mOutput << "UNSUPPORTED";
++            }
++            mOutput << '\n';
++        }
++        const GpuProgramParameters::AutoConstantList& constants = params.getAutoConstantList();
++        for(GpuProgramParameters::AutoConstantList::const_iterator it = constants.begin(); it != constants.end(); ++it)
++            mOutput << "auto type=" << it->paramType << " offset=" << it->physicalIndex
++                << " element_count=" << static_cast<unsigned int>(it->elementCount) << '\n';
++    }
++
++public:
++    /** Opens only an explicitly requested destination; failure leaves rendering untouched. */
++    ODTowerTrace() : mFrame(0), mFrames(0), mDraws(0), mStopped(false)
++    {
++        const char* path = std::getenv("OD_TOWER_TRACE");
++        if(path == nullptr || *path == '\0')
++        {
++            mStopped = true;
++            return;
++        }
++        mOutput.open(path, std::ios::out | std::ios::trunc);
++        if(!mOutput)
++        {
++            LogManager::getSingleton().logMessage("OD tower trace: cannot open destination");
++            mStopped = true;
++            return;
++        }
++        mOutput.imbue(std::locale::classic());
++        mOutput << std::setprecision(17)
++            << "OD_TOWER_TRACE schema=1 stage=post_draw_cpu_parameters warmup=120 frames=3 draw_cap=4096\n";
++    }
++
++    /** An interrupted capture must never masquerade as three complete frames. */
++    ~ODTowerTrace()
++    {
++        if(mOutput.is_open())
++            mOutput << "INCOMPLETE frames=" << mFrames << " draws=" << mDraws << '\n';
++    }
++
++    /** Records only this mesh, after normal binding and submission, for three visible frames. */
++    void record(Renderable* renderable, const Pass* pass, const LightList* lights,
++        const AutoParamDataSource* source)
++    {
++        if(mStopped || pass == nullptr)
++            return;
++        const unsigned long frame = Root::getSingleton().getNextFrameNumber();
++        if(frame < 120)
++            return;
++        const SubEntity* sub = dynamic_cast<const SubEntity*>(renderable);
++        if(sub == nullptr || sub->getParent()->getMesh()->getName() != "MenuGreenTower.mesh")
++            return;
++        if(mFrames == 0 || frame != mFrame)
++        {
++            if(mFrames == 3)
++            {
++                mOutput << "COMPLETE frames=3 draws=" << mDraws << '\n';
++                mOutput.close();
++                mStopped = true;
++                return;
++            }
++            mFrame = frame;
++            ++mFrames;
++        }
++        if(mDraws == 4096)
++        {
++            mOutput << "TRUNCATED draw_cap=4096\n";
++            mOutput.close();
++            mStopped = true;
++            return;
++        }
++        const Entity* entity = sub->getParent();
++        unsigned int subIndex = 0;
++        while(subIndex < entity->getNumSubEntities() && entity->getSubEntity(subIndex) != sub)
++            ++subIndex;
++        const Camera* camera = source->getCurrentCamera();
++        mOutput << "draw=" << ++mDraws << " frame=" << frame << " entity=" << entity->getName()
++            << " sub=" << subIndex << " material=" << sub->getMaterialName()
++            << " technique=" << pass->getParent()->getName()
++            << " scheme=" << pass->getParent()->getSchemeName() << " pass=" << pass->getIndex()
++            << " camera=" << (camera == nullptr ? "none" : camera->getName())
++            << " identity_view=" << renderable->getUseIdentityView()
++            << " identity_projection=" << renderable->getUseIdentityProjection()
++            << " per_light=" << pass->getIteratePerLight() << " lights_per_iteration=" << pass->getLightCountPerIteration()
++            << " max_lights=" << pass->getMaxSimultaneousLights() << " start_light=" << pass->getStartLight()
++            << " blend=" << pass->getSourceBlendFactor() << ',' << pass->getDestBlendFactor()
++            << " blend_op=" << pass->getSceneBlendingOperation()
++            << " depth_write=" << pass->getDepthWriteEnabled() << " depth_check=" << pass->getDepthCheckEnabled()
++            << " ambient=" << pass->getAmbient() << " diffuse=" << pass->getDiffuse()
++            << " specular=" << pass->getSpecular() << " emissive=" << pass->getSelfIllumination()
++            << " shininess=" << pass->getShininess() << '\n';
++        if(camera != nullptr)
++            mOutput << "camera_view=" << camera->getViewMatrix() << '\n';
++        for(unsigned short unit = 0; unit < pass->getNumTextureUnitStates(); ++unit)
++        {
++            const TextureUnitState* texture = pass->getTextureUnitState(unit);
++            mOutput << "texture unit=" << unit << " name=" << texture->getTextureName() << '\n';
++        }
++        mOutput << "lights=" << (lights == nullptr ? 0 : lights->size()) << '\n';
++        if(lights != nullptr)
++        {
++            for(size_t index = 0; index < lights->size(); ++index)
++            {
++                const Light* light = (*lights)[index];
++                mOutput << "light=" << index << " name=" << light->getName() << " type=" << light->getType()
++                    << " position=" << light->getDerivedPosition() << " direction=" << light->getDerivedDirection()
++                    << " diffuse=" << light->getDiffuseColour() << " specular=" << light->getSpecularColour()
++                    << " power=" << light->getPowerScale() << " attenuation=" << light->getAttenuationRange()
++                    << ',' << light->getAttenuationConstant() << ',' << light->getAttenuationLinear()
++                    << ',' << light->getAttenuationQuadric() << " shadows=" << light->getCastShadows() << '\n';
++            }
++        }
++        parameters(pass, GPT_VERTEX_PROGRAM);
++        parameters(pass, GPT_FRAGMENT_PROGRAM);
++        mOutput << "draw_end\n";
++        mOutput.flush();
++        if(!mOutput)
++        {
++            LogManager::getSingleton().logMessage("OD tower trace: write failed; capture incomplete");
++            mStopped = true;
++        }
++    }
++};
++
++/** Uses one process-local trace; its disabled path performs no light or uniform reads. */
++static void traceODTower(Renderable* renderable, const Pass* pass, const LightList* lights,
++    const AutoParamDataSource* source)
++{
++    static ODTowerTrace trace;
++    trace.record(renderable, pass, lights, source);
++}
++}
++#endif

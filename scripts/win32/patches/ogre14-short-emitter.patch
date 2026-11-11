@@ -1,3 +1,5 @@
+OGRE 14 prerequisite patch. Preserve LF line endings for git apply --recount.
+
 Fix: a timed particle emitter loses the particles accrued in the last frame of its duration.
 
 Description

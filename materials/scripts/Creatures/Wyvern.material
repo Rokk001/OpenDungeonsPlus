@@ -5,12 +5,13 @@
 vertex_program myWyvernVertexShader glsl
 {
   source Creature.vert
+    includes_skeletal_animation true
     default_params
     {
-        param_named_auto projectionMatrix projection_matrix
-        param_named_auto viewMatrix view_matrix
+        param_named_auto viewProjectionMatrix viewproj_matrix
+        param_named_auto lightMatrix texture_viewproj_matrix 0
+        param_named_auto boneMatrices world_matrix_array_3x4
         param_named_auto worldMatrix world_matrix
-        param_named_auto lightMatrix texture_worldviewproj_matrix
     }
   
 }
@@ -38,6 +39,7 @@ material Wyvern //: RTSS/NormalMapping_MultiPass
     
     technique
     {
+        shadow_caster_material CreatureShadowCaster
 
         pass 
         {

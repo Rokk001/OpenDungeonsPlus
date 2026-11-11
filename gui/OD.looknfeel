@@ -5677,8 +5677,8 @@
                 <Dim type="TopEdge">
                     <WidgetDim dimension="TopEdge" widget="__auto_TabPane__Buttons" />
                 </Dim>
-                <Dim type="Height"><AbsoluteDim value="0" />
-
+                <Dim type="BottomEdge">
+                    <WidgetDim dimension="BottomEdge" widget="__auto_TabPane__Buttons" />
                 </Dim>
             </Area>
             <Property name="AlwaysOnTop" value="True" />

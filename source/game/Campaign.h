@@ -61,6 +61,25 @@ struct CampaignLevel
     uint32_t mDifficulty;
 };
 
+//! \brief Campaign context stored in a game's Info block, independently of current progress.
+struct CampaignSave
+{
+    //! \brief Creates absent campaign metadata for legacy and ordinary saves.
+    CampaignSave();
+    //! \brief Reads the versioned Campaign line; malformed records never fall back to legacy matching.
+    bool importInfoLine(const std::string& line);
+    //! \brief Writes a complete record, or nothing when this is not a campaign game.
+    void exportInfo(std::ostream& os) const;
+
+    bool mPresent;
+    bool mValid;
+    std::string mLevelFile;
+    uint32_t mDifficulty;
+    bool mHeartstoneComplete;
+    std::string mKeptClass;
+    uint32_t mKeptLevel;
+};
+
 //! \brief The campaign: an ordered list of levels plus the saved progress.
 //!
 //! Definition file (levels/campaign/Campaign.cfg), one setting per line:
@@ -160,6 +179,16 @@ public:
     //! \brief AI difficulty of the whole campaign, chosen when a new campaign
     //! is begun. The value is an index into KeeperAIType.
     uint32_t getDifficulty() const;
+    //! \brief Difficulty of the running level, including the immutable saved difficulty.
+    uint32_t getLevelDifficulty() const;
+    //! \brief Heartstone availability of the running level, following its save when present.
+    bool isLevelHeartstoneComplete() const;
+    //! \brief Captures campaign membership, file identity, difficulty, Heartstone and pending creature.
+    CampaignSave getSaveState() const;
+    //! \brief Resolves eligible recorded or legacy saves by file name and current unlocks, without mutation.
+    size_t findSavedLevel(const CampaignSave& saved, const std::string& saveFilename) const;
+    //! \brief Restores eligible saves as campaign levels; other saves clear campaign activity.
+    bool restoreSavedLevel(const CampaignSave& saved, const std::string& saveFilename);
     //! \brief Sets the difficulty and saves the progress. Values above the
     //! highest AI level are ignored.
     void setDifficulty(uint32_t difficulty);
@@ -207,6 +236,10 @@ private:
     bool mPlayedLevelWon;
     std::string mLevelSummary;
     uint32_t mDifficulty;
+    uint32_t mLevelDifficulty;
+    bool mRestoredLevel;
+    bool mLoadedCampaignSave;
+    bool mSavedHeartstoneComplete;
     std::set<std::string> mFinishedDifficulties;
     //! The creature chosen by the kept minion special in the level that is played, and the one that came
     //! from the last level won (saved)
@@ -219,6 +252,8 @@ private:
     size_t getCurrentLevelNoLock() const;
     //! \brief isUnlocked for callers that hold the mutex already
     bool isUnlockedNoLock(size_t index) const;
+    //! \brief Resolves a save while the caller holds the campaign mutex.
+    size_t findSavedLevelNoLock(const CampaignSave& saved, const std::string& saveFilename) const;
     //! \brief Index of the branch sister of the level, or the number of levels if it has none. The mutex is held by the caller.
     size_t findBranchSisterNoLock(size_t index) const;
 };

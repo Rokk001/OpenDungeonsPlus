@@ -12848,16 +12848,58 @@ static Ogre::Vector3 ghostBeamAimPoint(Ogre::SceneManager* scene, const GameEnti
     return ghost.getPosition();
 }
 
-//! \brief Turns the capture cannon in the hunter's hand so that its barrel points at the aim point (owner decision 894).
-//! Whatever pose the Beam clip holds the hand in, the barrel (authored along +z, grip at the origin) points from the
-//! grip to the ghost for the whole beam step. The mount is the tag point on the hand bone, or the fallback hand node.
+//! \brief Returns the unit direction of `direction` with its pitch held between `down` radians below and `up` radians
+//! above the horizontal (decision 998). A direction straight up or down keeps the flat heading of `heading`.
+static Ogre::Vector3 limitGhostCannonPitch(const Ogre::Vector3& direction, const Ogre::Vector3& heading, Ogre::Real down,
+    Ogre::Real up)
+{
+    const Ogre::Real level=Ogre::Vector3(direction.x,direction.y,0.0f).length();
+    Ogre::Vector3 flat(direction.x,direction.y,0.0f);
+    if(flat.squaredLength()<1.0e-8f) flat=Ogre::Vector3(heading.x,heading.y,0.0f);
+    if(flat.squaredLength()<1.0e-8f) flat=Ogre::Vector3::NEGATIVE_UNIT_Y;
+    flat.normalise();
+    const Ogre::Real pitch=std::max(-down,std::min(up,static_cast<Ogre::Real>(std::atan2(direction.z,level))));
+    return flat*std::cos(pitch)+Ogre::Vector3::UNIT_Z*std::sin(pitch);
+}
+
+//! \brief Turns the capture cannon in the hunter's hand towards the aim point (owner decisions 894 and 998). Whatever
+//! pose the Beam clip holds the hand in, the barrel (authored along +z, grip at the origin) points from the grip towards
+//! the ghost for the whole beam step, but naturally: its pitch stays between GhostCannonMaxDownDegrees below and
+//! GhostCannonMaxUpDegrees above the horizontal, so it never points into the floor while the open trap pulls the ghost
+//! down, and it follows the ghost smoothly from the direction it showed the frame before (`shown`, zero at the start of
+//! the beam) with the time constant GhostCannonAimSeconds, so it never snaps. The mount is the tag point on the hand
+//! bone, or the fallback hand node.
 static void aimGhostCannon(Ogre::Entity& body, Ogre::Entity& cannon, Ogre::TagPoint* grip, Ogre::SceneNode* handNode,
-    const std::string& bone, const Ogre::Vector3& aim)
+    const std::string& bone, const Ogre::Vector3& aim, Ogre::Vector3& shown, double seconds)
 {
     const Ogre::Vector3 origin=cannon._getParentNodeFullTransform()*Ogre::Vector3::ZERO;
     const Ogre::Vector3 direction=aim-origin;
     if(direction.squaredLength()<1.0e-8f) return;
-    const Ogre::Quaternion wanted=Ogre::Vector3::UNIT_Z.getRotationTo(direction.normalisedCopy());
+    const ConfigManager& config=ConfigManager::getSingleton();
+    const Ogre::Real down=Ogre::Degree(static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostCannonMaxDownDegrees"))).valueRadians();
+    const Ogre::Real up=Ogre::Degree(static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostCannonMaxUpDegrees"))).valueRadians();
+    // The hunter's own heading (creatures face -y of their node) for a ghost straight above or below the grip
+    const Ogre::Vector3 heading=body.getParentNode()!=nullptr?
+        body.getParentNode()->_getDerivedOrientation()*Ogre::Vector3::NEGATIVE_UNIT_Y:Ogre::Vector3::NEGATIVE_UNIT_Y;
+    const Ogre::Vector3 target=limitGhostCannonPitch(direction,heading,down,up);
+    if(shown.squaredLength()<1.0e-8f) shown=target;
+    else
+    {
+        // Turned like a held cannon: about the vertical (the shorter way round) and tilted, each eased by the same share
+        // of what is left, so the pitch never leaves the natural range on the way
+        const double time=config.getRoomConfigDouble("GhostCannonAimSeconds");
+        const Ogre::Real follow=time>0.0?static_cast<Ogre::Real>(1.0-std::exp(-std::max(0.0,seconds)/time)):1.0f;
+        const Ogre::Vector3 from=limitGhostCannonPitch(shown,heading,down,up);
+        Ogre::Real yaw=std::atan2(from.y,from.x);
+        Ogre::Real pitch=std::asin(std::max(-1.0f,std::min(1.0f,from.z)));
+        Ogre::Real turn=std::atan2(target.y,target.x)-yaw;
+        while(turn>Ogre::Math::PI) turn-=Ogre::Math::TWO_PI;
+        while(turn<-Ogre::Math::PI) turn+=Ogre::Math::TWO_PI;
+        yaw+=follow*turn;
+        pitch+=follow*(std::asin(std::max(-1.0f,std::min(1.0f,target.z)))-pitch);
+        shown=Ogre::Vector3(std::cos(pitch)*std::cos(yaw),std::cos(pitch)*std::sin(yaw),std::sin(pitch));
+    }
+    const Ogre::Quaternion wanted=Ogre::Vector3::UNIT_Z.getRotationTo(shown);
     if(grip!=nullptr && !bone.empty() && body.hasSkeleton() && body.getParentNode()!=nullptr && body.getSkeleton()->hasBone(bone))
     {
         const Ogre::Quaternion parent=body.getParentNode()->_getDerivedOrientation()*body.getSkeleton()->getBone(bone)->_getDerivedOrientation();
@@ -12870,31 +12912,103 @@ static void aimGhostCannon(Ogre::Entity& body, Ogre::Entity& cannon, Ogre::TagPo
 //! Four rings per corrugation (32 ribs, decision 936); the vertex count of the dynamic hose never changes.
 static const size_t GHOST_HOSE_RINGS=128;
 static const size_t GHOST_HOSE_SIDES=8;
+//! Every coloured wire on the hose (decision 998) is a thin tube with as many rings as the hose and six sides.
+static const size_t GHOST_HOSE_WIRE_SIDES=6;
+
+//! \brief The look of the hose and of the coloured wires wound round it (owner decision 998), read once from rooms.cfg.
+struct GhostHoseLook
+{
+    //! GhostHoseColour: tint of the ribbed rubber texture
+    Ogre::ColourValue mHose;
+    //! GhostHoseWireColour1 to GhostHoseWireColour<GhostHoseWireCount>: one bright colour per wire
+    std::vector<Ogre::ColourValue> mWires;
+    //! GhostHoseWireRadius: thickness of a wire as a share of the hose radius
+    Ogre::Real mWireRadius = 0.0f;
+    //! GhostHoseWireTwist: turns every wire makes round the hose from the pack to the cannon
+    Ogre::Real mTwist = 0.0f;
+    //! GhostHoseGlow: share of the colour that shines whatever the light, the rest is lit from above
+    Ogre::Real mGlow = 0.0f;
+    //! GhostHoseWireEndInset: hose radii from each end, inside the steel coupling, where the wires end
+    Ogre::Real mEndInset = 0.0f;
+};
+
+//! \brief Reads a colour "red,green,blue" (0 to 1 each) of the room configuration; white with an error for a bad value.
+static Ogre::ColourValue ghostHoseConfigColour(const std::string& key)
+{
+    const std::string& text=ConfigManager::getSingleton().getRoomConfigString(key);
+    std::istringstream stream(text);
+    float red=1.0f,green=1.0f,blue=1.0f;
+    char comma1=0,comma2=0;
+    if(!(stream>>red>>comma1>>green>>comma2>>blue) || comma1!=',' || comma2!=',')
+    {
+        OD_LOG_ERR("Invalid colour " + key + "=" + text);
+        return Ogre::ColourValue::White;
+    }
+    return Ogre::ColourValue(red,green,blue,1.0f);
+}
+
+//! \brief Returns the hose look of the room configuration, read at the first use (the configuration does not change).
+static const GhostHoseLook& ghostHoseLook()
+{
+    static const GhostHoseLook look=[]()
+    {
+        const ConfigManager& config=ConfigManager::getSingleton();
+        GhostHoseLook result;
+        result.mHose=ghostHoseConfigColour("GhostHoseColour");
+        const uint32_t wires=config.getRoomConfigUInt32("GhostHoseWireCount");
+        for(uint32_t wire=1;wire<=wires;++wire)
+            result.mWires.push_back(ghostHoseConfigColour("GhostHoseWireColour"+std::to_string(wire)));
+        result.mWireRadius=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostHoseWireRadius"));
+        result.mTwist=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostHoseWireTwist"));
+        result.mGlow=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostHoseGlow"));
+        result.mEndInset=static_cast<Ogre::Real>(config.getRoomConfigDouble("GhostHoseWireEndInset"));
+        return result;
+    }();
+    return look;
+}
+
+//! \brief The colour of a hose or wire vertex (decision 998): the materials are unlit, so the hose reads the same in every
+//! room light; the glow share of the colour always shines and the rest is lit by a light from straight above.
+static Ogre::ColourValue shadeGhostHose(const Ogre::ColourValue& colour, const Ogre::Vector3& normal, Ogre::Real glow)
+{
+    const Ogre::Real light=glow+(1.0f-glow)*(0.5f+0.5f*normal.z);
+    return Ogre::ColourValue(colour.r*light,colour.g*light,colour.b*light,1.0f);
+}
 
 //! \brief Re-shapes the flexible hose (decision 894) as a tube along a cubic curve from the pack's port to the rear end of
 //! the cannon. Both ends leave along the given directions and the middle sags, so the hose follows every movement of the
-//! hunter and of the cannon; the textured corrugations reach the given radius in world units.
+//! hunter and of the cannon; the textured corrugations reach the given radius in world units. Coloured wires (decision
+//! 998, second section, material GhostHoseWire) wind round the ribs along the same curve every frame, from inside the
+//! steel coupling at the pack to inside the coupling at the cannon.
 static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, const Ogre::Vector3& portOut,
     const Ogre::Vector3& rear, const Ogre::Vector3& rearOut, Ogre::Real radius)
 {
+    const GhostHoseLook& look=ghostHoseLook();
     const Ogre::Real span=(rear-port).length();
     const Ogre::Real reach=0.4f*span+4.0f*radius;
     const Ogre::Vector3 sag(0.0f,0.0f,-0.18f*span-2.0f*radius);
     const Ogre::Vector3 control1=port+portOut*reach+sag,control2=rear+rearOut*reach+sag;
+    // The centre of the curve at t and the two axes across it
+    std::function<Ogre::Vector3(Ogre::Real, Ogre::Vector3&, Ogre::Vector3&, Ogre::Vector3&)> frame=[&](Ogre::Real t,Ogre::Vector3& tangent,Ogre::Vector3& side,Ogre::Vector3& up)
+    {
+        const Ogre::Real u=1.0f-t;
+        tangent=(control1-port)*(3.0f*u*u)+(control2-control1)*(6.0f*u*t)+(rear-control2)*(3.0f*t*t);
+        if(tangent.squaredLength()<1.0e-8f) tangent=rear-port;
+        if(tangent.squaredLength()<1.0e-8f) tangent=Ogre::Vector3::UNIT_X;
+        tangent.normalise();
+        side=tangent.crossProduct(Ogre::Vector3::UNIT_Z);
+        if(side.squaredLength()<1.0e-6f) side=tangent.crossProduct(Ogre::Vector3::UNIT_X);
+        side.normalise();
+        up=tangent.crossProduct(side);
+        return port*(u*u*u)+control1*(3.0f*u*u*t)+control2*(3.0f*u*t*t)+rear*(t*t*t);
+    };
     if(hose.getNumSections()==0) hose.begin("GhostHose",Ogre::RenderOperation::OT_TRIANGLE_LIST);
     else hose.beginUpdate(0);
     for(size_t ring=0;ring<=GHOST_HOSE_RINGS;++ring)
     {
-        const Ogre::Real t=static_cast<Ogre::Real>(ring)/static_cast<Ogre::Real>(GHOST_HOSE_RINGS),u=1.0f-t;
-        const Ogre::Vector3 centre=port*(u*u*u)+control1*(3.0f*u*u*t)+control2*(3.0f*u*t*t)+rear*(t*t*t);
-        Ogre::Vector3 tangent=(control1-port)*(3.0f*u*u)+(control2-control1)*(6.0f*u*t)+(rear-control2)*(3.0f*t*t);
-        if(tangent.squaredLength()<1.0e-8f) tangent=rear-port;
-        if(tangent.squaredLength()<1.0e-8f) tangent=Ogre::Vector3::UNIT_X;
-        tangent.normalise();
-        Ogre::Vector3 side=tangent.crossProduct(Ogre::Vector3::UNIT_Z);
-        if(side.squaredLength()<1.0e-6f) side=tangent.crossProduct(Ogre::Vector3::UNIT_X);
-        side.normalise();
-        const Ogre::Vector3 up=tangent.crossProduct(side);
+        const Ogre::Real t=static_cast<Ogre::Real>(ring)/static_cast<Ogre::Real>(GHOST_HOSE_RINGS);
+        Ogre::Vector3 tangent,side,up;
+        const Ogre::Vector3 centre=frame(t,tangent,side,up);
         const Ogre::Real ribRadius=radius*(0.86f+0.14f*std::cos(2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(ring)/4.0f));
         for(size_t k=0;k<=GHOST_HOSE_SIDES;++k)
         {
@@ -12902,6 +13016,7 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
             const Ogre::Vector3 normal=side*std::cos(angle)+up*std::sin(angle);
             hose.position(centre+normal*ribRadius);
             hose.normal(normal);
+            hose.colour(shadeGhostHose(look.mHose,normal,look.mGlow));
             hose.textureCoord(static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_SIDES),t);
         }
     }
@@ -12913,6 +13028,48 @@ static void shapeGhostHose(Ogre::ManualObject& hose, const Ogre::Vector3& port, 
             hose.triangle(a,c,b);
             hose.triangle(b,c,d);
         }
+    hose.end();
+    if(look.mWires.empty()) return;
+    // The wires lie on the crests of the ribs and end GhostHoseWireEndInset hose radii inside both couplings (the curve
+    // leaves each end at the speed 3 x the distance to its control point)
+    if(hose.getNumSections()<2) hose.begin("GhostHoseWire",Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    else hose.beginUpdate(1);
+    const Ogre::Real speedPort=3.0f*(control1-port).length(),speedRear=3.0f*(rear-control2).length();
+    const Ogre::Real first=speedPort>1.0e-6f?std::min(0.25f,look.mEndInset*radius/speedPort):0.0f;
+    const Ogre::Real last=speedRear>1.0e-6f?std::max(0.75f,1.0f-look.mEndInset*radius/speedRear):1.0f;
+    const Ogre::Real thickness=radius*look.mWireRadius;
+    const size_t wireVertices=(GHOST_HOSE_RINGS+1)*(GHOST_HOSE_WIRE_SIDES+1);
+    for(size_t wire=0;wire<look.mWires.size();++wire)
+    {
+        for(size_t ring=0;ring<=GHOST_HOSE_RINGS;++ring)
+        {
+            const Ogre::Real share=static_cast<Ogre::Real>(ring)/static_cast<Ogre::Real>(GHOST_HOSE_RINGS);
+            Ogre::Vector3 tangent,side,up;
+            const Ogre::Vector3 centre=frame(first+(last-first)*share,tangent,side,up);
+            // Evenly spread round the hose, every wire turning GhostHoseWireTwist times from the pack to the cannon
+            const Ogre::Real turn=2.0f*Ogre::Math::PI*(static_cast<Ogre::Real>(wire)/static_cast<Ogre::Real>(look.mWires.size())+
+                look.mTwist*share);
+            const Ogre::Vector3 out=side*std::cos(turn)+up*std::sin(turn);
+            const Ogre::Vector3 across=tangent.crossProduct(out);
+            const Ogre::Vector3 core=centre+out*(radius+thickness);
+            for(size_t k=0;k<=GHOST_HOSE_WIRE_SIDES;++k)
+            {
+                const Ogre::Real angle=2.0f*Ogre::Math::PI*static_cast<Ogre::Real>(k)/static_cast<Ogre::Real>(GHOST_HOSE_WIRE_SIDES);
+                const Ogre::Vector3 normal=out*std::cos(angle)+across*std::sin(angle);
+                hose.position(core+normal*thickness);
+                hose.normal(normal);
+                hose.colour(shadeGhostHose(look.mWires[wire],normal,look.mGlow));
+            }
+        }
+        for(size_t ring=0;ring<GHOST_HOSE_RINGS;++ring)
+            for(size_t k=0;k<GHOST_HOSE_WIRE_SIDES;++k)
+            {
+                const Ogre::uint32 a=static_cast<Ogre::uint32>(wire*wireVertices+ring*(GHOST_HOSE_WIRE_SIDES+1)+k),b=a+1;
+                const Ogre::uint32 c=a+static_cast<Ogre::uint32>(GHOST_HOSE_WIRE_SIDES+1),d=c+1;
+                hose.triangle(a,c,b);
+                hose.triangle(b,c,d);
+            }
+    }
     hose.end();
 }
 
@@ -13156,6 +13313,7 @@ void Creature::clearGhostHuntVisuals()
             mGhostGunHandNode->detachObject(mGhostCaptureGun);
         scene->destroyEntity(mGhostCaptureGun);mGhostCaptureGun=nullptr;mGhostCaptureGrip=nullptr;
     }
+    mGhostCannonAim=Ogre::Vector3::ZERO;
     if(mGhostGunHandNode!=nullptr) { scene->destroySceneNode(mGhostGunHandNode);mGhostGunHandNode=nullptr; }
     // The hunter's own weapons come back as its combat look wants them.
     if(mGhostOwnWeaponsHidden) { CreatureCombatReactions::showWeaponsForClip(this);mGhostOwnWeaponsHidden=false; }
@@ -13310,9 +13468,12 @@ void Creature::updateGhostHuntVisuals(double seconds)
     }
     mGhostCaptureGun->setVisible(beaming);
     if(mGhostPackGun!=nullptr) mGhostPackGun->setVisible(!beaming);
-    // Decision 894: the cannon points at the ghost for the whole beam step, whatever the Beam clip does with the hand
+    // Decision 894: the cannon points at the ghost for the whole beam step, whatever the Beam clip does with the hand;
+    // decision 998: smoothly and within a natural pitch, never into the floor. The next beam starts afresh.
     if(beaming) aimGhostCannon(*body,*mGhostCaptureGun,mGhostCaptureGrip,mGhostGunHandNode,
-        ghostCannonHandBone(body->hasSkeleton()?body->getSkeleton():nullptr),ghostBeamAimPoint(scene,*target));
+        ghostCannonHandBone(body->hasSkeleton()?body->getSkeleton():nullptr),ghostBeamAimPoint(scene,*target),
+        mGhostCannonAim,seconds*getGameMap()->getGameSpeedFactor());
+    else mGhostCannonAim=Ogre::Vector3::ZERO;
     // Decision 894: the flexible hose runs from the port on the pack's side to the rear end of the cannon, in its
     // holster or in the hand, and follows both
     Ogre::Entity* hoseGun=beaming?mGhostCaptureGun:mGhostPackGun;

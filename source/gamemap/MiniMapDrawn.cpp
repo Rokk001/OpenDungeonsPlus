@@ -30,8 +30,10 @@
 #include "render/ODFrameListener.h"
 
 #include <cmath>
+#include <cstring>
 
 #include <OgrePrerequisites.h>
+#include <OgreRenderWindow.h>
 #include <OgreSceneNode.h>
 #include <OgreTextureManager.h>
 
@@ -57,6 +59,7 @@ MiniMapDrawn::MiniMapDrawn(CEGUI::Window* miniMapWindow) :
     mHeight(static_cast<unsigned int>(mMiniMapWindow->getPixelSize().d_height)
             + mGrainSize - (static_cast<unsigned int>(mMiniMapWindow->getPixelSize().d_height) % mGrainSize)),
     mTiles(mWidth * mHeight, Color(0,0,0)),
+    mUploadedTextureState(0),
     mPixelBox(mWidth, mHeight, 1, Ogre::PF_R8G8B8A8),
     mMiniMapOgreTexture(Ogre::TextureManager::getSingletonPtr()->createManual(
             "miniMapOgreTexture",
@@ -114,7 +117,7 @@ Ogre::Vector2 MiniMapDrawn::camera_2dPositionFromClick(int xx, int yy)
         -pp * mHeight / mGrainSize) * getZoomScale();
 }
 
-//! \brief Updates visible map colours and keeps unexplored ground on the HUD stone surface.
+//! \brief Updates map colours and overlays, uploading pixels only when their bytes or texture state change.
 void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre::Vector3>& cornerTiles)
 {
     advanceAnimation(timeSinceLastFrame);
@@ -155,22 +158,35 @@ void MiniMapDrawn::update(Ogre::Real timeSinceLastFrame, const std::vector<Ogre:
         }
     }
 
-    Ogre::PixelBox output = mPixelBuffer->lock(mPixelBox, Ogre::HardwareBuffer::HBL_NORMAL);
-
-    size_t xx = 0;
-    size_t yy = 0;
-    for(const Color& color : mTiles)
+    // mTiles holds bytes in R, G, B, A order, which is Ogre's PF_BYTE_RGBA. One bulk conversion into
+    // the locked format writes the same bytes as the former per-pixel setColourAt(colour / 255) loop,
+    // without a float round trip per pixel.
+    static_assert(sizeof(Color) == 4, "map pixels must be tightly packed RGBA bytes");
+    // The two frame callbacks can produce identical pixels. Avoid the driver upload in that case,
+    // but keep generating colours and updating overlays so animation and camera state still advance.
+    if(!mMiniMapOgreTexture->isLoaded())
+        mMiniMapOgreTexture->createInternalResources();
+    const Ogre::HardwarePixelBufferSharedPtr currentBuffer = mMiniMapOgreTexture->getBuffer();
+    // Ogre neither draws nor swaps an inactive (minimized or deactivated) render window, so an upload there
+    // only queues driver copies that no frame shows and can periodically stall glTexSubImage2D.
+    // The baseline stays the last uploaded
+    // bytes, so the first update in the active window uploads the current map before it is drawn again.
+    const Ogre::RenderWindow* window = ODFrameListener::getSingleton().getRenderWindow();
+    const bool windowDrawn = window == nullptr || window->isActive();
+    if(windowDrawn && (currentBuffer != mPixelBuffer
+        || mUploadedTextureState != mMiniMapOgreTexture->getStateCount()
+        || mUploadedTiles.size() != mTiles.size()
+        || std::memcmp(mUploadedTiles.data(), mTiles.data(), mTiles.size() * sizeof(Color)) != 0))
     {
-        // TODO: This is probably a bit inefficient at the moment.
-        output.setColourAt(Ogre::ColourValue(color.RR/255.0, color.GG/255.0, color.BB/255.0, color.AA/255.0), xx, yy, 0);
-        ++xx;
-        if(xx == mWidth) {
-            xx = 0;
-            ++yy;
-        }
+        Ogre::PixelBox output = currentBuffer->lock(mPixelBox, Ogre::HardwareBuffer::HBL_NORMAL);
+        const Ogre::PixelBox source(mWidth, mHeight, 1, Ogre::PF_BYTE_RGBA, mTiles.data());
+        Ogre::PixelUtil::bulkPixelConversion(source, output);
+        currentBuffer->unlock();
+        // A failed conversion/upload must leave the previous successful bytes as the comparison baseline.
+        mUploadedTiles = mTiles;
+        mPixelBuffer = currentBuffer;
+        mUploadedTextureState = mMiniMapOgreTexture->getStateCount();
     }
-
-    mPixelBuffer->unlock();
     updateMapOverlay(mMiniMapWindow, mGameMap, mCamera_2dPosition,
         Ogre::Vector2(mWidth, mHeight) * (getZoomScale() / mGrainSize), rotation, cornerTiles);
 }

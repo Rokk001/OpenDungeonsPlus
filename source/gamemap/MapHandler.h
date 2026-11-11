@@ -20,6 +20,7 @@
 #define MAPHANDLER_H
 
 #include <string>
+#include "game/Campaign.h"
 
 class GameMap;
 
@@ -45,10 +46,15 @@ struct LevelInfo
     //! \brief The name of a sandbox realm (empty for a sandbox level that is not one) and the level file of the realm after it
     std::string mSandboxRealm;
     std::string mSandboxNext;
+
+    //! \brief Optional campaign snapshot, absent in levels and legacy saves.
+    CampaignSave mCampaignSave;
 };
 
 namespace MapHandler
 {
+    //! \brief Reads the campaign definition and user progress for load eligibility without opening its menu.
+    bool loadCampaignProgress();
     //! \brief Loads a level or saved game file into the game map, including the optional [Triggers] section.
     //! \param fileName The level file to read.
     //! \param gameMap The game map to fill.

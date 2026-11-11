@@ -40,10 +40,14 @@
                 <Property name="Text" value="Load Game" />
                 <Property name="MousePassThroughEnabled" value="True" />
             </Window>
+            <Window type="OD/Combobox" name="KindFilter" >
+                <Property name="Area" value="{{0.11,0},{0.5,-8},{0.40,0},{0.5,150}}" />
+                <Property name="ReadOnly" value="True" />
+            </Window>
             <Window type="OD/MenuListbox" name="SaveGameSelect" >
                 <Property name="Area" value="{{0.11,0},{0.5,28},{0.70,0},{1,-132}}" />
                 <Property name="ForceVertScrollbar" value="False" />
-                <Property name="Sort" value="True" />
+                <Property name="Sort" value="False" />
             </Window>
             <Window type="OD/StaticText" name="MapDescriptionText" >
                 <Property name="LookNFeel" value="OD/MenuDescription" />
@@ -65,7 +69,7 @@
             </Window>
             <Window type="OD/MenuTextButton" name="DeleteButton" >
                 <Property name="Area" value="{{0.11,0},{1,-80},{0.65,0},{1,-40}}" />
-                <Property name="Text" value="Delete saved game" />
+                <Property name="Text" value="Delete selected" />
                 <Property name="Font" value="MedievalSharp-12" />
             </Window>
             <Window type="OD/MenuSymbolButton" name="LaunchButton" >
