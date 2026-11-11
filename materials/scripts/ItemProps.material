@@ -338,16 +338,23 @@ material MerchantGold
     }
 }
 
+// A2 rework 6 (decisions 1053/1070): the merchant's long grey hair is a streaked texture instead of one flat grey.
 material MerchantHair
 {
+    receive_shadows on
     technique
     {
         pass
         {
-            ambient 0.3000 0.2850 0.2600
-            diffuse 0.3000 0.2850 0.2600 1
+            ambient 0.8 0.8 0.8 1
+            diffuse 1 1 1 1
             specular 0.05 0.05 0.05 1 8
-            emissive 0.0000 0.0000 0.0000
+            texture_unit
+            {
+                texture MerchantHair.png
+                tex_address_mode wrap
+                filtering trilinear
+            }
         }
     }
 }
@@ -404,8 +411,8 @@ material MerchantBrass
         {
             ambient 0.8 0.8 0.8 1
             diffuse 1 1 1 1
-            specular 0.55 0.45 0.25 1 30
-            emissive 0.16 0.12 0.05
+            specular 0.30 0.24 0.12 1 24
+            emissive 0.05 0.04 0.015
             texture_unit
             {
                 texture MerchantBrass.png
