@@ -1147,6 +1147,17 @@ private:
     std::set<Creature*> mDragContactCreatures;
     //! Base and last rendered local positions, used to remove cosmetic contact on release.
     std::map<Creature*, std::pair<Ogre::Vector3, Ogre::Vector3>> mDragContactPositions;
+    //! The fixed grip of a pulled body: hand in the worker node space, ankle in the body node space (decision 1048).
+    struct DragGrip
+    {
+        DragGrip() : mValid(false), mUsed(false) {}
+        bool mValid;
+        bool mUsed;
+        std::string mWorkerName;
+        Ogre::Vector3 mHand;
+        Ogre::Vector3 mAnkle;
+    };
+    std::map<Creature*, DragGrip> mDragContactGrips;
 
 
     Ogre::TexturePtr m_texture;
