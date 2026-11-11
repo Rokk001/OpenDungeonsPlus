@@ -20,13 +20,13 @@ assert 'setDepthBias(-4.0f, -32.0f)' in body and 'setDepthBias(1.0f, 1.0f)' not 
 # offset (0.012 of the mesh size) was as thick as thin parts (skeleton bones, wing membranes, spider legs) and huge in
 # close-ups, which drew the creature filled red.
 assert 'setNamedConstant("pixelWidth"' in body and 'OutlinerContourPixels' in body
-assert 'ACT_VIEWPORT_SIZE' in body and 'ACT_WORLDVIEW_MATRIX' in body and 'ACT_WORLDVIEWPROJ_MATRIX' in body
+assert 'ACT_VIEWPORT_SIZE' in body and 'ACT_VIEW_MATRIX' in body and 'ACT_VIEWPROJ_MATRIX' in body
 assert 'OutlinerContourWidthFactor' not in render and 'getBounds().getSize()' not in body
 px = float(render.split('OutlinerContourPixels = ')[1].split('f;')[0])
 assert 0.5 <= px <= 2.5, px
 assert 'uniform    float pixelWidth;' in vert and 'uniform    vec4 viewportSize;' in vert
 assert 'clip.xy += dir * pixelWidth * 2.0 * viewportSize.zw * clip.w' in vert
-assert 'normalize(normal.xyz) * width' not in vert and 'position.xyz +' not in vert
+assert 'normalize(normal.xyz) * width' not in vert and 'position.xyz +' not in vert and 'blendIndices' in vert
 # Every sub-entity of every creature gets the pass (no creature type is skipped) and it is added to a clone only.
 assert 'getNumSubEntities()' in body and '->clone(ss.str(),"Graphics")' in body
 print('ok')

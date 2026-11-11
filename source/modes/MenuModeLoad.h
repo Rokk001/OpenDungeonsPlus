@@ -44,6 +44,8 @@ public:
     bool isOpenInGame() const { return mInGame && mOpen; }
 
 private:
+    //! \brief Rebuilds the visible list for the selected filter.
+    bool updateFilesList(const CEGUI::EventArgs& = {});
     //! \brief Starts a local server with the given saved game and connects to it.
     bool launchSavedGame(const std::string& level);
     //! \brief Whether the browser is used on top of a running game.

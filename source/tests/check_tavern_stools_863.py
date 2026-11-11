@@ -11,7 +11,7 @@ What is checked (python only, no compiler, no game; fixed values of this branch,
                a stool guest takes only a stool, every other guest only bench places; the bench places at the end of an
                occupied stool that its body reaches stay free (and a stool stays free while one of them is taken); the
                footprint of the body lies on tiles of the room without other furniture, outside the reach of the guests
-               of every other table (1.48 tiles along, 1.51 across) and of every other stool guest; the stools are
+               of every other table (1.48 tiles along, 1.49 across) and of every other stool guest; the stools are
                created with the tables, removed with them and with the room, and are furniture for the navigation; the
                own stool and table are left out of the obstacles of the walk onto the seat and of the fall of a duel loser
   stool models (need OgreXMLConverter) the stool mesh: seat top at the bench height 0.2575, radius 0.16, inside its
@@ -19,7 +19,7 @@ What is checked (python only, no compiler, no game; fixed values of this branch,
                inside the footprint of its table row, no part deeper than 0.025 in the seat or in the post of the stool,
                no part deeper than 0.04 in the table or the benches, no overlap with a bench guest of any model beyond
                its blocked places (and an overlap at the last blocked place, so no place is blocked for nothing), no
-               overlap with any stool guest on the other stool; the bench guests of a table stay within 1.48 / 1.51; the
+               overlap with any stool guest on the other stool; the bench guests of a table stay within 1.48 / 1.49; the
                legs and belly of Troll, Dragon and PitDemon hang through any stool seat, which is why they keep the bench
   mug          the mug is 1.8 times as wide as its mesh and as long; a limb mug is at least 0.67 of the mesh; no weapon is
                shown in Drink (it sits on the same hand bone); a drink clip that fades out keeps its mug until the blend
@@ -31,8 +31,9 @@ What is checked (python only, no compiler, no game; fixed values of this branch,
   finding 9    when a duel starts (code) and how often: a model of the upkeep of two guests at one table gives a game in
                59 percent of the visits and a slap duel in 20 when they sit down together, 29 and 9.5 percent when the
                second comes 0 to 120 turns later; a model of playDuelTurn gives slaps of 6 to 14
-               turns (4.3 to 10 s), pauses of 5 to 8 turns (3.6 to 5.7 s), a knock-out state of 41 turns after the turn the
-               duel ends (29.3 s: DuelKoTurns 42 is counted down once in that same turn) and a get-up of 9 turns (6.4 s)
+               turns (4.3 to 10 s), pauses of 5 to 8 turns (3.6 to 5.7 s), a knock-out state of 42 turns after the turn the
+               duel ends (30 s, decision 897: DuelKoTurns 42 plus the turn of the knock-out, which upkeepSpots counts
+               down in that same turn) and a get-up of 9 turns (6.4 s)
 
 Call from the repository root:
   python source/tests/check_tavern_stools_863.py
@@ -55,14 +56,15 @@ sys.path.insert(0, str(ROOT / 'source' / 'tests'))
 TURNS_PER_SECOND = 1.4
 # Decision 863: the creatures on stools and their measured bodies (blocked bench places, front, back, half width)
 EXPECTED_BODIES = {
-    'CaveHornet.mesh': (1, 0.13, 0.12, 0.26), 'Kreatur.mesh': (4, 0.66, 1.23, 0.70), 'LavaSpawn.mesh': (4, 0.42, 0.96, 0.98),
-    'Rat.mesh': (1, 0.12, 0.47, 0.37), 'Roach.mesh': (2, 0.15, 0.57, 0.39), 'Scarab.mesh': (2, 0.23, 0.86, 0.43),
-    'Slime.mesh': (1, 0.14, 0.30, 0.23), 'Spider.mesh': (1, 0.20, 0.56, 0.42), 'TentacleAlbine.mesh': (2, 0.35, 0.24, 0.33),
-    'TentacleGreen.mesh': (2, 0.35, 0.24, 0.33), 'Wyvern.mesh': (2, 0.38, 0.69, 0.49)}
+    'CaveHornet.mesh': (2, 0.34, 0.21, 0.14), 'Kreatur.mesh': (4, 0.66, 1.23, 0.70), 'LavaSpawn.mesh': (4, 0.72, 0.55, 0.99),
+    'Rat.mesh': (2, 0.34, 0.47, 0.37), 'Roach.mesh': (2, 0.33, 0.57, 0.39), 'Scarab.mesh': (2, 0.36, 0.86, 0.43),
+    'Slime.mesh': (3, 0.35, 0.32, 0.25), 'Spider.mesh': (2, 0.32, 0.37, 0.32), 'TentacleAlbine.mesh': (2, 0.36, 0.24, 0.28),
+    'TentacleGreen.mesh': (2, 0.36, 0.24, 0.28), 'Wyvern.mesh': (3, 0.57, 0.69, 0.49)}
 BENCH_MODELS_ON_LEGS = ('Troll.mesh', 'Dragon.mesh', 'PitDemon.mesh')
 STOOL_DISTANCE = 0.8
 REACH_ALONG = 1.48
-REACH_ACROSS = 1.51
+# Measured maximum 1.488886574 after the Defender drink repair, rounded up to the next .01 tile.
+REACH_ACROSS = 1.49
 STOOL_TOP = 0.2575
 STOOL_RADIUS = 0.16
 STOOL_POST_RADIUS = 0.034
@@ -235,6 +237,7 @@ def check_stool_code():
 
 # 2. The mug in the code
 def check_mug_code():
+    """Require six fallback limb mounts and unchanged mug scale, hiding and blend contracts."""
     render = read('source/render/RenderManager.cpp')
     assert re.search(r'^const Ogre::Real TAVERN_MUG_GIRTH_SCALE = 1\.8f;$', render, re.M)
     props = extract(render, 'void RenderManager::updateCreatureTavernProps(')
@@ -246,7 +249,7 @@ def check_mug_code():
     table = render[render.index('const TavernMugLimbMount TAVERN_MUG_LIMB_MOUNTS[] ='):]
     table = table[:table.index('};')]
     scales = [float(v) for v in re.findall(r', ([0-9.]+)f \}', table)]
-    assert len(scales) == 7 and min(scales) >= MIN_LIMB_MUG_SCALE, scales
+    assert len(scales) == 6 and min(scales) >= MIN_LIMB_MUG_SCALE, scales
     entity = read('source/entities/MovableGameEntity.h')
     assert 'return isSeatClip(clip) || (clip == drink_anim);' in extract(entity, 'inline bool hidesWeapons(')
     reactions = read('source/render/CreatureCombatReactions.cpp')
@@ -360,7 +363,8 @@ def check_duel():
                   'clock.mTurnsLeft <= clock.mSlapTurns / 2', 'getTavernValue("SlapDuelLoseBelowHp")'):
         assert token in duel, token
     knock = extract(room, 'void RoomTavern::knockOut(')
-    assert 'setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")));' in knock
+    assert 'setSpotState(spot, TavernGuestState::ko, static_cast<int32_t>(getTavernValue("DuelKoTurns")) + KNOCK_OUT_TURN);' in knock
+    assert re.search(r'^const int32_t KNOCK_OUT_TURN = 1;$', room, re.M)
     spots = extract(room, 'void RoomTavern::upkeepSpots(')
     assert 'setSpotState(spot, TavernGuestState::getUp, getUpTurns());' in spots
 
@@ -373,15 +377,15 @@ def check_duel():
     assert set(pauses) == set(range(5, 9)), sorted(set(pauses))
     assert 4.0 <= min(slaps) / TURNS_PER_SECOND and max(slaps) / TURNS_PER_SECOND <= 10.0
     assert 3.0 <= min(pauses) / TURNS_PER_SECOND and max(pauses) / TURNS_PER_SECOND <= 6.0
-    # The knock-out: set in upkeepGames, counted down by upkeepSpots in the same turn and every turn after it
-    # (the turns after the knock-out turn until the get-up starts)
-    ko_left, ko_turns = 42, 0
+    # The knock-out: set in upkeepGames to DuelKoTurns + KNOCK_OUT_TURN, counted down by upkeepSpots in the same turn and
+    # every turn after it (the turns after the knock-out turn until the get-up starts): 42 turns, 30 s (decision 897)
+    ko_left, ko_turns = 42 + 1, 0
     ko_left -= 1
     while ko_left > 0:
         ko_turns += 1
         ko_left -= 1
     get_up = math.ceil(6 * TURNS_PER_SECOND)
-    assert ko_turns == 41 and get_up == 9
+    assert ko_turns == 42 and abs(ko_turns / TURNS_PER_SECOND - 30.0) < 1e-9 and get_up == 9
     # How often: two guests of one keeper at one table, beer served and paid. Measured with these seeds on this branch:
     # seated in the same turn, a game in 59.4 percent of the visits and a slap duel in 19.8; the second guest 0 to 120 turns
     # later, a game in 28.5 and a duel in 9.5 percent (a guest that is done before its mate came does not wait for it)
@@ -458,6 +462,31 @@ def try_game(rng, guests, index):
 
 
 # 5. The models
+def mug_table_share(points, on_stool):
+    """Measure the unchanged deep-height band in the actual table frame of each seat type."""
+    inside = (points[:, :, 2] > 0.39) & (points[:, :, 2] < 0.4225)
+    if on_stool:
+        # Native tabletop at scale 0.84: x +/-0.3234, y +/-0.588; its centre is 0.8 ahead of a stool.
+        inside &= (np.abs(points[:, :, 0]) < 0.3234)
+        inside &= (points[:, :, 1] > -STOOL_DISTANCE - 0.588)
+        inside &= (points[:, :, 1] < -STOOL_DISTANCE + 0.588)
+    else:
+        inside &= (points[:, :, 1] < -0.108) & (points[:, :, 1] > -0.735)
+    return float(inside.mean(axis=1).max())
+
+
+def check_mug_table_frames():
+    """Reject real deep stool collisions and exclude the phantom bench-only region."""
+    real = np.array([[[0.0, -1.0, 0.41]]])
+    phantom = np.array([[[0.0, -0.15, 0.41]]])
+    outside = np.array([[[0.324, -1.0, 0.41]]])
+    above = np.array([[[0.0, -1.0, 0.45]]])
+    assert mug_table_share(real, True) == 1.0 and mug_table_share(real, False) == 0.0
+    assert mug_table_share(phantom, True) == 0.0 and mug_table_share(phantom, False) == 1.0
+    assert mug_table_share(outside, True) == 0.0 and mug_table_share(above, True) == 0.0
+    print('mug table frames ok: actual stool collision, phantom bench region, side and height controls')
+
+
 def posed_points(skeleton, vertices, weights, rest):
     points = []
     for clip in SEAT_CLIPS:
@@ -517,6 +546,7 @@ def stool_sink(points):
 
 
 def check_models(out):
+    """Require actual native stool occupancy and mug clearance in the correct seat frame."""
     from check_animation_assets import export
     import fix_walk_feet as feet
     import author_rest_poses as rest
@@ -531,6 +561,14 @@ def check_models(out):
     assert float(np.hypot(top[:, 0], top[:, 1]).max()) >= STOOL_RADIUS - 0.009
     print('stool mesh ok: seat top %.4f, radius %.4f within the bounds 0.1655' % (float(stool[:, 2].max()), radius))
 
+    export('TavernTable.mesh', out)
+    table = rest.mesh_data(out / 'TavernTable.mesh.xml')[0].copy()
+    assert float_constant(read('source/rooms/RoomTavern.cpp'), 'TAVERN_TABLE_SCALE') == 0.84
+    table[:, :2] *= 0.84
+    top = table[table[:, 2] > 0.38]
+    assert np.allclose(top.min(axis=0)[:2], (-0.3234, -0.588), atol=2e-6, rtol=0.0)
+    assert np.allclose(top.max(axis=0), (0.3234, 0.588, 0.4425), atol=2e-6, rtol=0.0)
+
     meshes = []
     for block in re.findall(r'\[Creature\](.*?)\[/Creature\]', read('config/creatures.cfg'), re.S):
         mesh = re.search(r'^\s*MeshName\s+(\S+)', block, re.M)
@@ -539,8 +577,11 @@ def check_models(out):
             meshes.append(mesh.group(1))
     assert len(meshes) == 31, len(meshes)
     posed = {}
+    stool_names = set()
     for mesh in meshes:
         name = re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (ROOT / 'models' / mesh).read_bytes())[0].decode('ascii')
+        if mesh in EXPECTED_BODIES:
+            stool_names.add(name)
         export(name + '.skeleton', out)
         export(mesh, out)
         skeleton = feet.Skel(str(out / (name + '.skeleton.xml')))
@@ -603,7 +644,11 @@ def check_models(out):
     mug = rest.mesh_data(out / 'TavernMug.mesh.xml')[0]
     wide = mug.copy()
     wide[:, 1:] *= MUG_GIRTH
-    turned = wide @ seats.MUG_TURN.T
+    # Decision 901: Weapon_R holds the mug at its middle (TAVERN_MUG_GRIP_SHIFT along the x axis of the bone)
+    turned = wide @ seats.MUG_TURN.T + np.array([seats.MUG_GRIP_SHIFT, 0.0, 0.0])
+    sunk = np.stack((wide[:, 1], wide[:, 2] - STOOL_DISTANCE, -wide[:, 0] + 0.25), axis=1)[None]
+    assert mug_table_share(sunk, True) > MAX_MUG_IN_TABLE, 'a sunken physical cup was accepted'
+    assert re.search(r'^const Ogre::Real TAVERN_MUG_GRIP_SHIFT = 0\.1f;$', read('source/render/RenderManager.cpp'), re.M) and seats.MUG_GRIP_SHIFT == 0.1
     names = sorted({re.findall(rb'([A-Za-z0-9_]+)\.skeleton', (ROOT / 'models' / m).read_bytes())[0].decode('ascii') for m in meshes})
     worst = 0.0
     for name in names:
@@ -617,8 +662,7 @@ def check_models(out):
             for scale in (1.0, 1.1):
                 q = points * scale
                 if clip == 'SitDrink':
-                    inside = (q[:, :, 1] < -0.108) & (q[:, :, 1] > -0.735) & (q[:, :, 2] > 0.39) & (q[:, :, 2] < 0.4225)
-                    share = float(inside.mean(axis=1).max())
+                    share = mug_table_share(q, name in stool_names)
                     worst = max(worst, share)
                     assert share <= MAX_MUG_IN_TABLE, (name, 'the wide mug sinks into the table', share)
                 else:
@@ -627,10 +671,12 @@ def check_models(out):
 
 
 def main():
+    """Run source contracts, table-frame controls and complete native stool and mug checks."""
     check_stool_code()
     check_mug_code()
     check_drink_duration()
     check_duel()
+    check_mug_table_frames()
     converter = os.environ.get('OGRE_XML_CONVERTER') or shutil.which('OgreXMLConverter') or shutil.which('OgreXMLConverter.exe')
     if converter is None:
         print('models skipped: OgreXMLConverter not found')

@@ -34,6 +34,7 @@
 #include "entities/GameEntity.h"
 #include "render/TreasuryCreatureRules.h"
 #include "render/TreasuryGoldBatch.h"
+#include "render/TerrainDrawBatch.h"
 #include "rooms/HatcheryNestField.h"
 #include <OgreVector2.h>
 
@@ -102,6 +103,9 @@ public:
     //! \brief True when the creature already lies in its death pose (a knocked-out creature, a corpse): a death
     //! that follows must not play the death clip again (the body would stand up and fall once more).
     bool rrIsCreatureDown(const Creature* creature) const;
+    //! \brief Ends the procedural fall of a creature at once (the lying-down fallback and the death variant): a body
+    //! that already lay when the game was saved lies on the next frame instead of falling over again (decision 991).
+    void rrSettleCreatureFall(const Creature* creature);
 
     //! \brief Loop through the render requests in the queue and process them
     //! Advances hand animations in real time and world animations in unpaused game time.
@@ -158,6 +162,13 @@ public:
     //! The shader generator otherwise builds them in the frame in which an object first comes into view,
     //! which stalls a camera flight. Call it after pinMenuShaderLights(), so the shaders match the fixed light count.
     void prepareMenuShaders();
+
+    //! \brief Makes the generated shaders of an animated entity skin it on the GPU instead of Ogre skinning it on the CPU.
+    //! Every sub entity gets its own copy of its material (one per material and mesh) that carries the RTSS hardware
+    //! skinning stage, because the stage is stored in the material and would break meshes without a skeleton that share it.
+    //! The copy keeps the name of the original as prefix, so name based shading (the menu display stage) is unchanged.
+    //! Does nothing, and returns false, when a material has its own vertex program or the mesh has no usable skeleton.
+    bool useShaderSkinning(Ogre::Entity* entity);
 
     //! \brief Switches the dynamic texture shadows on or off.
     //! Updates the scene manager's shadow technique, the generated-shader shadow receiver and the
@@ -224,6 +235,12 @@ public:
     //! \brief Releases movable visuals and any attached cauldron fire.
     void rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRenderedMovableEntity, NodeType nt = NodeType::MTILES_NODE);
     void rrUpdateEntityOpacity(RenderedMovableEntity* entity);
+    //! \brief Aligns a pulled body with the current animated worker hand, with safe rig fallbacks.
+    void rrApplyDragContact(Creature& dragged, const Creature& worker);
+    //! \brief Samples contacts after all world movements and animations.
+    void rrUpdateDragContacts();
+    //! \brief Restores undisplaced nodes before movement; contact never changes simulation coordinates.
+    void rrResetDragContacts();
     void rrCreateCreature(Creature* curCreature);
     void rrDestroyCreature(Creature* curCreature);
     //! Shows, resizes or removes the sack of a thief according to the gold it carries (as sent by the server)
@@ -864,6 +881,8 @@ private:
     int mTreasuryDentNumber = 0;
     //! The settled piles of a treasury are drawn as one batch per room
     TreasuryGoldBatch mTreasuryBatch;
+    //! Earth submission batches retain per-tile lighting and original query entities.
+    TerrainDrawBatch mTerrainDrawBatch;
 
     //! An object standing in the gold of a treasury, drawn partly buried: only its node is lifted by mCurrent
     struct TreasuryBuriedObject
@@ -1124,6 +1143,10 @@ private:
     //! For each rotting corpse, the original materials of its sub-entities; while a corpse is listed here its
     //! entity uses private cloned materials whose corpseDecay value is driven by the animation progress
     std::map<Creature*, std::vector<Ogre::MaterialPtr>> mCreatureDecayMaterials;
+    //! Visible creatures, removed on destruction; sampled after movement and pose updates.
+    std::set<Creature*> mDragContactCreatures;
+    //! Base and last rendered local positions, used to remove cosmetic contact on release.
+    std::map<Creature*, std::pair<Ogre::Vector3, Ogre::Vector3>> mDragContactPositions;
 
 
     Ogre::TexturePtr m_texture;

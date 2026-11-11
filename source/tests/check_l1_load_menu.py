@@ -45,6 +45,9 @@ assert 'setGamePaused(mWasPaused)' in close and 'getCurrentMode()->giveFocus()' 
 assert 'closeBrowser()' in function(load, 'bool MenuModeLoad::keyPressed(')
 selected = function(load, 'bool MenuModeLoad::launchSelectedButtonPressed(')
 assert 'requestSavedGame(level)' in selected and 'launchSavedGame(level)' in selected
+replay = selected[selected.index('if(loadConfirmAction'):selected.index('    if(mInGame)', selected.index('        if(!ODClient::getSingleton().replay(level))'))]
+assert replay.index('checkReplayValid') < replay.index('if(mInGame)') < replay.index('requestSavedGame(level)') < replay.index('ODClient::getSingleton().replay(level)')
+assert 'extension().string() == ".odr"' in activate and 'ODClient::getSingleton().replay(filename)' in activate
 assert 'mLoadBrowser->closeBrowser()' in function(game, 'void GameMode::deactivate(')
 assert 'mCurrentApplicationMode = nullptr' in function(manager, 'void ModeManager::checkModeChange(')
 assert 'mRequestedSavedGame' in function(manager, 'void ModeManager::checkModeChange(')

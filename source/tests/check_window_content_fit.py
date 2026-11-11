@@ -35,8 +35,8 @@ Exclusions (each one is a documented limit of the game, not a layout fault, and 
 * progress bars (tinted overlays that the parent clips),
 * list, combo box and multi column list contents (rows are filled and scrolled by the code); of a combo box only the
   closed box (1.5 line spacings) counts, the drop down list opens over the other windows,
-* the room, trap and spell buttons of the game build bar (placed by Gui::arrangeActionButtons),
-* KNOWN_LIMITS: the map editor build bar and the developer widget gallery, which are not in-game windows; their
+* the room, trap and spell buttons of the game and editor build bars (placed by Gui),
+* KNOWN_LIMITS: the developer widget gallery, which is not an in-game window; its
   findings are counted and printed, not hidden.
 """
 from pathlib import Path
@@ -426,15 +426,7 @@ KNOWN_LIMITS = (
     # (layout file, path prefix or None for the whole layout, reason)
     ('WidgetsTest.layout', None,
      'developer widget gallery, no code loads it; its windows are test arrangements, not game windows'),
-    ('WindowTabRooms.layout', 'EDITORGUI/MainTabControl/',
-     'map editor build bar: fixed pixel positions designed for a 1024x768 bottom panel of 133 pixels, one row of buttons '
-     'per page; the editor sheet is not an in-game window and has no arranging code (Gui::arrangeActionButtons is used on '
-     'the game sheet only)'),
-    ('ModeEditor.layout', 'EDITORGUI/HorizontalPipe/GoldDensityDisplay',
-     'map editor status line: its area is pinned by check_world_balance_gold.py (editor, not an in-game window); at UI '
-     'scale 120 % the text line is higher than the 25 design pixel box'),
-    ('WindowTabTraps.layout', 'EDITORGUI/MainTabControl/', 'map editor build bar, see WindowTabRooms.layout'),
-    ('WindowTabSpells.layout', 'EDITORGUI/MainTabControl/', 'map editor build bar, see WindowTabRooms.layout'),
+
 )
 
 
@@ -455,9 +447,10 @@ def overhang_allowed(node):
         # the parent clips them, so a bar that is wider than its tile shows nothing outside the tile
         return 'overlay'
     if node.type == 'OD/GameTabButton' and node.layout in CODE_ARRANGED_LAYOUTS and node.parent.path.endswith(
-            CODE_ARRANGED_PAGES) and 'Root/MainTabControl' in node.parent.path:
-        # the room, trap and spell buttons of the game build bar are placed by Gui::arrangeRoomButtons /
-        # arrangeTrapButtons / arrangeSpellButtons (arrangeActionButtons) from the visible buttons at every resolution,
+            CODE_ARRANGED_PAGES) and ('Root/MainTabControl' in node.parent.path or 'EDITORGUI/MainTabControl' in node.parent.path):
+        # The game and editor construction buttons are positioned by Gui at every resolution.
+        # The game build bar uses Gui::arrangeRoomButtons /
+        # arrangeTrapButtons / arrangeSpellButtons (arrangeActionButtons) from the visible buttons;
         # the layout positions are only the defaults of the first frame
         return 'arranged by code'
     if parent is not None and parent.type in SCROLL_TYPES:

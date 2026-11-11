@@ -188,7 +188,8 @@ CameraManager::CameraManager(Ogre::SceneManager* sceneManager, GameMap* gm, Ogre
     // Attach background to the scene
     Ogre::SceneNode* node = mSceneManager->getRootSceneNode()->createChildSceneNode("Background");
     node->attachObject(rect);
-    node->showBoundingBox(true);
+    // The bounding box of the background is not shown: it lies far beyond the far clip distance, so it is never
+    // seen, and drawing it made the debug drawer rebuild its lines and wait for the GPU in every frame.
     OD_LOG_INF("Created camera manager");
 }
 

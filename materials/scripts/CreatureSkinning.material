@@ -1,0 +1,42 @@
+// Hardware skinning helpers for the animated creature materials.
+//
+// The creature vertex programs (Creature.vert) skin on the GPU and declare it with
+// includes_skeletal_animation, so Ogre no longer skins every visible creature on the CPU.
+// A hardware skinned entity needs a skinning shadow caster as well, otherwise the shadow
+// texture would show the creature in its bind pose: the creature materials point to
+// CreatureShadowCaster with shadow_caster_material.
+
+vertex_program CreatureShadowCasterVertexShader glsl
+{
+    source CreatureShadowCaster.vert
+    includes_skeletal_animation true
+    default_params
+    {
+        param_named_auto viewProjectionMatrix viewproj_matrix
+        param_named_auto boneMatrices world_matrix_array_3x4
+        param_named_auto worldMatrix world_matrix
+    }
+}
+
+fragment_program CreatureShadowCasterFragmentShader glsl
+{
+    source CreatureShadowCaster.frag
+}
+
+material CreatureShadowCaster
+{
+    receive_shadows false
+    technique
+    {
+        pass
+        {
+            depth_bias -1 -1
+            vertex_program_ref CreatureShadowCasterVertexShader
+            {
+            }
+            fragment_program_ref CreatureShadowCasterFragmentShader
+            {
+            }
+        }
+    }
+}

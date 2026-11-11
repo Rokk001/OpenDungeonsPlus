@@ -1730,6 +1730,19 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     return true;
 }
 
+//! \brief Abandons held mouse actions without submitting a world command.
+void GameMode::cancelMouseInput()
+{
+    mPendingHandDrop = false;
+    mMiddleDragDistance = 0.0f;
+    AbstractApplicationMode::cancelMouseInput();
+    ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);
+    ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateY, 0.0);
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::selectTile)
+        mPlayerSelection.setCurrentAction(SelectedAction::none);
+    unselectAllTiles();
+}
+
 //! \brief Completes a world action using the current action-specific pointer target.
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
@@ -2250,6 +2263,7 @@ void GameMode::updateCameraControls(float elapsed)
     CameraInput input = CameraInput::read(down);
     if(input.x == 0.0f && input.y == 0.0f && input.zoom == 0.0f && input.swivel == 0.0f
         && !down(OIS::KC_X) && !down(OIS::KC_Z)
+        && ODFrameListener::getSingleton().getRenderWindow()->isActive()
         && config.getInputValue(Config::AUTOSCROLL, "No", false) == "Yes")
     {
         CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();
@@ -3371,6 +3385,8 @@ bool GameMode::showSkillWindow(const CEGUI::EventArgs&)
     {
     }
     resetSkillTree();
+    // Brings the tree up to date if the research progress changed while it was closed
+    refreshGuiSkill();
     // The Rooms tab is shown when the window opens
     static_cast<CEGUI::TabControl*>(mRootWindow->getChild("SkillTreeWindow/Skills/SkillTabs"))->setSelectedTab("Rooms");
     mRootWindow->getChild("SkillTreeWindow")->show();
@@ -4700,8 +4716,15 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
        ((mCurrentSkillType != curResType) ||
         (mCurrentSkillProgress != curSkillProgress)))
     {
-        forceRefresh = true;
+        // The progress is shown only inside the skill tree. While the tree is closed, the refresh waits until it
+        // opens: the cast buttons and the action bar do not depend on the progress.
+        if(mIsSkillWindowOpen)
+            forceRefresh = true;
+        else
+            mIsSkillTreeOutdated = true;
     }
+    if(mIsSkillWindowOpen && mIsSkillTreeOutdated)
+        forceRefresh = true;
 
     // Losing or regaining the library locks or unlocks the spells
     if(mIsLibraryLostShown != localPlayerSeat->isLibraryLost())
@@ -4712,6 +4735,9 @@ void GameMode::refreshGuiSkill(bool forceRefresh)
 
     if(!forceRefresh && !localPlayerSeat->getGuiSkillNeedsRefresh())
         return;
+
+    // Every refresh below brings the whole tree up to date, the progress included
+    mIsSkillTreeOutdated = false;
 
     if(mIsSkillWindowOpen && localPlayerSeat->getGuiSkillNeedsRefresh())
     {

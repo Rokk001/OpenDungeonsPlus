@@ -20,6 +20,7 @@ The probe needs the MSVC compiler on the path (run it in a Visual Studio develop
 from pathlib import Path
 import re
 import subprocess
+import sys
 import tempfile
 
 root = Path(__file__).resolve().parents[2]
@@ -342,6 +343,19 @@ static void checkRoomStream()
     RoomSpa again; std::istringstream in2(exported(loaded));
     expect(again.importFromStream(in2) && again.mPendingBathers.size() == 3 && again.mPayer == SpaPayer::creature, "second round trip");
 
+    // All added bather phases preserve their separate transition timer and seated progress.
+    const SpaBatherState phases[] = {SpaBatherState::sitting, SpaBatherState::standing, SpaBatherState::leaving};
+    for(int phase = 0; phase < 3; ++phase)
+    {
+        RoomSpa phaseRoom; RoomSpaBather guest(&reserved); guest.mState = phases[phase];
+        guest.mTurnsDone = 42.0; guest.mTransitionTurns = 3.25; phaseRoom.mBathers.push_back(guest);
+        RoomSpa back; std::istringstream phaseIn(exported(phaseRoom));
+        expect(back.importFromStream(phaseIn), "new phase loads");
+        expect(back.mPendingBathers[reserved.getName()].mState == phases[phase], "phase survives save");
+        expectNear(back.mPendingBathers[reserved.getName()].mTurnsDone, 42.0, "seated time survives save");
+        expectNear(back.mPendingBathers[reserved.getName()].mTransitionTurns, 3.25, "transition time survives save");
+    }
+
     // All attendant states, with and without the optional fields
     const PoolAttendantState states[] = { PoolAttendantState::sitting, PoolAttendantState::whistling, PoolAttendantState::towelWaving,
         PoolAttendantState::dozing, PoolAttendantState::climbingDown, PoolAttendantState::walkingToBoard, PoolAttendantState::jumping,
@@ -554,6 +568,13 @@ replacements = {
 for token, text in replacements.items():
     assert token in probe, token
     probe = probe.replace(token, text)
+
+if '--source-only' in sys.argv:
+    output = root / 'out' / 'spa-streams-904.cpp'
+    output.parent.mkdir(exist_ok=True)
+    output.write_text(probe, encoding='utf-8')
+    print('spa streams source wiring checked; production probe generated, compilation pending')
+    sys.exit(0)
 
 with tempfile.TemporaryDirectory(prefix='odp-spa-streams-') as directory:
     work = Path(directory)

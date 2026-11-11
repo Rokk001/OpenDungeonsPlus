@@ -83,6 +83,8 @@ public:
     virtual bool wheelMovedN     (const MouseWheelEvent& arg);
     virtual bool mousePressed   (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
     virtual bool mouseReleased  (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
+    //! \brief Cancels a pointer gesture without treating capture loss as a user release.
+    virtual void cancelMouseInput();
     virtual bool keyPressed     (const OIS::KeyEvent &arg) override;
     virtual bool keyReleased    (const OIS::KeyEvent &arg) override;
     virtual void handleHotkeys  (OIS::KeyCode keycode) {};

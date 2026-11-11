@@ -87,6 +87,10 @@ public:
     //! \brief A required function to pass input to the OIS system.
     static CEGUI::MouseButton convertButton (OIS::MouseButtonID buttonID);
 
+    //! \brief Brings the default tooltip in front of the dialogs again when one of them rose above it since the last
+    //! frame. Called once per frame before the time pulse of CEGUI, outside of every CEGUI event and window update.
+    static void keepTooltipInFront();
+
     CEGUI::Window* getGuiSheet(guiSheet sheet);
 
     //! \brief Move CEGUI rendering to another Ogre render target.
@@ -133,6 +137,9 @@ public:
     //! \brief Redraws the heart badge of the top-left corner: its ring shows the given health
     //! fraction (0 to 1) of the dungeon heart and its painted background glows while under attack.
     void updateHeartBadge(float healthFraction, bool underAttack);
+
+    //! \brief Fits editor construction buttons into their available tab pages.
+    void arrangeEditorActionButtons(CEGUI::Window* editorSheet);
 
     //! \brief Arranges the room, trap and spell buttons of the in game sheet.
     void arrangeActionButtonPanels(CEGUI::Window* gameSheet);

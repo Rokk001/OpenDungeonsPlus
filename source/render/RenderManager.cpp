@@ -22,6 +22,7 @@
 #include "render/RenderManager.h"
 #include "ODApplication.h"
 #include "render/GroundShadowCameraSetup.h"
+#include "render/ShadowCasterSceneManager.h"
 
 #include "camera/CullingManager.h"
 #include "gamemap/RoomObjectBounds.h"
@@ -106,12 +107,14 @@
 #include <OgreSubEntity.h>
 #include <OgreSubMesh.h>
 #include <OgreRoot.h>
+#include <OgreRenderWindow.h>
 #include <OgreTechnique.h>
 #include <OgreViewport.h>
 #include <OISKeyboard.h>
 #include <Overlay/OgreOverlay.h>
 #include <Overlay/OgreOverlayManager.h>
 #include <Overlay/OgreOverlaySystem.h>
+#include <RTShaderSystem/OgreShaderExHardwareSkinning.h>
 #include <RTShaderSystem/OgreShaderGenerator.h>
 #include <RTShaderSystem/OgreShaderRenderState.h>
 
@@ -181,11 +184,17 @@ const std::string TAVERN_MUG_PREFIX = "TavernMug_";
 //! instead of 0.13 tiles across). Its length, from the grip to the rim, stays, so the drink clips still bring the rim to
 //! the mouth; checked against the table in SitDrink by source/tests/check_tavern_stools_863.py.
 const Ogre::Real TAVERN_MUG_GIRTH_SCALE = 1.8f;
+//! Decision 901: a hand holds the mug at its middle, not at its foot. On Weapon_R the mug is shifted this far along the x
+//! axis of the bone (its foot side), so the hand grips the tankard, the mug can stand on the table with the hand above the
+//! table top, and the drink clips (tools/author_tavern_drink.py) bring its rim, not the hand, to the mouth. The hand of the
+//! Defender (a limb mount) has the same shift in its offset.
+const Ogre::Real TAVERN_MUG_GRIP_SHIFT = 0.1f;
 
 //! \brief Where a guest whose skeleton has no Weapon_R bone holds its mug: on the paw, claw, feeler or front tentacle that
 //! its drink clips raise (decision 834: every guest holds a mug in every drink). The turn stands the mug upright in the
 //! rest pose of the bone (its rim along the -x axis of the mesh points up), the offset puts its foot on the middle of the
-//! limb (in the frame of the bone) and the scale is at least 0.67, so that even the mug of a small body is 0.12 tiles
+//! limb (in the frame of the bone; the hand of the Defender holds the middle of the mug, TAVERN_MUG_GRIP_SHIFT lower) and
+//! the scale is at least 0.67, so that even the mug of a small body is 0.12 tiles
 //! tall and readable from the game camera (decision 863; decision 834 had kept it at 0.3 of the height of a small body,
 //! 0.06 tiles on the spider). Values from the rest poses of the models (decision 834); checked against them by
 //! source/tests/check_tavern_drink_834.py.
@@ -205,13 +214,12 @@ struct TavernMugLimbMount
 
 const TavernMugLimbMount TAVERN_MUG_LIMB_MOUNTS[] =
 {
-    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0000f, 0.0810f, 0.8172f, -0.0012f, 0.0104f, -0.0002f, 0.67f },
-    { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, 0.0000f, 0.0000f, 0.0000f, 1.00f },
+    { "CaveHornet.skeleton", "Leg1low_R", 0.5706f, 0.0f, 0.081f, 0.8172f, -0.00927217250429f, 0.02282818196546f, -0.02555186825649f, 0.67f },
+    { "Defender.skeleton", "RightHand", 0.0343f, 0.0000f, -0.9994f, -0.0001f, -0.0998f, 0.0000f, 0.0069f, 1.00f },
     { "Rat.skeleton", "FrontLeg_R.003", 0.7071f, 0.0000f, -0.7071f, 0.0000f, 0.0011f, 0.0260f, 0.0028f, 0.67f },
-    { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0000f, -0.0561f, 0.4743f, -0.0002f, 0.0557f, -0.0080f, 0.90f },
-    { "Slime.skeleton", "slime_head", 0.7071f, 0.0000f, -0.3376f, -0.6213f, 0.0000f, 0.1018f, 0.0001f, 0.67f },
-    { "Spider.skeleton", "FU_3_R", 0.7487f, 0.0000f, -0.5237f, 0.4064f, -0.0201f, -0.0652f, -0.1277f, 0.67f },
-    { "Tentacle.skeleton", "ForeTentacle3_R", 0.5427f, 0.0000f, -0.7964f, 0.2670f, 0.0074f, 0.1346f, -0.0365f, 1.00f }
+    { "Roach.skeleton", "ClawFrontR", 0.8786f, 0.0f, -0.0561f, 0.4743f, 0.05803043732464f, 0.16537449933524f, -0.04501090019113f, 0.9f },
+    { "Spider.skeleton", "sip_tip", 0.707106781187f, 0.0f, 0.707106781187f, 0.0f, -0.02412f, 0.0f, -0.0603f, 0.67f },
+    { "Tentacle.skeleton", "ForeTentacle3_R", 0.5427f, 0.0f, -0.7964f, 0.267f, 0.00721508267503f, 0.202350441975f, -0.05217924144684f, 1.0f }
 };
 
 //! \brief Finds the limb mount of the mug for a skeleton without a Weapon_R bone: the entry of the skeleton, or else the
@@ -434,10 +442,13 @@ Ogre::Vector3 getHammerStrikePoint(const Ogre::MeshPtr& mesh)
 //! Moves the hand model so that the active cursor point lies on the pointer: the fingertip while
 //! pointing, the pickaxe tip while digging and the hammer's striking face while building.
 //! Without the tool arguments only the pointing alignment is applied.
+//! Inactive windows update only the skeleton used for alignment, deferring vertex uploads until drawing resumes.
 void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
     Ogre::Entity* hammer = nullptr, const Ogre::Vector3& hammerPoint = Ogre::Vector3::ZERO,
     Ogre::ManualObject* pickaxe = nullptr)
 {
+    const Ogre::RenderWindow* window = ODFrameListener::getSingleton().getRenderWindow();
+    const bool windowDrawn = window == nullptr || window->isActive();
     float weight = 0.0f;
     if(animation->getAnimationName() == "Point")
         weight = 1.0f;
@@ -468,13 +479,20 @@ void alignKeeperHandPointer(Ogre::Entity* hand, Ogre::AnimationState* animation,
         model->setPosition(-(model->getOrientation() * (model->getScale() * face)));
         skeleton->setAnimationState(*hand->getAllAnimationStates());
         skeleton->_updateTransforms();
-        hand->_updateAnimation();
+        if(windowDrawn)
+            hand->_updateAnimation();
         return;
     }
     if(weight == 0.0f)
         return;
 
-    hand->_updateAnimation();
+    if(windowDrawn)
+        hand->_updateAnimation();
+    else
+    {
+        hand->_updateSkeleton();
+        hand->getSkeleton()->_updateTransforms();
+    }
     const Ogre::Bone* index = hand->getSkeleton()->getBone("Index3");
     // Centre of the distal fingertip cap in Keeperhand.mesh, in Index3 bind space.
     const Ogre::Vector3 tipLocal(-0.000284253f, 0.0155774f, 0.000218656f);
@@ -1629,6 +1647,59 @@ std::string createCreatureDecayAnimation(Ogre::Entity* entity, const std::string
     return name;
 }
 
+//! \brief Builds seated spa transitions from each creature's existing bath pose without changing shared assets.
+void prepareSpaAnimation(Ogre::Entity* entity, const std::string& name)
+{
+    Ogre::Skeleton* skeleton = entity->getMesh()->getSkeleton().get();
+    if(!skeleton->hasAnimation(EntityAnimation::bathe_anim) || !skeleton->hasAnimation(EntityAnimation::idle_anim))
+        return;
+    if(!skeleton->hasAnimation(name))
+    {
+        const Ogre::Animation* idle = skeleton->getAnimation(EntityAnimation::idle_anim);
+        const Ogre::Animation* bath = skeleton->getAnimation(EntityAnimation::bathe_anim);
+        const bool wading = name == "SpaWade";
+        const Ogre::Animation* walking = skeleton->getAnimation(EntityAnimation::walk_anim);
+        const Ogre::Real duration = wading ? walking->getLength() : 1.0f;
+        Ogre::Animation* transition = skeleton->createAnimation(name, duration);
+        for(unsigned short bone = 0; bone < skeleton->getNumBones(); ++bone)
+        {
+            Ogre::TransformKeyFrame standing(nullptr, 0), seated(nullptr, 0);
+            if(idle->hasNodeTrack(bone))
+                idle->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &standing);
+            if(bath->hasNodeTrack(bone))
+                bath->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(0), &seated);
+            Ogre::NodeAnimationTrack* track = transition->createNodeTrack(bone);
+            for(unsigned key = 0; key <= 16; ++key)
+            {
+                const Ogre::Real progress = key / 16.0f;
+                const Ogre::Real smooth = progress * progress * (3.0f - 2.0f * progress);
+                const Ogre::Real blend = name == "SpaStand" ? 1.0f - smooth : smooth;
+                Ogre::TransformKeyFrame* frame = track->createNodeKeyFrame(progress * duration);
+                if(wading)
+                {
+                    Ogre::TransformKeyFrame step(nullptr, 0);
+                    if(walking->hasNodeTrack(bone))
+                        walking->getNodeTrack(bone)->getInterpolatedKeyFrame(Ogre::TimeIndex(progress * duration), &step);
+                    Ogre::Vector3 sink = Ogre::Vector3::ZERO;
+                    if(skeleton->getBone(bone)->getParent() == nullptr)
+                        sink.z = std::min(0.0f, (seated.getTranslate().z - standing.getTranslate().z) * 0.5f);
+                    frame->setTranslate(step.getTranslate() + sink);
+                    frame->setScale(step.getScale());
+                    frame->setRotation(step.getRotation());
+                }
+                else
+                {
+                    frame->setTranslate(standing.getTranslate() + (seated.getTranslate() - standing.getTranslate()) * blend);
+                    frame->setScale(standing.getScale() + (seated.getScale() - standing.getScale()) * blend);
+                    frame->setRotation(Ogre::Quaternion::Slerp(blend, standing.getRotation(), seated.getRotation(), true));
+                }
+            }
+        }
+    }
+    if(!entity->hasAnimationState(name))
+        entity->getAllAnimationStates()->createAnimationState(name, 0, skeleton->getAnimation(name)->getLength());
+}
+
 //! Sets the corpseDecay shader parameter (0 = intact, 1 = fully decayed) on every sub-entity material that has it
 void setCreatureDecayProgress(Ogre::Entity* entity, Ogre::Real progress)
 {
@@ -1689,7 +1760,9 @@ RenderManager::RenderManager(Ogre::OverlaySystem* overlaySystem) :
     // the nearest lights of each object, so the lights have to be sorted per object as in OGRE 13.
     Ogre::SceneManager::usePerRenderableLights(true);
 #endif
-    mSceneManager = Ogre::Root::getSingleton().createSceneManager("DefaultSceneManager", "SceneManager");
+    // Ogre's default scene manager whose shadow texture pass skips objects that cast no shadow
+    // (most of all the terrain tiles); the shadow texture and the image stay the same.
+    mSceneManager = Ogre::Root::getSingleton().createSceneManager(ShadowCasterSceneManager::registerFactory(), "SceneManager");
     mShaderGenerator = Ogre::RTShader::ShaderGenerator::getSingletonPtr();
 
     mShaderGenerator->setShaderCachePath(ResourceManager::getSingletonPtr()->getShaderCachePath());
@@ -1821,9 +1894,12 @@ void RenderManager::setDynamicShadowsEnabled(bool enabled)
     setShadowingEnabledParameters(enabled);
 }
 
-//! \brief Releases the renderer's visual resources.
+//! \brief Unregisters callbacks before releasing the renderer's visual resources.
 RenderManager::~RenderManager()
 {
+    mSceneManager->removeListener(&ddd);
+    if(mRenderTarget != nullptr)
+        mRenderTarget->removeListener(this);
     while(!mCreatureDecayMaterials.empty())
         clearCreatureDecay(mCreatureDecayMaterials.begin()->first);
     cancelCreatureStep();
@@ -1842,7 +1918,7 @@ RenderManager::~RenderManager()
 }
 
 //! \brief Builds the rock border around the map from shared earth wall meshes, grouped in chunk nodes so
-//! that chunks outside the view are skipped as a whole.
+//! that chunks outside the view are skipped as a whole; compatible earth shares draw submission.
 void RenderManager::createWorldBorder(GameMap* gameMap)
 {
     const std::vector<TileSetValue>& borderMeshes = gameMap->getMeshesForEnclosedEarth();
@@ -1902,6 +1978,7 @@ void RenderManager::createWorldBorder(GameMap* gameMap)
             Ogre::SceneNode* tileNode = chunk->second->createChildSceneNode(
                 Ogre::Vector3(static_cast<Ogre::Real>(xx), static_cast<Ogre::Real>(yy), 0.0f), orientation);
             tileNode->attachObject(entity);
+            mTerrainDrawBatch.add(mSceneManager, entity);
         }
     }
 }
@@ -2208,8 +2285,10 @@ void RenderManager::preRenderTargetUpdate(const Ogre::RenderTargetEvent& evt)
 }
 
 
+//! Releases terrain batches before destroying their source entities and game visuals.
 void RenderManager::stopGameRenderer(GameMap* gameMap)
 {
+    mTerrainDrawBatch.clear();
     mGameMap = nullptr;
     mForeignWealth.clear();
     if(mSceneManager->hasEntity(GROUND_UNDERLAY_ENTITY_NAME))
@@ -2479,6 +2558,107 @@ void RenderManager::prepareMenuShaders()
     OD_LOG_INF("Prepared the shaders of " + Helper::toString(static_cast<uint32_t>(materials.size())) + " menu materials");
 }
 
+//! Infix of the material copies that carry the hardware skinning stage (see useShaderSkinning()).
+static const Ogre::String SHADER_SKINNING_INFIX = "_RtssSkin_";
+//! Skeletons with more bones than this are left to the CPU. The array of bone matrices is 3 vec4 per bone.
+static const Ogre::ushort SHADER_SKINNING_MAX_BONES = 128;
+
+//! Adds skinning to authored-material copies and discards failed copies so later entities can retry.
+bool RenderManager::useShaderSkinning(Ogre::Entity* entity)
+{
+#if OGRE_VERSION_MAJOR >= 13
+    if(entity == nullptr || mShaderGenerator == nullptr || !entity->hasSkeleton() || entity->getMesh()->hasVertexAnimation())
+        return false;
+
+    // Ogre skins an entity on the GPU only when every sub entity is skinned there, so check all before changing any.
+    for(const Ogre::SubEntity* subEntity : entity->getSubEntities())
+    {
+        const Ogre::MaterialPtr& material = subEntity->getMaterial();
+        if(!material || material->getNumTechniques() == 0)
+            return false;
+        // The visibility of these parts is found by the name of their material, which the copy would change.
+        if(material->getName() == "ItemBagSealed" || material->getName() == "ChickenStraw")
+            return false;
+        for(unsigned short t = 0; t < material->getNumTechniques(); ++t)
+        {
+            const Ogre::Technique* technique = material->getTechnique(t);
+            // RTSS adds programmable techniques after first use. They are regenerated on the copy,
+            // so only authored programs should prevent adding skinning to a later entity.
+            if(technique->getSchemeName() == Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME &&
+                technique->getNumPasses() > 0 && technique->getPass(0)->getUserObjectBindings().getUserAny(
+                    Ogre::RTShader::TargetRenderState::UserKey).has_value())
+                continue;
+            for(unsigned short p = 0; p < technique->getNumPasses(); ++p)
+            {
+                const Ogre::Pass* pass = technique->getPass(p);
+                if(pass->hasVertexProgram() || pass->hasGeometryProgram() || pass->hasTessellationHullProgram()
+                    || pass->hasTessellationDomainProgram())
+                    return false;
+            }
+        }
+    }
+
+    Ogre::RTShader::HardwareSkinningFactory* factory = static_cast<Ogre::RTShader::HardwareSkinningFactory*>(
+        mShaderGenerator->getSubRenderStateFactory(Ogre::RTShader::SRS_HARDWARE_SKINNING));
+    if(factory == nullptr)
+        return false;
+    factory->setMaxCalculableBoneCount(SHADER_SKINNING_MAX_BONES);
+    // A skinned entity needs a skinning shadow caster, else its shadow shows the bind pose. The caster of the creatures
+    // rebuilds the fourth weight from the other three, so it serves meshes with any number of weights.
+    Ogre::MaterialPtr caster = Ogre::MaterialManager::getSingleton().getByName("CreatureShadowCaster");
+    if(caster)
+        factory->setCustomShadowCasterMaterials(Ogre::RTShader::ST_LINEAR, caster, caster, caster, caster);
+
+    const Ogre::String& scheme = Ogre::RTShader::ShaderGenerator::DEFAULT_SCHEME_NAME;
+    std::vector<Ogre::MaterialPtr> skinned;
+    for(Ogre::SubEntity* subEntity : entity->getSubEntities())
+    {
+        Ogre::MaterialPtr material = subEntity->getMaterial();
+        if(material->getName().find(SHADER_SKINNING_INFIX) != Ogre::String::npos)
+        {
+            skinned.push_back(material);
+            continue;
+        }
+        const Ogre::String copyName = material->getName() + SHADER_SKINNING_INFIX + entity->getMesh()->getName();
+        Ogre::MaterialPtr copy = Ogre::MaterialManager::getSingleton().getByName(copyName);
+        if(!copy)
+        {
+            copy = material->clone(copyName);
+            // The copy gets the render states of the original, then the skinning stage in every pass.
+            mShaderGenerator->cloneShaderBasedTechniques(*material, *copy);
+            if(!mShaderGenerator->createShaderBasedTechnique(*copy, Ogre::MaterialManager::DEFAULT_SCHEME_NAME, scheme))
+            {
+                OD_LOG_ERR("Cannot create the shader technique of " + copyName);
+                // An incomplete cached copy would bypass stage creation for every later entity using this mesh.
+                mShaderGenerator->removeAllShaderBasedTechniques(*copy);
+                Ogre::MaterialManager::getSingleton().remove(copy->getHandle());
+                return false;
+            }
+            const Ogre::Technique* technique = copy->getTechnique(0);
+            for(unsigned short p = 0; p < technique->getNumPasses(); ++p)
+            {
+                Ogre::RTShader::RenderState* renderState = mShaderGenerator->getRenderState(scheme, *copy, p);
+                bool hasSkinning = false;
+                for(const Ogre::RTShader::SubRenderState* subState : renderState->getSubRenderStates())
+                    hasSkinning = hasSkinning || subState->getType() == Ogre::RTShader::SRS_HARDWARE_SKINNING;
+                if(!hasSkinning)
+                    renderState->addTemplateSubRenderState(
+                        mShaderGenerator->createSubRenderState(Ogre::RTShader::SRS_HARDWARE_SKINNING));
+            }
+        }
+        skinned.push_back(copy);
+    }
+
+    for(size_t index = 0; index < skinned.size(); ++index)
+        entity->getSubEntity(static_cast<unsigned int>(index))->setMaterial(skinned[index]);
+    // Reads the bone and weight counts of the mesh into the materials and regenerates their shaders.
+    factory->prepareEntityForSkinning(entity);
+    return true;
+#else
+    return false;
+#endif
+}
+
 //! \brief Adds a menu point light with its own scene node so several lights can coexist.
 Ogre::Light* RenderManager::addPointLightMenu(const std::string& name, const Ogre::Vector3& pos,
         const Ogre::ColourValue& diffuse, const Ogre::ColourValue& specular, Ogre::Real attenuationRange,
@@ -2531,7 +2711,9 @@ Ogre::Entity* RenderManager::addEntityMenu(const std::string& meshName, const st
     } 
 
     Ogre::Entity* ent = mSceneManager->createEntity(entityName, meshPtr);
-    
+    // Banners, crows, cages, chained dead and the other animated menu models would otherwise be skinned on the CPU.
+    useShaderSkinning(ent);
+
     Ogre::SceneNode* node = mMainMenuSceneNode->createChildSceneNode(ent->getName() + "_node");
     node->attachObject(ent);
     node->setPosition(pos);
@@ -3559,8 +3741,8 @@ static void rrPlaceFogInstance(Ogre::InstancedEntity* instance)
     instance->setPosition(Ogre::Vector3::ZERO);
 }
 
-//! \brief Creates or updates discovered terrain or matching neutral earth, its delayed cloud
-//! and the dig mark of the local player.
+//! \brief Creates or updates discovered terrain or matching neutral earth, its delayed cloud,
+//! the dig mark of the local player and look-neutral earth submission batches.
 void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, const Player& localPlayer, NodeType nt)
 {
     if (tile.getEntityNode() == nullptr)
@@ -3598,6 +3780,7 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
     meshName = tileSetValue.getMeshName();
     Ogre::Entity* tileMeshEnt = nullptr;
     const std::string tileMeshName = tileName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_tileMesh";
+    mTerrainDrawBatch.remove(tileMeshName);
     if(mSceneManager->hasEntity(tileMeshName))
     {
         tileMeshEnt = mSceneManager->getEntity(tileMeshName);
@@ -3779,6 +3962,8 @@ void RenderManager::rrRefreshTile(Tile& tile, GameMap& draggableTileContainer, c
 
 
     
+    if(nt == NodeType::MTILES_NODE && tileMeshEnt != nullptr)
+        mTerrainDrawBatch.add(mSceneManager, tileMeshEnt);
 }
 
 void RenderManager::rrCreateTile(Tile& tile, GameMap& dtc, const Player& localPlayer, NodeType nt)
@@ -3797,6 +3982,7 @@ void RenderManager::rrCreateTile(Tile& tile, GameMap& dtc, const Player& localPl
     rrRefreshTile(tile, dtc, localPlayer,nt);
 }
 
+//! Removes terrain batch membership before releasing the tile's original query entity.
 void RenderManager::rrDestroyTile(Tile& tile, NodeType nt)
 {
     if (tile.getEntityNode() == nullptr)
@@ -3818,6 +4004,7 @@ void RenderManager::rrDestroyTile(Tile& tile, NodeType nt)
     }
 
     const std::string tileMeshName = tileName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_tileMesh";
+    mTerrainDrawBatch.remove(tileMeshName);
     if(mSceneManager->hasSceneNode(tileMeshName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_node"))
     {
         Ogre::SceneNode* tileMeshNode = mSceneManager->getSceneNode(tileMeshName + (static_cast<bool>(nt) ?  "" : "_dtc" ) + "_node");
@@ -3920,6 +4107,10 @@ void RenderManager::rrAttachEntity(GameEntity* entity)
         entityNode->getParent()->removeChild(entityNode);
     parentNode->addChild(entityNode);
 }
+
+//! Offset in tiles of the figure in Merchant.mesh from the origin of the mesh (the front corner of the sales table, STAND 0.64, -0.76)
+static const Ogre::Real MERCHANT_RIG_OFFSET_X = 0.64f;
+static const Ogre::Real MERCHANT_RIG_OFFSET_Y = -0.76f;
 
 //! \brief Builds movable visuals with explicit decorative scales and the existing furniture defaults.
 //! \brief Creates an object mesh, including untouchable translucent ghost shapes.
@@ -4047,13 +4238,30 @@ void RenderManager::rrCreateRenderedMovableEntity(RenderedMovableEntity* rendere
 
 
         ent = mSceneManager->createEntity(tempString, meshPtr);
-        node->attachObject(ent); 
+        if(meshName == "Merchant")
+        {
+            // The Merchant mesh is modelled standing at the front corner of a sales table, MERCHANT_RIG_OFFSET from its
+            // origin. The offset turns with the node and put him into walls and shelves; the figure hangs on a child
+            // node that cancels it, so the figure stands at the tile centre the server walks (decision 901)
+            Ogre::SceneNode* figure = node->createChildSceneNode(tempString + "_figure");
+            figure->setPosition(-MERCHANT_RIG_OFFSET_X, -MERCHANT_RIG_OFFSET_Y, 0.0f);
+            figure->attachObject(ent);
+        }
+        else
+            node->attachObject(ent);
         if(renderedMovableEntity->getObjectType() == GameEntityType::ghostEntity)
         {
             ent->setMaterialName("GhostGlow");
             ent->setCastShadows(false);
             ent->setQueryFlags(0);
         }
+        // Chickens, doors, beds and the other animated objects: skin on the GPU, after their final material is set.
+        // Not a ghost (owner decision 998): GhostEntity::updateLook sets its opacity every frame, and every opacity
+        // swaps in a "_alpha_" copy of the material (setEntityOpacity) that useShaderSkinning never prepared; a ghost
+        // was seen collapsed into a flat spiky heap on the floor. Skinned on the CPU, as before GPU skinning came,
+        // the ghost keeps its figure whatever material copy it shows.
+        if(renderedMovableEntity->getObjectType() != GameEntityType::ghostEntity)
+            useShaderSkinning(ent);
         if(meshName == "Cauldron" && ent->hasSkeleton() && ent->getSkeleton()->hasBone("FireAnchor"))
         {
             Ogre::ParticleSystem* fire = mSceneManager->createParticleSystem(tempString + "_CauldronFire", "RoomAmbAltarFlame");
@@ -4149,9 +4357,11 @@ void RenderManager::rrDestroyRenderedMovableEntity(RenderedMovableEntity* curRen
             ent->detachObjectFromBone(fire);
             mSceneManager->destroyParticleSystem(fire);
         }
-        node->detachObject(ent);
+        ent->detachFromParent();
         mSceneManager->destroyEntity(ent);
     }
+    if(mSceneManager->hasSceneNode(tempString + "_figure"))
+        mSceneManager->destroySceneNode(tempString + "_figure");
     // The sack shown while a worker carries gold
     if(mSceneManager->hasEntity(tempString + "_sack"))
     {
@@ -4224,8 +4434,104 @@ void RenderManager::rrUpdateEntityOpacity(RenderedMovableEntity* entity)
     }
 }
 
+//! \brief Samples the first supported animated contact bone in world coordinates.
+static bool dragBonePoint(Ogre::Entity* entity, std::initializer_list<const char*> names,
+    Ogre::Vector3& point)
+{
+    if(!entity->hasSkeleton() || entity->getParentSceneNode() == nullptr)
+        return false;
+    entity->_updateAnimation();
+    Ogre::SkeletonInstance* skeleton = entity->getSkeleton();
+    for(const char* name : names)
+    {
+        if(!skeleton->hasBone(name))
+            continue;
+        point = entity->getParentSceneNode()->convertLocalToWorldPosition(
+            skeleton->getBone(name)->_getDerivedPosition());
+        return true;
+    }
+    return false;
+}
+
+//! \brief Keeps an ankle in the animated hand; unknown rigs use their transformed mesh bounds.
+void RenderManager::rrApplyDragContact(Creature& dragged, const Creature& worker)
+{
+    const std::string bodyName = dragged.getOgreNamePrefix() + dragged.getName();
+    const std::string workerName = worker.getOgreNamePrefix() + worker.getName();
+    if(!mSceneManager->hasEntity(bodyName) || !mSceneManager->hasEntity(workerName))
+        return;
+    Ogre::Entity* body = mSceneManager->getEntity(bodyName);
+    Ogre::Entity* puller = mSceneManager->getEntity(workerName);
+    Ogre::SceneNode* bodyNode = body->getParentSceneNode();
+    Ogre::SceneNode* workerNode = puller->getParentSceneNode();
+    if(bodyNode == nullptr || workerNode == nullptr)
+        return;
+    Ogre::Vector3 hand;
+    if(!dragBonePoint(puller, {"Hand.R", "hand_r", "Hand_R", "RightHand", "Weapon_R"}, hand))
+    {
+        const Ogre::AxisAlignedBox& bounds = puller->getBoundingBox();
+        if(bounds.isNull() || bounds.isInfinite())
+            return;
+        hand = workerNode->convertLocalToWorldPosition(bounds.getCenter());
+    }
+    Ogre::Vector3 ankle;
+    if(!dragBonePoint(body, {"Foot.R", "foot_r", "foot.R", "Foot_R", "RightFoot"}, ankle))
+    {
+        const Ogre::AxisAlignedBox& bounds = body->getBoundingBox();
+        if(bounds.isNull() || bounds.isInfinite())
+            return;
+        // The end of the body's own bounds provides a deterministic contact for legless rigs.
+        const Ogre::Vector3 center = bounds.getCenter();
+        ankle = bodyNode->convertLocalToWorldPosition(
+            Ogre::Vector3(center.x, bounds.getMinimum().y, center.z));
+    }
+    const Ogre::Vector3 contactPosition = bodyNode->_getDerivedPosition() + hand - ankle;
+    const Ogre::Vector3 basePosition = bodyNode->getPosition();
+    Ogre::SceneNode* parent = bodyNode->getParentSceneNode();
+    bodyNode->setPosition(parent != nullptr ? parent->convertWorldToLocalPosition(contactPosition) : contactPosition);
+    mDragContactPositions[&dragged] = std::make_pair(basePosition, bodyNode->getPosition());
+}
+
+//! \brief Removes last frame's cosmetic displacement before animation and release movement.
+void RenderManager::rrResetDragContacts()
+{
+    for(const std::pair<Creature* const, std::pair<Ogre::Vector3, Ogre::Vector3>>& contact : mDragContactPositions)
+    {
+        Ogre::SceneNode* node = contact.first->getEntityNode();
+        // A packet or another pose may already have moved the node since contact was drawn.
+        if(node != nullptr && node->getPosition() == contact.second.second)
+            node->setPosition(contact.second.first);
+    }
+    mDragContactPositions.clear();
+}
+
+//! \brief Applies contact after every creature has advanced, independent of creation order.
+void RenderManager::rrUpdateDragContacts()
+{
+    for(Creature* creature : mDragContactCreatures)
+        creature->updateDragTether();
+}
+
+//! \brief Gives the plain ReflMetal sub entities of an animated creature the hardware skinned ReflMetalSkinned.
+//! An entity is only skinned on the GPU when the materials of all its sub entities are, and the Wyvern
+//! mesh has a ReflMetal part next to its creature material. ReflMetal itself stays unskinned for weapons.
+static void useSkinnedMetalMaterial(Ogre::Entity* entity)
+{
+    if(!entity->hasSkeleton())
+        return;
+
+    for(unsigned int sub = 0; sub < entity->getNumSubEntities(); ++sub)
+    {
+        Ogre::SubEntity* part = entity->getSubEntity(sub);
+        if(part->getMaterialName() == "ReflMetal")
+            part->setMaterialName("ReflMetalSkinned");
+    }
+}
+
+//! \brief Creates the visible creature and registers it for late contact sampling.
 void RenderManager::rrCreateCreature(Creature* curCreature)
 {
+    mDragContactCreatures.insert(curCreature);
     const std::string& meshName = curCreature->getCurrentMeshName();
 
     // Load the mesh for the creature
@@ -4244,6 +4550,7 @@ void RenderManager::rrCreateCreature(Creature* curCreature)
     }    
     std::string creatureName = curCreature->getOgreNamePrefix() + curCreature->getName();
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
+    useSkinnedMetalMaterial(ent);
 
 
     Ogre::SceneNode* node = mCreatureSceneNode->createChildSceneNode(creatureName + "_node");
@@ -4308,6 +4615,7 @@ void RenderManager::rrChangeCreatureMesh(Creature* curCreature)
     }
 
     Ogre::Entity* ent = mSceneManager->createEntity(creatureName, meshPtr);
+    useSkinnedMetalMaterial(ent);
     node->attachObject(ent);
 
     Ogre::Camera* cam = mViewport->getCamera();
@@ -4327,8 +4635,11 @@ bool RenderManager::isLastBlowLeftHanded(const Creature* creature) const
     return it != mCreatureLastBlowLeft.end() && it->second;
 }
 
+//! \brief Removes visible creature resources and its late contact registration.
 void RenderManager::rrDestroyCreature(Creature* curCreature)
 {
+    mDragContactCreatures.erase(curCreature);
+    mDragContactPositions.erase(curCreature);
     clearCreatureDecay(curCreature);
     removeCreatureTavernProps(curCreature);
     cancelCreatureStep(curCreature);
@@ -5122,6 +5433,8 @@ void RenderManager::rrSetObjectAnimationState(MovableGameEntity* curAnimatedObje
         return;
 
     std::string anim = poseAnimation;
+    if((animation == "SpaSit") || (animation == "SpaStand") || (animation == "SpaWade"))
+        prepareSpaAnimation(objectEntity, animation);
     if(curAnimatedObject->getObjectType() == GameEntityType::chickenEntity)
     {
         // The hatchery animals have clips for crowing, running and peeping, the plain walk and idle clips stay for
@@ -6079,6 +6392,7 @@ void RenderManager::rrSetFeedingChicken(Creature* creature, MovableGameEntity* c
 
         const std::string name = "FeedingChicken_" + Helper::toString(++mChickenFeatherEffectNumber);
         feeding.mChickenEntity = mSceneManager->createEntity(name, "Chicken.mesh");
+        useShaderSkinning(feeding.mChickenEntity);
         // The feathers have the plumage of the animal that is eaten
         feeding.mRoosterFeathers = (dynamic_cast<ChickenEntity*>(chicken) != nullptr) &&
             (static_cast<ChickenEntity*>(chicken)->getKind() == ChickenKind::rooster);
@@ -7389,6 +7703,21 @@ float RenderManager::getBuriedLift(RenderedMovableEntity* entity, bool settleAtO
     return it->second.mCurrent;
 }
 
+//! \brief Moves both procedural falls of the creature to their end; the next frame update applies the lying pose.
+void RenderManager::rrSettleCreatureFall(const Creature* creature)
+{
+    for(CreatureDropAnimation& dropAnimation : mCreatureDropAnimations)
+    {
+        if(dropAnimation.mCreature == creature)
+            dropAnimation.mElapsed = std::max(dropAnimation.mElapsed, CREATURE_DROP_ANIMATION_DURATION);
+    }
+    for(CreatureDeathVariant& variant : mCreatureDeathVariants)
+    {
+        if(variant.mCreature == creature)
+            variant.mElapsed = std::max(variant.mElapsed, variant.mDuration);
+    }
+}
+
 bool RenderManager::rrIsCreatureDown(const Creature* creature) const
 {
     if(creature == nullptr)
@@ -7903,6 +8232,8 @@ void RenderManager::rrAddOutliner(Creature* creature)
                 vertex_program = mgr.createProgram("Enlarge", "Graphics","glsl" ,Ogre::GpuProgramType::GPT_VERTEX_PROGRAM);
 
                 vertex_program->setSourceFile("Enlarge.vert");
+                // The contour follows the hardware skinned creature, so it skins the same way
+                vertex_program->setSkeletalAnimationIncluded(true);
             }
             else
             {
@@ -7912,8 +8243,11 @@ void RenderManager::rrAddOutliner(Creature* creature)
             myPass1->setVertexProgram("Enlarge","Graphics");
 
             myPass1->getVertexProgramParameters()->setNamedConstant("pixelWidth", OutlinerContourPixels);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldViewProj", Ogre::GpuProgramParameters::ACT_WORLDVIEWPROJ_MATRIX);
-            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldView", Ogre::GpuProgramParameters::ACT_WORLDVIEW_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewProjectionMatrix", Ogre::GpuProgramParameters::ACT_VIEWPROJ_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewMatrix", Ogre::GpuProgramParameters::ACT_VIEW_MATRIX);
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("boneMatrices", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX_ARRAY_3x4);
+            // OGRE 14 keeps the bone matrices in object space; the world matrix moves the skinned contour into the world
+            myPass1->getVertexProgramParameters()->setNamedAutoConstant("worldMatrix", Ogre::GpuProgramParameters::ACT_WORLD_MATRIX);
             myPass1->getVertexProgramParameters()->setNamedAutoConstant("viewportSize", Ogre::GpuProgramParameters::ACT_VIEWPORT_SIZE);
 
             Ogre::HighLevelGpuProgramPtr fragment_program;
@@ -8178,6 +8512,9 @@ void RenderManager::updateCreatureTavernProps(Creature* creature, const std::str
         WeaponMount mount;
         Ogre::Real mugScale = 1.0f;
         bool hasMount = getWeaponMount(skeleton, "R", TAVERN_MUG_MESH, mount);
+        // The hand grips the middle of the mug (decision 901)
+        if(hasMount)
+            mount.mOffset = mount.mRotation * Ogre::Vector3(TAVERN_MUG_GRIP_SHIFT, 0.0f, 0.0f);
         if(!hasMount)
         {
             const TavernMugLimbMount* limb = nullptr;

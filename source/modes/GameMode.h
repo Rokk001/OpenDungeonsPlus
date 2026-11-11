@@ -122,6 +122,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
      * Finalize the selection of tiles or drop a creature when the user releases the mouse button.
      */
     virtual bool mouseReleased  (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
+    //! \brief Cancels world selection, pending hand drops and mouse camera rotation.
+    void cancelMouseInput() override;
 
     //! \brief Handle the keyboard input.
     virtual bool keyPressed     (const OIS::KeyEvent &arg) override;
@@ -388,7 +390,8 @@ class GameMode final : public GameEditorModeBase, public InputCommand
     void endSkillTree(bool apply);
 
     //! \brief Called at each frame. It checks if the Gui should be refreshed (for example,
-    //! if a skill is done) and, if yes, refreshes accordingly.
+    //! if a skill is done) and, if yes, refreshes accordingly. A change of the research progress alone refreshes
+    //! only while the skill tree is open; while it is closed, the refresh is kept for when the tree opens.
     //! \param forceRefresh Refresh the gui even if no changes was declared by the local player Seat.
     void refreshGuiSkill(bool forceRefresh = false);
 
@@ -457,9 +460,9 @@ protected:
     virtual bool keyReleasedNormal  (const OIS::KeyEvent &arg);
 
 private:
-    //! \brief The population panel in the creatures tab
     //! \brief Browser retained while it owns input over the running game.
     std::unique_ptr<MenuModeLoad> mLoadBrowser;
+    //! \brief The population panel in the creatures tab
     std::unique_ptr<CreaturePanel> mCreaturePanel;
     std::unique_ptr<SocialWindow> mSocialWindow;
     //! The Workers window of the keeper (key J and the HUD button)
@@ -560,6 +563,10 @@ private:
 
     //! \brief Whether the spell buttons were last shown locked because the library was lost
     bool mIsLibraryLostShown;
+
+    //! \brief Whether the research progress changed while the skill tree was closed, so the tree is refreshed
+    //! when it opens
+    bool mIsSkillTreeOutdated = false;
 
     SkillType mCurrentSkillType;
     float mCurrentSkillProgress;

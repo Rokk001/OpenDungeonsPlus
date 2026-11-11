@@ -327,8 +327,8 @@ uint32_t ItemInstance::getLevelMin(const GameMap* map) const
     return definition == nullptr ? 1 : definition->getQuality(mQuality).mLevelMin;
 }
 
-//! \brief Uses a matching weapon-class base image for Poor spawn gear, otherwise the catalogue image.
-std::string ItemInstance::getImageName() const
+//! \brief Prefers the exact spawn equipment's base picture, then a matching weapon class, otherwise the catalogue image.
+std::string ItemInstance::getImageName(const Weapon* heldWeapon) const
 {
     // The ghost goods share the crystal picture until pictures of their own exist
     if(mSoulCrystal || mGhostItem != GhostItem::none) return "soul_crystal";
@@ -339,10 +339,15 @@ std::string ItemInstance::getImageName() const
     }
     if(mQuality == Quality::poor)
     {
-        const Weapon* weapon = ConfigManager::getSingleton().getWeapon(mDefinitionId);
+        const Weapon* weapon = heldWeapon != nullptr ? heldWeapon : ConfigManager::getSingleton().getWeapon(mDefinitionId);
         if(weapon != nullptr)
         {
             const std::string slot = weapon->getWeaponType() == "shield" ? "shield" : "weapon";
+            for(const ItemDefinition* definition : ConfigManager::getSingleton().getItems())
+                if(definition->getSlot() == slot && definition->getWeaponClass() == weapon->getWeaponType() &&
+                   definition->getPoorEquipment() == weapon->getName() &&
+                   definition->getQuality(Quality::common).mAvailable)
+                    return definition->getId() + "_base";
             for(const ItemDefinition* definition : ConfigManager::getSingleton().getItems())
                 if(definition->getSlot() == slot && definition->getWeaponClass() == weapon->getWeaponType() &&
                    definition->getQuality(Quality::common).mAvailable)
@@ -354,11 +359,28 @@ std::string ItemInstance::getImageName() const
     return mDefinitionId + "_" + QUALITY_SUFFIXES.at(static_cast<size_t>(mQuality));
 }
 
-//! \brief Builds the tooltip shared by bags, profile slots and merchant stock.
-std::string ItemInstance::describe(const GameMap* map) const
+//! \brief Builds the shared tooltip; spawn fallbacks show the actual held weapon's base values without rolling an item.
+std::string ItemInstance::describe(const GameMap* map, const Weapon* heldWeapon) const
 {
-    std::string text = "[colour='" + QUALITY_COLOURS.at(static_cast<size_t>(mQuality)) + "']" + getDisplayName(map)
+    std::string text = "[colour='" + QUALITY_COLOURS.at(static_cast<size_t>(mQuality)) + "']" +
+        (heldWeapon == nullptr ? getDisplayName(map) : heldWeapon->getName())
         + "[colour='FFFFFFFF']";
+    if(heldWeapon != nullptr)
+    {
+        std::ostringstream values;
+        values << "\nQuality: " << qualityName(mQuality)
+            << "\nType: " << heldWeapon->getWeaponType() << "\nHands: " << heldWeapon->getHands()
+            << "\nBase damage (physical/magical/elemental): "
+            << heldWeapon->getPhysicalDamageMin() << "-" << heldWeapon->getPhysicalDamage() << " / "
+            << heldWeapon->getMagicalDamageMin() << "-" << heldWeapon->getMagicalDamage() << " / "
+            << heldWeapon->getElementDamageMin() << "-" << heldWeapon->getElementDamage()
+            << "\nBase defense (physical/magical/elemental): "
+            << heldWeapon->getPhysicalDefense() << " / " << heldWeapon->getMagicalDefense() << " / "
+            << heldWeapon->getElementDefense()
+            << "\nAttack rating: " << heldWeapon->getAttackRating()
+            << "\nDefense rating: " << heldWeapon->getDefenseRating();
+        text += values.str();
+    }
     for(const std::pair<std::string, double>& bonus : mBonuses)
     {
         text += "\n" + bonusName(bonus.first) + " +" + itemNumber(bonus.second);

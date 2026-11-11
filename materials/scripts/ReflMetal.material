@@ -50,3 +50,43 @@ material ReflMetal
         }
     }
 }
+
+// Hardware skinned variant for the metal parts (the Wyvern mesh) of animated creatures.
+// ReflMetal itself stays unskinned for the weapons and shields, which have no skeleton.
+// RenderManager switches the ReflMetal sub entities of creatures to this material.
+vertex_program myReflMetalSkinnedVertexShader glsl
+{
+    source ReflMetalSkinned.vert
+    includes_skeletal_animation true
+    default_params
+    {
+        param_named_auto viewProjectionMatrix viewproj_matrix
+        param_named_auto boneMatrices world_matrix_array_3x4
+        param_named_auto worldMatrix world_matrix
+    }
+}
+
+material ReflMetalSkinned
+{
+    technique
+    {
+        shadow_caster_material CreatureShadowCaster
+        pass
+        {
+            vertex_program_ref myReflMetalSkinnedVertexShader
+            {
+            }
+
+            fragment_program_ref myReflMetalFragmentShader
+            {
+                param_named envmap int 0
+                param_named ambient float3 1.0 1.0 1.0  // This will be set from C++ code
+            }
+
+            texture_unit
+            {
+                texture EnvmapMetal.png
+            }
+        }
+    }
+}

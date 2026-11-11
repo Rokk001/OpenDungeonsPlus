@@ -60,6 +60,7 @@
 #include <OgreRenderSystem.h>
 #include <OgreRoot.h>
 #include <OgreSceneManager.h>
+#include <OgreViewport.h>
 #include <Overlay/OgreOverlaySystem.h>
 
 #include <CEGUI/EventArgs.h>
@@ -185,8 +186,10 @@ void ODFrameListener::windowClosed(Ogre::RenderWindow*)
     mModeManager = nullptr;
 }
 
+//! \brief Detaches scene callbacks before releasing the frame listener and its game map.
 ODFrameListener::~ODFrameListener()
 {
+    mRenderManager->getSceneManager()->removeRenderQueueListener(this);
     OD_LOG_INF("destructor of ODFrameListener");
     if (mInitialized)
         exitApplication();
@@ -395,14 +398,17 @@ void ODFrameListener::exitApplication()
 }
 
 //! \brief Keeps interface time independent while advancing world effects at the game speed.
+//! Advances world poses before resolving animated drag contacts.
 void ODFrameListener::updateAnimations(Ogre::Real timeSinceLastFrame)
 {
     updateMenuScene(timeSinceLastFrame);
     MusicPlayer::getSingleton().update(static_cast<float>(timeSinceLastFrame));
+    mRenderManager->rrResetDragContacts();
     mRenderManager->updateRenderAnimations(timeSinceLastFrame);
     mGameMap->processDeletionQueues();
 
     mGameMap->updateAnimations(timeSinceLastFrame);
+    mRenderManager->rrUpdateDragContacts();
 
     const Ogre::Real gameTime = timeSinceLastFrame * static_cast<Ogre::Real>(mGameMap->getGameSpeedFactor());
 
@@ -429,6 +435,8 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     RunLevelTest::recordFrame(evt.timeSinceLastFrame);
     
 
+    // A dialog that rose above the tooltip since the last frame must not hide it (owner decision 920)
+    Gui::keepTooltipInFront();
     CEGUI::System::getSingleton().injectTimePulse(evt.timeSinceLastFrame);
     CEGUI::System::getSingleton().getDefaultGUIContext().injectTimePulse(evt.timeSinceLastFrame);
 
@@ -479,7 +487,8 @@ bool ODFrameListener::frameRenderingQueued(const Ogre::FrameEvent& evt)
     printDebugInfo();
 
     mGameMap.get()->processDeletionQueues();
-    ODClient::getSingleton().processClientSocketMessages();
+    // Timeout 0: the frame reads every server message that has arrived but never waits for one
+    ODClient::getSingleton().processClientSocketMessages(0);
     ODClient::getSingleton().processClientNotifications();
     LoadingScreen::update();
 
@@ -556,11 +565,16 @@ bool ODFrameListener::frameStarted(const Ogre::FrameEvent& evt)
     return true;
 }
 
+//! \brief Draws the interface only in overlay-enabled views, leaving scene-only texture views untouched.
 void ODFrameListener::renderQueueStarted(Ogre::uint8 queueGroupId, const Ogre::String& cameraName,
     bool&)
 {
     // Ogre 14 passes the camera name here; shadow-texture passes are detected via the render stage (was invocation == "SHADOWS" in Ogre 13).
-    if(queueGroupId == RenderManager::OD_RENDER_QUEUE_ID_GUI && mRenderManager->getSceneManager()->_getCurrentRenderStage() != Ogre::SceneManager::IRS_RENDER_TO_TEXTURE)
+    Ogre::SceneManager* scene = mRenderManager->getSceneManager();
+    Ogre::Viewport* viewport = scene->getCurrentViewport();
+    if(queueGroupId == RenderManager::OD_RENDER_QUEUE_ID_GUI &&
+        scene->_getCurrentRenderStage() != Ogre::SceneManager::IRS_RENDER_TO_TEXTURE &&
+        viewport != nullptr && viewport->getOverlaysEnabled())
     {
         Ogre::Root::getSingleton().getRenderSystem()->clearFrameBuffer(Ogre::FBT_DEPTH);
         CEGUI::System::getSingleton().renderAllGUIContexts();

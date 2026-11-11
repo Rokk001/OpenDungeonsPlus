@@ -55,10 +55,7 @@ static const double DRAG_FOLLOW_MIN_ARC_GAIN = 0.001;
 //! bodies need (walking radii), so a big body (Troll, Dragon) does not lie over the small worker and hide it
 double dragGap(Creature& worker, Creature& dragged)
 {
-    const double configured = std::max(0.0, ConfigManager::getSingleton().getRoomConfigDoubleOrDefault("DormitoryWoundedDragGap",
-        Creature::WOUNDED_DRAG_GAP_DEFAULT));
-    const double bodies = static_cast<double>(RoomObjectNavigation::clearance(worker) + RoomObjectNavigation::clearance(dragged)) + 0.1;
-    return std::max(configured, bodies);
+    return Creature::getDragGap(worker, dragged);
 }
 
 //! \brief Appends the part of the trail between the two lengths to the path: the points of the trail that lie
@@ -162,6 +159,8 @@ CreatureActionCarryEntity::~CreatureActionCarryEntity()
         if(mIsDrag)
         {
             OD_LOG_INF("creature=" + mCreature.getName() + " is letting go of pulled " + mEntityToCarry->getName() + ", pos=" + Helper::toString(pos));
+            if(mExternalDrag && !mDelivered && mEntityToCarry->getIsOnMap())
+                static_cast<Creature*>(mEntityToCarry)->clearDestinations(EntityAnimation::die_anim, false, false);
             if(mCorpseDrag)
                 static_cast<Creature*>(mEntityToCarry)->notifyCorpseDragEnd();
             static_cast<Creature*>(mEntityToCarry)->notifyDragEnd();
@@ -379,7 +378,7 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
 void CreatureActionCarryEntity::startDrag()
 {
     Creature* dragged = static_cast<Creature*>(mEntityToCarry);
-    dragged->notifyDragStart(mCreature.getDefinition()->getDirtFactor());
+    dragged->notifyDragStart(mCreature, mCreature.getDefinition()->getDirtFactor());
     if(mCorpseDrag)
         dragged->notifyCorpseDragStart(mCreature, mForced);
 
@@ -401,6 +400,9 @@ void CreatureActionCarryEntity::startDrag()
         mDragTrail.push_back(workerPoint);
         mDragTrailArc.push_back(distance);
     }
+    // Restoring a save during laying must not briefly reattach the body to the hand.
+    if(mCreature.getPositionTile() == mTileDest)
+        startLaying(*dragged);
 }
 
 void CreatureActionCarryEntity::followTrail(Creature& dragged, double targetArc)
@@ -427,24 +429,30 @@ Tile* CreatureActionCarryEntity::getCryptGrave(const Creature& dragged) const
     return static_cast<RoomCrypt*>(mBuildingDest)->getReservedGrave(dragged, mTileDest);
 }
 
+//! \brief Releases the grip and slides the body into its reserved destination.
 void CreatureActionCarryEntity::startLaying(Creature& dragged)
 {
     mDragPhase = 1;
     mDragLayTurns = 0;
+    dragged.notifyDragLaying();
 
     // The worker is at the bed: the creature slides the rest of the way of the worker and then on to its place
     const std::deque<Ogre::Vector2>& queue = dragged.getWalkQueue();
     std::vector<Ogre::Vector2> path(queue.begin(), queue.end());
-    appendTrailSection(mDragTrail, mDragTrailArc, mDragFollowArc, mDragTrailArc.back(), path);
+    if(mExternalDrag)
+        path.clear(); // Restored deliveries resume from the saved body position, including inside the grave.
+    else
+        appendTrailSection(mDragTrail, mDragTrailArc, mDragFollowArc, mDragTrailArc.back(), path);
     mDragFollowArc = mDragTrailArc.back();
     Tile* homeTile = (mExternalDrag || (mBuildingDest != nullptr && mBuildingDest->getObjectType() == GameEntityType::room &&
         static_cast<Room*>(mBuildingDest)->getType() == RoomType::infirmary)) ? mTileDest : dragged.getHomeTile();
     if(homeTile != nullptr)
     {
-        path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(homeTile->getX()),
-            static_cast<Ogre::Real>(homeTile->getY())));
-        // A dead body in a crypt is pulled on into its grave tile and lies in the grave, not beside it
         Tile* graveTile = getCryptGrave(dragged);
+        if(graveTile == nullptr)
+            path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(homeTile->getX()),
+                static_cast<Ogre::Real>(homeTile->getY())));
+        // A dead body in a crypt is pulled on into its grave tile and lies in the grave, not beside it
         if(graveTile != nullptr)
         {
             path.push_back(Ogre::Vector2(static_cast<Ogre::Real>(graveTile->getX()),
@@ -556,6 +564,7 @@ bool CreatureActionCarryEntity::handleDragCreature()
             mTileDest = mBuildingDest->askSpotForCarriedEntity(dragged);
             mDragPhase = 0;
             mDragLayTurns = 0;
+            dragged->notifyDragStart(mCreature, mCreature.getDefinition()->getDirtFactor());
             mCreature.clearDestinations(EntityAnimation::idle_anim, true, true);
         }
     }
