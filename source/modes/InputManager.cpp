@@ -40,6 +40,7 @@
 #include <windows.h>
 #endif
 
+//! \brief Creates input devices and initialises absolute pointer tracking for the render window.
 InputManager::InputManager(Ogre::RenderWindow* renderWindow):
     mInputManager(nullptr),
     mKeyboard(nullptr),
@@ -68,7 +69,6 @@ InputManager::InputManager(Ogre::RenderWindow* renderWindow):
     mKeyboardGrab(false)
 #if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
     ,
-    mPointerForwarder(*this),
     mWasForeground(true),
     mCursorHidden(false),
     mCursorClipped(false),
@@ -97,6 +97,7 @@ InputManager::InputManager(Ogre::RenderWindow* renderWindow):
                        config.getInputValue(Config::KEYBOARD_GRAB, "No", false) == "Yes");
 }
 
+//! \brief Creates OIS devices and installs the ordered Windows pointer hook when available.
 void InputManager::createInputDevices(bool mouseGrab, bool keyboardGrab)
 {
 #ifndef OD_USE_SFML_WINDOW
@@ -139,6 +140,9 @@ void InputManager::createInputDevices(bool mouseGrab, bool keyboardGrab)
 
     //setup Mouse
     mMouse = static_cast<OIS::Mouse*>(mInputManager->createInputObject(OIS::OISMouse, true));
+#if defined OIS_WIN32_PLATFORM
+    hookWindowWheel();
+#endif
 #else
     mKeyboard.reset(new Keyboard());
 #endif
@@ -158,11 +162,13 @@ InputManager::~InputManager()
     destroyInputDevices();
 }
 
+//! \brief Releases cursor grab and the Windows hook before destroying the input devices.
 void InputManager::destroyInputDevices()
 {
 #ifndef OD_USE_SFML_WINDOW
 #if defined OIS_WIN32_PLATFORM
     updateCursorGrab(false);
+    unhookWindowWheel();
 #endif
     if(mInputManager != nullptr)
     {
@@ -178,6 +184,7 @@ void InputManager::destroyInputDevices()
     mKeyboard.reset();
 }
 
+//! \brief Applies capture settings after cancelling gestures owned by the old devices.
 void InputManager::refreshSettings()
 {
     // Called before capturing input, never from inside an OIS callback.
@@ -189,6 +196,9 @@ void InputManager::refreshSettings()
 
     const bool previousMouseGrab = mMouseGrab;
     const bool previousKeyboardGrab = mKeyboardGrab;
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+    cancelPointerInput();
+#endif
     destroyInputDevices();
     try
     {
@@ -206,6 +216,7 @@ void InputManager::refreshSettings()
     mLMouseDown = mRMouseDown = mMMouseDown = false;
 }
 
+//! \brief Rebinds input to a render window without retaining gestures from the old window.
 bool InputManager::setRenderWindow(Ogre::RenderWindow* renderWindow)
 {
     if(renderWindow == mRenderWindow)
@@ -215,6 +226,9 @@ bool InputManager::setRenderWindow(Ogre::RenderWindow* renderWindow)
     return false;
 #else
     Ogre::RenderWindow* previousWindow = mRenderWindow;
+#if defined OIS_WIN32_PLATFORM
+    cancelPointerInput();
+#endif
     destroyInputDevices();
     mRenderWindow = renderWindow;
     try
@@ -243,6 +257,7 @@ void InputManager::setWidthAndHeight(int width, int height)
 #endif
 }
 
+//! \brief Sets a new pointer position after cancelling stale gestures and queued input.
 void InputManager::setMousePosition(int x, int y)
 {
 #ifndef OD_USE_SFML_WINDOW
@@ -270,6 +285,9 @@ void InputManager::setMousePosition(int x, int y)
     }
     mLastPointerX = x;
     mLastPointerY = y;
+    // A warp is an input barrier, including when called by a dispatched callback.
+    // Old button positions must never pull the pointer back after loading.
+    cancelPointerInput();
 #else
     if(!mMouseGrab)
         return;
@@ -287,12 +305,22 @@ void InputManager::setMousePosition(int x, int y)
 #endif
 }
 
+//! \brief Routes input to the active mode.
 void InputManager::setCurrentAMode(AbstractApplicationMode& mode)
 {
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+    const bool changed = mCurrentAMode != &mode;
+    // ModeManager may already have destroyed the previous mode. Cancel against the
+    // newly activated mode, never dereference the old observer pointer here.
     mCurrentAMode = &mode;
+    if(changed)
+        cancelPointerInput();
+#else
+    mCurrentAMode = &mode;
+#endif
 #ifndef OD_USE_SFML_WINDOW
 #if defined OIS_WIN32_PLATFORM
-    mMouse->setEventCallback(&mPointerForwarder);
+    mMouse->setEventCallback(mOldWindowProc != nullptr ? nullptr : this);
 #else
     mMouse->setEventCallback(&mode);
 #endif
@@ -311,6 +339,7 @@ void InputManager::handleSFMLEvent(const sf::Event& evt)
 #endif
 }
 
+//! \brief Captures input and delivers Windows pointer messages in arrival order.
 void InputManager::capturePointer()
 {
 #if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
@@ -329,12 +358,14 @@ void InputManager::capturePointer()
         if(mWasForeground)
         {
             updateCursorGrab(false);
-            mLMouseDown = mRMouseDown = mMMouseDown = false;
+            cancelPointerInput();
             mWasForeground = false;
         }
         mMouse->setEventCallback(nullptr);
         mMouse->capture();
         mMouse->setEventCallback(listener);
+        mPointerEvents.clear();
+        mPointerButtons = 0;
         return;
     }
 
@@ -342,6 +373,8 @@ void InputManager::capturePointer()
     {
         // Back in the foreground: drop the input of the background, then follow the Windows pointer at once
         mWasForeground = true;
+        mPointerEvents.clear();
+        mPointerButtons = 0;
         mMouse->setEventCallback(nullptr);
         mMouse->capture();
         mMouse->setEventCallback(listener);
@@ -355,19 +388,31 @@ void InputManager::capturePointer()
         bool returnInside = true;
         if(readSystemPointer(returnX, returnY, returnInside))
         {
-            // Outside the window: bring the Windows pointer to the nearest point inside
-            if(!returnInside)
+            // Outside the window: bring the Windows pointer to the nearest point inside (only with mouse grab)
+            if(!returnInside && mMouseGrab)
                 moveSystemPointer(returnX, returnY);
             mLastPointerX = returnX;
             mLastPointerY = returnY;
             applyPointerToState(returnX, returnY);
+            // Input dropped above must not show up as motion or wheel
+            OIS::MouseState& returnState = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+            returnState.X.rel = returnState.Y.rel = returnState.Z.rel = 0;
             if(mCurrentAMode != nullptr)
-                mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, mMouse->getMouseState()));
+                mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, returnState));
         }
     }
 
     updateCursorGrab(mMouseGrab);
     mMouse->capture();
+    OIS::MouseState& capturedState = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+    capturedState.X.abs = mLastPointerX;
+    capturedState.Y.abs = mLastPointerY;
+    capturedState.buttons = mPointerButtons;
+    // The wheel is delivered from window messages in order, in OIS units (120 per notch).
+    // DirectInput callbacks are disabled while the hook is installed; otherwise the
+    // absolute fallback listener delivers the OIS wheel, so it is never delivered twice.
+    if(mOldWindowProc != nullptr)
+        dispatchPointerEvents();
 
     // The pointer can move without OIS reporting it (remote desktop), follow the Windows pointer anyway
     int x = 0;
@@ -375,14 +420,17 @@ void InputManager::capturePointer()
     bool inside = true;
     if(readSystemPointer(x, y, inside) && (x != mLastPointerX || y != mLastPointerY))
     {
+        OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+        state.X.rel = x - mLastPointerX;
+        state.Y.rel = y - mLastPointerY;
+        state.Z.rel = 0;
         mLastPointerX = x;
         mLastPointerY = y;
         applyPointerToState(x, y);
-        OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
-        state.X.rel = state.Y.rel = state.Z.rel = 0;
         if(mCurrentAMode != nullptr)
             mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
     }
+
 #else
     if(mMouse != nullptr)
         mMouse->capture();
@@ -390,52 +438,157 @@ void InputManager::capturePointer()
 }
 
 #if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
-bool InputManager::PointerForwarder::mouseMoved(const OIS::MouseEvent& arg)
+//! \brief Cancels GUI/world gestures and invalidates any batch being dispatched.
+void InputManager::cancelPointerInput()
 {
-    if(mInputManager.mCurrentAMode == nullptr)
-        return true;
-    int x = 0;
-    int y = 0;
-    bool inside = true;
-    if(mInputManager.readSystemPointer(x, y, inside))
+    ++mPointerEpoch;
+    mPointerEvents.clear();
+    mPointerButtons = mCapturedButtons = 0;
+    if(mMouse != nullptr)
     {
-        mInputManager.mLastPointerX = x;
-        mInputManager.mLastPointerY = y;
-        mInputManager.applyPointerToState(x, y);
+        OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+        state.buttons = 0;
+        state.X.rel = state.Y.rel = state.Z.rel = 0;
     }
-    return mInputManager.mCurrentAMode->mouseMoved(arg);
+    if(mHookedWindow != nullptr && GetCapture() == static_cast<HWND>(mHookedWindow))
+        ReleaseCapture();
+    if(mCurrentAMode != nullptr)
+        mCurrentAMode->cancelMouseInput();
 }
 
-bool InputManager::PointerForwarder::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
+//! \brief Replaces DirectInput relative coordinates with the Windows pointer in fallback events.
+bool InputManager::prepareFallbackPointer()
 {
-    if(mInputManager.mCurrentAMode == nullptr)
-        return true;
+    size_t windowHandle = 0;
+    mRenderWindow->getCustomAttribute("WINDOW", &windowHandle);
+    const HWND window = reinterpret_cast<HWND>(windowHandle);
+    if(GetForegroundWindow() != window || IsIconic(window) || mCurrentAMode == nullptr)
+        return false;
     int x = 0;
     int y = 0;
     bool inside = true;
-    if(mInputManager.readSystemPointer(x, y, inside))
-    {
-        mInputManager.mLastPointerX = x;
-        mInputManager.mLastPointerY = y;
-        mInputManager.applyPointerToState(x, y);
-    }
-    return mInputManager.mCurrentAMode->mousePressed(arg, id);
+    if(!readSystemPointer(x, y, inside))
+        return false;
+    OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+    state.X.rel = x - mLastPointerX;
+    state.Y.rel = y - mLastPointerY;
+    state.X.abs = mLastPointerX = x;
+    state.Y.abs = mLastPointerY = y;
+    state.buttons = mPointerButtons;
+    return true;
 }
 
-bool InputManager::PointerForwarder::mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
+//! \brief Delivers fallback wheel/motion once, using absolute Windows coordinates.
+bool InputManager::mouseMoved(const OIS::MouseEvent& arg)
 {
-    if(mInputManager.mCurrentAMode == nullptr)
+    if(prepareFallbackPointer())
+        return mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, mMouse->getMouseState()));
+    return true;
+}
+
+//! \brief Delivers fallback presses after synchronising GUI and world coordinates.
+bool InputManager::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID button)
+{
+    if(!prepareFallbackPointer())
         return true;
-    int x = 0;
-    int y = 0;
-    bool inside = true;
-    if(mInputManager.readSystemPointer(x, y, inside))
+    OIS::MouseState state = mMouse->getMouseState();
+    state.Z.rel = 0;
+    const unsigned int epoch = mPointerEpoch;
+    mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
+    if(epoch != mPointerEpoch)
+        return true;
+    mPointerButtons |= 1 << button;
+    state.buttons = mPointerButtons;
+    return mCurrentAMode->mousePressed(OIS::MouseEvent(mMouse, state), button);
+}
+
+//! \brief Delivers fallback releases only for presses that survived cancellation.
+bool InputManager::mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID button)
+{
+    if((mPointerButtons & (1 << button)) == 0 || !prepareFallbackPointer())
+        return true;
+    OIS::MouseState state = mMouse->getMouseState();
+    state.Z.rel = 0;
+    const unsigned int epoch = mPointerEpoch;
+    mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
+    if(epoch != mPointerEpoch)
+        return true;
+    mPointerButtons &= ~(1 << button);
+    state.buttons = mPointerButtons;
+    return mCurrentAMode->mouseReleased(OIS::MouseEvent(mMouse, state), button);
+}
+
+//! \brief Dispatches Windows mouse messages using their original position and order.
+void InputManager::dispatchPointerEvents()
+{
+    std::vector<PointerEvent> events;
+    events.swap(mPointerEvents);
+    OIS::MouseState& state = const_cast<OIS::MouseState&>(mMouse->getMouseState());
+    RECT client;
+    if(mHookedWindow == nullptr || !GetClientRect(static_cast<HWND>(mHookedWindow), &client))
+        return;
+    const unsigned int epoch = mPointerEpoch;
+    for(std::vector<PointerEvent>::const_iterator it = events.begin(); it != events.end(); ++it)
     {
-        mInputManager.mLastPointerX = x;
-        mInputManager.mLastPointerY = y;
-        mInputManager.applyPointerToState(x, y);
+        if(epoch != mPointerEpoch)
+            break;
+        if(it->mMessage == WM_CANCELMODE)
+        {
+            cancelPointerInput();
+            break;
+        }
+        const PointerMapping::Point point = PointerMapping::clientToGamePointer(it->mX, it->mY,
+            client.right - client.left, client.bottom - client.top, static_cast<int>(mRenderWindow->getWidth()),
+            static_cast<int>(mRenderWindow->getHeight()), static_cast<int>(Gui::getConfiguredUiScalePercent()));
+        state.X.rel = point.mX - mLastPointerX;
+        state.Y.rel = point.mY - mLastPointerY;
+        state.Z.rel = 0;
+        mLastPointerX = point.mX;
+        mLastPointerY = point.mY;
+        state.X.abs = point.mX;
+        state.Y.abs = point.mY;
+        if(mCurrentAMode == nullptr)
+            continue;
+        OIS::MouseButtonID button = OIS::MB_Left;
+        bool down = false;
+        bool up = false;
+        switch(it->mMessage)
+        {
+        case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK: down = true; break;
+        case WM_LBUTTONUP: up = true; break;
+        case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK: button = OIS::MB_Right; down = true; break;
+        case WM_RBUTTONUP: button = OIS::MB_Right; up = true; break;
+        case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK: button = OIS::MB_Middle; down = true; break;
+        case WM_MBUTTONUP: button = OIS::MB_Middle; up = true; break;
+        case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: button = it->mWheel == XBUTTON1 ? OIS::MB_Button3 : OIS::MB_Button4; down = true; break;
+        case WM_XBUTTONUP: button = it->mWheel == XBUTTON1 ? OIS::MB_Button3 : OIS::MB_Button4; up = true; break;
+        default: break;
+        }
+        if(up && (mPointerButtons & (1 << button)) == 0)
+            continue; // A cancelled or background press must not turn into a release action.
+        // Update both GUI hit testing and world targeting at the transition position.
+        // Use the previous held-button state so release-position movement finishes the drag.
+        state.buttons = mPointerButtons;
+        if(down || up)
+        {
+            mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
+            if(epoch != mPointerEpoch)
+                break;
+        }
+        if(down) mPointerButtons |= 1 << button;
+        if(up) mPointerButtons &= ~(1 << button);
+        state.buttons = mPointerButtons;
+        if(down)
+            mCurrentAMode->mousePressed(OIS::MouseEvent(mMouse, state), button);
+        else if(up)
+            mCurrentAMode->mouseReleased(OIS::MouseEvent(mMouse, state), button);
+        else
+        {
+            state.Z.rel = it->mWheel;
+            mCurrentAMode->mouseMoved(OIS::MouseEvent(mMouse, state));
+        }
     }
-    return mInputManager.mCurrentAMode->mouseReleased(arg, id);
+    state.Z.rel = 0;
 }
 
 bool InputManager::readSystemPointer(int& x, int& y, bool& inside)
@@ -483,8 +636,8 @@ void InputManager::moveSystemPointer(int x, int y)
     const int gameHeight = static_cast<int>(mRenderWindow->getHeight());
     // Game pointer position to client position (inverse of the proportional mapping)
     POINT point;
-    point.x = PointerMapping::clampToSize(gameWidth > 0 ? static_cast<int>(static_cast<long long>(x) * clientWidth / gameWidth) : x, clientWidth);
-    point.y = PointerMapping::clampToSize(gameHeight > 0 ? static_cast<int>(static_cast<long long>(y) * clientHeight / gameHeight) : y, clientHeight);
+    point.x = PointerMapping::clampToSize(PointerMapping::scaleCoordinate(x, gameWidth, clientWidth), clientWidth);
+    point.y = PointerMapping::clampToSize(PointerMapping::scaleCoordinate(y, gameHeight, clientHeight), clientHeight);
     if(ClientToScreen(window, &point))
         SetCursorPos(point.x, point.y);
 }
@@ -528,5 +681,117 @@ void InputManager::updateCursorGrab(bool grab)
             mCursorHidden = false;
         }
     }
+}
+
+void* InputManager::sWheelOwner = nullptr;
+
+//! \brief Queues window mouse messages and maintains Windows drag capture.
+long long __stdcall InputManager::wheelWindowProc(void* window, unsigned int message, unsigned long long wParam, long long lParam)
+{
+    InputManager* owner = static_cast<InputManager*>(sWheelOwner);
+    if(owner == nullptr || owner->mOldWindowProc == nullptr)
+        return DefWindowProcW(static_cast<HWND>(window), message, wParam, lParam);
+    const HWND hwnd = static_cast<HWND>(window);
+    if(GetForegroundWindow() == hwnd && !IsIconic(hwnd))
+    {
+        int button = 0;
+        bool down = false;
+        bool up = false;
+        switch(message)
+        {
+        case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK: button = 1; down = true; break;
+        case WM_LBUTTONUP: button = 1; up = true; break;
+        case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK: button = 2; down = true; break;
+        case WM_RBUTTONUP: button = 2; up = true; break;
+        case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK: button = 4; down = true; break;
+        case WM_MBUTTONUP: button = 4; up = true; break;
+        case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: button = HIWORD(wParam) == XBUTTON1 ? 8 : 16; down = true; break;
+        case WM_XBUTTONUP: button = HIWORD(wParam) == XBUTTON1 ? 8 : 16; up = true; break;
+        default: break;
+        }
+        if(message == WM_MOUSEMOVE || message == WM_MOUSEWHEEL || down || up)
+        {
+            POINT point = { static_cast<short>(LOWORD(lParam)), static_cast<short>(HIWORD(lParam)) };
+            if(message == WM_MOUSEWHEEL)
+                ScreenToClient(hwnd, &point);
+            PointerEvent event = { message, static_cast<int>(point.x), static_cast<int>(point.y),
+                message == WM_MOUSEWHEEL ? static_cast<int>(GET_WHEEL_DELTA_WPARAM(wParam)) :
+                (button >= 8 ? static_cast<int>(HIWORD(wParam)) : 0) };
+            owner->mPointerEvents.push_back(event);
+            if(down)
+            {
+                owner->mCapturedButtons |= button;
+                // Reacquiring our own capture can synchronously report capture loss.
+                // Additional held buttons must keep the existing drag capture.
+                if(GetCapture() != hwnd)
+                    SetCapture(hwnd);
+            }
+            if(up)
+            {
+                owner->mCapturedButtons &= ~button;
+                if(owner->mCapturedButtons == 0 && GetCapture() == hwnd)
+                    ReleaseCapture();
+            }
+        }
+    }
+    if((message == WM_CAPTURECHANGED && reinterpret_cast<HWND>(lParam) != hwnd &&
+        owner->mCapturedButtons != 0) ||
+       message == WM_CANCELMODE || message == WM_KILLFOCUS ||
+       (message == WM_ACTIVATEAPP && wParam == FALSE))
+    {
+        // Capture/focus loss is a cancellation, never a normal release/world action.
+        owner->mPointerEvents.clear();
+        ++owner->mPointerEpoch;
+        PointerEvent event = { WM_CANCELMODE, 0, 0, 0 };
+        owner->mPointerEvents.push_back(event);
+        owner->mCapturedButtons = 0;
+        if(GetCapture() == hwnd)
+            ReleaseCapture();
+    }
+    return CallWindowProcW(reinterpret_cast<WNDPROC>(owner->mOldWindowProc), static_cast<HWND>(window),
+        message, wParam, lParam);
+}
+
+//! \brief Installs the window procedure used to collect ordered pointer events.
+void InputManager::hookWindowWheel()
+{
+    unhookWindowWheel();
+    size_t windowHandle = 0;
+    mRenderWindow->getCustomAttribute("WINDOW", &windowHandle);
+    const HWND window = reinterpret_cast<HWND>(windowHandle);
+    if(window == nullptr)
+        return;
+    mPointerEvents.clear();
+    mPointerButtons = mCapturedButtons = 0;
+    sWheelOwner = this;
+    SetLastError(0);
+    LONG_PTR old = SetWindowLongPtrW(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&InputManager::wheelWindowProc));
+    if(old == 0)
+    {
+        sWheelOwner = nullptr;
+        OD_LOG_ERR("Could not install ordered pointer hook; using absolute OIS fallback");
+        return;
+    }
+    mOldWindowProc = reinterpret_cast<void*>(old);
+    mHookedWindow = window;
+}
+
+//! \brief Removes the pointer hook and releases its capture.
+void InputManager::unhookWindowWheel()
+{
+    if(mOldWindowProc != nullptr && mHookedWindow != nullptr)
+    {
+        const HWND window = static_cast<HWND>(mHookedWindow);
+        if(IsWindow(window) && GetWindowLongPtrW(window, GWLP_WNDPROC) == reinterpret_cast<LONG_PTR>(&InputManager::wheelWindowProc))
+            SetWindowLongPtrW(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(mOldWindowProc));
+    }
+    if(mHookedWindow != nullptr && GetCapture() == static_cast<HWND>(mHookedWindow))
+        ReleaseCapture();
+    mPointerEvents.clear();
+    mPointerButtons = mCapturedButtons = 0;
+    if(sWheelOwner == this)
+        sWheelOwner = nullptr;
+    mOldWindowProc = nullptr;
+    mHookedWindow = nullptr;
 }
 #endif

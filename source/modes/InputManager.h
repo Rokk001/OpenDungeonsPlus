@@ -23,6 +23,7 @@
 #include <OISMouse.h>
 
 #include <memory>
+#include <vector>
 
 
 #include "modes/Keyboard.h"
@@ -58,7 +59,11 @@ enum class SelectionEntityWanted;
 
 class Creature;
 
+//! \brief Owns input devices and delivers ordered absolute Windows pointer input.
 class InputManager: public Ogre::Singleton<InputManager>
+#if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
+    , public OIS::MouseListener
+#endif
 {
 public:
 
@@ -75,7 +80,7 @@ public:
 
     void setWidthAndHeight(int width, int height);
     //! \brief Moves the system cursor, the OIS mouse state and the GUI cursor to the given
-    //! window position (clamped to the window) and drops motion accumulated before the call.
+    //! window position (clamped to the window) and cancels gestures accumulated before the call.
     void setMousePosition(int x, int y);
     void setCurrentAMode(AbstractApplicationMode& mode);
     //! \brief Captures the mouse. On Windows (OIS/DirectInput) the game pointer is the position of the
@@ -129,18 +134,28 @@ public:
     //! \brief Destroys the mouse and keyboard; safe to call when they do not exist
     void destroyInputDevices();
 #if defined OIS_WIN32_PLATFORM && !defined OD_USE_SFML_WINDOW
-    //! \brief Hands the OIS mouse events to the current mode with the position of the Windows pointer
-    class PointerForwarder: public OIS::MouseListener
+    //! \brief Stores one window mouse message and its client coordinates in arrival order.
+    struct PointerEvent
     {
-    public:
-        PointerForwarder(InputManager& inputManager): mInputManager(inputManager) {}
-        virtual bool mouseMoved(const OIS::MouseEvent& arg) override;
-        virtual bool mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id) override;
-        virtual bool mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID id) override;
-    private:
-        InputManager& mInputManager;
+        unsigned int mMessage;
+        int mX, mY, mWheel;
     };
-    friend class PointerForwarder;
+    //! \brief Delivers queued Windows pointer events to the current mode.
+    void dispatchPointerEvents();
+    //! \brief Invalidates queued input and cancels held GUI and mode actions safely.
+    void cancelPointerInput();
+    //! \brief Updates fallback OIS events from the absolute Windows pointer.
+    bool prepareFallbackPointer();
+    //! \brief Forwards fallback motion and wheel input with absolute Windows coordinates.
+    bool mouseMoved(const OIS::MouseEvent& arg) override;
+    //! \brief Forwards fallback presses with absolute Windows coordinates.
+    bool mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID button) override;
+    //! \brief Forwards fallback releases only for a delivered press.
+    bool mouseReleased(const OIS::MouseEvent& arg, OIS::MouseButtonID button) override;
+    std::vector<PointerEvent> mPointerEvents;
+    unsigned int mPointerEpoch = 0;
+    int mPointerButtons = 0;
+    int mCapturedButtons = 0;
     //! \brief Reads the Windows pointer as game pointer position. Returns false if not possible.
     bool readSystemPointer(int& x, int& y, bool& inside);
     //! \brief Writes the game pointer position to the OIS state and the GUI
@@ -149,7 +164,6 @@ public:
     void updateCursorGrab(bool grab);
     //! \brief Moves the Windows pointer to the given game pointer position (clamped)
     void moveSystemPointer(int x, int y);
-    PointerForwarder mPointerForwarder;
     bool mWasForeground;
     bool mCursorHidden;
     bool mCursorClipped;
@@ -157,6 +171,13 @@ public:
     bool mHasPendingPosition;
     int mPendingX, mPendingY;
     int mLastPointerX, mLastPointerY;
+    //! \brief Window procedure that was replaced to see the wheel messages, and its window
+    void* mOldWindowProc = nullptr;
+    void* mHookedWindow = nullptr;
+    void hookWindowWheel();
+    void unhookWindowWheel();
+    static void* sWheelOwner;
+    static long long __stdcall wheelWindowProc(void* window, unsigned int message, unsigned long long wParam, long long lParam);
 #endif
 #ifdef OD_USE_SFML_WINDOW
     std::unique_ptr<SFMLToOISListener> mListener;

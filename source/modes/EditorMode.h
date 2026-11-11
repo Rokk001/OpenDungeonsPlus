@@ -68,6 +68,8 @@ public:
     virtual bool mouseMoved     (const OIS::MouseEvent &arg) override;
     virtual bool mousePressed   (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
     virtual bool mouseReleased  (const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
+    //! \brief Cancels the editor selection without validating an edit.
+    void cancelMouseInput() override;
     //! \brief Handles the keyboard shortcuts of the editor (including R for the region markers).
     virtual bool keyPressed     (const OIS::KeyEvent &arg) override;
     virtual bool keyReleased    (const OIS::KeyEvent &arg) override;

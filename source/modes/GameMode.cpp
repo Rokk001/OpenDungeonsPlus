@@ -1726,6 +1726,19 @@ bool GameMode::mousePressed(const OIS::MouseEvent& arg, OIS::MouseButtonID id)
     return true;
 }
 
+//! \brief Abandons held mouse actions without submitting a world command.
+void GameMode::cancelMouseInput()
+{
+    mPendingHandDrop = false;
+    mMiddleDragDistance = 0.0f;
+    AbstractApplicationMode::cancelMouseInput();
+    ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateX, 0.0);
+    ODFrameListener::getSingleton().moveCamera(CameraManager::zeroRandomRotateY, 0.0);
+    if(mPlayerSelection.getCurrentAction() == SelectedAction::selectTile)
+        mPlayerSelection.setCurrentAction(SelectedAction::none);
+    unselectAllTiles();
+}
+
 //! \brief Completes a world action using the current action-specific pointer target.
 bool GameMode::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
 {
@@ -2245,6 +2258,7 @@ void GameMode::updateCameraControls(float elapsed)
     CameraInput input = CameraInput::read(down);
     if(input.x == 0.0f && input.y == 0.0f && input.zoom == 0.0f && input.swivel == 0.0f
         && !down(OIS::KC_X) && !down(OIS::KC_Z)
+        && ODFrameListener::getSingleton().getRenderWindow()->isActive()
         && config.getInputValue(Config::AUTOSCROLL, "No", false) == "Yes")
     {
         CEGUI::GUIContext& context = CEGUI::System::getSingleton().getDefaultGUIContext();

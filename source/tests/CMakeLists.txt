@@ -55,6 +55,11 @@ add_boost_test(00-PointerMapping
         test_PointerMapping.cpp
         ${SRC}/modes/PointerMapping.h)
 
+add_boost_test(00-WheelAccumulator
+        SOURCES
+        test_WheelAccumulator.cpp
+        ${SRC}/modes/WheelAccumulator.h)
+
 add_boost_test(00-PostLog
         SOURCES
         test_PostLog.cpp
