@@ -50,6 +50,7 @@ class CreaturePanel;
 class GameEntity;
 class ItemBagEntity;
 class MiniMapDrawnFull;
+class MenuModeLoad;
 class SocialWindow;
 class WorkersWindow;
 class ODPacket;
@@ -429,6 +430,8 @@ protected:
     bool showObjectivesFromOptions(const CEGUI::EventArgs& e = {});
     bool showSkillFromOptions(const CEGUI::EventArgs& e = {});
     bool saveGame(const CEGUI::EventArgs& e = {});
+    //! \brief Opens the in-game saved-game browser.
+    bool loadGame(const CEGUI::EventArgs& e = {});
     //! \brief Opens the settings window from the options page.
     bool showSettingsFromOptions(const CEGUI::EventArgs& e = {});
     //! \brief Connects the buttons of the settings navigation window.
@@ -457,6 +460,8 @@ protected:
     virtual bool keyReleasedNormal  (const OIS::KeyEvent &arg);
 
 private:
+    //! \brief Browser retained while it owns input over the running game.
+    std::unique_ptr<MenuModeLoad> mLoadBrowser;
     //! \brief The population panel in the creatures tab
     std::unique_ptr<CreaturePanel> mCreaturePanel;
     std::unique_ptr<SocialWindow> mSocialWindow;

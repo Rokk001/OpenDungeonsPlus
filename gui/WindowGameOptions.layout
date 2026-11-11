@@ -21,6 +21,11 @@
             <Property name="IconImage" value="OpenDungeonsIcons/SaveIcon" />
             <Property name="Text" value="Save Game" />
         </Window>
+        <Window type="OD/IconButton" name="LoadGameButton" >
+            <Property name="Area" value="{{0,24},{0,174},{1,-24},{0,212}}" />
+            <Property name="IconImage" value="OpenDungeonsIcons/LoadIcon" />
+            <Property name="Text" value="Load Game" />
+        </Window>
         <Window type="OD/IconButton" name="SettingsButton" >
             <Property name="Area" value="{{0,24},{0,220},{1,-24},{0,258}}" />
             <Property name="IconImage" value="OpenDungeonsIcons/OptionsIcon" />

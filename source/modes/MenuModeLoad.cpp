@@ -132,7 +132,16 @@ bool MenuModeLoad::closeBrowser(const CEGUI::EventArgs&)
     mOpen = false;
     ODFrameListener::getSingleton().getClientGameMap()->setGamePaused(mWasPaused);
     getModeManager().getGui().loadGuiSheet(Gui::inGameMenu);
+    getModeManager().getCurrentMode()->giveFocus();
     return true;
+}
+
+//! \brief Closes the in-game browser on Escape and otherwise uses menu input.
+bool MenuModeLoad::keyPressed(const OIS::KeyEvent& arg)
+{
+    if(mInGame && arg.key == OIS::KC_ESCAPE)
+        return closeBrowser();
+    return AbstractApplicationMode::keyPressed(arg);
 }
 
 //! \brief Opens the save browser with current campaign eligibility available to its file list.
@@ -156,6 +165,7 @@ void MenuModeLoad::activate()
             mWasPaused = gameMap->getGamePaused();
         mOpen = true;
         gameMap->setGamePaused(true);
+        giveFocus();
     }
     else
     {
@@ -179,7 +189,16 @@ void MenuModeLoad::activate()
     {
         const std::string filename = mSavedGame;
         mSavedGame.clear();
-        launchSavedGame(filename);
+        if(boost::filesystem::path(filename).extension().string() == ".odr")
+        {
+            if(!ODClient::getSingleton().replay(filename))
+            {
+                sheet->getChild("LoadingText")->setText("Error: Couldn't launch replay!");
+                sheet->getChild("LoadingText")->show();
+            }
+        }
+        else
+            launchSavedGame(filename);
     }
 
 }
@@ -233,7 +252,18 @@ bool MenuModeLoad::launchSelectedButtonPressed(const CEGUI::EventArgs&)
         std::string description;
         std::string error;
         CEGUI::Window* loading = getModeManager().getGui().getGuiSheet(Gui::loadSavedGameMenu)->getChild("LoadingText");
-        if(!MenuModeReplay::checkReplayValid(level, description, error) || !ODClient::getSingleton().replay(level))
+        if(!MenuModeReplay::checkReplayValid(level, description, error))
+        {
+            loading->setText("Error: Couldn't launch replay!");
+            loading->show();
+            return true;
+        }
+        if(mInGame)
+        {
+            getModeManager().requestSavedGame(level);
+            return true;
+        }
+        if(!ODClient::getSingleton().replay(level))
         {
             loading->setText("Error: Couldn't launch replay!");
             loading->show();

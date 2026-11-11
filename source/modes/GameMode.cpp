@@ -16,6 +16,7 @@
  */
 
 #include "modes/GameMode.h"
+#include "modes/MenuModeLoad.h"
 
 #include "camera/CameraManager.h"
 #include "camera/CameraInput.h"
@@ -783,6 +784,9 @@ GameMode::GameMode(ModeManager *modeManager):
             CEGUI::Event::Subscriber(&GameMode::showSkillFromOptions, this)
         )
     );
+    addEventConnection(guiSheet->getChild("GameOptionsWindow/LoadGameButton")->subscribeEvent(
+        CEGUI::PushButton::EventClicked, CEGUI::Event::Subscriber(&GameMode::loadGame, this)));
+
     CEGUI::Window* saveGameButtonWindow = guiSheet->getChild("GameOptionsWindow/SaveGameButton");
     addEventConnection(
         saveGameButtonWindow->subscribeEvent(
@@ -2231,13 +2235,14 @@ void GameMode::handleHotkeys(OIS::KeyCode keycode)
     }
 }
 
+//! \brief Updates camera controls while suppressing movement behind the load browser.
 void GameMode::updateCameraControls(float elapsed)
 {
     CameraManager* camera = ODFrameListener::getSingleton().getCameraManager();
     const std::function<bool(OIS::KeyCode)> down = [this](OIS::KeyCode key) { return getKeyboard()->isKeyDown(key); };
     if(!down(OIS::KC_M))
         mMapKeyDown = false;
-    if(mDefeatSequence.blocksInput())
+    if(mDefeatSequence.blocksInput() || (mLoadBrowser && mLoadBrowser->isOpenInGame()))
     {
         camera->move(CameraManager::fullStop);
         return;
@@ -3970,7 +3975,7 @@ bool GameMode::toggleOptionsWindow(const CEGUI::EventArgs& e)
 void GameMode::setOptionsPage(bool endGame)
 {
     CEGUI::Window* options = mRootWindow->getChild("GameOptionsWindow");
-    for(const char* name : {"ObjectivesButton", "SkillButton", "SaveGameButton",
+    for(const char* name : {"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
         "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton", "ProductionButton"})
         options->getChild(name)->setVisible(!endGame);
     for(const char* name : {"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton"})
@@ -3979,14 +3984,17 @@ void GameMode::setOptionsPage(bool endGame)
 
     std::vector<const char*> entries = endGame ?
         std::vector<const char*>{"QuitGameButton", "ExitGameButton", "RestartLevelButton", "BackButton", "ContinueButton"} :
-        std::vector<const char*>{"ObjectivesButton", "SkillButton", "SaveGameButton",
+        std::vector<const char*>{"ObjectivesButton", "SkillButton", "SaveGameButton", "LoadGameButton",
             "SettingsButton", "EndGameButton", "HelpButton", "PlayerSettingsButton", "UserCamerasButton",
             "ProductionButton", "ContinueButton"};
     const bool canSave = ODServer::getSingleton().isConnected() &&
         ODServer::getSingleton().getServerMode() != ServerMode::ModeGameMultiPlayer;
     options->getChild("SaveGameButton")->setVisible(!endGame && canSave);
+    options->getChild("LoadGameButton")->setVisible(!endGame && canSave);
     if(!endGame && !canSave)
-        entries.erase(entries.begin() + 2);
+    {
+        entries.erase(entries.begin() + 2, entries.begin() + 4);
+    }
     Gui& gui = mModeManager->getGui();
     const CEGUI::Sizef display = CEGUI::System::getSingleton().getRenderer()->getDisplaySize();
     const float height = std::min(0.95f, (84.0f + 46.0f * entries.size()) * gui.getLayoutScale() / display.d_height);
@@ -4049,6 +4057,19 @@ bool GameMode::showSkillFromOptions(const CEGUI::EventArgs& e)
 {
     mRootWindow->getChild("GameOptionsWindow")->hide();
     return toggleSkillWindow(e);
+}
+
+//! \brief Opens the saved-game browser over a local single-player game.
+bool GameMode::loadGame(const CEGUI::EventArgs&)
+{
+    if(!ODServer::getSingleton().isConnected() ||
+       ODServer::getSingleton().getServerMode() == ServerMode::ModeGameMultiPlayer)
+        return true;
+    hideOptionsWindow();
+    if(!mLoadBrowser)
+        mLoadBrowser.reset(new MenuModeLoad(mModeManager, true));
+    mLoadBrowser->activate();
+    return true;
 }
 
 //! \brief Saves only local single-player or loaded games.
@@ -5209,8 +5230,11 @@ void GameMode::resetIdleHand()
     RenderManager::getSingleton().rrCancelIdleHandAnimation();
 }
 
+//! \brief Closes the browser before game teardown and releases active input state.
 void GameMode::deactivate()
 {
+    if(mLoadBrowser && mLoadBrowser->isOpenInGame())
+        mLoadBrowser->closeBrowser();
     resetIdleHand();
     mIdleHandKeys.clear();
     GameEditorModeBase::deactivate();
