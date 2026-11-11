@@ -174,8 +174,34 @@ material SpaHair : RTSS/PerPixel_SinglePass
     {
         pass
         {
-            diffuse 0.045 0.034 0.026 1
+            diffuse 0.2 0.19 0.18 1
             specular 0 0 0 0 1
+        }
+    }
+}
+
+// Dark body hair of the pool attendant (chest, shoulders, arms, legs, feet), decision 1070
+material SpaBodyHair : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.1 0.075 0.055 1
+            specular 0 0 0 0 1
+        }
+    }
+}
+
+// A very little dried blood on the pool attendant (brow cut, forearm scrape, knee, suit drops), decision 1070
+material SpaBlood : RTSS/PerPixel_SinglePass
+{
+    technique
+    {
+        pass
+        {
+            diffuse 0.34 0.035 0.03 1
+            specular 0.25 0.1 0.1 1 20
         }
     }
 }

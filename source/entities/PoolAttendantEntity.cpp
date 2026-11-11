@@ -69,6 +69,8 @@ const uint32_t NB_ACTS_WITH_BATHER = 3;
 const uint32_t ACT_TOWEL = 0;
 //! \brief Number of the act "doze" in the random draw.
 const uint32_t ACT_DOZE = 1;
+//! \brief Seconds into the Whistle clip at which the whistle reaches the mouth; the sound starts then.
+const double WHISTLE_BLOW_SECONDS = 0.6;
 
 //! \brief Turns a clip of the attendant lasts.
 double getClipTurns()
@@ -91,6 +93,7 @@ PoolAttendantEntity::PoolAttendantEntity(GameMap* gameMap, const std::string& ro
     mChairTile(nullptr),
     mState(PoolAttendantState::sitting),
     mTurnsLeft(0.0),
+    mWhistleSounded(false),
     mActTurnsLeft(0.0),
     mCannonballTurnsLeft(0.0),
     mHasPlace(false),
@@ -113,6 +116,7 @@ PoolAttendantEntity::PoolAttendantEntity(GameMap* gameMap) :
     mChairTile(nullptr),
     mState(PoolAttendantState::sitting),
     mTurnsLeft(0.0),
+    mWhistleSounded(false),
     mActTurnsLeft(0.0),
     mCannonballTurnsLeft(0.0),
     mHasPlace(false),
@@ -321,7 +325,7 @@ void PoolAttendantEntity::startAct()
     {
         mState = PoolAttendantState::whistling;
         clip = PoolAttendantPose::whistle;
-        RoomSpa::playSoundAt(mChairTile, SOUND_WHISTLE);
+        mWhistleSounded = false;
     }
 
     mTurnsLeft = getClipTurns();
@@ -331,6 +335,13 @@ void PoolAttendantEntity::startAct()
 void PoolAttendantEntity::upkeepAct()
 {
     mTurnsLeft -= 1.0;
+    // The whistle blows when the hand has lifted it to the mouth (decision 1057)
+    if((mState == PoolAttendantState::whistling) && !mWhistleSounded &&
+       (getClipTurns() - mTurnsLeft >= WHISTLE_BLOW_SECONDS * ODApplication::turnsPerSecond))
+    {
+        mWhistleSounded = true;
+        RoomSpa::playSoundAt(mChairTile, SOUND_WHISTLE);
+    }
     if(mTurnsLeft > 0.0)
         return;
 
@@ -636,6 +647,8 @@ void PoolAttendantEntity::restoreFromSave(const PoolAttendantSave& save)
             mState = save.mState;
             mTurnsLeft = save.mTurnsLeft;
             setAnimationState(PoolAttendantPose::whistle, false, Ogre::Vector3::ZERO, false);
+            // A blow that was heard before saving is not heard again
+            mWhistleSounded = (getClipTurns() - mTurnsLeft >= WHISTLE_BLOW_SECONDS * ODApplication::turnsPerSecond);
             // The saved clip time is used; an old save without it gets the time worked out from the turns left
             setAnimationTime(save.mHasClipTime ? save.mClipTime : (getClipTurns() - mTurnsLeft) / ODApplication::turnsPerSecond);
             break;

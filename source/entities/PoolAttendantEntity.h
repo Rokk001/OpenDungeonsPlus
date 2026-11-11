@@ -238,6 +238,8 @@ private:
     PoolAttendantState mState;
     //! \brief Turns the act or the climb still lasts (server side).
     double mTurnsLeft;
+    //! \brief True when the whistle of the current Whistle act was already blown (server side).
+    bool mWhistleSounded;
     //! \brief Turns until the next act while the attendant sits (server side).
     double mActTurnsLeft;
     //! \brief Turns until the next jump from the springboard (server side).
