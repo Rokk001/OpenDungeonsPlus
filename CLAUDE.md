@@ -58,14 +58,6 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 
 ## Load tests
 
-- Every integration runs exactly one load test: start the game, load one level and let it
-  run briefly. If level files were changed in the integration, only those levels are loaded
-  in addition. There are no sample levels and no run over all maps.
-- The full load test of all levels runs only when the owner explicitly asks for it. If an
-  integration changes code or shared files, the integration agent may propose the full run
-  to the main session, but never starts it itself.
-- `integration/all` is pushed once the release build, all check scripts and this load test
-  are green.
 - Check scripts, load tests and the pre-push hook are never removed, weakened or bypassed.
   If a check measures wrongly, correct the check openly and report it to the owner first.
 
@@ -84,15 +76,13 @@ Diese Pfade direkt verwenden, nie danach suchen.
 ## Builds
 
 - Build flow (Mario, 2026-10-25):
-  1. The integrator is the only one that runs a full build: once per run, Release, --parallel 1, at least 2 GB free RAM,
-     then all check scripts, the load test, push and deploy.
-  2. Feature and fix windows (Claude Code and Codex) never run a full build, not even when a prompt releases one, and
+  1. Feature and fix windows (Claude Code and Codex) never run a full build, not even when a prompt releases one, and
      compile nothing while a plan is in progress.
-  3. After the completeness question is answered with 'Offene Anforderungen: 0', the window merges the current
+  2. After the completeness question is answered with 'Offene Anforderungen: 0', the window merges the current
      origin/integration/all into its branch and resolves all conflicts itself.
-  4. Then it pushes normally and registers ready (bzz ready) with 'Offene Anforderungen: 0'. It runs no compile check and
+  3. Then it pushes normally and registers ready (bzz ready) with 'Offene Anforderungen: 0'. It runs no compile check and
      no check scripts: the HaiveQueen Orchestrator runs the compile check, the build and all check scripts after ready.
-  5. Plans run in parallel, also when they change the same files. Only a plan that needs another plan's result (it builds
+  4. Plans run in parallel, also when they change the same files. Only a plan that needs another plan's result (it builds
      on code that plan adds) waits until that plan is integrated. Every window merges the current origin/integration/all into
      its branch whenever another branch has been integrated (checked at the start of every package and at least once per
      hour) and always before ready, and resolves all conflicts so that the content of both sides is kept completely. The
@@ -106,13 +96,10 @@ Diese Pfade direkt verwenden, nie danach suchen.
 - Never use `git commit --amend`, `git reset`, `git update-ref` or any other ref rewrite, also not for unpushed commits. A wrong commit message stays; corrections are new commits. If a guard or hook blocks a git command, stop and report instead of working around it. No force push.
 - Never remove an existing comment; update it when its code changes. Every new or changed function, method and class gets a short Doxygen-style comment, and every new or changed Boost test case gets a short comment saying what it checks.
 - Commit messages are English and plain, say what changed and why, and carry no AI attribution.
-- The result of a build is decided only by the real exit code of `cmake --build` (written to a file right after the call), never by reading the log.
 - Check scripts use fixed expected values that match the state of the branch, counted once and named in the commit; they never derive the expected value at run time from the code under test. A check that is red on the branch and green on `origin/integration/all` is a regression of the branch and is fixed on the branch, never in the check.
 - Review fixes go into a fix branch from the tip of `integration/all`; they are never pushed to a pull request head unless Mario orders it separately.
-- Technical test adjustments (stubs, sample texts, calls, formal adaption of a check to a new layout) are done without asking; gameplay behaviour, values and level layout are Mario's decisions. One integration run has exactly one release build.
+- Technical test adjustments (stubs, sample texts, calls, formal adaption of a check to a new layout) are done without asking; gameplay behaviour, values and level layout are Mario's decisions.
 - Before removing a worktree: back up uncommitted and untracked files, verify the backup byte for byte, then run `git worktree remove` without `--force`. If the backup fails or HEAD is not contained in `origin/integration/all`, remove nothing. Branches stay.
 - Sounds are real recordings under CC0 or CC-BY, with author, licence and source URL in the CREDITS entry of the same commit; never synthesized or generated files.
 - Internal planning documents, design reference images and notes are never stored in this repository and never referenced from tracked files.
-- Only one integrator runs at a time. Every run takes all rows with status `ready` in the integration queue; the run prompt names no branch list.
-- A branch that is blocked only because it conflicts with another branch of the same run, and that other branch fails, is integrated alone in the same run or the next.
 - No absolute personal paths in tracked files: use the file name, a neutral word or an environment variable.
