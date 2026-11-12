@@ -29,7 +29,8 @@ assert 0.0 < limit <= 0.5, limit  # tile centre lines (half a tile from every wa
 # (e) the green chain between hunter and ghost is the capture beam: only while the hunter has a beam target
 # The whole function up to the next one (its trap light and stronger beam made it longer than a fixed slice)
 beam = creature.split('void Creature::updateGhostHuntVisuals')[1].split('void Creature::transferGhostHuntRoom')[0]
-assert 'target==nullptr || mGhostBeamTarget.empty()' in beam and 'createBillboardChain' in beam
+assert 'const bool beaming=target!=nullptr && mGhostBoxMode==3 && ghostAboveTrap(scene,*target);' in beam
+assert 'if(!beaming)' in beam and 'createBillboardChain' in beam
 
 # X1 rework 3 (decision 710): a creature stood at wall height on top of the ghost room apparatus. Cause: prepareLowStep
 # lets a creature that is wider than the lane climb every measured object (bodyBands exist for ghost apparatus heights
