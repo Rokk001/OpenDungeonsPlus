@@ -90,18 +90,14 @@ Diese Pfade direkt verwenden, nie danach suchen.
      compile nothing while a plan is in progress.
   3. After the completeness question is answered with 'Offene Anforderungen: 0', the window merges the current
      origin/integration/all into its branch and resolves all conflicts itself.
-  4. Then it runs scripts/win32/compile-check-changed.ps1 in its worktree. The script compiles only the .cpp files the branch
-     changed against origin/integration/all, with the compiler settings of the integrator's build folder, without linking
-     and without building the game. The window fixes every compile error and repeats until the script exits 0.
-  5. Then it runs the check scripts for its changed source files, pushes normally and registers ready in
-     the integration queue file with the checked tip and 'Kompiliertest: Exit 0'.
-  6. The integrator refuses a ready row without 'Kompiliertest: Exit 0' for its exact tip and sends it back.
-  7. Plans run in parallel, also when they change the same files. Only a plan that needs another plan's result (it builds
+  4. Then it pushes normally and registers ready (bzz ready) with 'Offene Anforderungen: 0'. It runs no compile check and
+     no check scripts: the HaiveQueen Orchestrator runs the compile check, the build and all check scripts after ready.
+  5. Plans run in parallel, also when they change the same files. Only a plan that needs another plan's result (it builds
      on code that plan adds) waits until that plan is integrated. Every window merges the current origin/integration/all into
      its branch whenever another branch has been integrated (checked at the start of every package and at least once per
      hour) and always before ready, and resolves all conflicts so that the content of both sides is kept completely. The
      coordinator applies the same rule when planning.
-- Check scripts in source/tests that compile small C++ probes with cl are not a game build. Feature windows run them before marking a branch ready for every source file the branch changes; skipping them is not allowed.
+- Check scripts in source/tests that compile small C++ probes with cl are not a game build; the HaiveQueen Orchestrator runs them after ready.
 - Every integrator release build that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on Mario's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every integrator build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
 
 ## Working rules
