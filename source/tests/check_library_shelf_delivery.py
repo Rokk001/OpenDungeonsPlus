@@ -33,6 +33,7 @@ PRELUDE = r'''
 #include <string>
 #include <vector>
 #define OD_LOG_ERR(message) ((void)0)
+#define OD_LOG_INF(message) ((void)0)
 //! \brief Fails the probe with the independently specified expectation.
 void check(bool result, const char* message)
 { if(!result) throw std::runtime_error(message); }
@@ -54,9 +55,10 @@ struct Vector3
     Vector3(float a=0, float b=0, float c=0):x(a),y(b),z(c) {}
 };
 }
-namespace EntityAnimation { const int walk_anim=1, idle_anim=2; }
-enum class GameEntityType { itemBagEntity, missileObject, other };
-enum class RoomType { library, treasury, ghostRoom, merchant };
+namespace EntityAnimation { const int walk_anim=1, idle_anim=2, die_anim=3; }
+enum class GameEntityType { itemBagEntity, missileObject, room, other };
+enum class RoomType { library, treasury, ghostRoom, merchant, alchemyLab, crypt, dormitory,
+    dungeonTemple, infirmary, prison, workshop };
 enum class GhostItem { none, researchBook, ectoplasm, manaCrystal };
 enum class EntityCarryType { notCarryable, itemBag };
 enum class MissileObjectType { stone, other };
@@ -105,6 +107,10 @@ struct GameEntity
     { if(std::find(tile->entities.begin(),tile->entities.end(),this)==tile->entities.end()) tile->entities.push_back(this); }
     void removeFromGameMap() { onMap=false; removed=true; }
     void deleteYourself() { deleted=true; }
+    //! \brief Supplies listener and release operations used by the production carry destructor.
+    void removeGameEntityListener(void*) {}
+    void setCarryLock(class Creature&,bool value) { locked=value; }
+    virtual void notifyEntityCarryOff(const Ogre::Vector3& value) { setPosition(value); }
 };
 //! \brief Represents shelf furniture position and wall rotation independently of the book.
 struct BuildingObject
@@ -135,14 +141,21 @@ struct RenderedMovableEntity : GameEntity
     { return bool(stream >> position.x >> position.y >> position.z); }
 };
 //! \brief Supplies the room's shelf lookup and destination checks.
-struct Room
+struct Room : GameEntity
 {
+    Room() { GameEntity::type=GameEntityType::room; }
     RoomType type=RoomType::library;
     Seat* seat=nullptr;
     Tile* shelfTile=nullptr;
     BuildingObject* object=nullptr;
     int released=0;
+    Creature* lastCarrier=nullptr;
+    GameEntity* lastCargo=nullptr;
+    int callbacks=0;
     virtual bool hasCarryEntitySpot(GameEntity*) { return false; }
+    //! \brief Records the destructor's callback contract for destinations outside the library.
+    virtual void notifyCarryingStateChanged(class Creature* carrier,GameEntity* cargo)
+    { lastCarrier=carrier; lastCargo=cargo; ++callbacks; }
     RoomType getType() { return type; }
     Seat* getSeat() { return seat; }
 protected:
@@ -161,7 +174,7 @@ void GameEntity::setPosition(const Ogre::Vector3& value)
     tile->entities.push_back(this);
 }
 //! \brief Holds a worker's route and action effects for the carry handler.
-struct Creature
+struct Creature : GameEntity
 {
     Seat* seat=nullptr;
     Tile* tile=nullptr;
@@ -175,6 +188,12 @@ struct Creature
     bool setDestination(Tile*) { ++destinations; return true; }
     void setWalkPath(int,int,bool,bool,const std::vector<Ogre::Vector2>&,bool,bool) { ++walked; }
     void pushAction(std::unique_ptr<class CreatureActionWalkToTile>) { ++pushed; }
+    //! \brief Supplies drag-only cleanup while recording ordinary cargo detachment.
+    int cargoReleases=0;
+    void releaseCarriedEntity() { ++cargoReleases; }
+    void clearDestinations(int,bool,bool) {}
+    void notifyCorpseDragEnd() {}
+    void notifyDragEnd() {}
 };
 //! \brief Supplies a typed walking action for the unchanged production call.
 struct CreatureActionWalkToTile { CreatureActionWalkToTile(Creature&) {} };
@@ -244,7 +263,7 @@ struct ItemBagEntity : RenderedMovableEntity
     void pickup();
     void drop(const Ogre::Vector3&);
     void notifyEntityCarryOn(Creature*);
-    void notifyEntityCarryOff(const Ogre::Vector3&);
+    void notifyEntityCarryOff(const Ogre::Vector3&) override;
     void exportToStream(std::ostream&) const;
     bool importFromStream(std::istream&);
     GameMap* getGameMap() { static GameMap map; return &map; }
@@ -259,13 +278,23 @@ struct RoomLibrary : Room
     Tile* bookshelfTile();
     bool hasCarryEntitySpot(GameEntity*) override;
     Tile* askSpotForCarriedEntity(GameEntity*);
-    void notifyCarryingStateChanged(Creature*,GameEntity*);
+    void notifyCarryingStateChanged(Creature*,GameEntity*) override;
     bool isBookshelfTile(Tile*);
     bool getBookshelfApproach(Creature&,Tile*,std::vector<Ogre::Vector2>&);
     bool openResearchBook();
 };
 struct CreatureActionCarryEntity
-{ static bool handleCarryEntity(Creature&,GameEntity*,Tile*); };
+{
+    Creature& mCreature;
+    GameEntity* mEntityToCarry;
+    Room* mBuildingDest;
+    bool mIsDrag=false, mExternalDrag=false, mCorpseDrag=false, mDelivered=false;
+    //! \brief Supplies transport state while retaining the production handler and destructor.
+    CreatureActionCarryEntity(Creature& worker,GameEntity* cargo,Room* destination):
+        mCreature(worker),mEntityToCarry(cargo),mBuildingDest(destination) {}
+    ~CreatureActionCarryEntity();
+    bool handleCarryEntity(Creature&,GameEntity*,Tile*);
+};
 '''
 
 CASES = r'''
@@ -283,6 +312,7 @@ int main()
     furniture.mesh="Bookshelf"; furniture.position=Ogre::Vector3(3,0,0);
     library.shelfTile=&shelf;
     Creature worker; worker.seat=&owner; worker.tile=&floor;
+    CreatureActionCarryEntity carry(worker,nullptr,&library);
     ItemBagEntity book; book.tile=&floor; floor.entities.push_back(&book);
 
     check(!library.hasCarryEntitySpot(&book),"shelfless library refuses delivery");
@@ -302,13 +332,52 @@ int main()
     check(!book.isResearchBookShelved() && !library.openResearchBook(),"interrupted carry on shelf tile stays floor cargo");
     book.setPosition(Ogre::Vector3(0,0,0));
 
-    CreatureActionCarryEntity::handleCarryEntity(worker,&book,&shelf);
+    // Interrupt after walking has reached the approach, before the carry handler can complete.
+    book.locked=true;
+    {
+        CreatureActionCarryEntity interrupted(worker,&book,&library);
+        interrupted.handleCarryEntity(worker,&book,&shelf);
+        check(!interrupted.mDelivered && worker.walked==1,"walking has not completed shelf delivery");
+        worker.atShelf=true;
+    }
+    check(!book.isResearchBookShelved() && book.getItem()!=nullptr && book.tile==&floor &&
+        !book.locked && worker.cargoReleases==1,"interrupted approach releases recoverable floor cargo");
+    check(!library.openResearchBook() && library.mSkillPoints==0 &&
+        book.getEntityCarryType(&worker)==EntityCarryType::itemBag,
+        "interrupted approach never grants research and can be carried again");
+    check(book.visibilityRemovals==0 && book.visibilityAdds==0 && library.released==2,
+        "interrupted approach cancels interaction without a shelf snapshot");
+    // A failed approach cannot become successful just because the worker later reaches it.
+    worker.routeAllowed=false;
+    {
+        CreatureActionCarryEntity blocked(worker,&book,&library);
+        blocked.handleCarryEntity(worker,&book,&shelf);
+        worker.routeAllowed=true;
+    }
+    check(!book.isResearchBookShelved() && !library.openResearchBook(),
+        "failed approach cannot be reclassified as completed during destruction");
+    library.object=nullptr;
+    {
+        CreatureActionCarryEntity missingShelf(worker,&book,&library);
+        missingShelf.handleCarryEntity(worker,&book,&shelf);
+        library.object=&furniture;
+    }
+    check(!book.isResearchBookShelved() && !library.openResearchBook(),
+        "missing shelf cannot be reclassified as completed during destruction");
+    {
+        CreatureActionCarryEntity released(worker,nullptr,&library);
+    }
+    check(!book.isResearchBookShelved() && book.getItem()!=nullptr,
+        "already released cargo stays untouched at the approach");
+    worker.atShelf=false;
+    worker.walked=0; worker.pushed=0; worker.popped=0;
+    carry.handleCarryEntity(worker,&book,&shelf);
     check(worker.walked==1 && worker.pushed==1 && worker.popped==0,"shelf delivery queues furniture approach");
     check(worker.destinations==0,"worker does not walk directly into shelf tile");
     library.notifyCarryingStateChanged(&worker,&book);
     check(book.tile==&floor && book.getItem()!=nullptr,"interrupted delivery leaves book on floor");
     worker.routeAllowed=false;
-    CreatureActionCarryEntity::handleCarryEntity(worker,&book,&shelf);
+    carry.handleCarryEntity(worker,&book,&shelf);
     library.notifyCarryingStateChanged(&worker,&book);
     check(worker.popped==1 && book.tile==&floor,"blocked shelf preserves book");
     worker.routeAllowed=true; worker.atShelf=true;
@@ -316,8 +385,11 @@ int main()
     library.notifyCarryingStateChanged(&worker,&book);
     check(book.tile==&floor,"foreign worker cannot deliver");
     worker.seat=&owner;
-    CreatureActionCarryEntity::handleCarryEntity(worker,&book,&shelf);
-    library.notifyCarryingStateChanged(&worker,&book);
+    {
+        CreatureActionCarryEntity completed(worker,&book,&library);
+        completed.handleCarryEntity(worker,&book,&shelf);
+        check(completed.mDelivered,"successful carry records completion before action removal");
+    }
     check(book.tile==&shelf && floor.entities.empty() && shelf.entities.size()==1,"delivery updates occupancy onto shelf");
     check(book.seat==&owner && book.getItem()!=nullptr && library.mSkillPoints==0,"delivery claims book without reward");
     check(book.visibilityRemovals==1 && book.visibilityAdds==1,"only successful delivery refreshes client placement");
@@ -366,6 +438,38 @@ int main()
     check(library.mSkillPoints==100.0,"second delivery still defers reward");
     check(library.openResearchBook() && library.mSkillPoints==200.0,"next work cycle opens delivered second book");
     check(!library.openResearchBook() && library.mSkillPoints==200.0,"no repeated reward");
+
+    // Every other destination keeps its previous non-null carrier, including trap callbacks.
+    const RoomType destinations[]={RoomType::treasury,RoomType::ghostRoom,RoomType::merchant,
+        RoomType::alchemyLab,RoomType::crypt,RoomType::dormitory,RoomType::dungeonTemple,
+        RoomType::infirmary,RoomType::prison,RoomType::workshop};
+    GameEntity callbackCargo; callbackCargo.tile=&floor;
+    for(RoomType type : destinations)
+    {
+        Room destination; destination.type=type;
+        {
+            CreatureActionCarryEntity interrupted(worker,&callbackCargo,&destination);
+        }
+        check(destination.callbacks==1 && destination.lastCarrier==&worker && destination.lastCargo==&callbackCargo,
+            "ordinary non-library callback preserves carrier and cargo");
+    }
+    Room trap; trap.GameEntity::type=GameEntityType::other;
+    {
+        CreatureActionCarryEntity interrupted(worker,&callbackCargo,&trap);
+    }
+    check(trap.lastCarrier==&worker && trap.lastCargo==&callbackCargo,"trap callback retains required carrier");
+    Room external; external.type=RoomType::crypt;
+    {
+        CreatureActionCarryEntity interrupted(worker,&callbackCargo,&external);
+        interrupted.mExternalDrag=true;
+    }
+    check(external.callbacks==1 && external.lastCarrier==nullptr,"external drag cancellation remains null");
+    {
+        CreatureActionCarryEntity completed(worker,&callbackCargo,&external);
+        completed.mExternalDrag=true; completed.mDelivered=true;
+    }
+    check(external.callbacks==2 && external.lastCarrier==&worker,"completed external delivery retains carrier");
+    callbackCargo.removeEntityFromPositionTile();
 
     // Fixed world positions for the four wall orientations, independently specified.
     const float rotations[4]={0.0f,90.0f,180.0f,270.0f};
@@ -427,7 +531,7 @@ int main()
 
 
 def main():
-    """Exercise production delivery state, lifecycle and save records with researcher-only rewards."""
+    """Exercise carry completion, interruption, callback compatibility and researcher-only rewards."""
     library = read("source/rooms/RoomLibrary.cpp")
     carry = read("source/creatureaction/CreatureActionCarryEntity.cpp")
     assert '#include "utils/MakeUnique.h"' in carry
@@ -443,6 +547,8 @@ def main():
     assert "tile = building->askSpotForCarriedEntity(entityToCarry);" in grab
     destructor = function(carry, "CreatureActionCarryEntity::~CreatureActionCarryEntity(")
     assert destructor.index("notifyEntityCarryOff(pos)") < destructor.index("notifyCarryingStateChanged(")
+    assert "this, std::ref(mCreature), mEntityToCarry, mTileDest" in function(
+        carry, "std::function<bool()> CreatureActionCarryEntity::action(")
     code = PRELUDE
     for signature in ("Tile* RoomLibrary::bookshelfTile(", "bool RoomLibrary::hasCarryEntitySpot(",
                       "bool RoomLibrary::isBookshelfTile(", "bool RoomLibrary::getBookshelfApproach(",
@@ -458,6 +564,7 @@ def main():
                       "void ItemBagEntity::notifyEntityCarryOn(", "void ItemBagEntity::notifyEntityCarryOff(",
                       "void ItemBagEntity::exportToStream(", "bool ItemBagEntity::importFromStream("):
         code += function(bag, signature) + "\n"
+    code += function(carry, "CreatureActionCarryEntity::~CreatureActionCarryEntity(") + "\n"
     code += function(carry, "bool CreatureActionCarryEntity::handleCarryEntity(") + "\n" + CASES
     with tempfile.TemporaryDirectory(prefix="library-shelf-") as directory:
         work = Path(directory)

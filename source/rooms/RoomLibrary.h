@@ -67,7 +67,7 @@ public:
     bool hasCarryEntitySpot(GameEntity* carriedEntity) override;
     //! \brief Directs the worker to a bookshelf of the library, never to a plain tile.
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
-    //! \brief Puts a delivered research book onto the shelf.
+    //! \brief Puts a completed carry's book onto the shelf; a null carrier cancels delivery.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
     //! \brief Tests whether the tile belongs to this library and contains actual shelf furniture.
     bool isBookshelfTile(Tile* tile);

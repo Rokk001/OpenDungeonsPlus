@@ -451,7 +451,7 @@ bool RoomLibrary::getBookshelfApproach(Creature& carrier, Tile* tile, std::vecto
         Ogre::Vector2::ZERO, approach);
 }
 
-//! \brief Confirms shelf delivery after arrival and sends the placed book to clients with vision.
+//! \brief Accepts a completed carry's non-null carrier, rechecks arrival and sends shelf placement to clients.
 void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
     if(carrier == nullptr || carrier->getSeat() != getSeat() || carriedEntity == nullptr ||

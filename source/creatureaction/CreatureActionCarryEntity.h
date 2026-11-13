@@ -57,8 +57,8 @@ public:
     bool notifyPickedUp(GameEntity* entity) override;
     bool notifyDropped(GameEntity* entity) override;
 
-    //! \brief Walks cargo to its destination, using a furniture-aware stand position for tables and library shelves.
-    static bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest);
+    //! \brief Walks cargo to its destination and records completed shelf delivery before releasing the action.
+    bool handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest);
 
     //! \brief Returns the nearest own gold tile with room (own treasuries and own heart ring) that the creature
     //! can walk to from the given tile, or nullptr when no gold tile has room or none can be reached.
