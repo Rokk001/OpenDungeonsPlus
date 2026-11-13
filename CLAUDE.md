@@ -26,14 +26,6 @@ These instructions apply to every change made to this repository with an AI assi
 
 - Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when the owner explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
 
-## Working mode
-
-Working mode: never wait idle. While a build, load test or agent runs, start every other task that does not depend on its result at once as a separate subagent (analysis, code fixes on own branches, checks, documentation). Only Blender work stays sequential, and timing measurements run without competing game instances. Before reporting 'waiting', list what else could run now and start it.
-
-## Agent model
-
-- Agent model: Model classes, effort always medium: light = Claude Haiku 5.5 / GPT-6 Luna, medium = Claude Sonnet 5.5 / GPT-6.1 Terra, heavy = Claude Opus 5.5 / GPT-6.1 Sol. Both providers of a class are equivalent; a plan's model line is fulfilled by either. Never ask the owner about the model.
-
 ## Protected content
 
 - Never copy or derive levels, maps, graphics, models, sounds, texts or data tables from
@@ -43,8 +35,8 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
   `docs/development/NAME-ALIASES.md` as the reference for our own names.
 - Never cite another game, its publisher or any outside source for rules, values or names
   in code, comments, docs, commits, branch names or PR texts.
-- Data from commercial games used for local testing stays outside the repository
-  (`G:\Moreya-Internal\medien\`) and is never committed.
+- Data from commercial games used for local testing stays outside the repository and is
+  never committed.
 - Every new asset needs a `CREDITS` entry with source and licence in the same commit;
   AI-generated assets are marked as such.
 - `scripts/check-protected-content.py` checks pushes against these rules. Install it once
@@ -53,8 +45,8 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 
 ## Binary and large archive files
 
-- Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset of the OpenDungeonsPlus repo) are never stored in a Git repository or kept locally. After integration they are moved to G:\Moreya-Internal\medien\<plan folder>\ (Unraid share, mapped as G: on laptop and VM). Blender agents open and save .blend files directly there. Text files (plans, state files, scripts, configs) live in the private repo %USERPROFILE%\GitHub\Moreya-Internal.
-- assets-src is not in the repository. Scripts and checks read it from the environment variable ODP_ASSETS_SRC (\\192.168.1.30\Git\Moreya-Internal\medien), else from <repo>/assets-src. Never create assets-src inside a worktree; save new asset sources directly under ODP_ASSETS_SRC.
+- Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset) are never stored in the Git repository.
+- Asset sources live outside the repository in the folder named by the environment variable ODP_ASSETS_SRC; scripts and checks read them from there, else from <repo>/assets-src. Never create assets-src inside a worktree; save new asset sources directly under ODP_ASSETS_SRC.
 
 ## Load tests
 
@@ -75,20 +67,11 @@ Diese Pfade direkt verwenden, nie danach suchen.
 
 ## Builds
 
-- Build flow (owner, 2026-10-25; adapted to the HaiveQueen flow on 2026-11-13):
-  1. Queens and Agents never run a full build, a compile check or check scripts, and compile nothing while a plan is in
-     progress.
-  2. Each Agent works in its own worktree and sub-branch and checks only its own change. The Queen merges the Agent
-     branches locally into the plan branch, writes the list in the section "## Completeness" of the state file (one line
-     per requirement: "- <id>: done | <evidence>") and registers ready (bzz ready). The Queen never merges the
-     integration branch and never pushes.
-  3. After ready is accepted, the HaiveQueen Orchestrator merges the current origin/integration/all into the plan branch
-     and resolves all conflicts so that the content of both sides is kept completely, then runs the compile check, all
-     check scripts and the build, pushes, deploys and asks the owner for the acceptance.
-  4. Plans run in parallel, also when they change the same files. HaiveQueen knows no order between plans: a plan that
-     needs another plan's result (it builds on code that plan adds) is submitted only after that plan is integrated.
-- Check scripts in source/tests that compile small C++ probes with cl are not a game build; the HaiveQueen Orchestrator runs them after ready.
-- Every release build of the HaiveQueen Orchestrator that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on the owner's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every Orchestrator release build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
+- Work on a feature or fix branch never runs a full build.
+- Before a branch is merged into integration/all, the current origin/integration/all is merged into it and all conflicts are
+  resolved so that the content of both sides is kept completely; the result must compile, and all check scripts (including
+  those in source/tests that compile small C++ probes with cl) and the load test must be green.
+- Every release build that is merged into integration/all and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on the owner's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every release build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
 
 ## Working rules
 
