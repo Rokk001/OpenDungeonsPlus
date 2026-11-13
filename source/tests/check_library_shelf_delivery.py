@@ -34,6 +34,7 @@ PRELUDE = r'''
 #include <vector>
 #define OD_LOG_ERR(message) ((void)0)
 #define OD_LOG_INF(message) ((void)0)
+#define OD_ASSERT_TRUE(result) check(bool(result), "carry invariant")
 //! \brief Fails the probe with the independently specified expectation.
 void check(bool result, const char* message)
 { if(!result) throw std::runtime_error(message); }
@@ -101,10 +102,20 @@ struct GameEntity
     Tile* getPositionTile() { return tile; }
     void setSeat(Seat* value) { seat=value; }
     void setPosition(const Ogre::Vector3& value);
+    //! \brief Removes occupancy and marks picked-up cargo off-map like the production base entity.
     void removeEntityFromPositionTile()
-    { tile->entities.erase(std::remove(tile->entities.begin(),tile->entities.end(),this),tile->entities.end()); }
+    {
+        if(!onMap) return;
+        onMap=false;
+        tile->entities.erase(std::remove(tile->entities.begin(),tile->entities.end(),this),tile->entities.end());
+    }
+    //! \brief Restores map membership only when cargo is released onto the ground.
     void addEntityToPositionTile()
-    { if(std::find(tile->entities.begin(),tile->entities.end(),this)==tile->entities.end()) tile->entities.push_back(this); }
+    {
+        if(onMap) return;
+        onMap=true;
+        tile->entities.push_back(this);
+    }
     void removeFromGameMap() { onMap=false; removed=true; }
     void deleteYourself() { deleted=true; }
     //! \brief Supplies listener and release operations used by the production carry destructor.
@@ -130,11 +141,12 @@ struct ConfigManager
     { check(key=="GhostEctoplasmResearchPoints","reward key"); return 100.0; }
     double getItemSetting(const std::string&,const std::string&) { return 20.0; }
 };
-//! \brief Supplies base placement serialization without replacing the bag's delivery-state format.
+//! \brief Supplies base placement, pickup and serialization without replacing the bag's delivery-state format.
 struct RenderedMovableEntity : GameEntity
 {
     void pickup() { removeEntityFromPositionTile(); }
-    void drop(const Ogre::Vector3& value) { setPosition(value); }
+    //! \brief Restores map occupancy after a keeper's drop.
+    void drop(const Ogre::Vector3& value) { setPosition(value); addEntityToPositionTile(); }
     void exportToStream(std::ostream& stream) const
     { stream << position.x << ' ' << position.y << ' ' << position.z << ' '; }
     bool importFromStream(std::istream& stream)
@@ -168,18 +180,26 @@ std::vector<Tile*> world;
 //! \brief Updates occupancy using nearest tile coordinates when a book moves onto an offset shelf.
 void GameEntity::setPosition(const Ogre::Vector3& value)
 {
-    removeEntityFromPositionTile(); position=value;
+    const bool wasOnMap=onMap;
+    if(wasOnMap) removeEntityFromPositionTile();
+    position=value;
     for(Tile* candidate : world)
         if(candidate->x==int(std::round(value.x)) && candidate->y==int(std::round(value.y))) tile=candidate;
-    tile->entities.push_back(this);
+    if(wasOnMap) addEntityToPositionTile();
 }
-//! \brief Holds a worker's route and action effects for the carry handler.
+//! \brief Holds a worker's route, attached cargo and action effects for the production carry methods.
 struct Creature : GameEntity
 {
     Seat* seat=nullptr;
     Tile* tile=nullptr;
     bool routeAllowed=true, atShelf=false;
     int popped=0, walked=0, pushed=0, destinations=0;
+    GameEntity* mCarriedEntity=nullptr;
+    std::vector<Seat*> mSeatsWithVisionNotified;
+    //! \brief Enables authoritative attachment in the extracted production carry method.
+    bool getIsOnServerMap() { return true; }
+    //! \brief Executes the production worker attachment and visibility lifecycle.
+    void carryEntity(GameEntity*);
     Seat* getSeat() { return seat; }
     Tile* getPositionTile() { return tile; }
     std::string getName() { return "worker"; }
@@ -190,7 +210,8 @@ struct Creature : GameEntity
     void pushAction(std::unique_ptr<class CreatureActionWalkToTile>) { ++pushed; }
     //! \brief Supplies drag-only cleanup while recording ordinary cargo detachment.
     int cargoReleases=0;
-    void releaseCarriedEntity() { ++cargoReleases; }
+    //! \brief Detaches the worker's cargo when the production action releases it.
+    void releaseCarriedEntity() { ++cargoReleases; mCarriedEntity=nullptr; }
     void clearDestinations(int,bool,bool) {}
     void notifyCorpseDragEnd() {}
     void notifyDragEnd() {}
@@ -298,7 +319,7 @@ struct CreatureActionCarryEntity
 '''
 
 CASES = r'''
-//! \brief Checks floor recovery, navigation, fixed top-shelf placement in four orientations and single-use rewards.
+//! \brief Checks pickup, off-map transport, floor recovery, rotated shelf placement and single-use rewards.
 int main()
 {
     Seat owner, enemy;
@@ -525,15 +546,73 @@ int main()
     check(!invalid.importFromStream(wrongKind),"shelf marker cannot turn another product into a shelved book");
     std::stringstream truncated("3 0 0 ShelvedResearchBook");
     check(!invalid.importFromStream(truncated),"truncated shelf record fails loading");
+
+    // Run actual bag pickup and worker attachment before navigation, completion and interruption.
+    furniture.mesh="Bookshelf"; furniture.rotation=0; furniture.position.z=0;
+    worker.routeAllowed=true; worker.seat=&owner; worker.atShelf=false;
+    library.mSkillPoints=0;
+    ItemBagEntity carriedBook; carriedBook.tile=&floor; floor.entities.push_back(&carriedBook);
+    carriedBook.markResearchBookShelved();
+    carriedBook.setCarryLock(worker,true);
+    carriedBook.notifyEntityCarryOn(&worker);
+    worker.carryEntity(&carriedBook);
+    check(!carriedBook.getIsOnMap() && !carriedBook.isResearchBookShelved() &&
+        worker.mCarriedEntity==&carriedBook &&
+        std::find(floor.entities.begin(),floor.entities.end(),&carriedBook)==floor.entities.end(),
+        "production pickup attaches off-map cargo and revokes shelf state");
+    const int walksBefore=worker.walked;
+    {
+        CreatureActionCarryEntity delivery(worker,&carriedBook,&library);
+        delivery.handleCarryEntity(worker,&carriedBook,&shelf);
+        check(!delivery.mDelivered && worker.walked==walksBefore+1 && !carriedBook.getIsOnMap(),
+            "off-map carried book walks to shelf without early completion");
+        worker.atShelf=true;
+        delivery.handleCarryEntity(worker,&carriedBook,&shelf);
+        check(delivery.mDelivered && !carriedBook.getIsOnMap() && library.mSkillPoints==0,
+            "off-map cargo completes only at shelf approach and has no pickup reward");
+    }
+    check(worker.mCarriedEntity==nullptr && carriedBook.getIsOnMap() && !carriedBook.locked &&
+        carriedBook.tile==&shelf && carriedBook.isResearchBookShelved(),
+        "release restores map occupancy before library confirms shelf delivery");
+    check(carriedBook.visibilityRemovals==2 && carriedBook.visibilityAdds==1 &&
+        carriedBook.clientPosition.z==carriedBook.position.z && carriedBook.position.z==1.51358f,
+        "pickup removes old snapshot and successful release publishes shelf placement");
+    check(library.openResearchBook() && library.mSkillPoints==100 && carriedBook.deleted,
+        "researcher consumes the normally picked-up book exactly once");
+    check(!library.openResearchBook() && library.mSkillPoints==100,"carried book cannot reward twice");
+
+    ItemBagEntity interruptedBook; interruptedBook.tile=&floor; floor.entities.push_back(&interruptedBook);
+    interruptedBook.setCarryLock(worker,true);
+    interruptedBook.notifyEntityCarryOn(&worker);
+    worker.carryEntity(&interruptedBook);
+    worker.atShelf=false;
+    {
+        CreatureActionCarryEntity interrupted(worker,&interruptedBook,&library);
+        interrupted.handleCarryEntity(worker,&interruptedBook,&shelf);
+        check(!interrupted.mDelivered && !interruptedBook.getIsOnMap(),"walking pickup remains off-map");
+        worker.atShelf=true;
+    }
+    check(worker.mCarriedEntity==nullptr && interruptedBook.getIsOnMap() && !interruptedBook.locked &&
+        interruptedBook.tile==&floor && !interruptedBook.isResearchBookShelved() &&
+        interruptedBook.getEntityCarryType(&worker)==EntityCarryType::itemBag,
+        "interrupted production pickup releases recoverable floor cargo even at shelf approach");
+    check(!library.openResearchBook() && library.mSkillPoints==100 && interruptedBook.visibilityAdds==0,
+        "interrupted pickup cannot publish shelf placement or grant research");
     std::cout << "library shelf delivery: OK\n";
 }
 '''
 
 
 def main():
-    """Exercise carry completion, interruption, callback compatibility and researcher-only rewards."""
+    """Exercise production pickup, off-map carry, completion, interruption and researcher-only rewards."""
     library = read("source/rooms/RoomLibrary.cpp")
     carry = read("source/creatureaction/CreatureActionCarryEntity.cpp")
+    constructor = function(carry, "CreatureActionCarryEntity::CreatureActionCarryEntity(Creature& creature, GameEntity& entityToCarry, Building&")
+    assert constructor.index("mEntityToCarry->notifyEntityCarryOn(&mCreature);") < constructor.index(
+        "mCreature.carryEntity(mEntityToCarry);")
+    entity = read("source/entities/GameEntity.cpp")
+    assert "setIsOnMap(false);" in function(entity, "void GameEntity::removeEntityFromPositionTile(")
+    assert "setIsOnMap(true);" in function(entity, "void GameEntity::addEntityToPositionTile(")
     assert '#include "utils/MakeUnique.h"' in carry
     bag = read("source/entities/ItemBagEntity.cpp")
     use = function(library, "bool RoomLibrary::useRoom(")
@@ -565,6 +644,7 @@ def main():
                       "void ItemBagEntity::exportToStream(", "bool ItemBagEntity::importFromStream("):
         code += function(bag, signature) + "\n"
     code += function(carry, "CreatureActionCarryEntity::~CreatureActionCarryEntity(") + "\n"
+    code += function(read("source/entities/Creature.cpp"), "void Creature::carryEntity(") + "\n"
     code += function(carry, "bool CreatureActionCarryEntity::handleCarryEntity(") + "\n" + CASES
     with tempfile.TemporaryDirectory(prefix="library-shelf-") as directory:
         work = Path(directory)

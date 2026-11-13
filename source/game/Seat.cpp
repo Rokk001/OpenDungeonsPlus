@@ -1639,7 +1639,7 @@ bool Seat::importSeatFromStream(std::istream& is)
 }
 
 
-//! \brief Saves seat state, tile knowledge, shared room settings and announced creature classes.
+//! \brief Saves seat state and fractional room progress at round-trip precision without changing stream precision.
 bool Seat::exportSeatToStream(std::ostream& os) const
 {
     os << "seatId\t";
@@ -1731,7 +1731,12 @@ bool Seat::exportSeatToStream(std::ostream& os) const
         os << Skills::toString(type) << "\t" << getSkillLevel(type) << "\n";
     os << "[/ResearchProgress]\n";
     if(mSkillPointsRemainder > 0.0)
-        os << "[ResearchRemainder]\t" << std::setprecision(17) << mSkillPointsRemainder << std::defaultfloat << "\n";
+    {
+        const std::streamsize researchPrecision = os.precision();
+        os << "[ResearchRemainder]\t" << std::setprecision(std::numeric_limits<double>::max_digits10)
+           << mSkillPointsRemainder << std::defaultfloat << "\n";
+        os.precision(researchPrecision);
+    }
     os << "[WorkerJobs]";
     for(uint32_t value : mWorkerJobSettings.fixed) os << '\t' << value;
     os << '\t' << mWorkerJobSettings.freeMode;
@@ -1763,8 +1768,11 @@ bool Seat::exportSeatToStream(std::ostream& os) const
     os << "[GhostBells] " << mGhostBellTargets.size();
     for(const std::string& name : mGhostBellTargets) os << ' ' << name;
     os << " [/GhostBells]\n";
-    os << "[GhostRoom] " << mEctoplasmLevels << ' ' << static_cast<uint32_t>(mGhostProduct)
+    const std::streamsize ghostPrecision = os.precision();
+    os << "[GhostRoom] " << std::setprecision(std::numeric_limits<double>::max_digits10)
+       << mEctoplasmLevels << ' ' << static_cast<uint32_t>(mGhostProduct)
        << ' ' << mGhostRevive << " [/GhostRoom]\n";
+    os.precision(ghostPrecision);
 
     os << "[Merchant]\t" << mMerchantMargin << '\t' << mMerchantMode << '\t' << mLabMode << "\t[/Merchant]\n";
     os << "[MerchantBalance] " << mMerchantGoldRemainder << " [/MerchantBalance]\n";

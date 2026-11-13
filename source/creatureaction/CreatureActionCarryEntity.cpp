@@ -323,7 +323,7 @@ bool CreatureActionCarryEntity::isPulledOverGround(const Creature& carrier, Game
     return !patient.isAlive() || patient.getKoTurnCounter() < 0;
 }
 
-//! \brief Delivers cargo at its tile or furniture approach, recording successful shelf arrival before popping.
+//! \brief Delivers carried off-map cargo at its tile or shelf approach before recording completion.
 bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest)
 {
     if(tileDest == nullptr)
@@ -354,7 +354,7 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     {
         std::vector<Ogre::Vector2> approach;
         if(room == mBuildingDest && room->getSeat() == creature.getSeat() &&
-            room->hasCarryEntitySpot(entityToCarry) && entityToCarry->getIsOnMap() &&
+            room->hasCarryEntitySpot(entityToCarry) &&
             static_cast<RoomLibrary*>(room)->getBookshelfApproach(creature, tileDest, approach))
         {
             if(!approach.empty())
