@@ -65,6 +65,9 @@ struct Tile
     Room* room=nullptr;
     int x=0, y=0;
     std::vector<class GameEntity*> entities;
+    std::vector<Seat*> visibleSeats;
+    //! \brief Returns the viewers of this tile, independent of the worker's tile.
+    const std::vector<Seat*>& getSeatsWithVision() { return visibleSeats; }
     Room* getCoveringRoom() { return room; }
     Ogre::Vector2 getPosition2d() { return Ogre::Vector2(float(x),float(y)); }
     std::vector<class GameEntity*> getEntitiesInTile() { return entities; }
@@ -77,6 +80,15 @@ struct GameEntity
     Seat* seat=nullptr;
     bool onMap=true, locked=false, removed=false, deleted=false;
     Ogre::Vector3 position;
+    int visibilityRemovals=0, visibilityAdds=0;
+    Ogre::Vector3 clientPosition;
+    Seat* clientSeat=nullptr;
+    std::vector<Seat*> clientViewers;
+    //! \brief Records removal of the old client placement.
+    void fireRemoveEntityToSeatsWithVision() { ++visibilityRemovals; }
+    //! \brief Records the full snapshot and its destination viewers.
+    void notifySeatsWithVision(const std::vector<Seat*>& seats)
+    { ++visibilityAdds; clientPosition=position; clientSeat=seat; clientViewers=seats; }
     GameEntityType getObjectType() { return type; }
     bool getIsOnMap() { return onMap; }
     bool isCarryLocked() { return locked; }
@@ -207,7 +219,7 @@ struct CreatureActionCarryEntity
 '''
 
 CASES = r'''
-//! \brief Checks floor recovery, shelf navigation, delayed consumption and single-use rewards.
+//! \brief Checks floor recovery, shelf navigation, client placement, delayed consumption and single-use rewards.
 int main()
 {
     Seat owner, enemy;
@@ -215,6 +227,7 @@ int main()
     library.seat=&owner;
     Tile floor, shelf;
     floor.room=&library; shelf.room=&library; shelf.x=3;
+    floor.visibleSeats={&owner}; shelf.visibleSeats={&owner,&enemy};
     world={&floor,&shelf}; library.mCoveredTiles=world;
     BuildingObject furniture;
     furniture.mesh="Bookshelf"; furniture.position=Ogre::Vector3(3,0,0);
@@ -249,6 +262,10 @@ int main()
     library.notifyCarryingStateChanged(&worker,&book);
     check(book.tile==&shelf && floor.entities.empty() && shelf.entities.size()==1,"delivery updates occupancy onto shelf");
     check(book.seat==&owner && book.getItem()!=nullptr && library.mSkillPoints==0,"delivery claims book without reward");
+    check(book.visibilityRemovals==1 && book.visibilityAdds==1,"only successful delivery refreshes client placement");
+    check(book.clientPosition.x==3 && book.clientPosition.y==0 && book.clientPosition.z==0 &&
+        book.clientSeat==&owner,"client snapshot contains shelf coordinates and owner");
+    check(book.clientViewers==shelf.visibleSeats,"snapshot reaches shelf viewers rather than only floor viewers");
     check(book.getEntityCarryType(&worker)==EntityCarryType::notCarryable,"shelved book waits for researcher");
     book.locked=true;
     check(!library.openResearchBook(),"reserved book cannot be consumed");

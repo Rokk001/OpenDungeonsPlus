@@ -450,7 +450,7 @@ bool RoomLibrary::getBookshelfApproach(Creature& carrier, Tile* tile, std::vecto
         Ogre::Vector2::ZERO, approach);
 }
 
-//! \brief Shelves a book only after its worker reaches a valid shelf interaction position.
+//! \brief Shelves a delivered book and sends its claimed shelf placement to clients with vision.
 void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
     if(carrier == nullptr || carrier->getSeat() != getSeat() || carriedEntity == nullptr ||
@@ -463,8 +463,12 @@ void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carr
     releaseInteractionPosition(carrier);
     if(!reached)
         return;
+    // The carry release has already queued the worker's position for clients. Recreate the
+    // released book with its shelf position and owner, using the normal visibility protocol.
+    carriedEntity->fireRemoveEntityToSeatsWithVision();
     carriedEntity->setSeat(getSeat());
     carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x, shelf->getPosition().y, 0.0f));
+    carriedEntity->notifySeatsWithVision(tile->getSeatsWithVision());
 }
 
 //! \brief Opens at most one unlocked, shelved book during a researcher's work cycle.
