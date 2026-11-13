@@ -129,17 +129,23 @@ class Room:
         return self.apparatus[kind]["stand"] if self.unlocked(kind) else None
 
     # Step 4: put down in front of the apparatus; the idle apparatus takes it in at once, at a busy one it stays lying on
-    # the stand tile as a real item (decision 813)
-    def put_down(self, item):
+    # the stand tile as a real item (decision 813). An interrupted carry leaves it at the interruption position.
+    def put_down(self, item, at=None):
         drop = body(ROOM, "void RoomGhostRoom::notifyCarryingStateChanged(")
         has(drop, "delivery", "const int32_t target=bag->getItem()->mGhostTarget;",
             "Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];",
             "if(!apparatus.working)\n    {\n        takeInEctoplasm(apparatus,*bag,ConfigManager::getSingleton().getRoomConfigDouble(\"GhostApparatusTurns\"));\n        return;\n    }",
             "bag->getItem()->mGhostTarget=static_cast<int32_t>(kind);\n    bag->setSeat(getSeat());\n}")
+        guard = "if(!isApparatusUnlocked(*getSeat(),kind) || apparatus.tile==nullptr || apparatus.stand==nullptr ||\n       tile!=apparatus.stand || carrier->getSeat()!=getSeat()) return;"
+        has(drop, "arrival before acceptance", guard)
+        assert drop.index(guard) < drop.index("takeInEctoplasm(") < drop.index("bag->setSeat(getSeat());")
         item["carried"] = False
         kind = NAMES[item["target"]]
-        item["at"] = self.apparatus[kind]["stand"] if self.unlocked(kind) else "floor"
-        if self.unlocked(kind) and not self.apparatus[kind]["working"]:
+        item["at"] = at if at is not None else self.apparatus[kind]["stand"] if self.unlocked(kind) else "floor"
+        if not self.unlocked(kind) or item["at"] != self.apparatus[kind]["stand"]:
+            self.floor.append(item)
+            return
+        if not self.apparatus[kind]["working"]:
             self.take_in(kind)
             return
         self.floor.append(item)
@@ -368,6 +374,55 @@ def busy():
     print("busy apparatus: ectoplasm waits as items in front of it: ok")
 
 
+# Interrupted carries stay recoverable inside and outside the room, including at the wrong apparatus.
+def interrupted():
+    carry = read("source/creatureaction/CreatureActionCarryEntity.cpp")
+    destructor = body(carry, "CreatureActionCarryEntity::~CreatureActionCarryEntity(")
+    has(destructor, "release interrupted cargo", "mEntityToCarry->setCarryLock(mCreature, false);",
+        "mEntityToCarry->notifyEntityCarryOff(pos);", "mCreature.releaseCarriedEntity();",
+        "mBuildingDest->notifyCarryingStateChanged(")
+    assert destructor.index("notifyEntityCarryOff(pos)") < destructor.index("notifyCarryingStateChanged(")
+    walking = body(carry, "bool CreatureActionCarryEntity::handleCarryEntity(")
+    failed_path = body(walking, "if(!creature.setDestination(tileDest))")
+    has(failed_path, "failed path ends carry", "creature.popAction();", "return false;")
+    bag = read("source/entities/ItemBagEntity.cpp")
+    has(body(bag, "void ItemBagEntity::notifyEntityCarryOff("), "drop at actual interruption position",
+        "setPosition(position); addEntityToPositionTile();")
+    has(body(ROOM, "bool RoomGhostRoom::isWaitingEctoplasm("), "wrong stand remains recoverable",
+        "const GhostProduct kind=static_cast<GhostProduct>(item->mGhostTarget);",
+        "const Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];",
+        "bag.getPositionTile()==apparatus.stand")
+    for kind in ("mana", "research", "crystal"):
+        for busy_apparatus in (False, True):
+            for position in ("outside-room", "room-entry", "stand-of-" + next(other for other in KINDS if other != kind)):
+                room = Room(3, kind)
+                if busy_apparatus:
+                    first = room.cauldron()
+                    room.pick_up(first)
+                    room.put_down(first)
+                item = room.cauldron()
+                assert room.pick_up(item) == "stand-of-" + kind
+                held_before = room.held(kind)
+                turns_before = room.apparatus[kind]["turns"]
+                room.put_down(item, at=position)
+                assert item in room.floor and item["at"] == position and not item["carried"]
+                assert room.held(kind) == held_before and room.apparatus[kind]["turns"] == turns_before
+                assert not room.waiting(kind) and room.carryable(item), (kind, position, "recoverable after interruption")
+                room.upkeep()
+                assert item in room.floor and room.carryable(item), (kind, position, "upkeep cannot accept remotely")
+                # Retry the interrupted delivery and reach its selected stand.
+                assert room.pick_up(item) == "stand-of-" + kind
+                room.put_down(item)
+                if busy_apparatus:
+                    assert room.waiting(kind) == [item] and not room.carryable(item)
+                    for _ in range(20):
+                        room.upkeep()
+                    assert item not in room.floor and not room.waiting(kind)
+                else:
+                    assert item not in room.floor and room.apparatus[kind]["working"]
+    print("interrupted carries: no remote acceptance, recoverable until stand delivery: ok")
+
+
 # An old save with a waiting count: the first upkeep lays the count out as items in front of the apparatus.
 def old_save():
     room = Room(1, "mana")
@@ -398,11 +453,13 @@ def locked():
     print("locked apparatus takes no ectoplasm: ok")
 
 
+# Run the normal flows, busy queues, interrupted deliveries and save compatibility scenarios.
 def main():
     assert set(KINDS) == {"mana", "research", "crystal"}, KINDS
     for kind in ("mana", "research", "crystal"):
         follow(kind)
     busy()
+    interrupted()
     old_save()
     locked()
     print("ghost apparatus flow: ok")

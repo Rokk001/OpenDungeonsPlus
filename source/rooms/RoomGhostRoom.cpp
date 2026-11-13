@@ -975,6 +975,7 @@ Tile* RoomGhostRoom::askSpotForCarriedEntity(GameEntity* carriedEntity)
     return getApparatusStandTile(getDeliveryTarget(*carriedEntity,*static_cast<ItemBagEntity*>(carriedEntity)->getItem()));
 }
 
+//! \brief Accepts ectoplasm only after it reaches the stand of the apparatus chosen at pickup.
 void RoomGhostRoom::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
     if(carrier==nullptr || carriedEntity==nullptr || carriedEntity->getObjectType()!=GameEntityType::itemBagEntity ||
@@ -987,7 +988,10 @@ void RoomGhostRoom::notifyCarryingStateChanged(Creature* carrier, GameEntity* ca
     const int32_t target=bag->getItem()->mGhostTarget;
     const GhostProduct kind=target>=0 && target<static_cast<int32_t>(APPARATUS_COUNT)?static_cast<GhostProduct>(target):getChosenApparatus(*getSeat());
     Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];
-    if(!isApparatusUnlocked(*getSeat(),kind) || apparatus.tile==nullptr) return;
+    // The carry destructor also reports interrupted deliveries. Leave those items where they fell so workers can
+    // recover them; only an item at this apparatus's stand can be consumed or join its waiting queue.
+    if(!isApparatusUnlocked(*getSeat(),kind) || apparatus.tile==nullptr || apparatus.stand==nullptr ||
+       tile!=apparatus.stand || carrier->getSeat()!=getSeat()) return;
     // An idle apparatus takes the ectoplasm in at once
     if(!apparatus.working)
     {
