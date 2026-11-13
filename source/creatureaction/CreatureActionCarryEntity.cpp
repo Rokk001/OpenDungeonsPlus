@@ -16,8 +16,10 @@
  */
 
 #include "creatureaction/CreatureActionCarryEntity.h"
+#include "creatureaction/CreatureActionWalkToTile.h"
 
 #include "entities/Building.h"
+#include "entities/BuildingObject.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
@@ -315,7 +317,7 @@ bool CreatureActionCarryEntity::isPulledOverGround(const Creature& carrier, Game
     return !patient.isAlive() || patient.getKoTurnCounter() < 0;
 }
 
-//! \brief Delivers cargo at its tile or the merchant table's existing furniture-aware stand position.
+//! \brief Delivers cargo at its tile or a furniture-aware stand position for tables and library shelves.
 bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity* entityToCarry, Tile* tileDest)
 {
     if(tileDest == nullptr)
@@ -341,6 +343,22 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     }
 
     Room* room = tileDest->getCoveringRoom();
+    if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity && room != nullptr &&
+        room->getType() == RoomType::library)
+    {
+        BuildingObject* shelf = room->getBuildingObjectFromTile(tileDest);
+        std::vector<Ogre::Vector2> approach;
+        if(shelf != nullptr && shelf->getMeshName() == "Bookshelf" && room->hasCarryEntitySpot(entityToCarry) &&
+            RoomObjectNavigation::workApproach(creature, *shelf, tileDest->getPosition2d(), Ogre::Vector2::ZERO, approach) &&
+            !approach.empty())
+        {
+            creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, approach, false, true);
+            creature.pushAction(Utils::make_unique<CreatureActionWalkToTile>(creature));
+            return false;
+        }
+        creature.popAction();
+        return false;
+    }
     if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity && room != nullptr &&
         room->getType() == RoomType::merchant)
     {

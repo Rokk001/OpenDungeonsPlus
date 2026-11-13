@@ -402,6 +402,7 @@ bool RoomLibrary::useRoom(Creature& creature, bool forced)
     return false;
 }
 
+//! \brief Finds actual shelf furniture rather than a workstation or an empty library tile.
 Tile* RoomLibrary::bookshelfTile()
 {
     for(Tile* tile : mCoveredTiles)
@@ -413,6 +414,7 @@ Tile* RoomLibrary::bookshelfTile()
     return nullptr;
 }
 
+//! \brief Accepts research books only while a shelf exists.
 bool RoomLibrary::hasCarryEntitySpot(GameEntity* carriedEntity)
 {
     if(carriedEntity == nullptr || carriedEntity->getObjectType() != GameEntityType::itemBagEntity || mCoveredTiles.empty())
@@ -422,6 +424,7 @@ bool RoomLibrary::hasCarryEntitySpot(GameEntity* carriedEntity)
     return item != nullptr && item->mGhostItem == GhostItem::researchBook && bookshelfTile() != nullptr;
 }
 
+//! \brief Returns the shelf tile for a research book delivery.
 Tile* RoomLibrary::askSpotForCarriedEntity(GameEntity* carriedEntity)
 {
     if(!hasCarryEntitySpot(carriedEntity))
@@ -429,27 +432,36 @@ Tile* RoomLibrary::askSpotForCarriedEntity(GameEntity* carriedEntity)
     return bookshelfTile();
 }
 
+//! \brief Shelves a book only after its worker reaches a valid shelf interaction position.
 void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
-    if(carrier == nullptr || carriedEntity == nullptr || !carriedEntity->getIsOnMap() || !hasCarryEntitySpot(carriedEntity))
+    if(carrier == nullptr || carrier->getSeat() != getSeat() || carriedEntity == nullptr ||
+        !carriedEntity->getIsOnMap() || !hasCarryEntitySpot(carriedEntity))
         return;
-    Tile* tile = carriedEntity->getPositionTile();
-    if(tile == nullptr || tile->getCoveringRoom() != this)
+    Tile* tile = bookshelfTile();
+    BuildingObject* shelf = getBuildingObjectFromTile(tile);
+    std::vector<Ogre::Vector2> approach;
+    const bool reached = RoomObjectNavigation::workApproach(*carrier, *shelf, tile->getPosition2d(),
+        Ogre::Vector2::ZERO, approach) && approach.empty();
+    releaseInteractionPosition(carrier);
+    if(!reached)
         return;
     carriedEntity->setSeat(getSeat());
-    BuildingObject* shelf = getBuildingObjectFromTile(tile);
-    if(shelf != nullptr && shelf->getMeshName() == "Bookshelf")
-        carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x, shelf->getPosition().y, 0.0f));
+    carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x, shelf->getPosition().y, 0.0f));
 }
 
+//! \brief Opens at most one unlocked, shelved book during a researcher's work cycle.
 bool RoomLibrary::openResearchBook()
 {
     for(Tile* tile : mCoveredTiles)
     {
+        BuildingObject* shelf = getBuildingObjectFromTile(tile);
+        if(shelf == nullptr || shelf->getMeshName() != "Bookshelf")
+            continue;
         const std::vector<GameEntity*> entities = tile->getEntitiesInTile();
         for(GameEntity* entity : entities)
         {
-            if(entity->getObjectType() != GameEntityType::itemBagEntity || entity->isCarryLocked())
+            if(entity->getObjectType() != GameEntityType::itemBagEntity || !entity->getIsOnMap() || entity->isCarryLocked())
                 continue;
             ItemBagEntity* bag = static_cast<ItemBagEntity*>(entity);
             if(bag->getItem() == nullptr || bag->getItem()->mGhostItem != GhostItem::researchBook)

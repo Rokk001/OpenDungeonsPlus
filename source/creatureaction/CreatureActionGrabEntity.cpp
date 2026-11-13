@@ -72,7 +72,7 @@ std::function<bool()> CreatureActionGrabEntity::action()
         std::ref(mCreature), std::ref(mEntityToCarry), mForced, mDigGold);
 }
 
-//! \brief Rechecks cargo and retains its origin when starting a transport.
+//! \brief Rechecks cargo and selects the actual shelf for research books when starting a transport.
 bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* entityToCarry, bool forced, bool digGold)
 {
     Tile* myTile = creature.getPositionTile();
@@ -168,6 +168,9 @@ bool CreatureActionGrabEntity::handleGrabEntity(Creature& creature, GameEntity* 
         if(building->hasCarryEntitySpot(entityToCarry))
         {
             Tile* tile = building->getCoveredTile(0);
+            if(bagItem != nullptr && bagItem->mGhostItem == GhostItem::researchBook &&
+                building->getObjectType() == GameEntityType::room && static_cast<Room*>(building)->getType() == RoomType::library)
+                tile = building->askSpotForCarriedEntity(entityToCarry);
             // Ectoplasm goes to the nearest apparatus of the chosen kind in any of the keeper's ghost rooms
             if(bagItem != nullptr && bagItem->mGhostItem == GhostItem::ectoplasm && building->getObjectType() == GameEntityType::room &&
                 static_cast<Room*>(building)->getType() == RoomType::ghostRoom)

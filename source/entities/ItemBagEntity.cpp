@@ -1,6 +1,7 @@
 #include "entities/ItemBagEntity.h"
 
 #include "entities/Creature.h"
+#include "entities/BuildingObject.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/ItemDrops.h"
@@ -133,7 +134,7 @@ void ItemBagEntity::drop(const Ogre::Vector3& position)
 
 //! \brief Workers move old bags to their use room first and otherwise leave treasury storage undisturbed.
 //! Ectoplasm, mana crystals and research books, and every ghost good in a ghost room, are carried at once, except
-//! ectoplasm waiting in front of its busy apparatus.
+//! ectoplasm waiting in front of its busy apparatus and research books already on library shelves.
 EntityCarryType ItemBagEntity::getEntityCarryType(Creature* carrier)
 {
     if(carrier == nullptr || mItem.get() == nullptr || !getIsOnMap() || getCarryLock(*carrier))
@@ -149,7 +150,11 @@ EntityCarryType ItemBagEntity::getEntityCarryType(Creature* carrier)
         return EntityCarryType::notCarryable;
     // A research book on a library shelf stays there until a researcher opens it
     if(mItem->mGhostItem == GhostItem::researchBook && storage != nullptr && storage->getType() == RoomType::library)
-        return EntityCarryType::notCarryable;
+    {
+        BuildingObject* shelf = storage->getBuildingObjectFromTile(tile);
+        if(shelf != nullptr && shelf->getMeshName() == "Bookshelf")
+            return EntityCarryType::notCarryable;
+    }
     if((mItem->mMerchantGoods || (storage != nullptr && storage->getType() == RoomType::treasury)) && !isWantedByUseRoom(*carrier))
         return EntityCarryType::notCarryable;
     return EntityCarryType::itemBag;
