@@ -37,6 +37,8 @@ def main():
         script.write_text(r'''
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'ogre-prereq-provenance.ps1')
+# The orchestrator can inherit a module environment without this cmdlet.
+function Get-FileHash { throw 'Get-FileHash is unavailable' }
 $fixtureRoot = $PSScriptRoot
 $receiptPath = Join-Path $fixtureRoot 'install/share/opendungeons-plus/ogre-prereq.json'
 New-Item -ItemType Directory -Force (Split-Path -Parent $receiptPath) | Out-Null
