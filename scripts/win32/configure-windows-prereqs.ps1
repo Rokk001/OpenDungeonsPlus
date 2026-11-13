@@ -7,7 +7,8 @@ Assert-OgrePrereqProvenance -DependencyRoot $taskDependencyRoot
 . (Join-Path $PSScriptRoot 'Enter-OpenDungeonsPlus.ps1')
 $taskRepo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $taskRoot = $taskDependencyRoot
-$taskOptions = @('-S', $taskRepo, '-B', "$taskRepo\build\windows",
+# Recreate CMake's cache so a build directory copied from another checkout can be configured here.
+$taskOptions = @('--fresh', '-S', $taskRepo, '-B', "$taskRepo\build\windows",
     '-G', 'Visual Studio 18 2026', '-A', 'x64', '-DOD_BUILD_TESTING=OFF', '-DBUILD_TESTING=OFF',
     "-DOD_BUILD_NUMBER=$BuildNumber",
     "-DCMAKE_INSTALL_PREFIX=$taskRepo/build/windows/install",
