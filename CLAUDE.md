@@ -49,6 +49,10 @@ These instructions apply to every change made to this repository with an AI assi
 - Asset sources live outside the repository in the folder named by the environment variable ODP_ASSETS_SRC; scripts and checks read them from there, else from <repo>/assets-src. Never create assets-src inside a worktree; save new asset sources directly under ODP_ASSETS_SRC.
 
 ## Load tests
+- Every integration runs exactly one load test: start the game, load one level and let it
+  run briefly. If level files were changed in the integration, only those levels are loaded
+  in addition. There are no sample levels and no run over all maps.
+- The full load test of all levels runs only when the owner explicitly asks for it.
 
 - Check scripts, load tests and the pre-push hook are never removed, weakened or bypassed.
   If a check measures wrongly, correct the check openly and report it to the owner first.
