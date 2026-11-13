@@ -64,7 +64,8 @@ def item_flow_and_unlocks():
     has(delivery, "idle apparatus takes it in, busy one leaves it lying", "if(!apparatus.working)",
         "takeInEctoplasm(apparatus,*bag,ConfigManager::getSingleton().getRoomConfigDouble(\"GhostApparatusTurns\"));\n        return;",
         "bag->getItem()->mGhostTarget=static_cast<int32_t>(kind);\n    bag->setSeat(getSeat());")
-    assert "queue" not in delivery and "takeItem" not in delivery and "deleteYourself" not in delivery, "a busy apparatus keeps no count"
+    delivery_code = re.sub(r"//[^\n]*|/\*[\s\S]*?\*/", "", delivery)
+    assert "queue" not in delivery_code and "takeItem" not in delivery_code and "deleteYourself" not in delivery_code, "a busy apparatus keeps no count"
     has(body(room, "void RoomGhostRoom::takeInEctoplasm("), "taking one item in",
         "bag.takeItem();", "bag.removeFromGameMap();bag.deleteYourself();", "apparatus.working=true;apparatus.workTurns+=turns;")
     waiting = body(room, "bool RoomGhostRoom::isWaitingEctoplasm(")

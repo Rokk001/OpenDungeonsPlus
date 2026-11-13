@@ -386,8 +386,8 @@ def interrupted():
     failed_path = body(walking, "if(!creature.setDestination(tileDest))")
     has(failed_path, "failed path ends carry", "creature.popAction();", "return false;")
     bag = read("source/entities/ItemBagEntity.cpp")
-    has(body(bag, "void ItemBagEntity::notifyEntityCarryOff("), "drop at actual interruption position",
-        "setPosition(position); addEntityToPositionTile();")
+    carry_off = body(bag, "void ItemBagEntity::notifyEntityCarryOff(")
+    assert re.search(r"setPosition\(position\);\s*addEntityToPositionTile\(\);", carry_off), "drop at actual interruption position"
     has(body(ROOM, "bool RoomGhostRoom::isWaitingEctoplasm("), "wrong stand remains recoverable",
         "const GhostProduct kind=static_cast<GhostProduct>(item->mGhostTarget);",
         "const Apparatus& apparatus=mApparatuses[static_cast<uint32_t>(kind)];",
