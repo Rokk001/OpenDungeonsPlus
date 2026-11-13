@@ -1,7 +1,6 @@
 #include "entities/ItemBagEntity.h"
 
 #include "entities/Creature.h"
-#include "entities/BuildingObject.h"
 #include "entities/GameEntityType.h"
 #include "entities/Tile.h"
 #include "game/ItemDrops.h"
@@ -11,6 +10,7 @@
 #include "render/RenderManager.h"
 #include "rooms/Room.h"
 #include "rooms/RoomGhostRoom.h"
+#include "rooms/RoomLibrary.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Random.h"
@@ -151,8 +151,7 @@ EntityCarryType ItemBagEntity::getEntityCarryType(Creature* carrier)
     // A research book on a library shelf stays there until a researcher opens it
     if(mItem->mGhostItem == GhostItem::researchBook && storage != nullptr && storage->getType() == RoomType::library)
     {
-        BuildingObject* shelf = storage->getBuildingObjectFromTile(tile);
-        if(shelf != nullptr && shelf->getMeshName() == "Bookshelf")
+        if(static_cast<RoomLibrary*>(storage)->isBookshelfTile(tile))
             return EntityCarryType::notCarryable;
     }
     if((mItem->mMerchantGoods || (storage != nullptr && storage->getType() == RoomType::treasury)) && !isWantedByUseRoom(*carrier))

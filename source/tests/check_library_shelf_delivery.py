@@ -116,7 +116,10 @@ struct Room
     virtual bool hasCarryEntitySpot(GameEntity*) { return false; }
     RoomType getType() { return type; }
     Seat* getSeat() { return seat; }
+protected:
+    //! \brief Keeps furniture lookup protected as in the real Building API.
     BuildingObject* getBuildingObjectFromTile(Tile* tile) { return tile==shelfTile ? object : nullptr; }
+public:
     void releaseInteractionPosition(class Creature*) { ++released; }
 };
 std::vector<Tile*> world;
@@ -195,6 +198,8 @@ struct RoomLibrary : Room
     bool hasCarryEntitySpot(GameEntity*) override;
     Tile* askSpotForCarriedEntity(GameEntity*);
     void notifyCarryingStateChanged(Creature*,GameEntity*);
+    bool isBookshelfTile(Tile*);
+    bool getBookshelfApproach(Creature&,Tile*,std::vector<Ogre::Vector2>&);
     bool openResearchBook();
 };
 struct CreatureActionCarryEntity
@@ -272,6 +277,7 @@ def main():
     """Run unchanged production rules and check their researcher-only call wiring."""
     library = read("source/rooms/RoomLibrary.cpp")
     carry = read("source/creatureaction/CreatureActionCarryEntity.cpp")
+    assert '#include "utils/MakeUnique.h"' in carry
     bag = read("source/entities/ItemBagEntity.cpp")
     use = function(library, "bool RoomLibrary::useRoom(")
     assert use.index("if(!approach.empty())") < use.index("openResearchBook();")
@@ -286,6 +292,7 @@ def main():
     assert destructor.index("notifyEntityCarryOff(pos)") < destructor.index("notifyCarryingStateChanged(")
     code = PRELUDE
     for signature in ("Tile* RoomLibrary::bookshelfTile(", "bool RoomLibrary::hasCarryEntitySpot(",
+                      "bool RoomLibrary::isBookshelfTile(", "bool RoomLibrary::getBookshelfApproach(",
                       "Tile* RoomLibrary::askSpotForCarriedEntity(",
                       "void RoomLibrary::notifyCarryingStateChanged(", "bool RoomLibrary::openResearchBook("):
         code += function(library, signature) + "\n"

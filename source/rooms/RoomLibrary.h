@@ -69,6 +69,10 @@ public:
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
     //! \brief Puts a delivered research book onto the shelf.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
+    //! \brief Tests whether the tile belongs to this library and contains actual shelf furniture.
+    bool isBookshelfTile(Tile* tile);
+    //! \brief Finds the furniture-aware delivery route; an empty path means the worker has arrived.
+    bool getBookshelfApproach(Creature& carrier, Tile* tile, std::vector<Ogre::Vector2>& approach);
 
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;

@@ -19,7 +19,6 @@
 #include "creatureaction/CreatureActionWalkToTile.h"
 
 #include "entities/Building.h"
-#include "entities/BuildingObject.h"
 #include "entities/Creature.h"
 #include "entities/CreatureDefinition.h"
 #include "entities/GameEntityType.h"
@@ -34,11 +33,13 @@
 #include "rooms/RoomPrison.h"
 #include "rooms/Room.h"
 #include "rooms/RoomMerchant.h"
+#include "rooms/RoomLibrary.h"
 #include "rooms/RoomTreasury.h"
 #include "rooms/RoomType.h"
 #include "utils/ConfigManager.h"
 #include "utils/Helper.h"
 #include "utils/LogManager.h"
+#include "utils/MakeUnique.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -346,10 +347,9 @@ bool CreatureActionCarryEntity::handleCarryEntity(Creature& creature, GameEntity
     if(entityToCarry->getObjectType() == GameEntityType::itemBagEntity && room != nullptr &&
         room->getType() == RoomType::library)
     {
-        BuildingObject* shelf = room->getBuildingObjectFromTile(tileDest);
         std::vector<Ogre::Vector2> approach;
-        if(shelf != nullptr && shelf->getMeshName() == "Bookshelf" && room->hasCarryEntitySpot(entityToCarry) &&
-            RoomObjectNavigation::workApproach(creature, *shelf, tileDest->getPosition2d(), Ogre::Vector2::ZERO, approach) &&
+        if(room->hasCarryEntitySpot(entityToCarry) &&
+            static_cast<RoomLibrary*>(room)->getBookshelfApproach(creature, tileDest, approach) &&
             !approach.empty())
         {
             creature.setWalkPath(EntityAnimation::walk_anim, EntityAnimation::idle_anim, true, true, approach, false, true);

@@ -432,6 +432,24 @@ Tile* RoomLibrary::askSpotForCarriedEntity(GameEntity* carriedEntity)
     return bookshelfTile();
 }
 
+//! \brief Tests actual shelf furniture on a tile of this library.
+bool RoomLibrary::isBookshelfTile(Tile* tile)
+{
+    if(tile == nullptr || tile->getCoveringRoom() != this)
+        return false;
+    BuildingObject* shelf = getBuildingObjectFromTile(tile);
+    return shelf != nullptr && shelf->getMeshName() == "Bookshelf";
+}
+
+//! \brief Finds a reachable standing position at a shelf without exposing protected furniture lookup.
+bool RoomLibrary::getBookshelfApproach(Creature& carrier, Tile* tile, std::vector<Ogre::Vector2>& approach)
+{
+    if(!isBookshelfTile(tile))
+        return false;
+    return RoomObjectNavigation::workApproach(carrier, *getBuildingObjectFromTile(tile), tile->getPosition2d(),
+        Ogre::Vector2::ZERO, approach);
+}
+
 //! \brief Shelves a book only after its worker reaches a valid shelf interaction position.
 void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
@@ -441,8 +459,7 @@ void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carr
     Tile* tile = bookshelfTile();
     BuildingObject* shelf = getBuildingObjectFromTile(tile);
     std::vector<Ogre::Vector2> approach;
-    const bool reached = RoomObjectNavigation::workApproach(*carrier, *shelf, tile->getPosition2d(),
-        Ogre::Vector2::ZERO, approach) && approach.empty();
+    const bool reached = getBookshelfApproach(*carrier, tile, approach) && approach.empty();
     releaseInteractionPosition(carrier);
     if(!reached)
         return;
