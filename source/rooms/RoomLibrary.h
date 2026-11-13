@@ -69,9 +69,10 @@ public:
     Tile* askSpotForCarriedEntity(GameEntity* carriedEntity) override;
     //! \brief Puts a delivered research book onto the shelf.
     void notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity) override;
-    //! \brief Opens one research book on this library's shelves and credits its research points.
-    //! \return true if a book was opened
-    bool openResearchBook();
+    //! \brief Tests whether the tile belongs to this library and contains actual shelf furniture.
+    bool isBookshelfTile(Tile* tile);
+    //! \brief Finds the furniture-aware delivery route; an empty path means the worker has arrived.
+    bool getBookshelfApproach(Creature& carrier, Tile* tile, std::vector<Ogre::Vector2>& approach);
 
     static const RoomType mRoomType;
     static const TileVisual mRoomVisual;
@@ -85,6 +86,9 @@ protected:
     BuildingObject* notifyActiveSpotCreated(ActiveSpotPlace place, Tile* tile) override;
     void notifyActiveSpotRemoved(ActiveSpotPlace place, Tile* tile) override;
 private:
+    //! \brief Opens one shelved book during useRoom; delivery and upkeep cannot credit it.
+    //! \return true if a book was opened
+    bool openResearchBook();
     //! \brief Returns the first tile carrying a bookshelf, or nullptr if the library has none.
     Tile* bookshelfTile();
     void getCreatureWantedPos(Creature* creature, Tile* tileSpot,
