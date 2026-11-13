@@ -40,6 +40,7 @@ def main():
             "carriedEntity->setSeat(getSeat());",
             "carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x - 0.12f * std::sin(angle),\n"
             "        shelf->getPosition().y + 0.12f * std::cos(angle), shelf->getPosition().z + 1.51358f));",
+            "static_cast<ItemBagEntity*>(carriedEntity)->markResearchBookShelved();",
             "carriedEntity->notifySeatsWithVision(tile->getSeatsWithVision());")
     assert "takeItem" not in delivery and "mSkillPoints" not in delivery
     destructor = function(read("source/creatureaction/CreatureActionCarryEntity.cpp"),
@@ -62,10 +63,19 @@ def main():
     opening = function(library, "bool RoomLibrary::openResearchBook(")
     ordered(opening, 'shelf->getMeshName() != "Bookshelf"', "tile->getEntitiesInTile()",
             "!entity->getIsOnMap() || entity->isCarryLocked()", "GhostItem::researchBook",
+            "!bag->isResearchBookShelved()",
             "mSkillPoints +=", "bag->takeItem();", "bag->removeFromGameMap();", "return true;")
     assert "openResearchBook();" in function(library, "bool RoomLibrary::useRoom(")
     assert "openResearchBook" not in function(library, "void RoomLibrary::doUpkeep(")
     assert "isBookshelfTile(tile)" in function(bag, "EntityCarryType ItemBagEntity::getEntityCarryType(")
+    assert "isResearchBookShelved() &&" in function(bag, "EntityCarryType ItemBagEntity::getEntityCarryType(")
+    for signature in ("void ItemBagEntity::pickup(", "void ItemBagEntity::drop(",
+                      "void ItemBagEntity::notifyEntityCarryOn(", "void ItemBagEntity::notifyEntityCarryOff("):
+        assert "mResearchBookShelved = false;" in function(bag, signature)
+    assert 'stream << "ShelvedResearchBook ";' in function(bag, "void ItemBagEntity::exportToStream(")
+    assert 'mResearchBookShelved = id == "ShelvedResearchBook";' in function(bag, "bool ItemBagEntity::importFromStream(")
+    assert "packet << mResearchBookShelved;" in function(bag, "void ItemBagEntity::exportToPacket(")
+    assert "packet >> mResearchBookShelved;" in function(bag, "void ItemBagEntity::importFromPacket(")
     print("library shelf synchronization: OK (non-compiling source checks)")
 
 

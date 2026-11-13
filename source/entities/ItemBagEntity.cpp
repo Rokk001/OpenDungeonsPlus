@@ -71,7 +71,7 @@ bool ItemBagEntity::isWantedByUseRoom(Creature& carrier)
 //! \brief Creates a crystal or ghost good mesh, or the common two-material bag for the owned instance.
 ItemBagEntity::ItemBagEntity(GameMap* map, std::unique_ptr<ItemInstance> item) :
     RenderedMovableEntity(map, "ItemBag_", "ItemBag", 0.0f, false),
-    mItem(std::move(item)), mIdleTurns(0)
+    mItem(std::move(item)), mIdleTurns(0), mResearchBookShelved(false)
 {
     if(mItem.get() != nullptr)
     {
@@ -81,7 +81,7 @@ ItemBagEntity::ItemBagEntity(GameMap* map, std::unique_ptr<ItemInstance> item) :
 }
 
 //! \brief Creates an empty bag for a complete saved or network record.
-ItemBagEntity::ItemBagEntity(GameMap* map) : RenderedMovableEntity(map), mIdleTurns(0) {}
+ItemBagEntity::ItemBagEntity(GameMap* map) : RenderedMovableEntity(map), mIdleTurns(0), mResearchBookShelved(false) {}
 
 //! \brief Unregisters only items that were not transferred to another holder.
 ItemBagEntity::~ItemBagEntity()
@@ -125,9 +125,17 @@ bool ItemBagEntity::tryDrop(Seat* seat, Tile* tile)
         (getGameMap()->isInEditorMode() || seat->hasVisionOnTile(tile));
 }
 
-//! \brief Places the bag before Player sends its drop notification and offers any keeper gift.
+//! \brief Takes a bag out of shelf storage before removing its ground occupancy.
+void ItemBagEntity::pickup()
+{
+    mResearchBookShelved = false;
+    RenderedMovableEntity::pickup();
+}
+
+//! \brief Places a floor bag before Player sends its drop notification and offers any keeper gift.
 void ItemBagEntity::drop(const Ogre::Vector3& position)
 {
+    mResearchBookShelved = false;
     RenderedMovableEntity::drop(position);
     mIdleTurns = 0;
 }
@@ -148,10 +156,10 @@ EntityCarryType ItemBagEntity::getEntityCarryType(Creature* carrier)
     const uint32_t idleLimit = static_cast<uint32_t>(ConfigManager::getSingleton().getItemSetting("ItemDrops", "ItemBagIdleTurns"));
     if(mIdleTurns < idleLimit && mItem->mGhostItem == GhostItem::none && !(mItem->mSoulCrystal && inGhostRoom))
         return EntityCarryType::notCarryable;
-    // A research book on a library shelf stays there until a researcher opens it
+    // A successfully delivered research book on a library shelf stays until a researcher opens it
     if(mItem->mGhostItem == GhostItem::researchBook && storage != nullptr && storage->getType() == RoomType::library)
     {
-        if(static_cast<RoomLibrary*>(storage)->isBookshelfTile(tile))
+        if(isResearchBookShelved() && static_cast<RoomLibrary*>(storage)->isBookshelfTile(tile))
             return EntityCarryType::notCarryable;
     }
     if((mItem->mMerchantGoods || (storage != nullptr && storage->getType() == RoomType::treasury)) && !isWantedByUseRoom(*carrier))
@@ -159,10 +167,19 @@ EntityCarryType ItemBagEntity::getEntityCarryType(Creature* carrier)
     return EntityCarryType::itemBag;
 }
 
-//! \brief Removes ground occupancy while a worker carries this bag.
-void ItemBagEntity::notifyEntityCarryOn(Creature* carrier) { removeEntityFromPositionTile(); }
-//! \brief Restores ground occupancy at the delivered position.
-void ItemBagEntity::notifyEntityCarryOff(const Ogre::Vector3& position) { setPosition(position); addEntityToPositionTile(); }
+//! \brief Clears shelf delivery and removes ground occupancy while a worker carries this bag.
+void ItemBagEntity::notifyEntityCarryOn(Creature* carrier)
+{
+    mResearchBookShelved = false;
+    removeEntityFromPositionTile();
+}
+//! \brief Releases a floor bag; the library separately confirms successful shelf delivery.
+void ItemBagEntity::notifyEntityCarryOff(const Ogre::Vector3& position)
+{
+    mResearchBookShelved = false;
+    setPosition(position);
+    addEntityToPositionTile();
+}
 
 //! \brief Reads and registers a bag only after a complete level record was parsed.
 ItemBagEntity* ItemBagEntity::loadFromStream(GameMap* map, std::istream& stream)
@@ -181,20 +198,25 @@ ItemBagEntity* ItemBagEntity::loadFromPacket(GameMap* map, ODPacket& packet)
     return bag;
 }
 
-//! \brief Writes the base placement and the unstacked contained instance.
+//! \brief Writes placement and an optional shelf-delivery prefix before the contained instance.
 void ItemBagEntity::exportToStream(std::ostream& stream) const
 {
     RenderedMovableEntity::exportToStream(stream);
+    if(mResearchBookShelved)
+        stream << "ShelvedResearchBook ";
     mItem->exportToStream(stream);
 }
 
-//! \brief Reads either a rolled instance or one of the three random-quality level tokens.
+//! \brief Reads delivery state and an instance; legacy unmarked books remain recoverable floor goods.
 bool ItemBagEntity::importFromStream(std::istream& stream)
 {
     if(!RenderedMovableEntity::importFromStream(stream))
         return false;
     std::string id;
     if(!(stream >> id))
+        return false;
+    mResearchBookShelved = id == "ShelvedResearchBook";
+    if(mResearchBookShelved && !(stream >> id))
         return false;
     const bool randomBag = id == "RandomEpic" || id == "RandomRare" || id == "RandomCommon";
     // A random item bag of a map holds one of the three ghost products instead of its item with GhostProductBoxChance
@@ -212,19 +234,22 @@ bool ItemBagEntity::importFromStream(std::istream& stream)
     }
     if(mItem.get() == nullptr)
         return false;
+    if(mResearchBookShelved && mItem->mGhostItem != GhostItem::researchBook)
+        return false;
     if(!getSpecialMesh(*mItem).empty()) setMeshName(getSpecialMesh(*mItem));
     getGameMap()->registerEpic(*mItem);
     return true;
 }
 
-//! \brief Sends the complete contained item after normal movable-entity placement.
+//! \brief Sends the complete contained item and its confirmed shelf state after placement.
 void ItemBagEntity::exportToPacket(ODPacket& packet, const Seat* seat) const
 {
     RenderedMovableEntity::exportToPacket(packet, seat);
     mItem->exportToPacket(packet);
+    packet << mResearchBookShelved;
 }
 
-//! \brief Reads the client copy's contained instance transactionally.
+//! \brief Reads the client copy's contained instance and confirmed shelf state.
 void ItemBagEntity::importFromPacket(ODPacket& packet)
 {
     RenderedMovableEntity::importFromPacket(packet);
@@ -232,6 +257,7 @@ void ItemBagEntity::importFromPacket(ODPacket& packet)
     if(item->importFromPacket(packet))
     {
         mItem = std::move(item);
+        packet >> mResearchBookShelved;
         if(!getSpecialMesh(*mItem).empty()) setMeshName(getSpecialMesh(*mItem));
     }
 }

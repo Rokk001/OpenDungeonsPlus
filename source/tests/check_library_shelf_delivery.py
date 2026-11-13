@@ -28,6 +28,7 @@ PRELUDE = r'''
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -100,6 +101,8 @@ struct GameEntity
     void setPosition(const Ogre::Vector3& value);
     void removeEntityFromPositionTile()
     { tile->entities.erase(std::remove(tile->entities.begin(),tile->entities.end(),this),tile->entities.end()); }
+    void addEntityToPositionTile()
+    { if(std::find(tile->entities.begin(),tile->entities.end(),this)==tile->entities.end()) tile->entities.push_back(this); }
     void removeFromGameMap() { onMap=false; removed=true; }
     void deleteYourself() { deleted=true; }
 };
@@ -120,6 +123,16 @@ struct ConfigManager
     double getRoomConfigDouble(const std::string& key)
     { check(key=="GhostEctoplasmResearchPoints","reward key"); return 100.0; }
     double getItemSetting(const std::string&,const std::string&) { return 20.0; }
+};
+//! \brief Supplies base placement serialization without replacing the bag's delivery-state format.
+struct RenderedMovableEntity : GameEntity
+{
+    void pickup() { removeEntityFromPositionTile(); }
+    void drop(const Ogre::Vector3& value) { setPosition(value); }
+    void exportToStream(std::ostream& stream) const
+    { stream << position.x << ' ' << position.y << ' ' << position.z << ' '; }
+    bool importFromStream(std::istream& stream)
+    { return bool(stream >> position.x >> position.y >> position.z); }
 };
 //! \brief Supplies the room's shelf lookup and destination checks.
 struct Room
@@ -193,17 +206,50 @@ struct MissileStone : MissileObject { void completeDelivery(Creature&) {} };
 struct RoomGhostRoom : Room { bool isWaitingEctoplasm(GameEntity&) { return false; } };
 //! \brief Supplies the item instance fields consulted by production bag rules.
 struct ItemInstance
-{ GhostItem mGhostItem=GhostItem::researchBook; bool mMerchantGoods=false, mSoulCrystal=false; };
+{
+    GhostItem mGhostItem=GhostItem::researchBook;
+    bool mMerchantGoods=false, mSoulCrystal=false;
+    //! \brief Keeps the item payload independent of the bag's optional shelf marker.
+    void exportToStream(std::ostream& stream) const { stream << "TestBook " << int(mGhostItem); }
+    bool importFromStream(std::istream& stream,const std::string& id)
+    { int kind=0; if(id!="TestBook" || !(stream >> kind)) return false; mGhostItem=GhostItem(kind); return true; }
+};
+enum class Quality { common, rare, epic };
+//! \brief Supplies unused random-token services while exercising production bag loading.
+struct GameMap
+{
+    bool isInEditorMode() { return true; }
+    std::unique_ptr<ItemInstance> rollItem(Quality) { return std::unique_ptr<ItemInstance>(new ItemInstance); }
+    void registerEpic(const ItemInstance&) {}
+};
+namespace Random { double Double(double,double) { return 1.0; } }
+namespace ItemDrops
+{
+std::unique_ptr<ItemInstance> randomGhostProduct(double)
+{ return std::unique_ptr<ItemInstance>(new ItemInstance); }
+}
 //! \brief Exposes the unchanged bag carry predicate and transfer operation.
-struct ItemBagEntity : GameEntity
+struct ItemBagEntity : RenderedMovableEntity
 {
     std::unique_ptr<ItemInstance> mItem;
     uint32_t mIdleTurns=0;
+    bool mResearchBookShelved=false;
     ItemBagEntity():mItem(new ItemInstance) { type=GameEntityType::itemBagEntity; }
     ItemInstance* getItem() { return mItem.get(); }
     std::unique_ptr<ItemInstance> takeItem() { return std::move(mItem); }
     bool isWantedByUseRoom(Creature&) { return false; }
     EntityCarryType getEntityCarryType(Creature*);
+    bool isResearchBookShelved() const;
+    void markResearchBookShelved();
+    void pickup();
+    void drop(const Ogre::Vector3&);
+    void notifyEntityCarryOn(Creature*);
+    void notifyEntityCarryOff(const Ogre::Vector3&);
+    void exportToStream(std::ostream&) const;
+    bool importFromStream(std::istream&);
+    GameMap* getGameMap() { static GameMap map; return &map; }
+    static std::string getSpecialMesh(const ItemInstance&) { return "Grimoire"; }
+    void setMeshName(const std::string&) {}
 };
 //! \brief Exposes production library functions and retained research for bounded assertions.
 struct RoomLibrary : Room
@@ -248,6 +294,14 @@ int main()
     check(!library.openResearchBook(),"library floor book is not opened");
     check(book.getEntityCarryType(&worker)==EntityCarryType::itemBag,"floor book remains carryable with shelves");
 
+    // A shelf tile alone must never stand in for successful delivery, even after interruption.
+    book.setPosition(Ogre::Vector3(3,0,0));
+    check(!library.openResearchBook(),"floor book on shelf tile cannot grant research");
+    check(book.getEntityCarryType(&worker)==EntityCarryType::itemBag,"floor book on shelf tile is recoverable");
+    library.notifyCarryingStateChanged(&worker,&book);
+    check(!book.isResearchBookShelved() && !library.openResearchBook(),"interrupted carry on shelf tile stays floor cargo");
+    book.setPosition(Ogre::Vector3(0,0,0));
+
     CreatureActionCarryEntity::handleCarryEntity(worker,&book,&shelf);
     check(worker.walked==1 && worker.pushed==1 && worker.popped==0,"shelf delivery queues furniture approach");
     check(worker.destinations==0,"worker does not walk directly into shelf tile");
@@ -274,6 +328,30 @@ int main()
         book.clientSeat==&owner,"client snapshot contains shelf coordinates and owner");
     check(book.clientViewers==shelf.visibleSeats,"snapshot reaches shelf viewers rather than only floor viewers");
     check(book.getEntityCarryType(&worker)==EntityCarryType::notCarryable,"shelved book waits for researcher");
+
+    std::stringstream saved;
+    book.exportToStream(saved);
+    ItemBagEntity restored;
+    check(restored.importFromStream(saved) && restored.isResearchBookShelved(),"confirmed delivery survives save/load");
+    check(std::abs(restored.position.z-1.51358f)<0.00001f,"save/load retains shelf elevation");
+    // Keeper pickup/drop and worker carry/release must revoke delivery before any later shelf visit.
+    book.pickup();
+    check(!book.isResearchBookShelved(),"keeper pickup revokes shelf delivery");
+    book.drop(Ogre::Vector3(3,0,0));
+    check(!library.openResearchBook() && book.getEntityCarryType(&worker)==EntityCarryType::itemBag,
+        "keeper floor drop on shelf tile remains recoverable");
+    library.notifyCarryingStateChanged(&worker,&book);
+    book.notifyEntityCarryOn(&worker);
+    check(!book.isResearchBookShelved(),"worker pickup revokes shelf delivery");
+    book.notifyEntityCarryOff(Ogre::Vector3(3,0,0));
+    check(!library.openResearchBook() && book.getEntityCarryType(&worker)==EntityCarryType::itemBag,
+        "worker floor release on shelf tile remains recoverable");
+    std::stringstream floorSave;
+    book.exportToStream(floorSave);
+    check(restored.importFromStream(floorSave) && !restored.isResearchBookShelved(),"floor save clears previous loaded delivery");
+    std::stringstream legacy("3 0 0 TestBook 1");
+    check(restored.importFromStream(legacy) && !restored.isResearchBookShelved(),"legacy unmarked floor book is recoverable");
+    library.notifyCarryingStateChanged(&worker,&book);
     book.locked=true;
     check(!library.openResearchBook(),"reserved book cannot be consumed");
     book.locked=false; book.onMap=false;
@@ -283,7 +361,10 @@ int main()
     check(library.openResearchBook(),"researcher opens delivered book");
     check(book.deleted && book.removed && book.getItem()==nullptr,"opened book removed completely");
     check(library.mSkillPoints==100.0 && second.getItem()!=nullptr,"one book per work cycle");
-    check(library.openResearchBook() && library.mSkillPoints==200.0,"next work cycle opens second book");
+    check(!library.openResearchBook() && library.mSkillPoints==100.0,"undelivered second book waits for delivery");
+    library.notifyCarryingStateChanged(&worker,&second);
+    check(library.mSkillPoints==100.0,"second delivery still defers reward");
+    check(library.openResearchBook() && library.mSkillPoints==200.0,"next work cycle opens delivered second book");
     check(!library.openResearchBook() && library.mSkillPoints==200.0,"no repeated reward");
 
     // Fixed world positions for the four wall orientations, independently specified.
@@ -320,13 +401,33 @@ int main()
     check(floorBook.getEntityCarryType(&worker)==EntityCarryType::itemBag,"workstation floor books can be moved");
     furniture.mesh="Bookshelf"; floorBook.mItem->mGhostItem=GhostItem::manaCrystal;
     check(!library.hasCarryEntitySpot(&floorBook),"shelf accepts research books only");
+
+    std::stringstream savedAgain(saved.str());
+    check(restored.importFromStream(savedAgain),"shelved record reloads after legacy record");
+    restored.tile=&shelf; shelf.entities.push_back(&restored);
+    check(restored.getEntityCarryType(&worker)==EntityCarryType::notCarryable && library.mSkillPoints==200.0,
+        "loaded delivered book waits for researcher without awarding points on load");
+    check(library.openResearchBook() && restored.deleted && library.mSkillPoints==300.0,
+        "researcher opens loaded delivered book exactly once");
+    ItemBagEntity loadedFloor;
+    std::stringstream floorAgain(floorSave.str());
+    check(loadedFloor.importFromStream(floorAgain),"floor record reloads");
+    loadedFloor.tile=&shelf; shelf.entities.push_back(&loadedFloor);
+    check(!library.openResearchBook() && loadedFloor.getEntityCarryType(&worker)==EntityCarryType::itemBag,
+        "loaded floor book on bookshelf tile still requires delivery");
+    loadedFloor.removeEntityFromPositionTile();
+    ItemBagEntity invalid;
+    std::stringstream wrongKind("3 0 0 ShelvedResearchBook TestBook 3");
+    check(!invalid.importFromStream(wrongKind),"shelf marker cannot turn another product into a shelved book");
+    std::stringstream truncated("3 0 0 ShelvedResearchBook");
+    check(!invalid.importFromStream(truncated),"truncated shelf record fails loading");
     std::cout << "library shelf delivery: OK\n";
 }
 '''
 
 
 def main():
-    """Run unchanged production rules and check their researcher-only call wiring."""
+    """Exercise production delivery state, lifecycle and save records with researcher-only rewards."""
     library = read("source/rooms/RoomLibrary.cpp")
     carry = read("source/creatureaction/CreatureActionCarryEntity.cpp")
     assert '#include "utils/MakeUnique.h"' in carry
@@ -349,6 +450,14 @@ def main():
                       "void RoomLibrary::notifyCarryingStateChanged(", "bool RoomLibrary::openResearchBook("):
         code += function(library, signature) + "\n"
     code += function(bag, "EntityCarryType ItemBagEntity::getEntityCarryType(") + "\n"
+    bag_header = read("source/entities/ItemBagEntity.h")
+    for signature, qualified in (("bool isResearchBookShelved()", "bool ItemBagEntity::isResearchBookShelved()"),
+                                 ("void markResearchBookShelved()", "void ItemBagEntity::markResearchBookShelved()")):
+        code += function(bag_header, signature).replace(signature, qualified, 1) + "\n"
+    for signature in ("void ItemBagEntity::pickup(", "void ItemBagEntity::drop(",
+                      "void ItemBagEntity::notifyEntityCarryOn(", "void ItemBagEntity::notifyEntityCarryOff(",
+                      "void ItemBagEntity::exportToStream(", "bool ItemBagEntity::importFromStream("):
+        code += function(bag, signature) + "\n"
     code += function(carry, "bool CreatureActionCarryEntity::handleCarryEntity(") + "\n" + CASES
     with tempfile.TemporaryDirectory(prefix="library-shelf-") as directory:
         work = Path(directory)

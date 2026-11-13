@@ -451,7 +451,7 @@ bool RoomLibrary::getBookshelfApproach(Creature& carrier, Tile* tile, std::vecto
         Ogre::Vector2::ZERO, approach);
 }
 
-//! \brief Places a delivered book on the clear top shelf and sends its claimed placement to clients with vision.
+//! \brief Confirms shelf delivery after arrival and sends the placed book to clients with vision.
 void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
     if(carrier == nullptr || carrier->getSeat() != getSeat() || carriedEntity == nullptr ||
@@ -474,10 +474,11 @@ void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carr
     const Ogre::Real angle = shelf->getRotationAngle() * std::acos(-1.0f) / 180.0f;
     carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x - 0.12f * std::sin(angle),
         shelf->getPosition().y + 0.12f * std::cos(angle), shelf->getPosition().z + 1.51358f));
+    static_cast<ItemBagEntity*>(carriedEntity)->markResearchBookShelved();
     carriedEntity->notifySeatsWithVision(tile->getSeatsWithVision());
 }
 
-//! \brief Opens at most one unlocked, shelved book during a researcher's work cycle.
+//! \brief Opens at most one unlocked book with confirmed shelf delivery during a researcher's work cycle.
 bool RoomLibrary::openResearchBook()
 {
     for(Tile* tile : mCoveredTiles)
@@ -491,7 +492,8 @@ bool RoomLibrary::openResearchBook()
             if(entity->getObjectType() != GameEntityType::itemBagEntity || !entity->getIsOnMap() || entity->isCarryLocked())
                 continue;
             ItemBagEntity* bag = static_cast<ItemBagEntity*>(entity);
-            if(bag->getItem() == nullptr || bag->getItem()->mGhostItem != GhostItem::researchBook)
+            if(bag->getItem() == nullptr || bag->getItem()->mGhostItem != GhostItem::researchBook ||
+                !bag->isResearchBookShelved())
                 continue;
             mSkillPoints += ConfigManager::getSingleton().getRoomConfigDouble("GhostEctoplasmResearchPoints");
             bag->takeItem();

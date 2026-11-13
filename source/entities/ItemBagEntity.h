@@ -21,6 +21,10 @@ public:
     ItemInstance* getItem() { return mItem.get(); }
     //! \brief Returns the immutable contained instance.
     const ItemInstance* getItem() const { return mItem.get(); }
+    //! \brief Reports successful shelf delivery, independently of the book's floor tile.
+    bool isResearchBookShelved() const { return mResearchBookShelved; }
+    //! \brief Marks a research book after the library has confirmed arrival and placed it.
+    void markResearchBookShelved() { mResearchBookShelved = mItem != nullptr && mItem->mGhostItem == GhostItem::researchBook; }
     //! \brief Transfers ownership without unregistering an Epic that remains on this map.
     std::unique_ptr<ItemInstance> takeItem();
     //! \brief Restores an unaccepted gift to this same bag without changing Epic ownership.
@@ -37,6 +41,8 @@ public:
     bool tryPickup(Seat* seat) override;
     //! \brief Allows dropping onto any visible non-solid tile.
     bool tryDrop(Seat* seat, Tile* tile) override;
+    //! \brief Removes shelf delivery state when the keeper takes the bag into the hand.
+    void pickup() override;
     //! \brief Places a dropped bag; Player offers its gift after notifying the drop to clients.
     void drop(const Ogre::Vector3& position) override;
     //! \brief Makes old ground bags carryable while leaving treasury storage in place unless a merchant wants it.
@@ -64,6 +70,8 @@ private:
     //! \brief The owned instance and number of turns it has remained on the floor.
     std::unique_ptr<ItemInstance> mItem;
     uint32_t mIdleTurns;
+    //! \brief True only after confirmed library delivery; floor releases clear it.
+    bool mResearchBookShelved;
 };
 
 #endif
