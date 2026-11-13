@@ -1,4 +1,4 @@
-"""Check the sole saved-game entry, save restrictions and load-menu flights without compiling."""
+"""Check the saved-game entries, single-player restrictions and load-menu flights without compiling."""
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -24,7 +24,7 @@ load = read("source/modes/MenuModeLoad.cpp")
 assert "LoadGameButton" in names("gui/MenuMain.layout")
 assert "StartReplayButton" not in names("gui/MenuMain.layout")
 assert "LoadSkirmishButton" not in names("gui/WindowSkirmishSubMenu.layout")
-assert "LoadGameButton" not in names("gui/WindowGameOptions.layout")
+assert "LoadGameButton" in names("gui/WindowGameOptions.layout")
 assert "SaveGameButton" in names("gui/WindowGameOptions.layout")
 assert "KC_F8" not in game
 keys = function(game, "bool GameMode::keyPressedNormal(")
@@ -32,7 +32,25 @@ assert "case OIS::KC_F5:" in keys and "saveGame();" in keys
 page = function(game, "void GameMode::setOptionsPage(")
 save = function(game, "bool GameMode::saveGame(")
 assert "isConnected() &&" in page and "!= ServerMode::ModeGameMultiPlayer" in page
-assert 'setVisible(!endGame && canSave)' in page and 'entries.erase(entries.begin() + 2)' in page
+assert 'options->getChild("LoadGameButton")->setVisible(!endGame && canSave)' in page
+assert 'entries.erase(entries.begin() + 2, entries.begin() + 4)' in page
+open_browser = function(game, 'bool GameMode::loadGame(')
+assert '!ODServer::getSingleton().isConnected() ||' in open_browser and 'ModeGameMultiPlayer' in open_browser
+assert 'new MenuModeLoad(mModeManager, true)' in open_browser and 'mLoadBrowser->activate()' in open_browser
+assert '&GameMode::loadGame' in game
+activate = function(load, 'void MenuModeLoad::activate(')
+close = function(load, 'bool MenuModeLoad::closeBrowser(')
+assert 'mWasPaused = gameMap->getGamePaused()' in activate and 'gameMap->setGamePaused(true)' in activate and 'giveFocus()' in activate
+assert 'setGamePaused(mWasPaused)' in close and 'getCurrentMode()->giveFocus()' in close
+assert 'closeBrowser()' in function(load, 'bool MenuModeLoad::keyPressed(')
+selected = function(load, 'bool MenuModeLoad::launchSelectedButtonPressed(')
+assert 'requestSavedGame(level)' in selected and 'launchSavedGame(level)' in selected
+replay = selected[selected.index('if(loadConfirmAction'):selected.index('    if(mInGame)', selected.index('        if(!ODClient::getSingleton().replay(level))'))]
+assert replay.index('checkReplayValid') < replay.index('if(mInGame)') < replay.index('requestSavedGame(level)') < replay.index('ODClient::getSingleton().replay(level)')
+assert 'extension().string() == ".odr"' in activate and 'ODClient::getSingleton().replay(filename)' in activate
+assert 'mLoadBrowser->closeBrowser()' in function(game, 'void GameMode::deactivate(')
+assert 'mCurrentApplicationMode = nullptr' in function(manager, 'void ModeManager::checkModeChange(')
+assert 'mRequestedSavedGame' in function(manager, 'void ModeManager::checkModeChange(')
 assert '!ODServer::getSingleton().isConnected() ||' in save
 assert '== ServerMode::ModeGameMultiPlayer' in save
 assert save.index('return true;') < save.index('hideOptionsWindow();') < save.index('askSaveMap')

@@ -32,6 +32,9 @@ public:
     //! Used to call the corresponding Gui Sheet.
     void activate() final override;
 
+    //! \brief Routes Escape back to the running game when used in game.
+    bool keyPressed(const OIS::KeyEvent& arg) override;
+
     bool launchSelectedButtonPressed(const CEGUI::EventArgs&);
     bool deleteSelectedButtonPressed(const CEGUI::EventArgs&);
     bool updateDescription(const CEGUI::EventArgs&);

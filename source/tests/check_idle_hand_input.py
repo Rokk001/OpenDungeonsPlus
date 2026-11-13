@@ -56,8 +56,10 @@ struct RenderManager {
 };
 struct GameEditorModeBase {int deactivated=0;void deactivate(){++deactivated;} };
 struct GameMap {bool paused=false;bool getGamePaused(){return paused;} };
+struct LoadBrowser {bool open=false;int closes=0;bool isOpenInGame(){return open;}void closeBrowser(){open=false;++closes;} };
 struct GameMode:GameEditorModeBase {
  Keyboard keys;std::set<OIS::KeyCode> mIdleHandKeys;float mIdleHandElapsed=0;
+ LoadBrowser* mLoadBrowser=nullptr;
  GameMap map;GameMap* mGameMap=&map;bool blocked=false,connected=true;
  Keyboard* getKeyboard(){return &keys;}
  bool cameraInputBlocked(){return blocked;}bool isConnected(){return connected;}
@@ -99,6 +101,10 @@ int main(){
  renderer.ready=true;game.updateIdleHand(.01f,true);check(renderer.playing,"start once contextual animation permits");
  game.mIdleHandKeys.insert(OIS::KC_A);game.deactivate();
  check(!renderer.playing&&game.mIdleHandElapsed==0&&game.mIdleHandKeys.empty()&&game.deactivated==1,"mode exit cancels and preserves base cleanup");
+ LoadBrowser browser;game.mLoadBrowser=&browser;game.deactivate();
+ check(browser.closes==0,"closed browser is left alone on exit");
+ browser.open=true;game.deactivate();
+ check(!browser.open&&browser.closes==1&&game.deactivated==3,"open browser closes before base cleanup");
  std::cout<<"CHECKS="<<checks<<" FAILURES="<<failures<<'\n';return failures?1:0;
 }
 '''.replace('METHODS', methods).replace('ELIGIBLE', eligible)

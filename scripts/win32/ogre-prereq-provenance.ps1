@@ -14,6 +14,22 @@ function Get-OgrePrereqFileHash {
     }
 }
 
+function Get-OgrePrereqFileHash {
+    # Hash a file without depending on the host's Get-FileHash command.
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $taskStream = [System.IO.File]::OpenRead($Path)
+    try {
+        $taskSha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            return ([System.BitConverter]::ToString($taskSha256.ComputeHash($taskStream))).Replace('-', '')
+        } finally {
+            $taskSha256.Dispose()
+        }
+    } finally {
+        $taskStream.Dispose()
+    }
+}
+
 function Get-OgrePrereqPatchHashes {
     # Return the complete patch set required by the pinned Ogre source revision.
     $taskHashes = [ordered]@{}
