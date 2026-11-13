@@ -60,6 +60,12 @@ check('next-build-number.py' in build_script, 'integrator build script does not 
 check('configure-windows-prereqs.ps1" -BuildNumber $buildNumber' in build_script, 'integrator build script does not pass -BuildNumber to the configure script')
 check('--parallel $(if ($env:BUILD_PARALLEL) { $env:BUILD_PARALLEL } else { 1 })' in build_script, 'integrator build script must default to one build job and allow BUILD_PARALLEL to override it')
 check('build-start-$Run.txt' in build_script, 'integrator build script does not record the build start time')
+orchestrator = (repo / 'scripts/win32/orchestrator-build.ps1').read_text()
+remove_exe = "Remove-Item -LiteralPath $exe -Force -ErrorAction Stop"
+check("Join-Path $wt 'build\\windows\\opendungeons-plus.exe'" in orchestrator,
+      'orchestrator does not identify the load-test executable')
+check(remove_exe in orchestrator and orchestrator.index(remove_exe) < orchestrator.index('$start = [DateTimeOffset]') < orchestrator.index('--build "$wt\\build\\windows"'),
+      'orchestrator must remove the old executable before recording the build start and rebuilding')
 check('Work on a feature or fix branch never runs a full build.' in claude and 'Before a branch is merged into integration/all' in claude and 'the result must compile' in claude, 'CLAUDE.md lacks the branch build and pre-integration compile rules')
 check('Kein Release- oder Abschlussbuild' not in claude, 'CLAUDE.md still allows a full build after a release')
 
