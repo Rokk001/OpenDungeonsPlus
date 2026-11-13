@@ -24,15 +24,7 @@ These instructions apply to every change made to this repository with an AI assi
 
 ## Branches
 
-- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when Mario explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
-
-## Working mode
-
-Working mode: never wait idle. While a build, load test or agent runs, start every other task that does not depend on its result at once as a separate subagent (analysis, code fixes on own branches, checks, documentation). Only Blender work stays sequential, and timing measurements run without competing game instances. Before reporting 'waiting', list what else could run now and start it.
-
-## Agent model
-
-- Agent model: Model classes, effort always medium: light = Claude Haiku 5.5 / GPT-6 Luna, medium = Claude Sonnet 5.5 / GPT-6.1 Terra, heavy = Claude Opus 5.5 / GPT-6.1 Sol. Both providers of a class are equivalent; a plan's model line is fulfilled by either. Never ask Mario about the model.
+- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when the owner explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
 
 ## Protected content
 
@@ -43,8 +35,8 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
   `docs/development/NAME-ALIASES.md` as the reference for our own names.
 - Never cite another game, its publisher or any outside source for rules, values or names
   in code, comments, docs, commits, branch names or PR texts.
-- Data from commercial games used for local testing stays outside the repository
-  (`G:\Moreya-Internal\medien\`) and is never committed.
+- Data from commercial games used for local testing stays outside the repository and is
+  never committed.
 - Every new asset needs a `CREDITS` entry with source and licence in the same commit;
   AI-generated assets are marked as such.
 - `scripts/check-protected-content.py` checks pushes against these rules. Install it once
@@ -53,8 +45,8 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 
 ## Binary and large archive files
 
-- Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset of the OpenDungeonsPlus repo) are never stored in a Git repository or kept locally. After integration they are moved to G:\Moreya-Internal\medien\<plan folder>\ (Unraid share, mapped as G: on laptop and VM). Blender agents open and save .blend files directly there. Text files (plans, state files, scripts, configs) live in the private repo %USERPROFILE%\GitHub\Moreya-Internal.
-- assets-src is not in the repository. Scripts and checks read it from the environment variable ODP_ASSETS_SRC (\\192.168.1.30\Git\Moreya-Internal\medien), else from <repo>/assets-src. Never create assets-src inside a worktree; save new asset sources directly under ODP_ASSETS_SRC.
+- Binary and large archive files (Blender sources, renders, zips, backups, exports and any non-text file that is not a tracked game asset) are never stored in the Git repository.
+- Asset sources live outside the repository in the folder named by the environment variable ODP_ASSETS_SRC; scripts and checks read them from there, else from <repo>/assets-src. Never create assets-src inside a worktree; save new asset sources directly under ODP_ASSETS_SRC.
 
 ## Load tests
 
@@ -75,30 +67,21 @@ Diese Pfade direkt verwenden, nie danach suchen.
 
 ## Builds
 
-- Build flow (Mario, 2026-10-25):
-  1. Feature and fix windows (Claude Code and Codex) never run a full build, not even when a prompt releases one, and
-     compile nothing while a plan is in progress.
-  2. After the completeness question is answered with 'Offene Anforderungen: 0', the window merges the current
-     origin/integration/all into its branch and resolves all conflicts itself.
-  3. Then it pushes normally and registers ready (bzz ready) with 'Offene Anforderungen: 0'. It runs no compile check and
-     no check scripts: the HaiveQueen Orchestrator runs the compile check, the build and all check scripts after ready.
-  4. Plans run in parallel, also when they change the same files. Only a plan that needs another plan's result (it builds
-     on code that plan adds) waits until that plan is integrated. Every window merges the current origin/integration/all into
-     its branch whenever another branch has been integrated (checked at the start of every package and at least once per
-     hour) and always before ready, and resolves all conflicts so that the content of both sides is kept completely. The
-     coordinator applies the same rule when planning.
-- Check scripts in source/tests that compile small C++ probes with cl are not a game build; the HaiveQueen Orchestrator runs them after ready.
-- Every integrator release build that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on Mario's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every integrator build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
+- Work on a feature or fix branch never runs a full build.
+- Before a branch is merged into integration/all, the current origin/integration/all is merged into it and all conflicts are
+  resolved so that the content of both sides is kept completely; the result must compile, and all check scripts (including
+  those in source/tests that compile small C++ probes with cl) and the load test must be green.
+- Every release build that is merged into integration/all and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on the owner's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every release build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
 
 ## Working rules
 
-- Pull requests are opened only on Mario's explicit order. A pull request contains nothing personal: no personal paths, no work rules, no agent files (`.claude/`, `AGENTS.md`), no internal planning documents. `CLAUDE.md` in a pull request branch equals the base version plus only the section "Protected content"; check the diff before opening.
+- Pull requests are opened only on the owner's explicit order. A pull request contains nothing personal: no personal paths, no work rules, no agent files (`.claude/`, `AGENTS.md`), no internal planning documents. `CLAUDE.md` in a pull request branch equals the base version plus only the section "Protected content"; check the diff before opening.
 - Never use `git commit --amend`, `git reset`, `git update-ref` or any other ref rewrite, also not for unpushed commits. A wrong commit message stays; corrections are new commits. If a guard or hook blocks a git command, stop and report instead of working around it. No force push.
 - Never remove an existing comment; update it when its code changes. Every new or changed function, method and class gets a short Doxygen-style comment, and every new or changed Boost test case gets a short comment saying what it checks.
 - Commit messages are English and plain, say what changed and why, and carry no AI attribution.
 - Check scripts use fixed expected values that match the state of the branch, counted once and named in the commit; they never derive the expected value at run time from the code under test. A check that is red on the branch and green on `origin/integration/all` is a regression of the branch and is fixed on the branch, never in the check.
-- Review fixes go into a fix branch from the tip of `integration/all`; they are never pushed to a pull request head unless Mario orders it separately.
-- Technical test adjustments (stubs, sample texts, calls, formal adaption of a check to a new layout) are done without asking; gameplay behaviour, values and level layout are Mario's decisions.
+- Review fixes go into a fix branch from the tip of `integration/all`; they are never pushed to a pull request head unless the owner orders it separately.
+- Technical test adjustments (stubs, sample texts, calls, formal adaption of a check to a new layout) are done without asking; gameplay behaviour, values and level layout are the owner's decisions.
 - Before removing a worktree: back up uncommitted and untracked files, verify the backup byte for byte, then run `git worktree remove` without `--force`. If the backup fails or HEAD is not contained in `origin/integration/all`, remove nothing. Branches stay.
 - Sounds are real recordings under CC0 or CC-BY, with author, licence and source URL in the CREDITS entry of the same commit; never synthesized or generated files.
 - Internal planning documents, design reference images and notes are never stored in this repository and never referenced from tracked files.
