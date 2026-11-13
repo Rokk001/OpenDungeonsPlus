@@ -40,6 +40,7 @@
 #include "utils/Random.h"
 
 #include <iomanip>
+#include <cmath>
 
 const std::string RoomLibraryName = "Library";
 const std::string RoomLibraryNameDisplay = "Library room";
@@ -450,7 +451,7 @@ bool RoomLibrary::getBookshelfApproach(Creature& carrier, Tile* tile, std::vecto
         Ogre::Vector2::ZERO, approach);
 }
 
-//! \brief Shelves a delivered book and sends its claimed shelf placement to clients with vision.
+//! \brief Places a delivered book on the clear top shelf and sends its claimed placement to clients with vision.
 void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carriedEntity)
 {
     if(carrier == nullptr || carrier->getSeat() != getSeat() || carriedEntity == nullptr ||
@@ -467,7 +468,12 @@ void RoomLibrary::notifyCarryingStateChanged(Creature* carrier, GameEntity* carr
     // released book with its shelf position and owner, using the normal visibility protocol.
     carriedEntity->fireRemoveEntityToSeatsWithVision();
     carriedEntity->setSeat(getSeat());
-    carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x, shelf->getPosition().y, 0.0f));
+    // Bookshelf's clear top board is at z=1.65358; Grimoire's base is at local z=0.14.
+    // Its interior shelf gaps are too short for this book. The scaled top board's
+    // centre is at local y=0.12; rotate that offset with the wall furniture.
+    const Ogre::Real angle = shelf->getRotationAngle() * std::acos(-1.0f) / 180.0f;
+    carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x - 0.12f * std::sin(angle),
+        shelf->getPosition().y + 0.12f * std::cos(angle), shelf->getPosition().z + 1.51358f));
     carriedEntity->notifySeatsWithVision(tile->getSeatsWithVision());
 }
 

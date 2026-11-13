@@ -24,6 +24,7 @@ def function(text, signature):
 
 PRELUDE = r'''
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -36,6 +37,7 @@ void check(bool result, const char* message)
 { if(!result) throw std::runtime_error(message); }
 namespace Ogre
 {
+typedef float Real;
 //! \brief Supplies the coordinates used by production delivery calls.
 struct Vector2
 {
@@ -101,11 +103,13 @@ struct GameEntity
     void removeFromGameMap() { onMap=false; removed=true; }
     void deleteYourself() { deleted=true; }
 };
-//! \brief Represents shelf furniture independently of the book.
+//! \brief Represents shelf furniture position and wall rotation independently of the book.
 struct BuildingObject
 {
     std::string mesh;
     Ogre::Vector3 position;
+    Ogre::Real rotation=0;
+    Ogre::Real getRotationAngle() { return rotation; }
     const std::string& getMeshName() { return mesh; }
     Ogre::Vector3 getPosition() { return position; }
 };
@@ -135,12 +139,12 @@ public:
     void releaseInteractionPosition(class Creature*) { ++released; }
 };
 std::vector<Tile*> world;
-//! \brief Updates occupancy when notification moves a book from a standing tile onto a shelf.
+//! \brief Updates occupancy using nearest tile coordinates when a book moves onto an offset shelf.
 void GameEntity::setPosition(const Ogre::Vector3& value)
 {
     removeEntityFromPositionTile(); position=value;
     for(Tile* candidate : world)
-        if(candidate->x==int(value.x) && candidate->y==int(value.y)) tile=candidate;
+        if(candidate->x==int(std::round(value.x)) && candidate->y==int(std::round(value.y))) tile=candidate;
     tile->entities.push_back(this);
 }
 //! \brief Holds a worker's route and action effects for the carry handler.
@@ -219,7 +223,7 @@ struct CreatureActionCarryEntity
 '''
 
 CASES = r'''
-//! \brief Checks floor recovery, shelf navigation, client placement, delayed consumption and single-use rewards.
+//! \brief Checks floor recovery, navigation, fixed top-shelf placement in four orientations and single-use rewards.
 int main()
 {
     Seat owner, enemy;
@@ -263,7 +267,10 @@ int main()
     check(book.tile==&shelf && floor.entities.empty() && shelf.entities.size()==1,"delivery updates occupancy onto shelf");
     check(book.seat==&owner && book.getItem()!=nullptr && library.mSkillPoints==0,"delivery claims book without reward");
     check(book.visibilityRemovals==1 && book.visibilityAdds==1,"only successful delivery refreshes client placement");
-    check(book.clientPosition.x==3 && book.clientPosition.y==0 && book.clientPosition.z==0 &&
+    check(std::abs(book.position.x-3.0f)<0.00001f && std::abs(book.position.y-0.12f)<0.00001f &&
+        std::abs(book.position.z-1.51358f)<0.00001f,"server book rests on top shelf rather than floor");
+    check(std::abs(book.clientPosition.x-3.0f)<0.00001f && std::abs(book.clientPosition.y-0.12f)<0.00001f &&
+        std::abs(book.clientPosition.z-1.51358f)<0.00001f &&
         book.clientSeat==&owner,"client snapshot contains shelf coordinates and owner");
     check(book.clientViewers==shelf.visibleSeats,"snapshot reaches shelf viewers rather than only floor viewers");
     check(book.getEntityCarryType(&worker)==EntityCarryType::notCarryable,"shelved book waits for researcher");
@@ -278,6 +285,34 @@ int main()
     check(library.mSkillPoints==100.0 && second.getItem()!=nullptr,"one book per work cycle");
     check(library.openResearchBook() && library.mSkillPoints==200.0,"next work cycle opens second book");
     check(!library.openResearchBook() && library.mSkillPoints==200.0,"no repeated reward");
+
+    // Fixed world positions for the four wall orientations, independently specified.
+    const float rotations[4]={0.0f,90.0f,180.0f,270.0f};
+    const float expectedX[4]={3.0f,2.88f,3.0f,3.12f};
+    const float expectedY[4]={0.12f,0.0f,-0.12f,0.0f};
+    for(int orientation=0; orientation<4; ++orientation)
+    {
+        ItemBagEntity rotatedBook;
+        rotatedBook.tile=&floor; floor.entities.push_back(&rotatedBook);
+        furniture.rotation=rotations[orientation];
+        // A raised fixture also verifies that support height is relative to the furniture.
+        furniture.position.z=0.25f;
+        library.notifyCarryingStateChanged(&worker,&rotatedBook);
+        check(rotatedBook.tile==&shelf,"rotated offset retains shelf tile occupancy");
+        check(std::abs(rotatedBook.position.x-expectedX[orientation])<0.00001f &&
+            std::abs(rotatedBook.position.y-expectedY[orientation])<0.00001f &&
+            std::abs(rotatedBook.position.z-1.76358f)<0.00001f,"fixed rotated server placement");
+        check(std::abs(rotatedBook.clientPosition.x-expectedX[orientation])<0.00001f &&
+            std::abs(rotatedBook.clientPosition.y-expectedY[orientation])<0.00001f &&
+            std::abs(rotatedBook.clientPosition.z-1.76358f)<0.00001f &&
+            rotatedBook.clientSeat==&owner && rotatedBook.clientViewers==shelf.visibleSeats,
+            "fixed rotated client snapshot");
+        check(rotatedBook.visibilityRemovals==1 && rotatedBook.visibilityAdds==1 &&
+            rotatedBook.getItem()!=nullptr && library.mSkillPoints==200.0,"placement preserves visibility and delayed reward");
+        check(library.openResearchBook() && rotatedBook.deleted && library.mSkillPoints==300.0,
+            "rotated shelf book grants exactly one research reward");
+        library.mSkillPoints=200.0;
+    }
 
     ItemBagEntity floorBook; floorBook.tile=&floor; floor.entities.push_back(&floorBook);
     furniture.mesh="Bookcase";

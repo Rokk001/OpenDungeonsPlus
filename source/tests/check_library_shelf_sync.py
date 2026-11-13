@@ -38,7 +38,8 @@ def main():
             "const bool reached =", "if(!reached)",
             "carriedEntity->fireRemoveEntityToSeatsWithVision();",
             "carriedEntity->setSeat(getSeat());",
-            "carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x, shelf->getPosition().y, 0.0f));",
+            "carriedEntity->setPosition(Ogre::Vector3(shelf->getPosition().x - 0.12f * std::sin(angle),\n"
+            "        shelf->getPosition().y + 0.12f * std::cos(angle), shelf->getPosition().z + 1.51358f));",
             "carriedEntity->notifySeatsWithVision(tile->getSeatsWithVision());")
     assert "takeItem" not in delivery and "mSkillPoints" not in delivery
     destructor = function(read("source/creatureaction/CreatureActionCarryEntity.cpp"),
