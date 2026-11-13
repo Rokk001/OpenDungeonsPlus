@@ -24,7 +24,7 @@ These instructions apply to every change made to this repository with an AI assi
 
 ## Branches
 
-- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when Mario explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
+- Every new feature or fix branch starts from the tip of integration/all, never from shaders-improvement and never from main. Nothing is committed directly on integration/all. No upstream pull requests are created any more. A pull request is only created when the owner explicitly instructs it. The pull request coverage check is informational only and never blocks an integration.
 
 ## Working mode
 
@@ -32,7 +32,7 @@ Working mode: never wait idle. While a build, load test or agent runs, start eve
 
 ## Agent model
 
-- Agent model: Model classes, effort always medium: light = Claude Haiku 5.5 / GPT-6 Luna, medium = Claude Sonnet 5.5 / GPT-6.1 Terra, heavy = Claude Opus 5.5 / GPT-6.1 Sol. Both providers of a class are equivalent; a plan's model line is fulfilled by either. Never ask Mario about the model.
+- Agent model: Model classes, effort always medium: light = Claude Haiku 5.5 / GPT-6 Luna, medium = Claude Sonnet 5.5 / GPT-6.1 Terra, heavy = Claude Opus 5.5 / GPT-6.1 Sol. Both providers of a class are equivalent; a plan's model line is fulfilled by either. Never ask the owner about the model.
 
 ## Protected content
 
@@ -75,30 +75,30 @@ Diese Pfade direkt verwenden, nie danach suchen.
 
 ## Builds
 
-- Build flow (Mario, 2026-10-25):
-  1. Feature and fix windows (Claude Code and Codex) never run a full build, not even when a prompt releases one, and
-     compile nothing while a plan is in progress.
-  2. After the completeness question is answered with 'Offene Anforderungen: 0', the window merges the current
-     origin/integration/all into its branch and resolves all conflicts itself.
-  3. Then it pushes normally and registers ready (bzz ready) with 'Offene Anforderungen: 0'. It runs no compile check and
-     no check scripts: the HaiveQueen Orchestrator runs the compile check, the build and all check scripts after ready.
-  4. Plans run in parallel, also when they change the same files. Only a plan that needs another plan's result (it builds
-     on code that plan adds) waits until that plan is integrated. Every window merges the current origin/integration/all into
-     its branch whenever another branch has been integrated (checked at the start of every package and at least once per
-     hour) and always before ready, and resolves all conflicts so that the content of both sides is kept completely. The
-     coordinator applies the same rule when planning.
+- Build flow (owner, 2026-10-25; adapted to the HaiveQueen flow on 2026-11-13):
+  1. Queens and Agents never run a full build, a compile check or check scripts, and compile nothing while a plan is in
+     progress.
+  2. Each Agent works in its own worktree and sub-branch and checks only its own change. The Queen merges the Agent
+     branches locally into the plan branch, writes the list in the section "## Completeness" of the state file (one line
+     per requirement: "- <id>: done | <evidence>") and registers ready (bzz ready). The Queen never merges the
+     integration branch and never pushes.
+  3. After ready is accepted, the HaiveQueen Orchestrator merges the current origin/integration/all into the plan branch
+     and resolves all conflicts so that the content of both sides is kept completely, then runs the compile check, all
+     check scripts and the build, pushes, deploys and asks the owner for the acceptance.
+  4. Plans run in parallel, also when they change the same files. HaiveQueen knows no order between plans: a plan that
+     needs another plan's result (it builds on code that plan adds) is submitted only after that plan is integrated.
 - Check scripts in source/tests that compile small C++ probes with cl are not a game build; the HaiveQueen Orchestrator runs them after ready.
-- Every integrator release build that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on Mario's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every integrator build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
+- Every release build of the HaiveQueen Orchestrator that is pushed and deployed gets the next build number (version 0.7.3.N); branch and test builds use build number 0. Major, minor and patch version change only on the owner's explicit instruction. When major, minor or patch changes (for example 0.7.3 to 0.7.4), the build number starts again at 1 (0.7.4.1); otherwise every Orchestrator release build only increases the last digit. `scripts/next-build-number.py` computes N by comparing OD_MAJOR_VERSION, OD_MINOR_VERSION and OD_PATCH_LEVEL in CMakeLists.txt with the last deployed state.
 
 ## Working rules
 
-- Pull requests are opened only on Mario's explicit order. A pull request contains nothing personal: no personal paths, no work rules, no agent files (`.claude/`, `AGENTS.md`), no internal planning documents. `CLAUDE.md` in a pull request branch equals the base version plus only the section "Protected content"; check the diff before opening.
+- Pull requests are opened only on the owner's explicit order. A pull request contains nothing personal: no personal paths, no work rules, no agent files (`.claude/`, `AGENTS.md`), no internal planning documents. `CLAUDE.md` in a pull request branch equals the base version plus only the section "Protected content"; check the diff before opening.
 - Never use `git commit --amend`, `git reset`, `git update-ref` or any other ref rewrite, also not for unpushed commits. A wrong commit message stays; corrections are new commits. If a guard or hook blocks a git command, stop and report instead of working around it. No force push.
 - Never remove an existing comment; update it when its code changes. Every new or changed function, method and class gets a short Doxygen-style comment, and every new or changed Boost test case gets a short comment saying what it checks.
 - Commit messages are English and plain, say what changed and why, and carry no AI attribution.
 - Check scripts use fixed expected values that match the state of the branch, counted once and named in the commit; they never derive the expected value at run time from the code under test. A check that is red on the branch and green on `origin/integration/all` is a regression of the branch and is fixed on the branch, never in the check.
-- Review fixes go into a fix branch from the tip of `integration/all`; they are never pushed to a pull request head unless Mario orders it separately.
-- Technical test adjustments (stubs, sample texts, calls, formal adaption of a check to a new layout) are done without asking; gameplay behaviour, values and level layout are Mario's decisions.
+- Review fixes go into a fix branch from the tip of `integration/all`; they are never pushed to a pull request head unless the owner orders it separately.
+- Technical test adjustments (stubs, sample texts, calls, formal adaption of a check to a new layout) are done without asking; gameplay behaviour, values and level layout are the owner's decisions.
 - Before removing a worktree: back up uncommitted and untracked files, verify the backup byte for byte, then run `git worktree remove` without `--force`. If the backup fails or HEAD is not contained in `origin/integration/all`, remove nothing. Branches stay.
 - Sounds are real recordings under CC0 or CC-BY, with author, licence and source URL in the CREDITS entry of the same commit; never synthesized or generated files.
 - Internal planning documents, design reference images and notes are never stored in this repository and never referenced from tracked files.
