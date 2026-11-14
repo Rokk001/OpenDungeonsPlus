@@ -18,7 +18,8 @@ if ($env:BUILD_JOBS -and -not $env:BUILD_MP_JOBS) { $env:BUILD_MP_JOBS = $env:BU
 $n = [int](& python -I "$wt\scripts\next-build-number.py" --counter $Counter --base $Base)
 if ($LASTEXITCODE -ne 0) { Write-Output "build number failed (exit $LASTEXITCODE)"; exit $LASTEXITCODE }
 Set-Content -Encoding ascii "$wt\out\build-number-$run.txt" $n
-& powershell -NoProfile -File "$PSScriptRoot\configure-windows-prereqs.ps1" -BuildNumber $n *> "$wt\out\configure-$run.log"
+Write-Output "configure started: $run"
+& powershell -NoProfile -File "$PSScriptRoot\configure-windows-prereqs.ps1" -BuildNumber $n *>&1 | Tee-Object -FilePath "$wt\out\configure-$run.log"
 if ($LASTEXITCODE -ne 0) { Write-Output "configure failed (exit $LASTEXITCODE), log out\configure-$run.log"; exit $LASTEXITCODE }
 $parallel = if ($env:BUILD_PARALLEL) { [int]$env:BUILD_PARALLEL } else { 1 }
 # Force the linker to produce a fresh executable even when an earlier build is up to date.
@@ -26,10 +27,12 @@ $exe = Join-Path $wt 'build\windows\opendungeons-plus.exe'
 if (Test-Path -LiteralPath $exe) { Remove-Item -LiteralPath $exe -Force -ErrorAction Stop }
 # Epoch time right before the build; run-checks.py needs it as --build-start
 $start = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-& $taskCmakeExe --build "$wt\build\windows" --config Release --target opendungeons-plus --parallel $parallel *> "$wt\out\build-$run.log"
+Write-Output "build started: $run"
+& $taskCmakeExe --build "$wt\build\windows" --config Release --target opendungeons-plus --parallel $parallel *>&1 | Tee-Object -FilePath "$wt\out\build-$run.log"
 $code = $LASTEXITCODE
 if ($code -ne 0) { Write-Output "build failed (exit $code), log out\build-$run.log"; exit $code }
-& python -I $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $Base --build-start $start --run $run
+Write-Output "checks started: $run"
+& python -u -I $Checks --repo $wt --out "$wt\out\checks-$run.txt" --base $Base --build-start $start --run $run
 $code = $LASTEXITCODE
 if ($code -ne 0) { Write-Output "checks failed (exit $code), see out\checks-$run.txt" }
 exit $code
