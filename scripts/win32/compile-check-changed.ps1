@@ -21,6 +21,13 @@ $log = "$wt\out\compile-check.log"
 $vcvars = 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat'
 New-Item -ItemType Directory -Force $outDir | Out-Null
 $ErrorActionPreference = 'Continue'
+Set-Content -LiteralPath $log -Value '' -Encoding utf8
+
+# Writes each check message immediately to the journal and the caller's output stream.
+function Write-CheckLog([string]$text) {
+    $text | Out-File -Append -Encoding utf8 $log
+    Write-Output $text
+}
 
 # Returns the number of full builds running (cmake, MSBuild, or a cl.exe started by MSBuild); compile probes of check scripts do not count.
 function Get-FullBuildCount {
@@ -75,12 +82,12 @@ function Get-ReleaseCompilerArgs {
 # Wait while a full build runs, then require 2 GB free RAM
 $deadline = (Get-Date).AddMinutes($MaxWaitMinutes)
 while ((Get-FullBuildCount) -gt 0) {
-    if ((Get-Date) -gt $deadline) { "WAIT_TIMEOUT: a full build still runs" | Out-File -Encoding ascii $log; exit 4 }
-    Write-Host 'waiting: a full build is running'
+    if ((Get-Date) -gt $deadline) { Write-CheckLog "WAIT_TIMEOUT: a full build still runs"; exit 4 }
+    Write-CheckLog 'waiting: a full build is running'
     Start-Sleep -Seconds 30
 }
 $free = [math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024)
-if ($free -lt 2048) { "RAM too low: $free MB" | Out-File -Encoding ascii $log; exit 3 }
+if ($free -lt 2048) { Write-CheckLog "RAM too low: $free MB"; exit 3 }
 
 $files = @(& git -C $wt diff --name-only --diff-filter=AM "$Base...HEAD" -- source | Where-Object { $_ -like '*.cpp' })
 $rsp = "$outDir\args.rsp"
@@ -89,22 +96,21 @@ $boostConfigDir = "$outDir\boostcfg"
 New-Item -ItemType Directory -Force $boostConfigDir | Out-Null
 Copy-Item -Force "$wt\cmake\modules\BoostTestTargets\BoostTestTargetsIncluded.h" "$boostConfigDir\BoostTestTargetConfig.h"
 (Get-ReleaseCompilerArgs) + @('/I' + (Format-RspArg $boostConfigDir)) | Out-File -Encoding ascii $rsp
-"compile check of $($files.Count) file(s) against $Base" | Out-File -Encoding ascii $log
+Write-CheckLog "compile check of $($files.Count) file(s) against $Base"
 $failed = 0
 foreach ($f in $files) {
     $start = Get-Date
     $src = "$wt\$($f -replace '/', '\')"
     $cmd = "call `"$vcvars`" >nul && cl @`"$rsp`" /Fo`"$outDir\\`" `"$src`""
-    $output = & cmd /c $cmd 2>&1
+    Write-CheckLog "compiling $f"
+    & cmd /c $cmd 2>&1 | ForEach-Object { Write-CheckLog ([string]$_) }
     $code = $LASTEXITCODE
     $secs = [math]::Round(((Get-Date) - $start).TotalSeconds, 1)
-    "$f exit=$code seconds=$secs" | Out-File -Append -Encoding ascii $log
+    Write-CheckLog "$f exit=$code seconds=$secs"
     if ($code -ne 0) {
         $failed++
-        $output | Select-String 'error' | ForEach-Object { $_.Line } | Out-File -Append -Encoding ascii $log
     }
 }
-"files=$($files.Count) failed=$failed" | Out-File -Append -Encoding ascii $log
-Get-Content $log | Write-Host
+Write-CheckLog "files=$($files.Count) failed=$failed"
 if ($failed -gt 0) { exit 1 }
 exit 0
