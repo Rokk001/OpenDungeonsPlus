@@ -180,7 +180,8 @@ class BuildControllerTests(unittest.TestCase):
                 subprocess.run(['git','-C',str(repo),'add','.'],check=True)
                 subprocess.run(['git','-C',str(repo),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','fixture'],check=True)
                 head=events.git(repo,'rev-parse','HEAD');journal=repo/'events.jsonl'
-                env={**os.environ,'HQ_CHECK_EVENTS':str(journal),'HQ_CHECK_RUN':'fixture-build','HQ_CHECK_COMMIT':head}
+                # Start from a child environment so a deferred release of the outer check run cannot leak into the fixture.
+                env={**events.child_environment(os.environ),'HQ_CHECK_EVENTS':str(journal),'HQ_CHECK_RUN':'fixture-build','HQ_CHECK_COMMIT':head}
                 result=subprocess.run(['powershell','-NoProfile','-File',str(repo/'scripts/win32/orchestrator-build.ps1'),
                                        '-Counter',str(repo/'counter.txt'),'-Base',head,'-Checks','unused-legacy-runner','-Worktree',str(repo)],
                                       cwd=repo,env=env,capture_output=True,text=True,timeout=30)
@@ -245,7 +246,8 @@ class ProcessTests(unittest.TestCase):
             subprocess.run(['git','-C',str(repo),'add','.'],check=True)
             subprocess.run(['git','-C',str(repo),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','fixture'],check=True)
             head=events.git(repo,'rev-parse','HEAD');journal=repo/'events.jsonl'
-            env={**os.environ,'HQ_CHECK_EVENTS':str(journal),'HQ_CHECK_RUN':'delivery','HQ_CHECK_COMMIT':head}
+            # Start from a child environment so a deferred release of the outer check run cannot leak into the fixture.
+            env={**events.child_environment(os.environ),'HQ_CHECK_EVENTS':str(journal),'HQ_CHECK_RUN':'delivery','HQ_CHECK_COMMIT':head}
             command=[sys.executable,str(ROOT/'scripts/hq-check-command.py'),'--repo',str(repo),'--name','deploy-delivery','--',
                      sys.executable,'-c','print("partial copy happened; verification failed");raise SystemExit(7)']
             result=subprocess.run(command,env=env,capture_output=True,text=True,timeout=15)
@@ -268,7 +270,8 @@ class StreamingTests(unittest.TestCase):
             subprocess.run(['git','-C',str(repo),'add','.'],check=True)
             subprocess.run(['git','-C',str(repo),'-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','fixture'],check=True)
             head=events.git(repo,'rev-parse','HEAD');gate=repo/'gate'
-            env={**os.environ,'HQ_CHECK_EVENTS':str(repo/'events.jsonl'),'HQ_CHECK_RUN':'stream','HQ_CHECK_COMMIT':head}
+            # Start from a child environment so a deferred release of the outer check run cannot leak into the fixture.
+            env={**events.child_environment(os.environ),'HQ_CHECK_EVENTS':str(repo/'events.jsonl'),'HQ_CHECK_RUN':'stream','HQ_CHECK_COMMIT':head}
             producer='import pathlib,sys,time; p=pathlib.Path(sys.argv[1]); print("ready",flush=True); deadline=time.monotonic()+5\nwhile not p.exists() and time.monotonic()<deadline: time.sleep(.01)\nraise SystemExit(0 if p.exists() else 9)'
             proc=subprocess.Popen([sys.executable,str(ROOT/'scripts/hq-check-command.py'),'--repo',str(repo),'--name','compile-check','--',
                                    sys.executable,'-c',producer,str(gate)],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
