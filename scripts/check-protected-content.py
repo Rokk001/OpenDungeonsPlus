@@ -127,6 +127,24 @@ def run_git(args, cwd):
     return proc.returncode, proc.stdout.decode("utf-8", errors="replace")
 
 
+# Results of one hook run, shared by all pushed refs. Commits and file versions (blobs)
+# never change, so each one is checked only once per run however many branches and tags
+# contain it; the checks and their results are the same as without the cache.
+RESULT_CACHE = {}
+
+
+def terms_key(terms):
+    """A hashable key for a term list (plain and whole-word terms are kept apart)."""
+    return tuple((type(term).__name__, str(term)) for term in terms)
+
+
+def cached(key, compute):
+    """Return the cached result for key, computing and storing it on the first call."""
+    if key not in RESULT_CACHE:
+        RESULT_CACHE[key] = compute()
+    return RESULT_CACHE[key]
+
+
 class WordTerm(str):
     """A term that only matches as a whole word."""
 
@@ -252,7 +270,13 @@ def find_baseline(remote_name, cwd):
 
 
 def commits_to_check(local_sha, remote_sha, remote_name, cwd):
-    """Return the commits of a pushed ref that the remote does not have yet."""
+    """Return the commits of a pushed ref that the remote does not have yet (cached per ref)."""
+    return list(cached(("range", cwd, local_sha, remote_sha, remote_name),
+                       lambda: compute_commits_to_check(local_sha, remote_sha, cwd)))
+
+
+def compute_commits_to_check(local_sha, remote_sha, cwd):
+    """The commits of a pushed ref that the remote does not have yet."""
     if remote_sha != ZERO_SHA:
         code, out = run_git(["rev-list", "%s..%s" % (remote_sha, local_sha)], cwd)
         if code == 0:
@@ -282,6 +306,22 @@ def patch_ids(revisions, cwd):
     return result
 
 
+def own_patch_ids(commits, cwd):
+    """Maps commit -> patch id like patch_ids(["--no-walk"] + commits), each commit computed
+    only once per run (merge commits have no patch id)."""
+    missing = [commit for commit in commits if ("patch", cwd, commit) not in RESULT_CACHE]
+    if len(missing) > 0:
+        found = patch_ids(["--no-walk"] + missing, cwd)
+        for commit in missing:
+            RESULT_CACHE[("patch", cwd, commit)] = found.get(commit)
+    result = {}
+    for commit in commits:
+        patch = RESULT_CACHE[("patch", cwd, commit)]
+        if patch is not None:
+            result[commit] = patch
+    return result
+
+
 def known_patch_ids(remote_sha, baseline, cwd):
     """Patch ids of the history that is already on the remote (without the baseline)."""
     if remote_sha == ZERO_SHA:
@@ -293,19 +333,40 @@ def known_patch_ids(remote_sha, baseline, cwd):
 
 
 def check_commit_message(commit, terms, cwd, problems):
-    """Append a problem if the commit message contains a protected term."""
+    """Append a problem if the commit message contains a protected term (checked once per
+    commit and run)."""
+    problems.extend(cached(("message", cwd, commit, terms_key(terms)),
+                           lambda: compute_commit_message(commit, terms, cwd)))
+
+
+def compute_commit_message(commit, terms, cwd):
+    """The problems of one commit message."""
+    problems = []
     code, message = run_git(["log", "-1", "--format=%B", commit], cwd)
     term = find_term(message, terms)
     if term is not None:
         problems.append("commit %s: term '%s' in the commit message" % (commit[:10], term))
+    return problems
 
 
 def check_commit_content(commit, terms, cwd, added_files, problems):
-    """Check the files and added lines of one commit; collect added files and problems."""
+    """Check the files and added lines of one commit; collect added files and problems
+    (checked once per commit and run, replayed in the same order for every ref)."""
+    found, added = cached(("content", cwd, commit, terms_key(terms), tuple(BLOCKED_PREFIXES)),
+                          lambda: compute_commit_content(commit, terms, cwd))
+    problems.extend(found)
+    for path, short in added:
+        added_files.setdefault(path, short)
+
+
+def compute_commit_content(commit, terms, cwd):
+    """The problems and the added media files (in order) of one commit."""
+    problems = []
+    added = []
     short = commit[:10]
     code, parents = run_git(["rev-list", "--parents", "-n", "1", commit], cwd)
     if len(parents.split()) > 2:
-        return  # merge commit: the merged commits are checked on their own
+        return problems, added  # merge commit: the merged commits are checked on their own
 
     code, names = run_git(["diff-tree", "--root", "--no-commit-id", "-r", "-M",
                            "--name-status", commit], cwd)
@@ -324,7 +385,7 @@ def check_commit_content(commit, terms, cwd, added_files, problems):
                                 "pushed)" % (short, path, prefix))
         extension = path.rsplit(".", 1)[-1].lower() if "." in os.path.basename(path) else ""
         if status in ("A", "C", "R") and extension in MEDIA_EXTENSIONS:
-            added_files.setdefault(path, short)
+            added.append((path, short))
 
     code, diff = run_git(["show", "--format=", "-p", "--no-color", "-U0", commit], cwd)
     for line in diff.split("\n"):
@@ -333,6 +394,7 @@ def check_commit_content(commit, terms, cwd, added_files, problems):
             if term is not None:
                 problems.append("commit %s: term '%s' in an added line: %s"
                                 % (short, term, line[:80]))
+    return problems, added
 
 
 def baseline_lines(baseline, path, cache, cwd):
@@ -340,9 +402,15 @@ def baseline_lines(baseline, path, cache, cwd):
     if baseline is None:
         return set()
     if path not in cache:
-        code, out = run_git(["show", "%s:%s" % (baseline, path)], cwd)
-        cache[path] = set(out.split("\n")) if code == 0 else set()
+        cache[path] = cached(("baseline", cwd, baseline, path),
+                             lambda: baseline_file_lines(baseline, path, cwd))
     return cache[path]
+
+
+def baseline_file_lines(baseline, path, cwd):
+    """The set of lines of one file at the baseline commit (empty when it is missing)."""
+    code, out = run_git(["show", "%s:%s" % (baseline, path)], cwd)
+    return set(out.split("\n")) if code == 0 else set()
 
 
 def check_tree(tip, baseline, terms, cwd, problems):
@@ -359,22 +427,7 @@ def check_tree(tip, baseline, terms, cwd, problems):
 
     # Pre-filter with git grep; find_term below makes the final decision. Whole-word terms
     # get a word-boundary pattern so that a short word does not select every file.
-    hits = ""
-    plain = [term for term in terms if not isinstance(term, WordTerm)]
-    words = [term for term in terms if isinstance(term, WordTerm)]
-    if len(plain) > 0:
-        arguments = ["grep", "-I", "-i", "-n", "-F", "--no-color"]
-        for term in plain:
-            arguments += ["-e", term]
-        code, found = run_git(arguments + [tip], cwd)
-        hits += found
-    if len(words) > 0:
-        arguments = ["grep", "-I", "-i", "-n", "-E", "--no-color"]
-        for term in words:
-            escaped = re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", str(term))
-            arguments += ["-e", "(^|[^[:alnum:]_])" + escaped + "([^[:alnum:]_]|$)"]
-        code, found = run_git(arguments + [tip], cwd)
-        hits += found
+    hits = tree_grep_hits(tip, terms, cwd)
     cache = {}
     prefix = tip + ":"
     for hit in split_lines(hits):
@@ -389,6 +442,122 @@ def check_tree(tip, baseline, terms, cwd, problems):
         term = find_term(text, terms)
         if term is not None:
             problems.append("tree: term '%s' in %s:%s: %s" % (term, path, number, text[:80]))
+
+
+def grep_arguments(terms):
+    """The git grep argument lists of the plain and the whole-word terms (None when empty)."""
+    plain = [term for term in terms if not isinstance(term, WordTerm)]
+    words = [term for term in terms if isinstance(term, WordTerm)]
+    plain_arguments = None
+    word_arguments = None
+    if len(plain) > 0:
+        plain_arguments = ["grep", "-I", "-i", "-n", "-F", "--no-color"]
+        for term in plain:
+            plain_arguments += ["-e", term]
+    if len(words) > 0:
+        word_arguments = ["grep", "-I", "-i", "-n", "-E", "--no-color"]
+        for term in words:
+            escaped = re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", str(term))
+            word_arguments += ["-e", "(^|[^[:alnum:]_])" + escaped + "([^[:alnum:]_]|$)"]
+    return plain_arguments, word_arguments
+
+
+def quote_path(path):
+    """A path in the quoted form git prints with core.quotepath (as git grep does)."""
+    special = {"\a": "\\a", "\b": "\\b", "\t": "\\t", "\n": "\\n", "\v": "\\v",
+               "\f": "\\f", "\r": "\\r", "\"": "\\\"", "\\": "\\\\"}
+    data = path.encode("utf-8", errors="surrogateescape")
+    if all(0x20 <= byte < 0x7f and chr(byte) not in special for byte in data):
+        return path
+    out = ""
+    for byte in data:
+        char = chr(byte)
+        if char in special:
+            out += special[char]
+        elif 0x20 <= byte < 0x7f:
+            out += char
+        else:
+            out += "\\%03o" % byte
+    return "\"" + out + "\""
+
+
+def unquote_path(text):
+    """The raw path of a name that git printed in quoted form."""
+    if not (text.startswith("\"") and text.endswith("\"")):
+        return text
+    body = text[1:-1]
+    escapes = {"a": 7, "b": 8, "t": 9, "n": 10, "v": 11, "f": 12, "r": 13, "\"": 34,
+               "\\": 92}
+    data = bytearray()
+    index = 0
+    while index < len(body):
+        char = body[index]
+        if char == "\\" and index + 1 < len(body):
+            following = body[index + 1]
+            if following in escapes:
+                data.append(escapes[following])
+                index += 2
+                continue
+            if body[index + 1:index + 4].isdigit():
+                data.append(int(body[index + 1:index + 4], 8))
+                index += 4
+                continue
+        data += char.encode("utf-8")
+        index += 1
+    return data.decode("utf-8", errors="replace")
+
+
+def grep_folder(tree, arguments, cwd):
+    """Hits of git grep in the files directly inside one folder tree: name -> [(line, text)]."""
+    result = {}
+    code, found = run_git(arguments + ["--max-depth", "0", tree], cwd)
+    prefix = tree + ":"
+    for hit in split_lines(found):
+        if hit.startswith(prefix):
+            hit = hit[len(prefix):]
+        fields = hit.split(":", 2)
+        if len(fields) != 3:
+            continue
+        result.setdefault(unquote_path(fields[0]), []).append((fields[1], fields[2]))
+    return result
+
+
+def tree_grep_hits(tip, terms, cwd):
+    """The git grep hits of the tree at tip, as "path:line:text" lines in the order of one
+    git grep over the whole tree (plain terms first, then whole-word terms). Every file
+    version (blob) is grepped only once per run; a folder is grepped when it holds a file
+    version that was not grepped before."""
+    plain_arguments, word_arguments = grep_arguments(terms)
+    key = terms_key(terms)
+    code, out = run_git(["ls-tree", "-r", "-t", "-z", tip], cwd)
+    code, root = run_git(["rev-parse", "%s^{tree}" % tip], cwd)
+    folders = {"": root.strip()}
+    files = []
+    for entry in out.split("\0"):
+        if "\t" not in entry:
+            continue
+        meta, path = entry.split("\t", 1)
+        kind, sha = meta.split()[1], meta.split()[2]
+        if kind == "tree":
+            folders[path] = sha
+        elif kind == "blob":
+            folder, name = path.rsplit("/", 1) if "/" in path else ("", path)
+            files.append((path, folder, name, sha))
+    to_grep = set(folder for path, folder, name, sha in files
+                  if ("blob", cwd, sha, key) not in RESULT_CACHE)
+    for folder in sorted(to_grep):
+        plain_hits = grep_folder(folders[folder], plain_arguments, cwd) if plain_arguments else {}
+        word_hits = grep_folder(folders[folder], word_arguments, cwd) if word_arguments else {}
+        for path, file_folder, name, sha in files:
+            if file_folder == folder and ("blob", cwd, sha, key) not in RESULT_CACHE:
+                RESULT_CACHE[("blob", cwd, sha, key)] = (plain_hits.get(name, []),
+                                                         word_hits.get(name, []))
+    lines = []
+    for part in (0, 1):
+        for path, folder, name, sha in files:
+            for number, text in RESULT_CACHE[("blob", cwd, sha, key)][part]:
+                lines.append("%s:%s:%s" % (quote_path(path), number, text))
+    return "\n".join(lines)
 
 
 def check_push(ref_lines, terms, remote_name, cwd):
@@ -414,7 +583,7 @@ def check_push(ref_lines, terms, remote_name, cwd):
         known = known_patch_ids(remote_sha, baseline, cwd)
         own_ids = {}
         if len(commits) > 0:
-            own_ids = patch_ids(["--no-walk"] + commits, cwd)
+            own_ids = own_patch_ids(commits, cwd)
         added_files = {}
         for commit in commits:
             check_commit_message(commit, terms, cwd, problems)
@@ -438,19 +607,28 @@ def changed_level_files(tip, commits, cwd):
     """Level files under levels/ that the given commits add or change and that exist at tip."""
     paths = set()
     for commit in commits:
-        code, parents = run_git(["rev-list", "--parents", "-n", "1", commit], cwd)
-        if len(parents.split()) > 2:
-            continue
-        code, names = run_git(["diff-tree", "--root", "--no-commit-id", "-r", "-M",
-                               "--name-status", commit], cwd)
-        for line in split_lines(names):
-            fields = line.split("\t")
-            path = fields[-1]
-            if (fields[0][0] != "D" and path.startswith(LEVEL_PREFIX)
-                    and path.endswith(LEVEL_SUFFIXES)):
-                paths.add(path)
+        paths.update(cached(("levels", cwd, commit), lambda: commit_level_files(commit, cwd)))
     return sorted(path for path in paths
-                  if run_git(["cat-file", "-e", "%s:%s" % (tip, path)], cwd)[0] == 0)
+                  if cached(("exists", cwd, tip, path),
+                            lambda: run_git(["cat-file", "-e", "%s:%s" % (tip, path)],
+                                            cwd)[0] == 0))
+
+
+def commit_level_files(commit, cwd):
+    """Level files under levels/ that one non-merge commit adds or changes."""
+    paths = []
+    code, parents = run_git(["rev-list", "--parents", "-n", "1", commit], cwd)
+    if len(parents.split()) > 2:
+        return paths
+    code, names = run_git(["diff-tree", "--root", "--no-commit-id", "-r", "-M",
+                           "--name-status", commit], cwd)
+    for line in split_lines(names):
+        fields = line.split("\t")
+        path = fields[-1]
+        if (fields[0][0] != "D" and path.startswith(LEVEL_PREFIX)
+                and path.endswith(LEVEL_SUFFIXES)):
+            paths.append(path)
+    return paths
 
 
 def check_level_similarity(ref_lines, remote_name, cwd, problems):
