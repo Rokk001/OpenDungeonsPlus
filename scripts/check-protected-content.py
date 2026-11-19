@@ -8,7 +8,8 @@ name and url as arguments. The push is blocked (exit 1) if
   * a term from the local term list is in a commit message or a ref name (all commits
     of the pushed range, new or rewritten),
   * the file tree at the pushed tip contains a term in a file name or in a line of a
-    text file (lines that also exist in the baseline <remote>/main are ignored, binary
+    text file (lines that also exist in the baseline <remote>/main, or upstream/shaders-improvement
+    when the target remote has no main, are ignored, binary
     files are checked by name only), has files under levels/campaign/ that are not in
     CAMPAIGN_ALLOW_LIST, or has anything under tools/level-convert/,
   * a commit with new content (its patch is not part of the history already on the
@@ -57,6 +58,10 @@ WORD_DIRECTIVE = "word:"
 
 # Blocked path prefixes, filled from the "path:" lines of the term list.
 BLOCKED_PREFIXES = []
+
+# Baseline used when the target remote has no main branch yet: the default branch of the
+# original project (remote "upstream").
+UPSTREAM_BASELINE_REF = "refs/remotes/upstream/shaders-improvement"
 
 # Placeholder campaign files that exist in origin/integration/all.
 CAMPAIGN_ALLOW_LIST = [
@@ -236,12 +241,14 @@ def is_covered_by_credits(path, credits):
 
 
 def find_baseline(remote_name, cwd):
-    """The mirror of the project the fork was made from: <remote>/main, or None."""
-    ref = "refs/remotes/%s/main" % remote_name
-    code, out = run_git(["rev-parse", "--verify", "-q", ref + "^{commit}"], cwd)
-    if code != 0:
-        return None
-    return out.strip()
+    """The mirror of the project the fork was made from: <remote>/main, or, when the target
+    remote has no main yet (for example a new, empty repository), the default branch of the
+    original project, upstream/shaders-improvement; None when neither exists."""
+    for ref in ("refs/remotes/%s/main" % remote_name, UPSTREAM_BASELINE_REF):
+        code, out = run_git(["rev-parse", "--verify", "-q", ref + "^{commit}"], cwd)
+        if code == 0:
+            return out.strip()
+    return None
 
 
 def commits_to_check(local_sha, remote_sha, remote_name, cwd):
