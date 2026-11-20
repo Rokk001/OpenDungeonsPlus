@@ -276,9 +276,13 @@ def commits_to_check(local_sha, remote_sha, remote_name, cwd):
 
 
 def compute_commits_to_check(local_sha, remote_sha, cwd):
-    """The commits of a pushed ref that the remote does not have yet."""
+    """The commits of a pushed ref that the remote does not have yet and that are not on any
+    remote ref already. A new ref and an updated ref follow the same rule: commits already
+    published on a remote count as known, so an update skips them just like a new ref does.
+    The tree of the pushed tip is checked separately and in full."""
     if remote_sha != ZERO_SHA:
-        code, out = run_git(["rev-list", "%s..%s" % (remote_sha, local_sha)], cwd)
+        code, out = run_git(["rev-list", "%s..%s" % (remote_sha, local_sha), "--not",
+                             "--remotes"], cwd)
         if code == 0:
             return split_lines(out)
     code, out = run_git(["rev-list", local_sha, "--not", "--remotes"], cwd)
@@ -839,6 +843,24 @@ def self_test():
         sha = commit_files({"c.txt": "zzterm\n"}, "add c")
         expect("new branch", work, ["refs/heads/newbranch %s refs/heads/newbranch %s"
                                     % (sha, ZERO_SHA)], terms, True)
+
+        # an updated ref skips commits that are already on a remote ref, like a new ref;
+        # new commits and the tree of the pushed tip are still checked
+        work, git, commit_files, base = new_repo()
+        published = commit_files({"pub.txt": "fine\n"}, "published zzterm message")
+        git("update-ref", "refs/remotes/other/integration", published)
+        expect("update over published commits", work,
+               ["refs/heads/main %s refs/heads/main %s" % (published, base)], terms, False)
+        fresh = commit_files({"fresh.txt": "fine\n"}, "new zzterm message")
+        expect("update with a new commit", work,
+               ["refs/heads/main %s refs/heads/main %s" % (fresh, base)], terms, True,
+               "commit message")
+        work, git, commit_files, base = new_repo()
+        published = commit_files({"pub.txt": "a zzterm line\n"}, "published file")
+        git("update-ref", "refs/remotes/other/integration", published)
+        expect("update over a published tree", work,
+               ["refs/heads/main %s refs/heads/main %s" % (published, base)], terms, True,
+               "tree", "added line")
 
         work, git, commit_files, base = new_repo()
         expect("deleted ref", work, ["(delete) %s refs/heads/old %s" % (ZERO_SHA, base)],
